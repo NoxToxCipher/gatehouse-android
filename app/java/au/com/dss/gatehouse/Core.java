@@ -55,6 +55,10 @@ public final class Core {
     public static native String head();
     public static native String lastReason();
 
+    public static native int isSaved();
+    public static native int continueShift(int occurred, int recorded,
+                                           String text);
+
     public static native String report(int opens, int closes);
     public static native String archive();
 }

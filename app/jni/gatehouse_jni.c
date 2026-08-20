@@ -180,6 +180,22 @@ JNIEXPORT jstring JNICALL NS(lastReason)(JNIEnv *e, jclass c) {
   return take(e, why, n);
 }
 
+JNIEXPORT jint JNICALL NS(isSaved)(JNIEnv *e, jclass c) {
+  (void) e; (void) c; return gatehouse_is_saved();
+}
+
+/* Carrying on past a sealed record. The core refuses unless what is held has
+   been written out, which is why the screen archives first: a night nobody
+   kept is a night thrown away, and the library will not do that quietly. */
+JNIEXPORT jint JNICALL NS(continueShift)(JNIEnv *e, jclass c, jint occurred,
+                                         jint recorded, jstring text) {
+  (void) c;
+  const char *t = (*e)->GetStringUTFChars(e, text, 0);
+  int r = gatehouse_continue(occurred, recorded, t, (int) strlen(t));
+  (*e)->ReleaseStringUTFChars(e, text, t);
+  return r;
+}
+
 JNIEXPORT jstring JNICALL NS(report)(JNIEnv *e, jclass c,
                                      jint opens, jint closes) {
   (void) c;

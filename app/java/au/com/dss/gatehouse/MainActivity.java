@@ -1,12 +1,13 @@
 package au.com.dss.gatehouse;
 
 import android.app.Activity;
-import android.graphics.Color;
+import android.content.res.ColorStateList;
 import android.graphics.Typeface;
+import android.graphics.drawable.GradientDrawable;
+import android.graphics.drawable.RippleDrawable;
 import android.os.Bundle;
 import android.view.Gravity;
 import android.view.View;
-import android.widget.Button;
 import android.widget.LinearLayout;
 import android.widget.ScrollView;
 import android.widget.TextView;
@@ -14,39 +15,54 @@ import java.util.TimeZone;
 
 /** A screen over the record core.
  *
- * Placeholder in almost every way that matters: the site and the guard are
- * hardcoded, a tap is a button rather than an NFC tag, and there is no
- * storage, so closing the app loses the night. What is not placeholder is the
- * record underneath. Every entry below goes through the same Ada library that
- * is proved and tested on the desktop, the rules that refuse an entry are its
- * rules, the sentence explaining a refusal is its sentence, and the handover
- * page is rendered by it rather than assembled here.
+ * Placeholder in the obvious ways: the site and the guard are hardcoded, a
+ * tap is a button rather than an NFC tag, and nothing is written to disk, so
+ * closing the app loses the night. What is not placeholder is the record
+ * underneath. Every entry goes through the same Ada library that is proved
+ * and tested on the desktop, the rules that refuse an entry are its rules,
+ * the sentence explaining a refusal is its sentence, and the handover page is
+ * rendered by it rather than assembled here.
+ *
+ * The screen offers what the record will actually take next. A sealed shift
+ * accepts nothing, so the tiles go quiet and the one thing left to do is
+ * start the next record. Buttons that do nothing when pressed are how an app
+ * teaches somebody to stop trusting it.
  */
 public class MainActivity extends Activity {
 
     private static final int NAVY = 0xFF14213D;
-    private static final int AMBER = 0xFFE8A33D;
-    private static final int PALE = 0xFFDCE3F0;
-    private static final int MUTED = 0xFF8FA0C4;
     private static final int PANEL = 0xFF1C2A4A;
+    private static final int LINE = 0xFF2C3A5C;
+    private static final int AMBER = 0xFFE8A33D;
+    private static final int AMBER_INK = 0xFF14213D;
+    private static final int PALE = 0xFFF2F4F8;
+    private static final int MUTED = 0xFF8FA0C4;
+    private static final int QUIET = 0xFF54648A;
 
-    private TextView status;
-    private TextView reason;
+    private static final String[] POINTS = {
+        "gate A", "04A2B7C1D3E580",
+        "compound", "04B1C2D3E4F590",
+        "east fence", "04C9D8E7F6A5B4",
+        "crane base", "04D3E2F1A0B9C8",
+    };
+
+    private LinearLayout pills;
+    private LinearLayout tiles;
+    private LinearLayout notes;
+    private TextView banner;
+    private TextView primary;
+    private TextView pageTitle;
     private TextView page;
-    private int taps = 100;
 
-    /** When this shift opened. The report is asked for the window the
-     *  record actually covers rather than a guessed fourteen hours, so
-     *  the page does not report a stretch of night that never happened. */
+    private int taps = 100;
     private int openedAt;
 
     /** Minutes since 1970-01-01 00:00 in the zone this site keeps, which is
-     *  what the core means by a time. Local rather than UTC on purpose: see
+     *  what the core means by a time. Local rather than UTC: see
      *  Gatehouse.Clock. */
     private static int nowMinutes() {
         long ms = System.currentTimeMillis();
-        long local = ms + TimeZone.getDefault().getOffset(ms);
-        return (int) (local / 60000L);
+        return (int) ((ms + TimeZone.getDefault().getOffset(ms)) / 60000L);
     }
 
     @Override
@@ -56,63 +72,84 @@ public class MainActivity extends Activity {
         LinearLayout root = new LinearLayout(this);
         root.setOrientation(LinearLayout.VERTICAL);
         root.setBackgroundColor(NAVY);
-        root.setPadding(dp(16), dp(20), dp(16), dp(16));
+        root.setPadding(dp(20), dp(16), dp(20), dp(28));
 
-        TextView title = new TextView(this);
-        title.setText("Gatehouse");
-        title.setTextColor(AMBER);
-        title.setTextSize(22);
-        root.addView(title);
+        root.addView(header());
 
-        TextView site = new TextView(this);
-        site.setText("Northgate Rise, stage 2");
-        site.setTextColor(PALE);
-        site.setTextSize(15);
-        site.setPadding(0, dp(2), 0, 0);
-        root.addView(site);
+        pills = new LinearLayout(this);
+        pills.setOrientation(LinearLayout.HORIZONTAL);
+        pills.setPadding(0, dp(14), 0, dp(22));
+        root.addView(pills);
 
-        status = new TextView(this);
-        status.setTextColor(MUTED);
-        status.setTextSize(12);
-        status.setPadding(0, dp(6), 0, dp(12));
-        root.addView(status);
+        root.addView(label("checkpoints"));
+        tiles = new LinearLayout(this);
+        tiles.setOrientation(LinearLayout.VERTICAL);
+        tiles.setPadding(0, dp(10), 0, dp(20));
+        for (int i = 0; i < POINTS.length; i += 4) {
+            LinearLayout row = new LinearLayout(this);
+            row.setOrientation(LinearLayout.HORIZONTAL);
+            row.addView(tile(POINTS[i], POINTS[i + 1], true));
+            row.addView(tile(POINTS[i + 2], POINTS[i + 3], false));
+            tiles.addView(row);
+        }
+        root.addView(tiles);
 
-        root.addView(button("tap gate A", new View.OnClickListener() {
-            public void onClick(View v) { tap("gate A", "04A2B7C1D3E580"); }
-        }));
-        root.addView(button("tap compound", new View.OnClickListener() {
-            public void onClick(View v) { tap("compound", "04B1C2D3E4F590"); }
-        }));
-        root.addView(button("note for the day crew", new View.OnClickListener() {
+        root.addView(label("write up"));
+        notes = new LinearLayout(this);
+        notes.setOrientation(LinearLayout.VERTICAL);
+        notes.setPadding(0, dp(10), 0, dp(22));
+        notes.addView(ghost("a note for the day crew", new View.OnClickListener() {
             public void onClick(View v) {
-                int t = nowMinutes();
-                check(Core.addNote(Core.KIND_OBSERVATION, Core.TOPIC_FOR_DAY_CREW,
-                                   t, t, "floodlight out over the east stack", 0));
+                note(Core.TOPIC_FOR_DAY_CREW,
+                     "floodlight out over the east stack");
             }
         }));
-        root.addView(button("try a note with a line break", new View.OnClickListener() {
+        notes.addView(ghost("an incident", new View.OnClickListener() {
             public void onClick(View v) {
-                int t = nowMinutes();
-                check(Core.addNote(Core.KIND_OBSERVATION, Core.TOPIC_ROUTINE,
-                                   t, t, "vehicles:\nute, van", 0));
+                note(Core.TOPIC_INCIDENT,
+                     "two people at the east fence, moved off north when the "
+                     + "torch was put on them");
             }
         }));
-        root.addView(button("seal and read the handover", new View.OnClickListener() {
-            public void onClick(View v) { sealAndShow(); }
+        notes.addView(ghost("a note the record will refuse",
+                            new View.OnClickListener() {
+            public void onClick(View v) {
+                note(Core.TOPIC_ROUTINE, "vehicles:\nute, van");
+            }
         }));
+        root.addView(notes);
 
-        reason = new TextView(this);
-        reason.setTextColor(AMBER);
-        reason.setTextSize(13);
-        reason.setPadding(dp(2), dp(8), dp(2), dp(8));
-        root.addView(reason);
+        primary = new TextView(this);
+        primary.setTextSize(16);
+        primary.setGravity(Gravity.CENTER);
+        primary.setPadding(dp(16), dp(17), dp(16), dp(17));
+        root.addView(primary);
+
+        banner = new TextView(this);
+        banner.setTextSize(14);
+        banner.setTextColor(AMBER);
+        banner.setPadding(dp(14), dp(12), dp(14), dp(12));
+        banner.setBackground(rounded(PANEL, dp(12)));
+        banner.setVisibility(View.GONE);
+        LinearLayout.LayoutParams bl = new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT);
+        bl.topMargin = dp(16);
+        banner.setLayoutParams(bl);
+        root.addView(banner);
+
+        pageTitle = label("the handover");
+        pageTitle.setPadding(0, dp(26), 0, dp(10));
+        pageTitle.setVisibility(View.GONE);
+        root.addView(pageTitle);
 
         page = new TextView(this);
         page.setTextColor(PALE);
-        page.setTextSize(10);
+        page.setTextSize(9);
         page.setTypeface(Typeface.MONOSPACE);
-        page.setBackgroundColor(PANEL);
-        page.setPadding(dp(10), dp(10), dp(10), dp(10));
+        page.setBackground(rounded(PANEL, dp(12)));
+        page.setPadding(dp(12), dp(12), dp(12), dp(12));
+        page.setVisibility(View.GONE);
         root.addView(page);
 
         ScrollView scroll = new ScrollView(this);
@@ -124,78 +161,241 @@ public class MainActivity extends Activity {
         startShift();
     }
 
-    private Button button(String label, View.OnClickListener onClick) {
-        Button b = new Button(this);
-        b.setText(label);
-        b.setAllCaps(false);
-        b.setTextColor(NAVY);
-        b.setBackgroundColor(AMBER);
-        b.setGravity(Gravity.CENTER);
-        b.setOnClickListener(onClick);
+    // ---- the pieces ------------------------------------------------------
+
+    private LinearLayout header() {
+        LinearLayout h = new LinearLayout(this);
+        h.setOrientation(LinearLayout.VERTICAL);
+
+        TextView word = new TextView(this);
+        word.setText("GATEHOUSE");
+        word.setTextColor(AMBER);
+        word.setTextSize(12);
+        word.setLetterSpacing(0.18f);
+        h.addView(word);
+
+        TextView site = new TextView(this);
+        site.setText("Northgate Rise, stage 2");
+        site.setTextColor(PALE);
+        site.setTextSize(25);
+        site.setPadding(0, dp(4), 0, 0);
+        h.addView(site);
+
+        TextView who = new TextView(this);
+        who.setText("R. Kelso");
+        who.setTextColor(MUTED);
+        who.setTextSize(14);
+        h.addView(who);
+        return h;
+    }
+
+    private TextView label(String text) {
+        TextView t = new TextView(this);
+        t.setText(text);
+        t.setTextColor(QUIET);
+        t.setTextSize(12);
+        t.setLetterSpacing(0.12f);
+        return t;
+    }
+
+    private TextView pill(String text, boolean strong) {
+        TextView t = new TextView(this);
+        t.setText(text);
+        t.setTextSize(12);
+        t.setTextColor(strong ? AMBER_INK : MUTED);
+        t.setPadding(dp(11), dp(6), dp(11), dp(6));
+        t.setBackground(strong ? rounded(AMBER, dp(20))
+                               : outlined(LINE, dp(20)));
+        LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.WRAP_CONTENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT);
+        lp.rightMargin = dp(8);
+        t.setLayoutParams(lp);
+        return t;
+    }
+
+    /** A checkpoint. Four of them, none singled out as next: the patrol is
+     *  meant to be walked in whatever order the guard chooses. */
+    private TextView tile(final String name, final String uid, boolean left) {
+        TextView t = new TextView(this);
+        t.setText(name);
+        t.setTextSize(16);
+        t.setTextColor(PALE);
+        t.setGravity(Gravity.CENTER);
+        t.setPadding(dp(12), dp(24), dp(12), dp(24));
+        t.setBackground(pressable(PANEL, dp(14)));
+        t.setOnClickListener(new View.OnClickListener() {
+            public void onClick(View v) { tap(name, uid); }
+        });
+        LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(
+                0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
+        lp.rightMargin = left ? dp(5) : 0;
+        lp.leftMargin = left ? 0 : dp(5);
+        lp.bottomMargin = dp(10);
+        t.setLayoutParams(lp);
+        return t;
+    }
+
+    private TextView ghost(String text, View.OnClickListener onClick) {
+        TextView t = new TextView(this);
+        t.setText(text);
+        t.setTextSize(15);
+        t.setTextColor(PALE);
+        t.setPadding(dp(16), dp(15), dp(16), dp(15));
+        t.setBackground(pressableOutline(LINE, dp(12)));
+        t.setOnClickListener(onClick);
         LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT,
                 LinearLayout.LayoutParams.WRAP_CONTENT);
         lp.bottomMargin = dp(8);
-        b.setLayoutParams(lp);
-        return b;
+        t.setLayoutParams(lp);
+        return t;
     }
+
+    private GradientDrawable rounded(int fill, int radius) {
+        GradientDrawable g = new GradientDrawable();
+        g.setColor(fill);
+        g.setCornerRadius(radius);
+        return g;
+    }
+
+    private GradientDrawable outlined(int stroke, int radius) {
+        GradientDrawable g = new GradientDrawable();
+        g.setColor(0x00000000);
+        g.setStroke(dp(1), stroke);
+        g.setCornerRadius(radius);
+        return g;
+    }
+
+    private RippleDrawable pressable(int fill, int radius) {
+        return new RippleDrawable(ColorStateList.valueOf(0x44E8A33D),
+                                  rounded(fill, radius), null);
+    }
+
+    private RippleDrawable pressableOutline(int stroke, int radius) {
+        return new RippleDrawable(ColorStateList.valueOf(0x44E8A33D),
+                                  outlined(stroke, radius), null);
+    }
+
+    private int dp(int v) {
+        return (int) (v * getResources().getDisplayMetrics().density);
+    }
+
+    // ---- what the record is asked to do ----------------------------------
 
     private void startShift() {
         int t = nowMinutes();
         openedAt = t;
         Core.siteBegin("Northgate Rise, stage 2");
-        Core.siteAddPoint("gate A", "04A2B7C1D3E580");
-        Core.siteAddPoint("compound", "04B1C2D3E4F590");
-        Core.siteAddPoint("east fence", "04C9D8E7F6A5B4");
-        Core.siteAddPoint("crane base", "04D3E2F1A0B9C8");
+        for (int i = 0; i < POINTS.length; i += 2) {
+            Core.siteAddPoint(POINTS[i], POINTS[i + 1]);
+        }
         Core.sitePolicy(1, 240, 0);
         Core.setAttribution(Core.DEVICE_PERSONAL, Core.METHOD_SESSION);
         Core.setGuard("g-kelso", "R. Kelso", "SAMPLE-LIC", "typed", "");
-        check(Core.openShift(Core.genesis(), Core.siteHash(), t, t,
-                             "on site, handover from day crew taken"));
-        page.setText("The record is open. Tap, write, then seal, and the "
-                     + "handover page appears here.\n\nentry encoding v"
-                     + Core.encodingVersion() + "   archive format v"
-                     + Core.archiveVersion());
+        answer(Core.openShift(Core.genesis(), Core.siteHash(), t, t,
+                              "on site, handover from day crew taken"));
+        hidePage();
     }
 
-    private void tap(String label, String uid) {
+    private void tap(String name, String uid) {
         int t = nowMinutes();
         taps++;
-        check(Core.addCheckpoint(t, t, label, uid, taps, Core.AUTH_CRYPTOGRAPHIC));
+        answer(Core.addCheckpoint(t, t, name, uid, taps,
+                                  Core.AUTH_CRYPTOGRAPHIC));
+    }
+
+    private void note(int topic, String text) {
+        int t = nowMinutes();
+        answer(Core.addNote(Core.KIND_OBSERVATION, topic, t, t, text, 0));
     }
 
     private void sealAndShow() {
         int t = nowMinutes();
-        int r = Core.seal(t, t, "off site");
-        check(r);
+        answer(Core.seal(t, t, "off site"));
         String text = Core.report(openedAt, t);
         if (text.length() > 0) {
             page.setText(text);
+            page.setVisibility(View.VISIBLE);
+            pageTitle.setVisibility(View.VISIBLE);
         }
     }
 
-    /** The core answered. If it refused, show its words, not ours. */
-    private void check(int result) {
+    /** The next record, opened on this one's head so the two read as one run.
+     *  The core will not start it until this one has been written out, so the
+     *  archive is taken first. That rule is the whole point: opening the next
+     *  chain throws this one away, and a night nobody kept is gone. */
+    private void nextShift() {
+        int t = nowMinutes();
+        Core.archive();
+        int r = Core.continueShift(t, t, "on site, continuation");
+        if (r == Core.OK) {
+            openedAt = t;
+            hidePage();
+        }
+        answer(r);
+    }
+
+    private void hidePage() {
+        page.setVisibility(View.GONE);
+        pageTitle.setVisibility(View.GONE);
+    }
+
+    /** The core answered. If it refused, show its words, never ours. */
+    private void answer(int result) {
         String why = Core.lastReason();
-        if (result == Core.OK) {
-            reason.setText("");
-        } else if (why.length() > 0) {
-            reason.setText(why);
+        if (result == Core.OK || why.length() == 0) {
+            banner.setVisibility(View.GONE);
         } else {
-            reason.setText("refused, status " + result);
+            banner.setText(why);
+            banner.setVisibility(View.VISIBLE);
         }
         refresh();
     }
 
+    /** Offer what the record will take. A sealed shift accepts nothing, so
+     *  the tiles and the write-up buttons go quiet instead of sitting there
+     *  refusing every press. */
     private void refresh() {
+        boolean isSealed = Core.isSealed() == 1;
         int n = Core.entryCount();
-        status.setText(n + (n == 1 ? " entry" : " entries")
-                       + (Core.isSealed() == 1 ? " - sealed" : " - open")
-                       + (Core.verified() == 1 ? " - verifies" : " - BROKEN"));
+
+        pills.removeAllViews();
+        pills.addView(pill(n + (n == 1 ? " entry" : " entries"), false));
+        pills.addView(pill(isSealed ? "sealed" : "open", isSealed));
+        pills.addView(pill(Core.verified() == 1 ? "verifies" : "BROKEN", false));
+
+        setLive(tiles, !isSealed);
+        setLive(notes, !isSealed);
+
+        if (isSealed) {
+            primary.setText("start the next record");
+            primary.setTextColor(PALE);
+            primary.setBackground(pressableOutline(LINE, dp(14)));
+            primary.setOnClickListener(new View.OnClickListener() {
+                public void onClick(View v) { nextShift(); }
+            });
+        } else {
+            primary.setText("seal and read the handover");
+            primary.setTextColor(AMBER_INK);
+            primary.setBackground(pressable(AMBER, dp(14)));
+            primary.setOnClickListener(new View.OnClickListener() {
+                public void onClick(View v) { sealAndShow(); }
+            });
+        }
     }
 
-    private int dp(int v) {
-        return (int) (v * getResources().getDisplayMetrics().density);
+    private void setLive(LinearLayout group, boolean on) {
+        group.setAlpha(on ? 1f : 0.3f);
+        for (int i = 0; i < group.getChildCount(); i++) {
+            View child = group.getChildAt(i);
+            child.setEnabled(on);
+            if (child instanceof LinearLayout) {
+                LinearLayout row = (LinearLayout) child;
+                for (int k = 0; k < row.getChildCount(); k++) {
+                    row.getChildAt(k).setEnabled(on);
+                }
+            }
+        }
     }
 }
