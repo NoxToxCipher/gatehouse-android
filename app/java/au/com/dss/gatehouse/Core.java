@@ -59,6 +59,11 @@ public final class Core {
     public static native int pointVisits(String label);
     public static native int pointLast(String label);
 
+    /** The recorded time of the last entry, or 0 on an empty record. Take
+     *  the later of this and the clock so a recorded time never goes
+     *  backwards, which is what happens on the daylight saving changeover. */
+    public static native int lastRecorded();
+
     public static native int entryCount();
     public static native int isSealed();
     public static native int verified();

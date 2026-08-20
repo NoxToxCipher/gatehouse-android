@@ -182,6 +182,10 @@ JNIEXPORT jint JNICALL NS(pointLast)(JNIEnv *e, jclass c, jstring label) {
   return r;
 }
 
+JNIEXPORT jint JNICALL NS(lastRecorded)(JNIEnv *e, jclass c) {
+  (void) e; (void) c; return gatehouse_last_recorded();
+}
+
 JNIEXPORT jint JNICALL NS(entryCount)(JNIEnv *e, jclass c) {
   (void) e; (void) c; return gatehouse_entry_count();
 }

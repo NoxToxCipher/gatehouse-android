@@ -8,6 +8,14 @@ import android.graphics.Typeface;
 import android.graphics.drawable.GradientDrawable;
 import android.graphics.drawable.RippleDrawable;
 import android.os.Bundle;
+import android.os.Handler;
+import android.os.SystemClock;
+import android.text.InputType;
+import android.widget.EditText;
+import java.util.ArrayList;
+import java.io.BufferedReader;
+import java.io.FileInputStream;
+import java.io.InputStreamReader;
 import android.view.Gravity;
 import android.view.View;
 import android.widget.LinearLayout;
@@ -61,6 +69,43 @@ public class MainActivity extends Activity {
     private TextView primary;
     private TextView pageTitle;
     private TextView page;
+
+    /** How long an entry waits before it becomes part of the record.
+     *
+     *  Nothing is ever removed from a chain -- there is no delete, by design,
+     *  and the postcondition on Append proves every earlier entry is
+     *  unchanged. So an entry a guard can take back is one that has not been
+     *  written yet. It sits here, on this side of the record, and the record
+     *  begins for it when it commits, the same as a guard deciding not to
+     *  write a line on paper.
+     *
+     *  The time it happened is kept from the moment of the tap, so holding it
+     *  does not move it: the record carries when it happened and when it was
+     *  written down, and those being different is ordinary. */
+    private static final long HOLD_MS = 2 * 60 * 1000L;
+
+    /** How many entries may be held at once.
+     *
+     *  The window is the weak point of this whole idea and the cap is most of
+     *  what makes it safe. A guard who can hold one entry for two minutes has
+     *  a way to undo a fumble. A guard who can hold twelve until 05:00 has a
+     *  way to decide, at the end of the night, which parts of it happened.
+     *  Past three, the oldest is written before the newest is held. */
+    private static final int MAX_HELD = 3;
+
+    private static class Pending {
+        boolean checkpoint;
+        String label = "";
+        String uid = "";
+        int taps;
+        int topic;
+        String text = "";
+        int occurred;
+        long created;
+    }
+
+    private final ArrayList<Pending> pending = new ArrayList<Pending>();
+    private final Handler ticker = new Handler();
 
     private int taps = 100;
     private int openedAt;
@@ -130,23 +175,22 @@ public class MainActivity extends Activity {
         notes = new LinearLayout(this);
         notes.setOrientation(LinearLayout.VERTICAL);
         notes.setPadding(0, dp(10), 0, dp(22));
-        notes.addView(ghost("a note for the day crew", new View.OnClickListener() {
+        notes.addView(ghost("a note for the day crew",
+                            new View.OnClickListener() {
             public void onClick(View v) {
-                note(Core.TOPIC_FOR_DAY_CREW,
-                     "floodlight out over the east stack");
+                askNote(Core.TOPIC_FOR_DAY_CREW, "For the day crew",
+                        "floodlight out over the east stack", "");
             }
         }));
         notes.addView(ghost("an incident", new View.OnClickListener() {
             public void onClick(View v) {
-                note(Core.TOPIC_INCIDENT,
-                     "two people at the east fence, moved off north when the "
-                     + "torch was put on them");
+                askNote(Core.TOPIC_INCIDENT, "Incident",
+                        "what happened, where, and what you did", "");
             }
         }));
-        notes.addView(ghost("a note the record will refuse",
-                            new View.OnClickListener() {
+        notes.addView(ghost("anything else", new View.OnClickListener() {
             public void onClick(View v) {
-                note(Core.TOPIC_ROUTINE, "vehicles:\nute, van");
+                askNote(Core.TOPIC_ROUTINE, "Note", "in your own words", "");
             }
         }));
         root.addView(notes);
@@ -177,7 +221,43 @@ public class MainActivity extends Activity {
         scroll.addView(root);
         setContentView(scroll);
 
+        loadPending();
         startShift();
+        // Anything that survived a restart is written straight in rather than
+        // resuming its window. It stops the entries being lost, which is what
+        // the file is for, without letting a restart be a way to keep them
+        // hanging: a held entry that outlives the app has stopped being a
+        // fumble a guard is about to correct.
+        commitAll();
+        ticker.postDelayed(tick, 1000);
+    }
+
+    private final Runnable tick = new Runnable() {
+        public void run() {
+            commitDue();
+            if (!pending.isEmpty()) {
+                refresh();
+            }
+            ticker.postDelayed(this, 1000);
+        }
+    };
+
+    /** Putting the phone away ends the window.
+     *
+     *  The point of holding an entry is the few seconds in which a guard
+     *  realises they hit the wrong tile. Once the app is off the screen that
+     *  moment is over, and anything still held is just an entry waiting to be
+     *  chosen or discarded later. So it gets written. */
+    @Override
+    protected void onPause() {
+        super.onPause();
+        commitAll();
+    }
+
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+        ticker.removeCallbacks(tick);
     }
 
     // ---- the pieces ------------------------------------------------------
@@ -304,9 +384,94 @@ public class MainActivity extends Activity {
             tonight.addView(entryRow(line, i));
             shown++;
         }
+        // Held entries below the written ones, looking different, because
+        // the difference between them is the whole point: one lot is the
+        // record and the other is not yet anything.
+        for (int i = 0; i < pending.size(); i++) {
+            tonight.addView(pendingRow(pending.get(i)));
+        }
+        shown += pending.size();
         boolean any = shown > 0;
         tonight.setVisibility(any ? View.VISIBLE : View.GONE);
         tonightTitle.setVisibility(any ? View.VISIBLE : View.GONE);
+    }
+
+    /** A held entry: what it will say, and that it can still be taken back.
+     *
+     *  Dragged sideways past a threshold it is discarded, and nothing about
+     *  it ever reaches the record. Held to a threshold rather than any
+     *  movement because a guard scrolling a list with cold hands should not
+     *  be able to lose an entry by brushing it. */
+    private TextView pendingRow(final Pending p) {
+        final TextView t = new TextView(this);
+        long left = HOLD_MS - (SystemClock.elapsedRealtime() - p.created);
+        int secs = (int) Math.max(0, (left + 999) / 1000);
+        t.setText(clock(p.occurred) + "  "
+                  + (p.checkpoint ? p.label : p.text)
+                  + "\nheld for " + secs
+                  + "s  ·  swipe to take it back");
+        t.setTextSize(14);
+        t.setTextColor(MUTED);
+        t.setPadding(dp(14), dp(11), dp(14), dp(11));
+        t.setBackground(outlined(LINE, dp(10)));
+        LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT);
+        lp.bottomMargin = dp(6);
+        t.setLayoutParams(lp);
+
+        t.setOnTouchListener(new View.OnTouchListener() {
+            private float from;
+            private boolean dragging;
+
+            public boolean onTouch(View v, android.view.MotionEvent e) {
+                switch (e.getActionMasked()) {
+                case android.view.MotionEvent.ACTION_DOWN:
+                    from = e.getRawX();
+                    dragging = true;
+                    return true;
+                case android.view.MotionEvent.ACTION_MOVE:
+                    if (dragging) {
+                        float dx = e.getRawX() - from;
+                        v.setTranslationX(dx);
+                        v.setAlpha(Math.max(0.25f,
+                                   1f - Math.abs(dx) / (dp(200) * 1f)));
+                    }
+                    return true;
+                case android.view.MotionEvent.ACTION_UP:
+                case android.view.MotionEvent.ACTION_CANCEL:
+                    float dx2 = e.getRawX() - from;
+                    dragging = false;
+                    if (Math.abs(dx2) > dp(110)) {
+                        // Posted, not called. Taking it back rebuilds this
+                        // list, and removing a view while the framework is
+                        // still dispatching touch to that very view leaves a
+                        // hole in the parent's children and brings the app
+                        // down on the next layout pass. It did, twice.
+                        v.post(new Runnable() {
+                            public void run() { takeBack(p); }
+                        });
+                    } else {
+                        v.setTranslationX(0f);
+                        v.setAlpha(1f);
+                    }
+                    return true;
+                default:
+                    return false;
+                }
+            }
+        });
+        return t;
+    }
+
+    /** Discarded before it was ever a record, which is the only kind of
+     *  taking back this product has. */
+    private void takeBack(Pending p) {
+        pending.remove(p);
+        savePending();
+        banner.setText("taken back, and never written to the record");
+        banner.setVisibility(View.VISIBLE);
+        refresh();
     }
 
     private TextView entryRow(String line, int seq) {
@@ -372,19 +537,144 @@ public class MainActivity extends Activity {
     }
 
     private void tap(String name, String uid) {
-        int t = nowMinutes();
-        taps++;
-        answer(Core.addCheckpoint(t, t, name, uid, taps,
-                                  Core.AUTH_CRYPTOGRAPHIC));
+        Pending p = new Pending();
+        p.checkpoint = true;
+        p.label = name;
+        p.uid = uid;
+        p.taps = ++taps;
+        p.occurred = nowMinutes();
+        p.created = SystemClock.elapsedRealtime();
+        hold(p);
     }
 
     private void note(int topic, String text) {
-        int t = nowMinutes();
-        answer(Core.addNote(Core.KIND_OBSERVATION, topic, t, t, text, 0));
+        Pending p = new Pending();
+        p.checkpoint = false;
+        p.topic = topic;
+        p.text = text;
+        p.occurred = nowMinutes();
+        p.created = SystemClock.elapsedRealtime();
+        hold(p);
+    }
+
+    /** The guard writes the note.
+     *
+     *  These were canned examples that wrote the same sentence every time,
+     *  which was fine for showing the record working and no use to anybody on
+     *  a site. The example is the hint now, so the field starts empty and
+     *  what goes into the record is what the guard actually typed.
+     *
+     *  The field takes line breaks even though rule 13 refuses them. Hiding
+     *  the possibility would hide the rule; losing what they typed would be
+     *  worse than either, so the text comes back in the box to be fixed. */
+    private void askNote(final int topic, final String title, String hint,
+                         String prefill) {
+        final EditText field = new EditText(this);
+        field.setHint(hint);
+        field.setText(prefill);
+        field.setTextColor(PALE);
+        field.setHintTextColor(QUIET);
+        field.setInputType(InputType.TYPE_CLASS_TEXT
+                           | InputType.TYPE_TEXT_FLAG_MULTI_LINE
+                           | InputType.TYPE_TEXT_FLAG_CAP_SENTENCES);
+        field.setMinLines(3);
+        field.setGravity(Gravity.TOP);
+        field.setPadding(dp(20), dp(12), dp(20), dp(12));
+        field.setSelection(prefill.length());
+
+        new AlertDialog.Builder(this)
+            .setTitle(title)
+            .setView(field)
+            .setNegativeButton("cancel", null)
+            .setPositiveButton("add", new DialogInterface.OnClickListener() {
+                public void onClick(DialogInterface d, int which) {
+                    String text = field.getText().toString().trim();
+                    if (text.length() == 0) {
+                        return;
+                    }
+                    if (!oneLine(text)) {
+                        banner.setText("an entry is one line; "
+                                       + "take out the line break");
+                        banner.setVisibility(View.VISIBLE);
+                        askNote(topic, title, "", text);
+                        return;
+                    }
+                    note(topic, text);
+                }
+            })
+            .show();
+    }
+
+    /** Asked here only so the typed text can be handed straight back to be
+     *  fixed. The record still decides: this entry goes through the same
+     *  core call every other one does, and would be refused there too. */
+    private boolean oneLine(String text) {
+        for (int i = 0; i < text.length(); i++) {
+            char c = text.charAt(i);
+            if (c < ' ' || c == 127) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    private void hold(Pending p) {
+        pending.add(p);
+        while (pending.size() > MAX_HELD) {
+            commit(pending.remove(0));
+        }
+        savePending();
+        banner.setVisibility(View.GONE);
+        refresh();
+    }
+
+    /** Commit anything that has waited long enough. */
+    private void commitDue() {
+        long now = SystemClock.elapsedRealtime();
+        boolean any = false;
+        for (int i = 0; i < pending.size(); ) {
+            Pending p = pending.get(i);
+            if (now - p.created >= HOLD_MS) {
+                pending.remove(i);
+                commit(p);
+                any = true;
+            } else {
+                i++;
+            }
+        }
+        if (any) {
+            savePending();
+            refresh();
+        }
+    }
+
+    /** Everything still waiting, now. Sealing has to do this first: a record
+     *  sealed with entries still held on this side would drop them without a
+     *  word, which is the failure this whole buffer exists to avoid. */
+    private void commitAll() {
+        while (!pending.isEmpty()) {
+            commit(pending.remove(0));
+        }
+        savePending();
+    }
+
+    /** Recorded is the later of the clock and the last entry's time, because
+     *  recorded times may not go backwards and a phone's clock can. The core
+     *  exports last_recorded for exactly this. */
+    private void commit(Pending p) {
+        int t = Math.max(nowMinutes(), Core.lastRecorded());
+        if (p.checkpoint) {
+            answer(Core.addCheckpoint(p.occurred, t, p.label, p.uid, p.taps,
+                                      Core.AUTH_CRYPTOGRAPHIC));
+        } else {
+            answer(Core.addNote(Core.KIND_OBSERVATION, p.topic,
+                                p.occurred, t, p.text, 0));
+        }
     }
 
     private void sealAndShow() {
-        int t = nowMinutes();
+        commitAll();
+        int t = Math.max(nowMinutes(), Core.lastRecorded());
         answer(Core.seal(t, t, "off site"));
         String text = Core.report(openedAt, t);
         if (text.length() > 0) {
@@ -436,6 +726,98 @@ public class MainActivity extends Activity {
             hidePage();
         }
         answer(r);
+    }
+
+    /** Held entries outlive the app being killed.
+     *
+     *  Without this the buffer would trade one silent loss for another: a
+     *  guard taps a checkpoint, the phone is killed inside the window, and a
+     *  visit that really happened is gone with nothing to show it ever did.
+     *
+     *  Text last and its length in front of it, the same discipline the
+     *  archive uses, so a note containing the separator reads back whole. */
+    private void savePending() {
+        StringBuilder b = new StringBuilder();
+        for (int i = 0; i < pending.size(); i++) {
+            Pending p = pending.get(i);
+            String body = p.checkpoint ? p.label : p.text;
+            b.append(p.checkpoint ? 1 : 0).append('|')
+             .append(p.topic).append('|')
+             .append(p.taps).append('|')
+             .append(p.occurred).append('|')
+             .append(p.created).append('|')
+             .append(p.uid).append('|')
+             .append(body.length()).append('|')
+             .append(body).append('\n');
+        }
+        try {
+            FileOutputStream f = new FileOutputStream(
+                    new File(getFilesDir(), "pending.txt"));
+            f.write(b.toString().getBytes("UTF-8"));
+            f.close();
+        } catch (Exception e) {
+            // Nothing useful to do: the entries are still held in memory.
+        }
+    }
+
+    private void loadPending() {
+        pending.clear();
+        File in = new File(getFilesDir(), "pending.txt");
+        if (!in.exists()) {
+            return;
+        }
+        try {
+            BufferedReader r = new BufferedReader(
+                    new InputStreamReader(new FileInputStream(in), "UTF-8"));
+            String line;
+            while ((line = r.readLine()) != null) {
+                Pending p = parsePending(line);
+                if (p != null) {
+                    pending.add(p);
+                }
+            }
+            r.close();
+        } catch (Exception e) {
+            // A file that will not read is not worth guessing at.
+        }
+    }
+
+    private Pending parsePending(String line) {
+        try {
+            int[] at = new int[7];
+            int n = 0;
+            for (int i = 0; i < line.length() && n < 7; i++) {
+                if (line.charAt(i) == '|') {
+                    at[n++] = i;
+                }
+            }
+            if (n < 7) {
+                return null;
+            }
+            Pending p = new Pending();
+            p.checkpoint = line.charAt(0) == '1';
+            p.topic = Integer.parseInt(line.substring(at[0] + 1, at[1]));
+            p.taps = Integer.parseInt(line.substring(at[1] + 1, at[2]));
+            p.occurred = Integer.parseInt(line.substring(at[2] + 1, at[3]));
+            p.created = Long.parseLong(line.substring(at[3] + 1, at[4]));
+            p.uid = line.substring(at[4] + 1, at[5]);
+            int len = Integer.parseInt(line.substring(at[5] + 1, at[6]));
+            if (at[6] + 1 + len > line.length()) {
+                return null;
+            }
+            String body = line.substring(at[6] + 1, at[6] + 1 + len);
+            if (p.checkpoint) {
+                p.label = body;
+            } else {
+                p.text = body;
+            }
+            if (p.taps > taps) {
+                taps = p.taps;
+            }
+            return p;
+        } catch (Exception e) {
+            return null;
+        }
     }
 
     private void hidePage() {
@@ -505,12 +887,16 @@ public class MainActivity extends Activity {
      *  a guard who reads "seal 3 entries" at 05:00 knows something is wrong
      *  before the record says so. */
     private void askThenSeal() {
-        int n = Core.entryCount();
+        int n = Core.entryCount() + pending.size();
+        String held = pending.isEmpty() ? ""
+            : " That includes " + pending.size()
+              + (pending.size() == 1 ? " entry" : " entries")
+              + " still held, which will be written in first.";
         new AlertDialog.Builder(this)
             .setTitle("Seal the record?")
             .setMessage("Sealing ends tonight's record with " + n
                         + (n == 1 ? " entry" : " entries")
-                        + ". Nothing can be added to it afterwards.")
+                        + ". Nothing can be added to it afterwards." + held)
             .setNegativeButton("not yet", null)
             .setPositiveButton("seal", new DialogInterface.OnClickListener() {
                 public void onClick(DialogInterface d, int which) {
