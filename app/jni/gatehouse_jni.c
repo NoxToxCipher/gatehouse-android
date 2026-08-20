@@ -211,7 +211,11 @@ JNIEXPORT jint JNICALL NS(continueShift)(JNIEnv *e, jclass c, jint occurred,
 JNIEXPORT jstring JNICALL NS(report)(JNIEnv *e, jclass c,
                                      jint opens, jint closes) {
   (void) c;
-  static char page[65536];
+  /* A full night's report: 1000 lines of up to 100 characters, plus
+     room. Sized for the busy night rather than the quiet one, because
+     the buffer that is big enough for a demo is the one that truncates
+     the record somebody is relying on. */
+  static char page[131072];
   int n = gatehouse_report(opens, closes, page, (int) sizeof page);
   if (n < 0) return (*e)->NewStringUTF(e, "");
   return take(e, page, n);
@@ -219,7 +223,12 @@ JNIEXPORT jstring JNICALL NS(report)(JNIEnv *e, jclass c,
 
 JNIEXPORT jstring JNICALL NS(archive)(JNIEnv *e, jclass c) {
   (void) c;
-  static char buf[131072];
+  /* A full record is 512 entries at up to 900 characters a line, so an
+     archive of one is around half a megabyte. This was 128 KB, which is
+     ample for a quiet night and silently short on a busy one: the
+     archive would refuse to render, the record would not be kept, and
+     the app would decline to continue. */
+  static char buf[524288];
   int n = gatehouse_archive(buf, (int) sizeof buf);
   if (n < 0) return (*e)->NewStringUTF(e, "");
   return take(e, buf, n);
