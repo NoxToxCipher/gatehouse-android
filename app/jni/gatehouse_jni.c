@@ -123,8 +123,16 @@ JNIEXPORT jint JNICALL NS(addCheckpoint)(JNIEnv *e, jclass c, jint occurred,
   (void) c;
   const char *l = (*e)->GetStringUTFChars(e, label, 0);
   const char *u = (*e)->GetStringUTFChars(e, uid, 0);
+  /* Rule 14: a tap claiming a signed tag has to bring back what the tag
+     produced. There is no NFC here yet, so this is a stand-in of the right
+     shape rather than a real one, and it is marked as such on the screen. */
+  static const char stub[64] =
+    "1111111111111111111111111111111111111111111111111111111111111111";
+  int signed_tap = (auth == GATEHOUSE_AUTH_CRYPTOGRAPHIC);
   int r = gatehouse_add_checkpoint(occurred, recorded, l, (int) strlen(l),
-                                   u, (int) strlen(u), taps, auth);
+                                   u, (int) strlen(u), taps, auth,
+                                   signed_tap ? stub : 0,
+                                   signed_tap ? 64 : 0);
   (*e)->ReleaseStringUTFChars(e, label, l);
   (*e)->ReleaseStringUTFChars(e, uid, u);
   return r;
