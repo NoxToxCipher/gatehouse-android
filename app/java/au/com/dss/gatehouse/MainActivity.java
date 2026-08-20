@@ -35,6 +35,11 @@ public class MainActivity extends Activity {
     private TextView page;
     private int taps = 100;
 
+    /** When this shift opened. The report is asked for the window the
+     *  record actually covers rather than a guessed fourteen hours, so
+     *  the page does not report a stretch of night that never happened. */
+    private int openedAt;
+
     /** Minutes since 1970-01-01 00:00 in the zone this site keeps, which is
      *  what the core means by a time. Local rather than UTC on purpose: see
      *  Gatehouse.Clock. */
@@ -112,6 +117,7 @@ public class MainActivity extends Activity {
 
         ScrollView scroll = new ScrollView(this);
         scroll.setBackgroundColor(NAVY);
+        scroll.setFitsSystemWindows(true);
         scroll.addView(root);
         setContentView(scroll);
 
@@ -136,6 +142,7 @@ public class MainActivity extends Activity {
 
     private void startShift() {
         int t = nowMinutes();
+        openedAt = t;
         Core.siteBegin("Northgate Rise, stage 2");
         Core.siteAddPoint("gate A", "04A2B7C1D3E580");
         Core.siteAddPoint("compound", "04B1C2D3E4F590");
@@ -162,7 +169,7 @@ public class MainActivity extends Activity {
         int t = nowMinutes();
         int r = Core.seal(t, t, "off site");
         check(r);
-        String text = Core.report(t - 840, t);
+        String text = Core.report(openedAt, t);
         if (text.length() > 0) {
             page.setText(text);
         }
@@ -182,9 +189,10 @@ public class MainActivity extends Activity {
     }
 
     private void refresh() {
-        status.setText(Core.entryCount() + " entries"
-                       + (Core.isSealed() == 1 ? " · sealed" : " · open")
-                       + (Core.verified() == 1 ? " · verifies" : " · BROKEN"));
+        int n = Core.entryCount();
+        status.setText(n + (n == 1 ? " entry" : " entries")
+                       + (Core.isSealed() == 1 ? " - sealed" : " - open")
+                       + (Core.verified() == 1 ? " - verifies" : " - BROKEN"));
     }
 
     private int dp(int v) {

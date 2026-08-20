@@ -108,7 +108,7 @@ ok
 
 # ---- code -----------------------------------------------------------------
 say "java"
-if ! "$JDK/bin/javac.exe" -nowarn --release 11 -classpath "$JAR" \
+if ! "$JDK/bin/javac.exe" -nowarn --release 11 -encoding UTF-8 -classpath "$JAR" \
      -d "$OUT/classes" app/java/au/com/dss/gatehouse/*.java 2> "$OUT/javac.log"
 then
   echo "FAILED"; cat "$OUT/javac.log"; exit 1
