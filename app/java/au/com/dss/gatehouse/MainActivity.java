@@ -11,13 +11,17 @@ import android.view.View;
 import android.widget.LinearLayout;
 import android.widget.ScrollView;
 import android.widget.TextView;
+import java.io.File;
+import java.io.FileOutputStream;
 import java.util.TimeZone;
 
 /** A screen over the record core.
  *
- * Placeholder in the obvious ways: the site and the guard are hardcoded, a
- * tap is a button rather than an NFC tag, and nothing is written to disk, so
- * closing the app loses the night. What is not placeholder is the record
+ * Placeholder in the obvious ways: the site and the guard are hardcoded, and
+ * a tap is a button rather than an NFC tag. A sealed record is written to a
+ * file before the next one opens, so a night that finished is kept; a night
+ * still running is not, and force-closing mid-shift still loses it. What is
+ * not placeholder is the record
  * underneath. Every entry goes through the same Ada library that is proved
  * and tested on the desktop, the rules that refuse an entry are its rules,
  * the sentence explaining a refusal is its sentence, and the handover page is
@@ -321,13 +325,42 @@ public class MainActivity extends Activity {
         }
     }
 
+    /** Writes the archive to a file, then tells the core it was stored.
+     *
+     *  Two calls, not one, and the second is the honest half. The core hands
+     *  over the bytes; only this side knows whether they reached anywhere
+     *  that survives the app being killed. Saying Kept without writing them
+     *  would be a lie the core cannot catch, which is exactly what this app
+     *  was doing before the two were separated. */
+    private boolean keepArchive() {
+        String text = Core.archive();
+        if (text.length() == 0) {
+            return false;
+        }
+        try {
+            File out = new File(getFilesDir(),
+                                "record-" + Core.head().substring(0, 16) + ".txt");
+            FileOutputStream f = new FileOutputStream(out);
+            f.write(text.getBytes("UTF-8"));
+            f.close();
+        } catch (Exception e) {
+            return false;
+        }
+        int r = Core.kept();
+        return r == Core.OK;
+    }
+
     /** The next record, opened on this one's head so the two read as one run.
-     *  The core will not start it until this one has been written out, so the
-     *  archive is taken first. That rule is the whole point: opening the next
-     *  chain throws this one away, and a night nobody kept is gone. */
+     *  The core will not start it until this one has been stored, which is
+     *  the whole point: opening the next chain throws this one away, and a
+     *  night nobody kept is gone. */
     private void nextShift() {
         int t = nowMinutes();
-        Core.archive();
+        if (!keepArchive()) {
+            banner.setText("could not write the record out; it has not been kept");
+            banner.setVisibility(View.VISIBLE);
+            return;
+        }
         int r = Core.continueShift(t, t, "on site, continuation");
         if (r == Core.OK) {
             openedAt = t;

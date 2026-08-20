@@ -188,6 +188,10 @@ JNIEXPORT jstring JNICALL NS(lastReason)(JNIEnv *e, jclass c) {
   return take(e, why, n);
 }
 
+JNIEXPORT jint JNICALL NS(kept)(JNIEnv *e, jclass c) {
+  (void) e; (void) c; return gatehouse_kept();
+}
+
 JNIEXPORT jint JNICALL NS(isSaved)(JNIEnv *e, jclass c) {
   (void) e; (void) c; return gatehouse_is_saved();
 }
