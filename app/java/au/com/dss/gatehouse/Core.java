@@ -49,6 +49,16 @@ public final class Core {
                                      int recorded, String text, int refers);
     public static native int seal(int occurred, int recorded, String text);
 
+    /** One entry as a line for the screen, 1 based; "" once past the end.
+     *  The wording is the record's, so what a guard watches go in matches
+     *  what the handover page will say about it. */
+    public static native String entryLine(int i);
+
+    /** What the record already holds for a checkpoint: how many times it has
+     *  been recorded tonight, and the minute of the last one (0 for none). */
+    public static native int pointVisits(String label);
+    public static native int pointLast(String label);
+
     public static native int entryCount();
     public static native int isSealed();
     public static native int verified();

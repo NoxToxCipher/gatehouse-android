@@ -158,6 +158,30 @@ JNIEXPORT jint JNICALL NS(seal)(JNIEnv *e, jclass c, jint occurred,
   return r;
 }
 
+JNIEXPORT jstring JNICALL NS(entryLine)(JNIEnv *e, jclass c, jint i) {
+  (void) c;
+  char line[512];
+  int n = gatehouse_entry_line(i, line, (int) sizeof line);
+  if (n <= 0) return (*e)->NewStringUTF(e, "");
+  return take(e, line, n);
+}
+
+JNIEXPORT jint JNICALL NS(pointVisits)(JNIEnv *e, jclass c, jstring label) {
+  (void) c;
+  const char *l = (*e)->GetStringUTFChars(e, label, 0);
+  int r = gatehouse_point_visits(l, (int) strlen(l));
+  (*e)->ReleaseStringUTFChars(e, label, l);
+  return r;
+}
+
+JNIEXPORT jint JNICALL NS(pointLast)(JNIEnv *e, jclass c, jstring label) {
+  (void) c;
+  const char *l = (*e)->GetStringUTFChars(e, label, 0);
+  int r = gatehouse_point_last(l, (int) strlen(l));
+  (*e)->ReleaseStringUTFChars(e, label, l);
+  return r;
+}
+
 JNIEXPORT jint JNICALL NS(entryCount)(JNIEnv *e, jclass c) {
   (void) e; (void) c; return gatehouse_entry_count();
 }

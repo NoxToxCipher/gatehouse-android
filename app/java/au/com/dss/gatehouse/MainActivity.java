@@ -1,6 +1,8 @@
 package au.com.dss.gatehouse;
 
 import android.app.Activity;
+import android.app.AlertDialog;
+import android.content.DialogInterface;
 import android.content.res.ColorStateList;
 import android.graphics.Typeface;
 import android.graphics.drawable.GradientDrawable;
@@ -53,6 +55,8 @@ public class MainActivity extends Activity {
     private LinearLayout pills;
     private LinearLayout tiles;
     private LinearLayout notes;
+    private LinearLayout tonight;
+    private TextView tonightTitle;
     private TextView banner;
     private TextView primary;
     private TextView pageTitle;
@@ -82,8 +86,26 @@ public class MainActivity extends Activity {
 
         pills = new LinearLayout(this);
         pills.setOrientation(LinearLayout.HORIZONTAL);
-        pills.setPadding(0, dp(14), 0, dp(22));
+        pills.setPadding(0, dp(14), 0, dp(4));
         root.addView(pills);
+
+        // Directly under the status pills, where a refusal is on screen
+        // without scrolling. It used to sit below the seal button, off the
+        // bottom of a phone: the record refused an entry and said why, and
+        // the guard never saw the sentence.
+        banner = new TextView(this);
+        banner.setTextSize(14);
+        banner.setTextColor(AMBER);
+        banner.setPadding(dp(14), dp(12), dp(14), dp(12));
+        banner.setBackground(rounded(PANEL, dp(12)));
+        banner.setVisibility(View.GONE);
+        LinearLayout.LayoutParams bl = new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT);
+        bl.topMargin = dp(14);
+        bl.bottomMargin = dp(4);
+        banner.setLayoutParams(bl);
+        root.addView(banner);
 
         root.addView(label("checkpoints"));
         tiles = new LinearLayout(this);
@@ -97,6 +119,12 @@ public class MainActivity extends Activity {
             tiles.addView(row);
         }
         root.addView(tiles);
+
+        root.addView(tonightLabel());
+        tonight = new LinearLayout(this);
+        tonight.setOrientation(LinearLayout.VERTICAL);
+        tonight.setPadding(0, dp(10), 0, dp(22));
+        root.addView(tonight);
 
         root.addView(label("write up"));
         notes = new LinearLayout(this);
@@ -128,19 +156,6 @@ public class MainActivity extends Activity {
         primary.setGravity(Gravity.CENTER);
         primary.setPadding(dp(16), dp(17), dp(16), dp(17));
         root.addView(primary);
-
-        banner = new TextView(this);
-        banner.setTextSize(14);
-        banner.setTextColor(AMBER);
-        banner.setPadding(dp(14), dp(12), dp(14), dp(12));
-        banner.setBackground(rounded(PANEL, dp(12)));
-        banner.setVisibility(View.GONE);
-        LinearLayout.LayoutParams bl = new LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT,
-                LinearLayout.LayoutParams.WRAP_CONTENT);
-        bl.topMargin = dp(16);
-        banner.setLayoutParams(bl);
-        root.addView(banner);
 
         pageTitle = label("the handover");
         pageTitle.setPadding(0, dp(26), 0, dp(10));
@@ -220,13 +235,22 @@ public class MainActivity extends Activity {
 
     /** A checkpoint. Four of them, none singled out as next: the patrol is
      *  meant to be walked in whatever order the guard chooses. */
+    /** A checkpoint tile, showing what the record holds for that point.
+     *
+     *  It used to show the name alone, and the only sign a tap had landed was
+     *  a small count changing elsewhere on the page. A guard who is not sure
+     *  taps again, and a second tap is a second visit in the record on a point
+     *  walked once: the screen was quietly inviting the record to say
+     *  something untrue. The count and the time under the name come from the
+     *  core, so what the tile claims is what the record holds. */
     private TextView tile(final String name, final String uid, boolean left) {
         TextView t = new TextView(this);
+        t.setTag(name);
         t.setText(name);
         t.setTextSize(16);
         t.setTextColor(PALE);
         t.setGravity(Gravity.CENTER);
-        t.setPadding(dp(12), dp(24), dp(12), dp(24));
+        t.setPadding(dp(12), dp(18), dp(12), dp(18));
         t.setBackground(pressable(PANEL, dp(14)));
         t.setOnClickListener(new View.OnClickListener() {
             public void onClick(View v) { tap(name, uid); }
@@ -252,6 +276,51 @@ public class MainActivity extends Activity {
                 LinearLayout.LayoutParams.MATCH_PARENT,
                 LinearLayout.LayoutParams.WRAP_CONTENT);
         lp.bottomMargin = dp(8);
+        t.setLayoutParams(lp);
+        return t;
+    }
+
+    private TextView tonightLabel() {
+        tonightTitle = label("tonight so far");
+        return tonightTitle;
+    }
+
+    /** The record, read back out of the record.
+     *
+     *  Every line here comes from the core, one call per entry, rather than
+     *  from anything this screen remembered doing. That matters more than it
+     *  looks: an app listing what it believes it sent would go on showing an
+     *  entry the record refused, and would be the last thing to find out it
+     *  had drifted. Walking until the core returns nothing also means a
+     *  restored record fills the list in correctly with no extra work. */
+    private void fillTonight() {
+        tonight.removeAllViews();
+        int shown = 0;
+        for (int i = 1; ; i++) {
+            String line = Core.entryLine(i);
+            if (line.length() == 0) {
+                break;
+            }
+            tonight.addView(entryRow(line, i));
+            shown++;
+        }
+        boolean any = shown > 0;
+        tonight.setVisibility(any ? View.VISIBLE : View.GONE);
+        tonightTitle.setVisibility(any ? View.VISIBLE : View.GONE);
+    }
+
+    private TextView entryRow(String line, int seq) {
+        TextView t = new TextView(this);
+        t.setText(line);
+        t.setTextSize(14);
+        t.setTextColor(PALE);
+        t.setTypeface(Typeface.MONOSPACE);
+        t.setPadding(dp(14), dp(11), dp(14), dp(11));
+        t.setBackground(rounded(PANEL, dp(10)));
+        LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT);
+        lp.bottomMargin = dp(6);
         t.setLayoutParams(lp);
         return t;
     }
@@ -398,6 +467,15 @@ public class MainActivity extends Activity {
         pills.addView(pill(isSealed ? "sealed" : "open", isSealed));
         pills.addView(pill(Core.verified() == 1 ? "verifies" : "BROKEN", false));
 
+        for (int r = 0; r < tiles.getChildCount(); r++) {
+            LinearLayout row = (LinearLayout) tiles.getChildAt(r);
+            for (int k = 0; k < row.getChildCount(); k++) {
+                TextView t = (TextView) row.getChildAt(k);
+                markTile(t, (String) t.getTag());
+            }
+        }
+        fillTonight();
+
         setLive(tiles, !isSealed);
         setLive(notes, !isSealed);
 
@@ -413,9 +491,55 @@ public class MainActivity extends Activity {
             primary.setTextColor(AMBER_INK);
             primary.setBackground(pressable(AMBER, dp(14)));
             primary.setOnClickListener(new View.OnClickListener() {
-                public void onClick(View v) { sealAndShow(); }
+                public void onClick(View v) { askThenSeal(); }
             });
         }
+    }
+
+    /** Sealing is final: nothing can be added to a sealed record, by design.
+     *  It was one tap, in the largest control on the screen, with the tiles
+     *  right above it. A guard reaching for a checkpoint and catching this
+     *  instead ended the night, and no part of the record can undo that.
+     *
+     *  The count is in the question because it is the thing worth checking:
+     *  a guard who reads "seal 3 entries" at 05:00 knows something is wrong
+     *  before the record says so. */
+    private void askThenSeal() {
+        int n = Core.entryCount();
+        new AlertDialog.Builder(this)
+            .setTitle("Seal the record?")
+            .setMessage("Sealing ends tonight's record with " + n
+                        + (n == 1 ? " entry" : " entries")
+                        + ". Nothing can be added to it afterwards.")
+            .setNegativeButton("not yet", null)
+            .setPositiveButton("seal", new DialogInterface.OnClickListener() {
+                public void onClick(DialogInterface d, int which) {
+                    sealAndShow();
+                }
+            })
+            .show();
+    }
+
+    /** What the record holds for this point, under its name. Never walked
+     *  reads as exactly that rather than as a zero, because "0 visits" and
+     *  "not yet" are the same fact and only one of them is a sentence. */
+    private void markTile(TextView t, String name) {
+        int visits = Core.pointVisits(name);
+        if (visits <= 0) {
+            t.setText(name + "\nnot yet");
+            t.setTextColor(PALE);
+            return;
+        }
+        int at = Core.pointLast(name);
+        t.setText(name + "\n" + clock(at)
+                  + (visits > 1 ? "  x" + visits : ""));
+        t.setTextColor(AMBER);
+    }
+
+    private String clock(int minutes) {
+        int h = (minutes / 60) % 24;
+        int m = minutes % 60;
+        return (h < 10 ? "0" : "") + h + ":" + (m < 10 ? "0" : "") + m;
     }
 
     private void setLive(LinearLayout group, boolean on) {
