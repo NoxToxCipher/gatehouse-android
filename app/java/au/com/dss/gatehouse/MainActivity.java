@@ -6113,6 +6113,15 @@ private void updateTabSelection(int tabIndex) {
 
     private boolean isCarbonCopyMode = false;
 
+    private String getFormattedShiftDateHeader() {
+        SimpleDateFormat sdf = new SimpleDateFormat("EEEE d'TH' MMMM, yyyy", Locale.US);
+        String formatted = sdf.format(new Date()).toUpperCase(Locale.US);
+        return formatted.replace("1TH", "1ST").replace("2TH", "2ND").replace("3TH", "3RD")
+                .replace("11ST", "11TH").replace("12ND", "12TH").replace("13RD", "13TH")
+                .replace("21TH", "21ST").replace("22TH", "22ND").replace("23TH", "23RD")
+                .replace("31TH", "31ST");
+    }
+
     private LinearLayout tonightLabel() {
         LinearLayout row = new LinearLayout(this);
         row.setOrientation(LinearLayout.HORIZONTAL);
@@ -6125,85 +6134,115 @@ private void updateTabSelection(int tabIndex) {
         row.addView(tonightTitle);
 
         final TextView btnToggleCarbon = new TextView(this);
-        btnToggleCarbon.setText(isCarbonCopyMode ? "🟡 CARBON COPY (DSS)" : "📄 CLIENT TOP SHEET");
-        btnToggleCarbon.setTextColor(isCarbonCopyMode ? 0xFFF59E0B : colCyan);
+        btnToggleCarbon.setText(isCarbonCopyMode ? "🟡 CARBON DUPLICATE (PAGE 28)" : "📄 ORIGINAL SHEET (PAGE 28)");
+        btnToggleCarbon.setTextColor(isCarbonCopyMode ? 0xFFFDE047 : colCyan);
         btnToggleCarbon.setTextSize(9.5f);
         btnToggleCarbon.setTypeface(Typeface.create(Typeface.MONOSPACE, Typeface.BOLD));
         btnToggleCarbon.setPadding(dp(8), dp(4), dp(8), dp(4));
-        btnToggleCarbon.setBackground(rounded(isCarbonCopyMode ? 0x22F59E0B : 0x2206B6D4, dp(6)));
+        btnToggleCarbon.setBackground(rounded(isCarbonCopyMode ? 0x33FDE047 : 0x2206B6D4, dp(6)));
         btnToggleCarbon.setOnClickListener(new View.OnClickListener() {
             public void onClick(View v) {
                 hapticHeavyClick();
-                isCarbonCopyMode = !isCarbonCopyMode;
-                btnToggleCarbon.setText(isCarbonCopyMode ? "🟡 CARBON COPY (DSS)" : "📄 CLIENT TOP SHEET");
-                btnToggleCarbon.setTextColor(isCarbonCopyMode ? 0xFFF59E0B : colCyan);
-                btnToggleCarbon.setBackground(rounded(isCarbonCopyMode ? 0x22F59E0B : 0x2206B6D4, dp(6)));
-                if (tonight != null) {
-                    tonight.animate().rotationY(90f).setDuration(120).withEndAction(new Runnable() {
-                        public void run() {
-                            fillTonight();
-                            tonight.setRotationY(-90f);
-                            tonight.animate().rotationY(0f).setDuration(160).start();
-                        }
-                    }).start();
-                }
+                flipLedgerPage();
             }
         });
         row.addView(btnToggleCarbon);
         return row;
     }
 
+    private void flipLedgerPage() {
+        if (tonight == null) return;
+        isCarbonCopyMode = !isCarbonCopyMode;
+        tonight.setCameraDistance(dp(12000));
+        tonight.animate()
+                .rotationX(-90f)
+                .scaleX(0.96f)
+                .scaleY(0.96f)
+                .setDuration(160)
+                .withEndAction(new Runnable() {
+                    public void run() {
+                        fillTonight();
+                        tonight.setRotationX(90f);
+                        tonight.animate()
+                                .rotationX(0f)
+                                .scaleX(1f)
+                                .scaleY(1f)
+                                .setDuration(200)
+                                .setInterpolator(new OvershootInterpolator(1.08f))
+                                .start();
+                    }
+                })
+                .start();
+    }
+
     private void fillTonight() {
         tonight.removeAllViews();
-        tonight.setCameraDistance(dp(8000));
+        tonight.setCameraDistance(dp(12000));
 
-        // 1. Carbon Folio Binder Card
-        LinearLayout ledgerCard = new LinearLayout(this);
+        // 1. Digital Folio Binder Card
+        final LinearLayout ledgerCard = new LinearLayout(this);
         ledgerCard.setOrientation(LinearLayout.VERTICAL);
-        int sheetBg = isCarbonCopyMode ? 0xFF141923 : colPanel;
-        ledgerCard.setBackground(rounded(sheetBg, dp(16)));
-        ledgerCard.setPadding(dp(14), dp(12), dp(14), dp(14));
+
+        // Styling based on Authentic Security Log Book Photos
+        int sheetBg = isCarbonCopyMode ? 0xFF241E09 : 0xFF0F172A;
+        int ruleCol = isCarbonCopyMode ? 0x44FDE047 : 0x2238BDF8;
+        int marginLineCol = isCarbonCopyMode ? 0x883B82F6 : 0x4438BDF8;
+        int headerModeCol = isCarbonCopyMode ? 0xFFFDE047 : colQuiet;
+        int dateCol = isCarbonCopyMode ? 0xFFFEF08A : colPale;
+        int pageNumCol = isCarbonCopyMode ? 0xFFFDE047 : colAccent;
+
+        ledgerCard.setBackground(rounded(sheetBg, dp(18)));
+        ledgerCard.setPadding(dp(16), dp(14), dp(16), dp(14));
         LinearLayout.LayoutParams lcp = new LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
         lcp.bottomMargin = dp(14);
         ledgerCard.setLayoutParams(lcp);
 
-        // Perforated Binder Header
-        LinearLayout folioTop = new LinearLayout(this);
-        folioTop.setOrientation(LinearLayout.HORIZONTAL);
-        folioTop.setGravity(Gravity.CENTER_VERTICAL);
-        folioTop.setPadding(0, 0, 0, dp(10));
+        // Header: Left: "Original" / "Duplicate", Center: Date, Right: Page "28"
+        LinearLayout notebookHeader = new LinearLayout(this);
+        notebookHeader.setOrientation(LinearLayout.HORIZONTAL);
+        notebookHeader.setGravity(Gravity.CENTER_VERTICAL);
+        notebookHeader.setPadding(dp(4), dp(2), dp(4), dp(8));
 
-        TextView folioTitle = new TextView(this);
-        folioTitle.setText(isCarbonCopyMode
-                ? "DOHERTY SECURITY SERVICES · DUPLICATE CARBON ARCHIVE"
-                : "HUME DOORS & TIMBER · SECURITY REGISTER (CLIENT ORIGINAL)");
-        folioTitle.setTextColor(isCarbonCopyMode ? 0xFFF59E0B : colAccent);
-        folioTitle.setTextSize(9.5f);
-        folioTitle.setTypeface(Typeface.create(Typeface.MONOSPACE, Typeface.BOLD));
-        folioTitle.setLetterSpacing(0.08f);
-        LinearLayout.LayoutParams ftl = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
-        folioTitle.setLayoutParams(ftl);
-        folioTop.addView(folioTitle);
+        TextView tvMode = new TextView(this);
+        tvMode.setText(isCarbonCopyMode ? "Duplicate" : "Original");
+        tvMode.setTextColor(headerModeCol);
+        tvMode.setTextSize(11.5f);
+        tvMode.setTypeface(Typeface.create(Typeface.DEFAULT, Typeface.BOLD_ITALIC));
+        LinearLayout.LayoutParams tml = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1.2f);
+        tvMode.setLayoutParams(tml);
+        notebookHeader.addView(tvMode);
 
-        TextView stampBadge = new TextView(this);
-        stampBadge.setText(isCarbonCopyMode ? "CARBON COPY" : "TOP ORIGINAL");
-        stampBadge.setTextColor(isCarbonCopyMode ? 0xFFF59E0B : colCyan);
-        stampBadge.setTextSize(8.5f);
-        stampBadge.setTypeface(Typeface.MONOSPACE);
-        stampBadge.setPadding(dp(6), dp(2), dp(6), dp(2));
-        stampBadge.setBackground(rounded(isCarbonCopyMode ? 0x22F59E0B : 0x2206B6D4, dp(4)));
-        folioTop.addView(stampBadge);
-        ledgerCard.addView(folioTop);
+        TextView tvDate = new TextView(this);
+        tvDate.setText(getFormattedShiftDateHeader());
+        tvDate.setTextColor(dateCol);
+        tvDate.setTextSize(11f);
+        tvDate.setTypeface(Typeface.create(Typeface.MONOSPACE, Typeface.BOLD));
+        tvDate.setGravity(Gravity.CENTER);
+        LinearLayout.LayoutParams tdl = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 3.2f);
+        tvDate.setLayoutParams(tdl);
+        notebookHeader.addView(tvDate);
 
-        // Divider
-        View div = new View(this);
-        div.setBackgroundColor(isCarbonCopyMode ? 0x33F59E0B : colLineSubtle);
-        LinearLayout.LayoutParams dvl = new LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT, dp(1));
-        dvl.bottomMargin = dp(10);
-        div.setLayoutParams(dvl);
-        ledgerCard.addView(div);
+        TextView tvPageNum = new TextView(this);
+        tvPageNum.setText("28");
+        tvPageNum.setTextColor(pageNumCol);
+        tvPageNum.setTextSize(13f);
+        tvPageNum.setTypeface(Typeface.create(Typeface.MONOSPACE, Typeface.BOLD));
+        tvPageNum.setGravity(Gravity.END);
+        LinearLayout.LayoutParams tpl = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 0.8f);
+        tvPageNum.setLayoutParams(tpl);
+        notebookHeader.addView(tvPageNum);
+
+        ledgerCard.addView(notebookHeader);
+
+        // Top Double Rule Header Line
+        View topRule = new View(this);
+        topRule.setBackgroundColor(marginLineCol);
+        LinearLayout.LayoutParams trl = new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT, dp(2));
+        trl.bottomMargin = dp(6);
+        topRule.setLayoutParams(trl);
+        ledgerCard.addView(topRule);
 
         int shown = 0;
         for (int i = 1; ; i++) {
@@ -6218,34 +6257,246 @@ private void updateTabSelection(int tabIndex) {
         }
         shown += pending.size();
 
-        // Footer Attestation
-        LinearLayout folioFoot = new LinearLayout(this);
-        folioFoot.setOrientation(LinearLayout.HORIZONTAL);
-        folioFoot.setGravity(Gravity.CENTER_VERTICAL);
-        folioFoot.setPadding(0, dp(10), 0, dp(2));
+        // If fewer entries, add authentic blank ruled lines down the page
+        int minLines = 5;
+        if (shown < minLines) {
+            for (int k = shown + 1; k <= minLines; k++) {
+                ledgerCard.addView(blankRuledLine(k));
+            }
+        }
 
-        TextView footLeft = new TextView(this);
-        footLeft.setText("DSS-LOGBOOK-41207 · SPARK SHA-256");
-        footLeft.setTextColor(colQuiet);
-        footLeft.setTextSize(8.5f);
-        footLeft.setTypeface(Typeface.MONOSPACE);
-        LinearLayout.LayoutParams fll = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
-        footLeft.setLayoutParams(fll);
-        folioFoot.addView(footLeft);
+        // Bottom Page Divider Line
+        View botRule = new View(this);
+        botRule.setBackgroundColor(ruleCol);
+        LinearLayout.LayoutParams brl = new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT, dp(1));
+        brl.topMargin = dp(6);
+        brl.bottomMargin = dp(8);
+        botRule.setLayoutParams(brl);
+        ledgerCard.addView(botRule);
 
-        TextView footRight = new TextView(this);
-        footRight.setText("OFFICER L. DOHERTY #41207 ✓");
-        footRight.setTextColor(colMuted);
-        footRight.setTextSize(8.5f);
-        footRight.setTypeface(Typeface.MONOSPACE);
-        folioFoot.addView(footRight);
+        // Interactive Page Flip / Carbon Turning Bar
+        LinearLayout flipBar = new LinearLayout(this);
+        flipBar.setOrientation(LinearLayout.HORIZONTAL);
+        flipBar.setGravity(Gravity.CENTER_VERTICAL);
+        flipBar.setPadding(dp(10), dp(8), dp(10), dp(8));
+        flipBar.setBackground(rounded(isCarbonCopyMode ? 0x33FDE047 : 0x2238BDF8, dp(8)));
+        flipBar.setOnClickListener(new View.OnClickListener() {
+            public void onClick(View v) {
+                hapticHeavyClick();
+                flipLedgerPage();
+            }
+        });
 
-        ledgerCard.addView(folioFoot);
+        TextView flipIcon = new TextView(this);
+        flipIcon.setText(isCarbonCopyMode ? "📄" : "🟡");
+        flipIcon.setTextSize(13f);
+        flipIcon.setPadding(0, 0, dp(6), 0);
+        flipBar.addView(flipIcon);
+
+        TextView flipText = new TextView(this);
+        flipText.setText(isCarbonCopyMode
+                ? "FLIP BACK TO ORIGINAL (TOP SHEET) ▴"
+                : "FLIP TO CANARY CARBON COPY (DUPLICATE) ▾");
+        flipText.setTextColor(isCarbonCopyMode ? 0xFFFEF08A : colCyan);
+        flipText.setTextSize(10f);
+        flipText.setTypeface(Typeface.create(Typeface.MONOSPACE, Typeface.BOLD));
+        LinearLayout.LayoutParams ftlp = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
+        flipText.setLayoutParams(ftlp);
+        flipBar.addView(flipText);
+
+        TextView pageBadge = new TextView(this);
+        pageBadge.setText("PAGE 28/50");
+        pageBadge.setTextColor(isCarbonCopyMode ? 0xFFFDE047 : colMuted);
+        pageBadge.setTextSize(9f);
+        pageBadge.setTypeface(Typeface.MONOSPACE);
+        flipBar.addView(pageBadge);
+
+        ledgerCard.addView(flipBar);
+
+        // Touch listener for swipe down/up to flip page
+        ledgerCard.setOnTouchListener(new View.OnTouchListener() {
+            private float downY = 0f;
+            private boolean isFlipping = false;
+
+            @Override
+            public boolean onTouch(View v, MotionEvent event) {
+                switch (event.getActionMasked()) {
+                    case MotionEvent.ACTION_DOWN:
+                        downY = event.getY();
+                        isFlipping = false;
+                        break;
+                    case MotionEvent.ACTION_MOVE:
+                        float dy = event.getY() - downY;
+                        if (Math.abs(dy) > dp(45) && !isFlipping) {
+                            isFlipping = true;
+                            hapticHeavyClick();
+                            flipLedgerPage();
+                            return true;
+                        }
+                        break;
+                }
+                return false;
+            }
+        });
+
         tonight.addView(ledgerCard);
 
         boolean any = shown > 0;
         tonight.setVisibility(any ? View.VISIBLE : View.GONE);
         if (tonightTitle != null) tonightTitle.setVisibility(any ? View.VISIBLE : View.GONE);
+    }
+
+    private LinearLayout blankRuledLine(int seq) {
+        LinearLayout row = new LinearLayout(this);
+        row.setOrientation(LinearLayout.VERTICAL);
+        row.setPadding(0, dp(3), 0, dp(3));
+
+        LinearLayout contentRow = new LinearLayout(this);
+        contentRow.setOrientation(LinearLayout.HORIZONTAL);
+        contentRow.setGravity(Gravity.CENTER_VERTICAL);
+        contentRow.setMinimumHeight(dp(22));
+
+        TextView timeBlank = new TextView(this);
+        timeBlank.setText("--:--");
+        timeBlank.setTextColor(isCarbonCopyMode ? 0x22FDE047 : 0x2238BDF8);
+        timeBlank.setTextSize(11f);
+        timeBlank.setTypeface(Typeface.MONOSPACE);
+        timeBlank.setGravity(Gravity.CENTER);
+        LinearLayout.LayoutParams tblp = new LinearLayout.LayoutParams(dp(54), LinearLayout.LayoutParams.WRAP_CONTENT);
+        timeBlank.setLayoutParams(tblp);
+        contentRow.addView(timeBlank);
+
+        View vertMargin = new View(this);
+        vertMargin.setBackgroundColor(isCarbonCopyMode ? 0x443B82F6 : 0x2238BDF8);
+        LinearLayout.LayoutParams vml = new LinearLayout.LayoutParams(dp(2), LinearLayout.LayoutParams.MATCH_PARENT);
+        vml.setMargins(dp(6), 0, dp(10), 0);
+        vertMargin.setLayoutParams(vml);
+        contentRow.addView(vertMargin);
+
+        row.addView(contentRow);
+
+        View rule = new View(this);
+        rule.setBackgroundColor(isCarbonCopyMode ? 0x22FDE047 : 0x1538BDF8);
+        LinearLayout.LayoutParams rl = new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT, dp(1));
+        rule.setLayoutParams(rl);
+        row.addView(rule);
+
+        return row;
+    }
+
+    private LinearLayout entryRow(String line, int seq) {
+        LinearLayout row = new LinearLayout(this);
+        row.setOrientation(LinearLayout.HORIZONTAL);
+        row.setGravity(Gravity.CENTER_VERTICAL);
+        row.setPadding(dp(2), dp(6), dp(2), dp(6));
+
+        int ruleCol = isCarbonCopyMode ? 0x33FDE047 : 0x2238BDF8;
+        int marginLineCol = isCarbonCopyMode ? 0x883B82F6 : 0x4438BDF8;
+        int timeCol = isCarbonCopyMode ? 0xFF60A5FA : colCyan;
+        int textInkCol = isCarbonCopyMode ? 0xFF93C5FD : colPale;
+
+        // Extract timestamp (e.g. "18:00") and content
+        String timeStr = "";
+        String contentStr = line;
+        if (line.length() >= 5 && line.charAt(2) == ':') {
+            timeStr = line.substring(0, 5);
+            contentStr = line.substring(5).trim();
+        }
+
+        // Left Time Column (Authentic military time)
+        LinearLayout leftCol = new LinearLayout(this);
+        leftCol.setOrientation(LinearLayout.VERTICAL);
+        leftCol.setGravity(Gravity.CENTER);
+        LinearLayout.LayoutParams lml = new LinearLayout.LayoutParams(dp(54), LinearLayout.LayoutParams.WRAP_CONTENT);
+        leftCol.setLayoutParams(lml);
+
+        TextView timeTv = new TextView(this);
+        String displayTime = timeStr.isEmpty() ? clock(nowMinutes()) : timeStr;
+        timeTv.setText(displayTime);
+        timeTv.setTextColor(timeCol);
+        timeTv.setTextSize(12f);
+        timeTv.setTypeface(Typeface.create(Typeface.MONOSPACE, Typeface.BOLD));
+        leftCol.addView(timeTv);
+        row.addView(leftCol);
+
+        // Vertical Blue Notebook Margin Rule
+        View vertMargin = new View(this);
+        vertMargin.setBackgroundColor(marginLineCol);
+        LinearLayout.LayoutParams vml = new LinearLayout.LayoutParams(dp(2), LinearLayout.LayoutParams.MATCH_PARENT);
+        vml.setMargins(dp(6), 0, dp(10), 0);
+        vertMargin.setLayoutParams(vml);
+        row.addView(vertMargin);
+
+        // Right Entry Column
+        LinearLayout rightCol = new LinearLayout(this);
+        rightCol.setOrientation(LinearLayout.VERTICAL);
+        LinearLayout.LayoutParams rcl = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
+        rightCol.setLayoutParams(rcl);
+
+        // Category Tag
+        String tag = "✓ OCCURRENCE";
+        int tagCol = colMuted;
+        if (contentStr.startsWith("[INCIDENT:")) {
+            tag = "🚨 INCIDENT";
+            tagCol = colCrimson;
+        } else if (contentStr.startsWith("[OBSERVATION") || contentStr.startsWith("[NOTE")) {
+            tag = "📝 NOTE";
+            tagCol = isCarbonCopyMode ? 0xFF93C5FD : colCyan;
+        } else if (contentStr.contains("Lot") || contentStr.contains("Factory")) {
+            tag = "🏭 LOT AUDIT";
+            tagCol = isCarbonCopyMode ? 0xFF34D399 : colEmerald;
+        } else if (contentStr.contains("External") || contentStr.contains("Perimeter")) {
+            tag = "🛡️ PERIMETER";
+            tagCol = isCarbonCopyMode ? 0xFFFCD34D : colAccent;
+        } else if (contentStr.contains("Pump") || contentStr.contains("Fire") || contentStr.contains("PSI")) {
+            tag = "🚒 FIRE SYSTEM";
+            tagCol = 0xFFF59E0B;
+        } else if (contentStr.contains("handover") || contentStr.contains("on site") || contentStr.contains("OFFICER")) {
+            tag = "📋 HANDOVER";
+            tagCol = isCarbonCopyMode ? 0xFFFCD34D : colAccent;
+        }
+
+        LinearLayout tagRow = new LinearLayout(this);
+        tagRow.setOrientation(LinearLayout.HORIZONTAL);
+        tagRow.setGravity(Gravity.CENTER_VERTICAL);
+
+        TextView tagTv = new TextView(this);
+        tagTv.setText(tag);
+        tagTv.setTextColor(tagCol);
+        tagTv.setTextSize(8.5f);
+        tagTv.setTypeface(Typeface.create(Typeface.MONOSPACE, Typeface.BOLD));
+        tagRow.addView(tagTv);
+        rightCol.addView(tagRow);
+
+        TextView contentTv = new TextView(this);
+        contentTv.setText(contentStr);
+        contentTv.setTextSize(12.5f);
+        contentTv.setTextColor(textInkCol);
+        contentTv.setTypeface(isCarbonCopyMode ? Typeface.create(Typeface.MONOSPACE, Typeface.BOLD) : Typeface.DEFAULT_BOLD);
+        contentTv.setPadding(0, dp(1), 0, 0);
+        rightCol.addView(contentTv);
+
+        row.addView(rightCol);
+
+        // Ruled bottom line under each entry
+        LinearLayout container = new LinearLayout(this);
+        container.setOrientation(LinearLayout.VERTICAL);
+        container.addView(row);
+
+        View rule = new View(this);
+        rule.setBackgroundColor(ruleCol);
+        LinearLayout.LayoutParams rl = new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT, dp(1));
+        rl.topMargin = dp(2);
+        rule.setLayoutParams(rl);
+        container.addView(rule);
+
+        LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+        container.setLayoutParams(lp);
+        return container;
     }
 
     private LinearLayout pendingRow(final Pending p) {
@@ -6345,109 +6596,6 @@ private void updateTabSelection(int tabIndex) {
         banner.setText("taken back, and never written to the record");
         banner.setVisibility(View.VISIBLE);
         refresh();
-    }
-
-    private LinearLayout entryRow(String line, int seq) {
-        LinearLayout row = new LinearLayout(this);
-        row.setOrientation(LinearLayout.HORIZONTAL);
-        row.setGravity(Gravity.TOP);
-        row.setPadding(dp(4), dp(8), dp(4), dp(8));
-        row.setBackground(pressable(Color.TRANSPARENT, dp(6)));
-
-        // Extract timestamp (e.g. "18:00") and content
-        String timeStr = "";
-        String contentStr = line;
-        if (line.length() >= 5 && line.charAt(2) == ':') {
-            timeStr = line.substring(0, 5);
-            contentStr = line.substring(5).trim();
-        }
-
-        // Left Margin Column (Seq # and Time)
-        LinearLayout leftMarginCol = new LinearLayout(this);
-        leftMarginCol.setOrientation(LinearLayout.VERTICAL);
-        leftMarginCol.setGravity(Gravity.CENTER_HORIZONTAL);
-        LinearLayout.LayoutParams lml = new LinearLayout.LayoutParams(dp(54), LinearLayout.LayoutParams.WRAP_CONTENT);
-        leftMarginCol.setLayoutParams(lml);
-
-        TextView seqTv = new TextView(this);
-        seqTv.setText(String.format(Locale.US, "#%02d", seq));
-        seqTv.setTextColor(isCarbonCopyMode ? 0x99F59E0B : colQuiet);
-        seqTv.setTextSize(8.5f);
-        seqTv.setTypeface(Typeface.MONOSPACE);
-        leftMarginCol.addView(seqTv);
-
-        TextView timeTv = new TextView(this);
-        timeTv.setText(timeStr.isEmpty() ? clock(nowMinutes()) : timeStr);
-        timeTv.setTextColor(isCarbonCopyMode ? 0xFFFCD34D : colCyan);
-        timeTv.setTextSize(11f);
-        timeTv.setTypeface(Typeface.create(Typeface.MONOSPACE, Typeface.BOLD));
-        leftMarginCol.addView(timeTv);
-        row.addView(leftMarginCol);
-
-        // Vertical Red Ledger Line
-        View redLine = new View(this);
-        redLine.setBackgroundColor(isCarbonCopyMode ? 0x55EF4444 : 0x33EF4444);
-        LinearLayout.LayoutParams rll = new LinearLayout.LayoutParams(dp(2), LinearLayout.LayoutParams.MATCH_PARENT);
-        rll.setMargins(dp(6), 0, dp(8), 0);
-        redLine.setLayoutParams(rll);
-        row.addView(redLine);
-
-        // Right Entry Column
-        LinearLayout rightCol = new LinearLayout(this);
-        rightCol.setOrientation(LinearLayout.VERTICAL);
-        LinearLayout.LayoutParams rcl = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
-        rightCol.setLayoutParams(rcl);
-
-        // Category Tag + Content
-        String tag = "✓ OCCURRENCE";
-        int tagCol = colMuted;
-        if (contentStr.startsWith("[INCIDENT:")) {
-            tag = "🚨 INCIDENT";
-            tagCol = colCrimson;
-        } else if (contentStr.startsWith("[OBSERVATION")) {
-            tag = "📝 NOTE";
-            tagCol = colCyan;
-        } else if (contentStr.contains("Lot") || contentStr.contains("Factory")) {
-            tag = "🏭 LOT AUDIT";
-            tagCol = colEmerald;
-        } else if (contentStr.contains("External") || contentStr.contains("Perimeter")) {
-            tag = "🛡️ PERIMETER";
-            tagCol = colAccent;
-        } else if (contentStr.contains("Pump") || contentStr.contains("Fire") || contentStr.contains("PSI")) {
-            tag = "🚒 FIRE SYSTEM";
-            tagCol = 0xFFF59E0B;
-        } else if (contentStr.contains("handover") || contentStr.contains("on site")) {
-            tag = "📋 HANDOVER";
-            tagCol = colAccent;
-        }
-
-        LinearLayout tagRow = new LinearLayout(this);
-        tagRow.setOrientation(LinearLayout.HORIZONTAL);
-        tagRow.setGravity(Gravity.CENTER_VERTICAL);
-
-        TextView tagTv = new TextView(this);
-        tagTv.setText(tag);
-        tagTv.setTextColor(tagCol);
-        tagTv.setTextSize(8.5f);
-        tagTv.setTypeface(Typeface.create(Typeface.MONOSPACE, Typeface.BOLD));
-        tagRow.addView(tagTv);
-        rightCol.addView(tagRow);
-
-        TextView contentTv = new TextView(this);
-        contentTv.setText(contentStr);
-        contentTv.setTextSize(12.5f);
-        contentTv.setTextColor(isCarbonCopyMode ? 0xFFE2E8F0 : colPale);
-        contentTv.setTypeface(Typeface.DEFAULT_BOLD);
-        contentTv.setPadding(0, dp(2), 0, 0);
-        rightCol.addView(contentTv);
-
-        row.addView(rightCol);
-
-        LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
-        lp.bottomMargin = dp(6);
-        row.setLayoutParams(lp);
-        return row;
     }
 
     private GradientDrawable rounded(int fill, int radius) {
