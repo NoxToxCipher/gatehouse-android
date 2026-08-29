@@ -957,19 +957,22 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
         mainSurfaceContainer.addView(scrollIndicator);
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-            scroll.setOnScrollChangeListener(new View.OnScrollChangeListener() {
-                public void onScrollChange(View v, int scrollX, int scrollY, int oldScrollX, int oldScrollY) {
-                    if (root != null && scroll != null) {
-                        int maxScroll = root.getHeight() - scroll.getHeight();
-                        if (maxScroll > 0) {
-                            float pct = Math.max(0f, Math.min(1f, (float) scrollY / maxScroll));
-                            if (scrollIndicator != null) {
-                                scrollIndicator.setScrollProgress(pct);
+            ScrollView activeScroll = (scrollPatrol != null ? scrollPatrol : scroll);
+            if (activeScroll != null) {
+                activeScroll.setOnScrollChangeListener(new View.OnScrollChangeListener() {
+                    public void onScrollChange(View v, int scrollX, int scrollY, int oldScrollX, int oldScrollY) {
+                        if (root != null && v != null) {
+                            int maxScroll = root.getHeight() - v.getHeight();
+                            if (maxScroll > 0) {
+                                float pct = Math.max(0f, Math.min(1f, (float) scrollY / maxScroll));
+                                if (scrollIndicator != null) {
+                                    scrollIndicator.setScrollProgress(pct);
+                                }
                             }
                         }
                     }
-                }
-            });
+                });
+            }
         }
 
         // conureOverlay
