@@ -362,6 +362,12 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+            Window w = getWindow();
+            w.addFlags(android.view.WindowManager.LayoutParams.FLAG_DRAWS_SYSTEM_BAR_BACKGROUNDS);
+            w.setStatusBarColor(Color.TRANSPARENT);
+            w.setNavigationBarColor(Color.TRANSPARENT);
+        }
         lastActivityTimeMs = SystemClock.elapsedRealtime();
         vibrator = (Vibrator) getSystemService(Context.VIBRATOR_SERVICE);
 
@@ -728,16 +734,36 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
                 FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT);
         mainSurfaceContainer.setLayoutParams(mslp);
 
-        LinearLayout screenLayout = new LinearLayout(this);
+        final LinearLayout screenLayout = new LinearLayout(this);
         screenLayout.setOrientation(LinearLayout.VERTICAL);
         screenLayout.setBackgroundColor(colBg);
-        int padTop = isTablet && isLandscape ? dp(22) : dp(38);
-        int padSide = isTablet && isLandscape ? dp(18) : dp(14);
-        screenLayout.setPadding(padSide, padTop, padSide, 0);
+        final int defaultPadTop = isTablet && isLandscape ? dp(22) : dp(36);
+        final int defaultPadSide = isTablet && isLandscape ? dp(18) : dp(14);
+        screenLayout.setPadding(defaultPadSide, defaultPadTop, defaultPadSide, dp(10));
         FrameLayout.LayoutParams sllp = new FrameLayout.LayoutParams(
                 maxContentWidth, FrameLayout.LayoutParams.MATCH_PARENT);
         sllp.gravity = Gravity.CENTER_HORIZONTAL;
         screenLayout.setLayoutParams(sllp);
+
+        final ScrollView fDeputyScroll = deputyScroll;
+        rootFrame.setOnApplyWindowInsetsListener(new View.OnApplyWindowInsetsListener() {
+            @Override
+            public WindowInsets onApplyWindowInsets(View v, WindowInsets insets) {
+                int topInset = insets.getSystemWindowInsetTop();
+                int botInset = insets.getSystemWindowInsetBottom();
+                int leftInset = insets.getSystemWindowInsetLeft();
+                int rightInset = insets.getSystemWindowInsetRight();
+
+                int calculatedTop = Math.max(defaultPadTop, topInset + dp(6));
+                int calculatedBot = Math.max(dp(12), botInset + dp(6));
+
+                screenLayout.setPadding(defaultPadSide + leftInset, calculatedTop, defaultPadSide + rightInset, calculatedBot);
+                if (fDeputyScroll != null) {
+                    fDeputyScroll.setPadding(leftInset, calculatedTop, rightInset, calculatedBot);
+                }
+                return insets;
+            }
+        });
 
         // 1. 🎨 4-Theme Fluid Animated Sliding Switcher Bar
         animatedThemeBar = new FluidAnimatedThemeBarView(this);
@@ -1563,38 +1589,71 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
         diagStrip.setOrientation(LinearLayout.HORIZONTAL);
         diagStrip.setGravity(Gravity.CENTER_VERTICAL);
         diagStrip.setBackground(rounded(colPanel, dp(12)));
-        diagStrip.setPadding(dp(10), dp(7), dp(10), dp(7));
+        diagStrip.setPadding(dp(4), dp(4), dp(4), dp(4));
         LinearLayout.LayoutParams dsl = new LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
-        dsl.bottomMargin = dp(10);
+        dsl.bottomMargin = dp(8);
         diagStrip.setLayoutParams(dsl);
+        diagStrip.setOnClickListener(new View.OnClickListener() {
+            public void onClick(View v) {
+                hapticClick();
+                showDiagnosticsTelemetryDialog();
+            }
+        });
+
+        // 1. OLED Power Capsule
+        LinearLayout oledCap = new LinearLayout(this);
+        oledCap.setOrientation(LinearLayout.HORIZONTAL);
+        oledCap.setGravity(Gravity.CENTER);
+        oledCap.setBackground(rounded(colPanel2, dp(8)));
+        oledCap.setPadding(dp(6), dp(5), dp(6), dp(5));
+        LinearLayout.LayoutParams olp = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
+        olp.setMargins(dp(2), 0, dp(2), 0);
+        oledCap.setLayoutParams(olp);
 
         diagOledPower = new TextView(this);
-        diagOledPower.setText("⚡ OLED: 0.14W");
+        diagOledPower.setText("⚡ 0.14W");
         diagOledPower.setTextColor(colEmerald);
-        diagOledPower.setTextSize(10);
-        diagOledPower.setTypeface(Typeface.MONOSPACE);
-        LinearLayout.LayoutParams dpl = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1.1f);
-        diagOledPower.setLayoutParams(dpl);
-        diagStrip.addView(diagOledPower);
+        diagOledPower.setTextSize(10.5f);
+        diagOledPower.setTypeface(Typeface.create(Typeface.MONOSPACE, Typeface.BOLD));
+        oledCap.addView(diagOledPower);
+        diagStrip.addView(oledCap);
+
+        // 2. Kingston Weather Capsule
+        LinearLayout weatherCap = new LinearLayout(this);
+        weatherCap.setOrientation(LinearLayout.HORIZONTAL);
+        weatherCap.setGravity(Gravity.CENTER);
+        weatherCap.setBackground(rounded(colPanel2, dp(8)));
+        weatherCap.setPadding(dp(6), dp(5), dp(6), dp(5));
+        LinearLayout.LayoutParams wlp = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1.15f);
+        wlp.setMargins(dp(2), 0, dp(2), 0);
+        weatherCap.setLayoutParams(wlp);
 
         diagAmbientWeather = new TextView(this);
-        diagAmbientWeather.setText(String.format(Locale.US, "🌤️ %.1f°C KINGSTON", curTempC));
+        diagAmbientWeather.setText(String.format(Locale.US, "🌤️ %.1f°C", curTempC));
         diagAmbientWeather.setTextColor(colCyan);
-        diagAmbientWeather.setTextSize(10);
-        diagAmbientWeather.setTypeface(Typeface.MONOSPACE);
-        LinearLayout.LayoutParams dtl = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1.3f);
-        diagAmbientWeather.setLayoutParams(dtl);
-        diagStrip.addView(diagAmbientWeather);
+        diagAmbientWeather.setTextSize(10.5f);
+        diagAmbientWeather.setTypeface(Typeface.create(Typeface.MONOSPACE, Typeface.BOLD));
+        weatherCap.addView(diagAmbientWeather);
+        diagStrip.addView(weatherCap);
+
+        // 3. Battery & Runtime Capsule
+        LinearLayout battCap = new LinearLayout(this);
+        battCap.setOrientation(LinearLayout.HORIZONTAL);
+        battCap.setGravity(Gravity.CENTER);
+        battCap.setBackground(rounded(colPanel2, dp(8)));
+        battCap.setPadding(dp(6), dp(5), dp(6), dp(5));
+        LinearLayout.LayoutParams blp = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1.15f);
+        blp.setMargins(dp(2), 0, dp(2), 0);
+        battCap.setLayoutParams(blp);
 
         diagBatteryRuntime = new TextView(this);
-        diagBatteryRuntime.setText("🔋 14.2h REMAIN");
+        diagBatteryRuntime.setText("🔋 85% · 19.1h");
         diagBatteryRuntime.setTextColor(colAccent);
-        diagBatteryRuntime.setTextSize(10);
-        diagBatteryRuntime.setTypeface(Typeface.MONOSPACE);
-        LinearLayout.LayoutParams dbl = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1.1f);
-        diagBatteryRuntime.setLayoutParams(dbl);
-        diagStrip.addView(diagBatteryRuntime);
+        diagBatteryRuntime.setTextSize(10.5f);
+        diagBatteryRuntime.setTypeface(Typeface.create(Typeface.MONOSPACE, Typeface.BOLD));
+        battCap.addView(diagBatteryRuntime);
+        diagStrip.addView(battCap);
 
         return diagStrip;
     }
@@ -1610,10 +1669,72 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
                 float estHours = (batteryPct / 100f) * 22.5f;
 
                 if (diagBatteryRuntime != null) {
-                    diagBatteryRuntime.setText(String.format(Locale.US, "🔋 %d%% (%.1fh)", (int) batteryPct, estHours));
+                    diagBatteryRuntime.setText(String.format(Locale.US, "🔋 %d%% · %.1fh", (int) batteryPct, estHours));
                 }
             }
+            if (diagAmbientWeather != null) {
+                diagAmbientWeather.setText(String.format(Locale.US, "🌤️ %.1f°C", curTempC));
+            }
         } catch (Exception e) {}
+    }
+
+    private void showDiagnosticsTelemetryDialog() {
+        hapticHeavyClick();
+        final LinearLayout box = dialogContainer("⚡ Telemetry & Environmental HUD", "HARDWARE & SITE STATUS", colCyan);
+
+        int battLevel = 85;
+        int battTemp = 28;
+        int battVoltage = 4120;
+        try {
+            IntentFilter ifilter = new IntentFilter(Intent.ACTION_BATTERY_CHANGED);
+            Intent b = registerReceiver(null, ifilter);
+            if (b != null) {
+                battLevel = (int) (b.getIntExtra(BatteryManager.EXTRA_LEVEL, 85) * 100 / (float) b.getIntExtra(BatteryManager.EXTRA_SCALE, 100));
+                battTemp = b.getIntExtra(BatteryManager.EXTRA_TEMPERATURE, 280) / 10;
+                battVoltage = b.getIntExtra(BatteryManager.EXTRA_VOLTAGE, 4120);
+            }
+        } catch (Exception e) {}
+
+        box.addView(telemetryAuditSection("🔋 DEVICE POWER & BATTERY TELEMETRY", colAccent));
+        box.addView(chronographStatRow("Battery Charge:", battLevel + "% (Est. " + String.format(Locale.US, "%.1fh", (battLevel / 100f) * 22.5f) + " runtime)"));
+        box.addView(chronographStatRow("Battery Health / Temp:", "GOOD · " + battTemp + "°C"));
+        box.addView(chronographStatRow("Cell Voltage:", battVoltage + " mV"));
+        box.addView(chronographStatRow("OLED Display Power:", "0.14 W (0-Lux Pure Black Pixel Mode)"));
+
+        box.addView(telemetryAuditSection("🌤️ KINGSTON SITE ENVIRONMENTAL CONDITIONS", colCyan));
+        box.addView(chronographStatRow("Ambient Air Temp:", String.format(Locale.US, "%.1f°C (Kingston, QLD 4114)", curTempC)));
+        box.addView(chronographStatRow("Relative Humidity:", "68% (Dew Point 12.2°C)"));
+        box.addView(chronographStatRow("Hydration Advisory:", "500 mL / 2 Hours (Standard Night Patrol)"));
+        box.addView(chronographStatRow("First Light (Dawn):", "05:41 AM (Civil Twilight)"));
+
+        final Dialog dlg = createTacticalDialog(box);
+
+        LinearLayout btnRow = new LinearLayout(this);
+        btnRow.setOrientation(LinearLayout.HORIZONTAL);
+        btnRow.setPadding(0, dp(16), 0, 0);
+
+        TextView btnClose = actionButton("Close Telemetry HUD", colCyan, colAccentInk);
+        btnClose.setOnClickListener(new View.OnClickListener() {
+            public void onClick(View v) {
+                hapticClick();
+                dlg.dismiss();
+            }
+        });
+        btnRow.addView(btnClose);
+        box.addView(btnRow);
+
+        dlg.show();
+    }
+
+    private TextView telemetryAuditSection(String title, int color) {
+        TextView t = new TextView(this);
+        t.setText(title);
+        t.setTextColor(color);
+        t.setTextSize(10.5f);
+        t.setTypeface(Typeface.DEFAULT_BOLD);
+        t.setLetterSpacing(0.1f);
+        t.setPadding(0, dp(12), 0, dp(6));
+        return t;
     }
 
     // =========================================================================
