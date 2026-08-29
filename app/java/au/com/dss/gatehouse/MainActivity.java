@@ -89,7 +89,7 @@ import java.util.HashMap;
 import java.util.Locale;
 import java.util.TimeZone;
 
-/** A streamlined 21st-century tactical screen over the SPARK Ada record core.
+/** A streamlined 21st-century security guard terminal over the SPARK Ada record core.
  * Configured specifically for Hume Doors & Timber, Kingston.
  */
 public class MainActivity extends Activity implements SensorEventListener, LocationListener {
@@ -608,15 +608,17 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
                     case MotionEvent.ACTION_MOVE:
                         float dx = ev.getX() - peekDownX;
                         float dy = Math.abs(ev.getY() - peekDownY);
-                        if (!isDeputyOpen && peekDownX < dp(48) && dx > dp(16) && dx > dy * 1.2f) {
+                        boolean isTab = getResources().getConfiguration().smallestScreenWidthDp >= 600;
+                        float maxEdge = isTab ? dp(160) : dp(56);
+                        int screenW = getWidth();
+                        boolean canOpen = !isDeputyOpen && (peekDownX < maxEdge || (currentTab == 0 && peekDownX < screenW * 0.45f)) && dx > dp(14) && dx > dy * 1.1f;
+                        boolean canClose = isDeputyOpen && dx < -dp(14) && Math.abs(dx) > dy * 1.1f;
+                        if (canOpen || canClose) {
                             isPeekDragging = true;
                             if (!peekBuzzed) {
                                 hapticClick();
                                 peekBuzzed = true;
                             }
-                            return true;
-                        } else if (isDeputyOpen && dx < -dp(16) && Math.abs(dx) > dy * 1.2f) {
-                            isPeekDragging = true;
                             return true;
                         }
                         break;
@@ -640,24 +642,10 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
                             float totalDx = ev.getX() - peekDownX;
                             if (isDeputyOpen) {
                                 float curTrans = Math.max(0f, Math.min(w, w + totalDx));
-                                if (mainSurfaceContainer != null) mainSurfaceContainer.setTranslationX(curTrans);
-                                if (deputyContainer != null) {
-                                    float pct = curTrans / w;
-                                    deputyContainer.setScaleX(0.94f + 0.06f * pct);
-                                    deputyContainer.setScaleY(0.94f + 0.06f * pct);
-                                    deputyContainer.setTranslationX(-dp(30) * (1f - pct));
-                                }
-                                if (deputyScrim != null) deputyScrim.setAlpha(0.65f * (1f - (curTrans / w)));
+                                applyPeek(curTrans);
                             } else {
                                 float curTrans = Math.max(0f, Math.min(w, totalDx));
-                                if (mainSurfaceContainer != null) mainSurfaceContainer.setTranslationX(curTrans);
-                                if (deputyContainer != null) {
-                                    float pct = curTrans / w;
-                                    deputyContainer.setScaleX(0.94f + 0.06f * pct);
-                                    deputyContainer.setScaleY(0.94f + 0.06f * pct);
-                                    deputyContainer.setTranslationX(-dp(30) * (1f - pct));
-                                }
-                                if (deputyScrim != null) deputyScrim.setAlpha(0.65f * (1f - (curTrans / w)));
+                                applyPeek(curTrans);
                             }
                             return true;
                         }
@@ -673,13 +661,13 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
                                 vx = peekVelocityTracker.getXVelocity();
                             }
                             if (isDeputyOpen) {
-                                if (totalDx < -w * 0.25f || vx < -800) {
+                                if (totalDx < -w * 0.22f || vx < -700) {
                                     closeDeputy(true);
                                 } else {
                                     openDeputy(true);
                                 }
                             } else {
-                                if (totalDx > w * 0.25f || vx > 800) {
+                                if (totalDx > w * 0.22f || vx > 700) {
                                     openDeputy(true);
                                 } else {
                                     closeDeputy(true);
@@ -798,6 +786,10 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
                     case MotionEvent.ACTION_MOVE:
                         float dx = ev.getX() - pageSwipeDownX;
                         float dy = Math.abs(ev.getY() - pageSwipeDownY);
+                        if (currentTab == 0 && dx > dp(14) && dx > dy * 1.1f) {
+                            // Let rootFrame execute 3D Page Turn / Peek to Deputy!
+                            return false;
+                        }
                         if (Math.abs(dx) > dp(20) && Math.abs(dx) > dy * 1.3f) {
                             isPageSwiping = true;
                             getParent().requestDisallowInterceptTouchEvent(true);
@@ -818,6 +810,11 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
                     case MotionEvent.ACTION_MOVE:
                         if (isPageSwiping) {
                             float totalDx = ev.getX() - pageSwipeDownX;
+                            if (currentTab == 0 && totalDx > dp(14)) {
+                                isPageSwiping = false;
+                                getParent().requestDisallowInterceptTouchEvent(false);
+                                return false;
+                            }
                             float deltaPages = -totalDx / w;
                             applyTabScrollPosition(currentTab + deltaPages);
                             return true;
@@ -1024,7 +1021,7 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
             // Header Card (Triple tap for Sun Conure!)
             patrolContent.addView(headerCard());
 
-            // Tactical Chronograph (Solar Dual-Arc)
+            // Shift Chronograph (Solar Dual-Arc)
             patrolContent.addView(buildChronographSection());
 
             // Chain Banner & Hash
@@ -1655,6 +1652,32 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
         battCap.addView(diagBatteryRuntime);
         diagStrip.addView(battCap);
 
+        boolean isTablet = getResources().getConfiguration().smallestScreenWidthDp >= 600;
+        if (isTablet) {
+            LinearLayout depCap = new LinearLayout(this);
+            depCap.setOrientation(LinearLayout.HORIZONTAL);
+            depCap.setGravity(Gravity.CENTER);
+            depCap.setBackground(rounded(0x3313C5BE, dp(8)));
+            depCap.setPadding(dp(8), dp(5), dp(8), dp(5));
+            LinearLayout.LayoutParams dlp = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1.25f);
+            dlp.setMargins(dp(2), 0, dp(2), 0);
+            depCap.setLayoutParams(dlp);
+
+            TextView depTv = new TextView(this);
+            depTv.setText("📖 DEPUTY ROSTER");
+            depTv.setTextColor(0xFF13C5BE);
+            depTv.setTextSize(10.5f);
+            depTv.setTypeface(Typeface.create(Typeface.MONOSPACE, Typeface.BOLD));
+            depCap.addView(depTv);
+            depCap.setOnClickListener(new View.OnClickListener() {
+                public void onClick(View v) {
+                    hapticHeavyClick();
+                    openDeputy(true);
+                }
+            });
+            diagStrip.addView(depCap);
+        }
+
         return diagStrip;
     }
 
@@ -1707,7 +1730,7 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
         box.addView(chronographStatRow("Hydration Advisory:", "500 mL / 2 Hours (Standard Night Patrol)"));
         box.addView(chronographStatRow("First Light (Dawn):", "05:41 AM (Civil Twilight)"));
 
-        final Dialog dlg = createTacticalDialog(box);
+        final Dialog dlg = createDialogSheet(box);
 
         LinearLayout btnRow = new LinearLayout(this);
         btnRow.setOrientation(LinearLayout.HORIZONTAL);
@@ -2287,7 +2310,7 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
                 box.addView(item);
             }
 
-            final Dialog dlg = createTacticalDialog(box);
+            final Dialog dlg = createDialogSheet(box);
 
             LinearLayout btnRow = new LinearLayout(this);
             btnRow.setOrientation(LinearLayout.HORIZONTAL);
@@ -2495,7 +2518,7 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
                 box.addView(item);
             }
 
-            final Dialog dlg = createTacticalDialog(box);
+            final Dialog dlg = createDialogSheet(box);
 
             LinearLayout btnRow = new LinearLayout(this);
             btnRow.setOrientation(LinearLayout.HORIZONTAL);
@@ -2568,7 +2591,7 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
         top.setPadding(0, 0, 0, dp(8));
 
         TextView title = new TextView(this);
-        title.setText("⏱️ TACTICAL CHRONOGRAPH");
+        title.setText("⏱️ SHIFT CHRONOGRAPH");
         title.setTextColor(colQuiet);
         title.setTextSize(10.5f);
         title.setTypeface(Typeface.DEFAULT_BOLD);
@@ -2587,7 +2610,7 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
         top.addView(tag);
         container.addView(top);
 
-        // 2. High-Precision Tactical Dual-Arc Dial View
+        // 2. High-Precision Dual-Arc Dial View
         chronographView = new ChronographView(this);
         LinearLayout.LayoutParams cvl = new LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT, dp(200));
@@ -2600,7 +2623,7 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
         });
         container.addView(chronographView);
 
-        // 3. Tactical 3-Pill Telemetry Deck (Cleanly Separated Below the Dial)
+        // 3. 3-Pill Telemetry Deck (Cleanly Separated Below the Dial)
         LinearLayout deck = new LinearLayout(this);
         deck.setOrientation(LinearLayout.HORIZONTAL);
         deck.setPadding(0, dp(10), 0, 0);
@@ -2799,7 +2822,7 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
             innerArcPaint.setStrokeWidth(dpf(4.5f));
             canvas.drawArc(innerRect, 135f, innerSweep, false, innerArcPaint);
 
-            // 4. Center Tactical Core Display (Clean, High-Legibility, Zero Overlaps)
+            // 4. Center Monospace Digital Core Display (Clean, High-Legibility, Zero Overlaps)
             long ms = System.currentTimeMillis();
             SimpleDateFormat sdf = new SimpleDateFormat("HH:mm:ss", Locale.US);
             sdf.setTimeZone(TimeZone.getDefault());
@@ -2859,7 +2882,7 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
         box.addView(chronographStatRow("Welfare Status:", remainWelfareMins + " minutes until next check-in"));
         box.addView(chronographStatRow("Assigned Officer:", "R. Kelso (LIC #41207)"));
 
-        final Dialog dlg = createTacticalDialog(box);
+        final Dialog dlg = createDialogSheet(box);
 
         LinearLayout btnRow = new LinearLayout(this);
         btnRow.setOrientation(LinearLayout.HORIZONTAL);
@@ -3117,7 +3140,7 @@ private void updateTabSelection(int tabIndex) {
             rclp.leftMargin = dp(10);
             rightCol.setLayoutParams(rclp);
 
-            rightCol.addView(contactsSectionHeader("🔦 TACTICAL LIGHTING (SHAKE / CHOP)", colAccent));
+            rightCol.addView(contactsSectionHeader("🔦 SITE LIGHTING (SHAKE / CHOP)", colAccent));
             rightCol.addView(buildLightingGrid());
 
             rightCol.addView(contactsSectionHeader("🧭 SITE COMPASS & AZIMUTH", colCyan));
@@ -3144,7 +3167,7 @@ private void updateTabSelection(int tabIndex) {
         container.addView(contactsSectionHeader("🪪 OFFICER VAULT & CREDENTIALS", colPale));
         container.addView(buildCredentialPreviewCard());
 
-        container.addView(contactsSectionHeader("🔦 TACTICAL LIGHTING (SHAKE / CHOP)", colAccent));
+        container.addView(contactsSectionHeader("🔦 SITE LIGHTING (SHAKE / CHOP)", colAccent));
         container.addView(buildLightingGrid());
 
         container.addView(contactsSectionHeader("🧭 SITE COMPASS & AZIMUTH", colCyan));
@@ -3290,7 +3313,7 @@ private void updateTabSelection(int tabIndex) {
             box.addView(pRow);
         }
 
-        final Dialog dlg = createTacticalDialog(box);
+        final Dialog dlg = createDialogSheet(box);
 
         LinearLayout btnRow = new LinearLayout(this);
         btnRow.setOrientation(LinearLayout.HORIZONTAL);
@@ -4178,7 +4201,7 @@ private void updateTabSelection(int tabIndex) {
             }
         });
 
-        final Dialog dlg = createTacticalDialog(box);
+        final Dialog dlg = createDialogSheet(box);
 
         LinearLayout btnRow = new LinearLayout(this);
         btnRow.setOrientation(LinearLayout.HORIZONTAL);
@@ -4751,7 +4774,7 @@ private void updateTabSelection(int tabIndex) {
     // DIALOG CONTAINER & SATELLITE RADAR
     // =========================================================================
 
-    private Dialog createTacticalDialog(View content) {
+    private Dialog createDialogSheet(View content) {
         final Dialog dlg = new Dialog(this);
         dlg.requestWindowFeature(Window.FEATURE_NO_TITLE);
         dlg.setContentView(content);
@@ -5240,7 +5263,7 @@ private void updateTabSelection(int tabIndex) {
         final EditText descField = modernInputField("Photo Subject (e.g. Main gate padlock, Lot 16 mesh)");
         box.addView(descField);
 
-        final Dialog dlg = createTacticalDialog(box);
+        final Dialog dlg = createDialogSheet(box);
 
         LinearLayout btnRow = new LinearLayout(this);
         btnRow.setOrientation(LinearLayout.HORIZONTAL);
@@ -5345,7 +5368,7 @@ private void updateTabSelection(int tabIndex) {
         final EditText customField = modernInputField("Perimeter observation notes (optional)...");
         box.addView(customField);
 
-        final Dialog dlg = createTacticalDialog(box);
+        final Dialog dlg = createDialogSheet(box);
 
         LinearLayout btnRow = new LinearLayout(this);
         btnRow.setOrientation(LinearLayout.HORIZONTAL);
@@ -5447,7 +5470,7 @@ private void updateTabSelection(int tabIndex) {
         captionField.setVisibility(View.GONE);
         box.addView(captionField);
 
-        final Dialog dlg = createTacticalDialog(box);
+        final Dialog dlg = createDialogSheet(box);
 
         final Handler voiceTicker = new Handler();
         final Runnable voiceTick = new Runnable() {
@@ -5600,7 +5623,7 @@ private void updateTabSelection(int tabIndex) {
         detailsField.setMinLines(3);
         box.addView(detailsField);
 
-        final Dialog dlg = createTacticalDialog(box);
+        final Dialog dlg = createDialogSheet(box);
 
         LinearLayout btnRow = new LinearLayout(this);
         btnRow.setOrientation(LinearLayout.HORIZONTAL);
@@ -5657,7 +5680,7 @@ private void updateTabSelection(int tabIndex) {
         noteField.setMinLines(3);
         box.addView(noteField);
 
-        final Dialog dlg = createTacticalDialog(box);
+        final Dialog dlg = createDialogSheet(box);
 
         LinearLayout btnRow = new LinearLayout(this);
         btnRow.setOrientation(LinearLayout.HORIZONTAL);
@@ -5761,7 +5784,7 @@ private void updateTabSelection(int tabIndex) {
         final EditText customField = modernInputField("Additional observation note (optional)...");
         box.addView(customField);
 
-        final Dialog dlg = createTacticalDialog(box);
+        final Dialog dlg = createDialogSheet(box);
 
         LinearLayout btnRow = new LinearLayout(this);
         btnRow.setOrientation(LinearLayout.HORIZONTAL);
@@ -6477,7 +6500,7 @@ private void updateTabSelection(int tabIndex) {
         desc.setPadding(0, 0, 0, dp(14));
         box.addView(desc);
 
-        final Dialog dlg = createTacticalDialog(box);
+        final Dialog dlg = createDialogSheet(box);
 
         BiometricSealPadView sealPad = new BiometricSealPadView(this, new Runnable() {
             public void run() {
@@ -6655,7 +6678,7 @@ private void updateTabSelection(int tabIndex) {
         btnSos.setLayoutParams(sfl);
         box.addView(btnSos);
 
-        final Dialog dlg = createTacticalDialog(box);
+        final Dialog dlg = createDialogSheet(box);
 
         final Handler welfareTicker = new Handler();
         final Runnable welfareTick = new Runnable() {
@@ -6990,64 +7013,155 @@ private void updateTabSelection(int tabIndex) {
         isDeputyOpen = true;
         hapticHeavyClick();
 
+        boolean isTablet = getResources().getConfiguration().smallestScreenWidthDp >= 600;
+        float cameraDist = getResources().getDisplayMetrics().density * 10000;
+
         if (animate) {
-            if (deputyContainer != null) {
-                deputyContainer.animate().scaleX(1f).scaleY(1f).translationX(0f).setDuration(220)
+            if (isTablet) {
+                mainSurfaceContainer.setCameraDistance(cameraDist);
+                mainSurfaceContainer.setPivotX(0f);
+                mainSurfaceContainer.setPivotY(rootFrame.getHeight() * 0.5f);
+                mainSurfaceContainer.animate()
+                        .translationX(w * 0.82f)
+                        .rotationY(-38f)
+                        .scaleX(0.92f)
+                        .scaleY(0.92f)
+                        .alpha(0.80f)
+                        .setDuration(280)
+                        .setInterpolator(new DecelerateInterpolator())
+                        .start();
+
+                if (deputyContainer != null) {
+                    deputyContainer.setCameraDistance(cameraDist);
+                    deputyContainer.setPivotX(0f);
+                    deputyContainer.setPivotY(rootFrame.getHeight() * 0.5f);
+                    deputyContainer.animate()
+                            .scaleX(1f)
+                            .scaleY(1f)
+                            .rotationY(0f)
+                            .translationX(0f)
+                            .setDuration(280)
+                            .setInterpolator(new DecelerateInterpolator())
+                            .start();
+                }
+            } else {
+                mainSurfaceContainer.animate().translationX(w).setDuration(220)
                         .setInterpolator(new DecelerateInterpolator()).start();
+                if (deputyContainer != null) {
+                    deputyContainer.animate().scaleX(1f).scaleY(1f).translationX(0f).setDuration(220)
+                            .setInterpolator(new DecelerateInterpolator()).start();
+                }
             }
             if (deputyScrim != null) {
-                deputyScrim.animate().alpha(0f).setDuration(200).start();
+                deputyScrim.animate().alpha(0f).setDuration(220).start();
             }
             if (peekShadow != null) {
                 peekShadow.animate().alpha(0.85f).translationX(w - dp(30)).setDuration(220).start();
             }
-            mainSurfaceContainer.animate().translationX(w).setDuration(220)
-                    .setInterpolator(new DecelerateInterpolator()).start();
         } else {
-            if (deputyContainer != null) {
-                deputyContainer.setScaleX(1f);
-                deputyContainer.setScaleY(1f);
-                deputyContainer.setTranslationX(0f);
+            if (isTablet) {
+                mainSurfaceContainer.setCameraDistance(cameraDist);
+                mainSurfaceContainer.setPivotX(0f);
+                mainSurfaceContainer.setPivotY(rootFrame.getHeight() * 0.5f);
+                mainSurfaceContainer.setTranslationX(w * 0.82f);
+                mainSurfaceContainer.setRotationY(-38f);
+                mainSurfaceContainer.setScaleX(0.92f);
+                mainSurfaceContainer.setScaleY(0.92f);
+                mainSurfaceContainer.setAlpha(0.80f);
+
+                if (deputyContainer != null) {
+                    deputyContainer.setCameraDistance(cameraDist);
+                    deputyContainer.setPivotX(0f);
+                    deputyContainer.setPivotY(rootFrame.getHeight() * 0.5f);
+                    deputyContainer.setScaleX(1f);
+                    deputyContainer.setScaleY(1f);
+                    deputyContainer.setRotationY(0f);
+                    deputyContainer.setTranslationX(0f);
+                }
+            } else {
+                mainSurfaceContainer.setTranslationX(w);
+                if (deputyContainer != null) {
+                    deputyContainer.setScaleX(1f);
+                    deputyContainer.setScaleY(1f);
+                    deputyContainer.setTranslationX(0f);
+                }
             }
             if (deputyScrim != null) deputyScrim.setAlpha(0f);
             if (peekShadow != null) {
                 peekShadow.setAlpha(0.85f);
                 peekShadow.setTranslationX(w - dp(30));
             }
-            mainSurfaceContainer.setTranslationX(w);
         }
     }
 
     public void closeDeputy(boolean animate) {
-        if (mainSurfaceContainer == null) return;
+        if (mainSurfaceContainer == null || rootFrame == null) return;
         isDeputyOpen = false;
         hapticClick();
 
+        boolean isTablet = getResources().getConfiguration().smallestScreenWidthDp >= 600;
+        float cameraDist = getResources().getDisplayMetrics().density * 10000;
+
         if (animate) {
-            if (deputyContainer != null) {
-                deputyContainer.animate().scaleX(0.94f).scaleY(0.94f).translationX(-dp(30)).setDuration(240)
+            if (isTablet) {
+                mainSurfaceContainer.setCameraDistance(cameraDist);
+                mainSurfaceContainer.setPivotX(0f);
+                mainSurfaceContainer.setPivotY(rootFrame.getHeight() * 0.5f);
+                mainSurfaceContainer.animate()
+                        .translationX(0f)
+                        .rotationY(0f)
+                        .scaleX(1f)
+                        .scaleY(1f)
+                        .alpha(1f)
+                        .setDuration(260)
+                        .setInterpolator(new DecelerateInterpolator())
+                        .start();
+
+                if (deputyContainer != null) {
+                    deputyContainer.setCameraDistance(cameraDist);
+                    deputyContainer.setPivotX(0f);
+                    deputyContainer.setPivotY(rootFrame.getHeight() * 0.5f);
+                    deputyContainer.animate()
+                            .scaleX(0.94f)
+                            .scaleY(0.94f)
+                            .rotationY(18f)
+                            .translationX(-dp(35))
+                            .setDuration(260)
+                            .setInterpolator(new DecelerateInterpolator())
+                            .start();
+                }
+            } else {
+                mainSurfaceContainer.animate().translationX(0f).setDuration(240)
                         .setInterpolator(new DecelerateInterpolator()).start();
+                if (deputyContainer != null) {
+                    deputyContainer.animate().scaleX(0.94f).scaleY(0.94f).translationX(-dp(30)).setDuration(240)
+                            .setInterpolator(new DecelerateInterpolator()).start();
+                }
             }
             if (deputyScrim != null) {
-                deputyScrim.animate().alpha(0.65f).setDuration(220).start();
+                deputyScrim.animate().alpha(0.65f).setDuration(240).start();
             }
             if (peekShadow != null) {
                 peekShadow.animate().alpha(0f).translationX(-dp(30)).setDuration(200).start();
             }
-            mainSurfaceContainer.animate().translationX(0f).setDuration(240)
-                    .setInterpolator(new DecelerateInterpolator()).start();
         } else {
+            mainSurfaceContainer.setTranslationX(0f);
+            mainSurfaceContainer.setRotationY(0f);
+            mainSurfaceContainer.setScaleX(1f);
+            mainSurfaceContainer.setScaleY(1f);
+            mainSurfaceContainer.setAlpha(1f);
+
             if (deputyContainer != null) {
                 deputyContainer.setScaleX(0.94f);
                 deputyContainer.setScaleY(0.94f);
-                deputyContainer.setTranslationX(-dp(30));
+                deputyContainer.setRotationY(isTablet ? 18f : 0f);
+                deputyContainer.setTranslationX(isTablet ? -dp(35) : -dp(30));
             }
             if (deputyScrim != null) deputyScrim.setAlpha(0.65f);
             if (peekShadow != null) {
                 peekShadow.setAlpha(0f);
                 peekShadow.setTranslationX(-dp(30));
             }
-            mainSurfaceContainer.setTranslationX(0f);
         }
     }
 
@@ -7057,27 +7171,59 @@ private void updateTabSelection(int tabIndex) {
         if (w <= 0) return;
 
         float x = Math.max(0f, Math.min(dx, w));
-        mainSurfaceContainer.setTranslationX(x);
-        float p = Math.min(1f, x / (w * 0.55f));
+        float p = Math.min(1f, x / (w * 0.85f));
+
+        boolean isTablet = getResources().getConfiguration().smallestScreenWidthDp >= 600;
+
+        if (isTablet) {
+            float cameraDist = getResources().getDisplayMetrics().density * 10000;
+            mainSurfaceContainer.setCameraDistance(cameraDist);
+            mainSurfaceContainer.setPivotX(0f);
+            mainSurfaceContainer.setPivotY(rootFrame.getHeight() * 0.5f);
+            mainSurfaceContainer.setRotationY(-38f * p);
+            mainSurfaceContainer.setTranslationX(p * w * 0.82f);
+            mainSurfaceContainer.setScaleX(1f - 0.08f * p);
+            mainSurfaceContainer.setScaleY(1f - 0.08f * p);
+            mainSurfaceContainer.setAlpha(1f - 0.20f * p);
+
+            if (deputyContainer != null) {
+                deputyContainer.setCameraDistance(cameraDist);
+                deputyContainer.setPivotX(0f);
+                deputyContainer.setPivotY(rootFrame.getHeight() * 0.5f);
+                deputyContainer.setRotationY(18f * (1f - p));
+                float s = 0.94f + 0.06f * p;
+                deputyContainer.setScaleX(s);
+                deputyContainer.setScaleY(s);
+                deputyContainer.setTranslationX(-dp(35) * (1f - p));
+            }
+        } else {
+            mainSurfaceContainer.setRotationY(0f);
+            mainSurfaceContainer.setScaleX(1f);
+            mainSurfaceContainer.setScaleY(1f);
+            mainSurfaceContainer.setAlpha(1f);
+            mainSurfaceContainer.setTranslationX(x);
+
+            if (deputyContainer != null) {
+                deputyContainer.setRotationY(0f);
+                float s = 0.94f + 0.06f * p;
+                deputyContainer.setScaleX(s);
+                deputyContainer.setScaleY(s);
+                deputyContainer.setTranslationX(-dp(30) * (1f - p));
+            }
+        }
 
         if (deputyScrim != null) {
             deputyScrim.setAlpha((1f - p) * 0.65f);
-        }
-        if (deputyContainer != null) {
-            float s = 0.94f + 0.06f * p;
-            deputyContainer.setScaleX(s);
-            deputyContainer.setScaleY(s);
-            deputyContainer.setTranslationX(-dp(30) * (1f - p));
         }
         if (peekShadow != null) {
             peekShadow.setTranslationX(x - dp(30));
             peekShadow.setAlpha(Math.min(0.85f, p * 1.4f));
         }
 
-        if (!peekBuzzed && x > w * 0.5f) {
+        if (!peekBuzzed && x > w * 0.45f) {
             peekBuzzed = true;
             hapticClick();
-        } else if (peekBuzzed && x < w * 0.45f) {
+        } else if (peekBuzzed && x < w * 0.40f) {
             peekBuzzed = false;
         }
     }
@@ -8297,7 +8443,7 @@ private void updateTabSelection(int tabIndex) {
         // Pre-Shift Checklist
         card.addView(rosterCheckItem("✓ Master key ring & electronic gate fobs verified", true));
         card.addView(rosterCheckItem("✓ Bodycam charged & memory cleared", true));
-        card.addView(rosterCheckItem("✓ LED tactical torches inspected", true));
+        card.addView(rosterCheckItem("✓ LED security torches inspected", true));
         card.addView(rosterCheckItem("○ 05:18 AM Civil Dawn perimeter round scheduled", false));
 
         // 3D Hybrid Deck Cascade Animation Entrance
@@ -8437,7 +8583,7 @@ private void updateTabSelection(int tabIndex) {
         final String[] selGuard = {guards[0]};
         box.addView(buildChipGroup(guards, selGuard, true, colAccent));
 
-        final Dialog dlg = createTacticalDialog(box);
+        final Dialog dlg = createDialogSheet(box);
 
         LinearLayout btnRow = new LinearLayout(this);
         btnRow.setOrientation(LinearLayout.HORIZONTAL);
