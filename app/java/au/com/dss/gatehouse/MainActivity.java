@@ -6255,95 +6255,356 @@ private void updateTabSelection(int tabIndex) {
                 .start();
     }
 
-    private void renderFullPageFolio() {
-        if (fullPageFolioOverlay == null) return;
-        fullPageFolioOverlay.removeAllViews();
+    // =========================================================================
+    // 📖 AUTHENTIC INTERACTIVE PAGE CURL FOLIO LAYOUT
+    // =========================================================================
 
-        boolean isTablet = getResources().getConfiguration().smallestScreenWidthDp >= 600;
-        boolean isLandscape = getResources().getConfiguration().orientation == android.content.res.Configuration.ORIENTATION_LANDSCAPE;
+    class AuthenticPageCurlFolioLayout extends FrameLayout {
+        private float curlX = -1f;
+        private float curlY = -1f;
+        private boolean isCurling = false;
+        private float startTouchX = 0f, startTouchY = 0f;
+        private ValueAnimator curlAnimator;
 
+        private final Path topVisiblePath = new Path();
+        private final Path curlFlapPath = new Path();
+        private final Path shadowPath = new Path();
+        private final Paint flapPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+        private final Paint shadowPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+        private final Paint ridgeHighlightPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+        private final Paint dogEarPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+        private final Paint dogEarHintPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+
+        public View underneathView;
+        public View topView;
+
+        private float dpf(float v) {
+            return v * getResources().getDisplayMetrics().density;
+        }
+
+        public AuthenticPageCurlFolioLayout(Context context) {
+            super(context);
+            setWillNotDraw(false);
+            flapPaint.setStyle(Paint.Style.FILL);
+            shadowPaint.setStyle(Paint.Style.FILL);
+            ridgeHighlightPaint.setStyle(Paint.Style.FILL);
+            dogEarPaint.setStyle(Paint.Style.FILL);
+            dogEarHintPaint.setTextAlign(Paint.Align.RIGHT);
+            dogEarHintPaint.setTypeface(Typeface.create(Typeface.MONOSPACE, Typeface.BOLD));
+        }
+
+        public void setPages(View under, View top) {
+            this.underneathView = under;
+            this.topView = top;
+            removeAllViews();
+            if (underneathView != null) addView(underneathView);
+            if (topView != null) addView(topView);
+            isCurling = false;
+            curlX = -1f;
+            curlY = -1f;
+            invalidate();
+        }
+
+        public void triggerPageCurlAnimation(final boolean toCarbon) {
+            if (curlAnimator != null && curlAnimator.isRunning()) curlAnimator.cancel();
+            final float w = getWidth() > 0 ? getWidth() : getResources().getDisplayMetrics().widthPixels;
+            final float h = getHeight() > 0 ? getHeight() : getResources().getDisplayMetrics().heightPixels;
+
+            isCurling = true;
+            curlAnimator = ValueAnimator.ofFloat(0f, 1f);
+            curlAnimator.setDuration(360);
+            curlAnimator.setInterpolator(new android.view.animation.AccelerateDecelerateInterpolator());
+            curlAnimator.addUpdateListener(new ValueAnimator.AnimatorUpdateListener() {
+                public void onAnimationUpdate(ValueAnimator va) {
+                    float p = (Float) va.getAnimatedValue();
+                    float startX = w - dpf(20);
+                    float startY = h - dpf(20);
+                    float targetX = -w * 0.45f;
+                    float targetY = -h * 0.25f;
+
+                    curlX = startX + (targetX - startX) * p;
+                    curlY = startY + (targetY - startY) * p;
+                    calculateCurlGeometry(curlX, curlY, w, h);
+                    invalidate();
+                }
+            });
+            curlAnimator.addListener(new AnimatorListenerAdapter() {
+                @Override
+                public void onAnimationEnd(Animator animation) {
+                    isCarbonCopyMode = toCarbon;
+                    MainActivity.this.hapticHeavyClick();
+                    MainActivity.this.renderFullPageFolio();
+                }
+            });
+            curlAnimator.start();
+        }
+
+        private void calculateCurlGeometry(float pX, float pY, float w, float h) {
+            topVisiblePath.reset();
+            curlFlapPath.reset();
+            shadowPath.reset();
+
+            float clampedX = Math.max(-w * 0.6f, Math.min(w - 2f, pX));
+            float clampedY = Math.max(-h * 0.4f, Math.min(h - 2f, pY));
+
+            float cX = w;
+            float cY = h;
+
+            float vx = clampedX - cX;
+            float vy = clampedY - cY;
+            float len = (float) Math.hypot(vx, vy);
+            if (len < 1f) {
+                topVisiblePath.addRect(0, 0, w, h, Path.Direction.CW);
+                return;
+            }
+
+            float ux = vx / len;
+            float uy = vy / len;
+
+            float mx = (cX + clampedX) * 0.5f;
+            float my = (cY + clampedY) * 0.5f;
+
+            float botX = (Math.abs(ux) > 0.001f) ? mx - (h - my) * uy / ux : mx;
+            float rightY = (Math.abs(uy) > 0.001f) ? my - (w - mx) * ux / uy : my;
+
+            botX = Math.max(-w * 0.5f, Math.min(w, botX));
+            rightY = Math.max(-h * 0.5f, Math.min(h, rightY));
+
+            topVisiblePath.moveTo(0, 0);
+            topVisiblePath.lineTo(w, 0);
+            if (rightY > 0) {
+                topVisiblePath.lineTo(w, rightY);
+            }
+            if (botX > 0) {
+                topVisiblePath.lineTo(botX, h);
+                topVisiblePath.lineTo(0, h);
+            } else {
+                topVisiblePath.lineTo(0, Math.max(0, rightY));
+            }
+            topVisiblePath.close();
+
+            curlFlapPath.moveTo(botX, h);
+            curlFlapPath.lineTo(clampedX, clampedY);
+            curlFlapPath.lineTo(w, rightY);
+            curlFlapPath.close();
+
+            shadowPath.moveTo(botX - dpf(16), h);
+            shadowPath.lineTo(botX, h);
+            shadowPath.lineTo(w, rightY);
+            shadowPath.lineTo(w, rightY - dpf(16));
+            shadowPath.close();
+
+            int flapBase = isCarbonCopyMode ? 0xFF3D3310 : 0xFF1E293B;
+            flapPaint.setColor(flapBase);
+
+            Shader ridgeShader = new LinearGradient(
+                    mx - ux * dpf(18), my - uy * dpf(18),
+                    mx + ux * dpf(22), my + uy * dpf(22),
+                    new int[]{0x33000000, 0x99FFFFFF, 0x55000000, 0x00000000},
+                    new float[]{0f, 0.45f, 0.72f, 1f},
+                    Shader.TileMode.CLAMP);
+            ridgeHighlightPaint.setShader(ridgeShader);
+
+            Shader shadowShader = new LinearGradient(
+                    mx, my,
+                    mx - ux * dpf(26), my - uy * dpf(26),
+                    new int[]{0x77000000, 0x33000000, 0x00000000},
+                    new float[]{0f, 0.5f, 1f},
+                    Shader.TileMode.CLAMP);
+            shadowPaint.setShader(shadowShader);
+        }
+
+        @Override
+        public boolean onInterceptTouchEvent(MotionEvent ev) {
+            float w = getWidth();
+            float h = getHeight();
+            if (w <= 0 || h <= 0) return false;
+
+            switch (ev.getActionMasked()) {
+                case MotionEvent.ACTION_DOWN:
+                    startTouchX = ev.getX();
+                    startTouchY = ev.getY();
+                    // Intercept touches near the bottom or bottom corner
+                    if (startTouchY > h - dpf(170) || (startTouchX > w - dpf(140) && startTouchY > h - dpf(220))) {
+                        isCurling = true;
+                        curlX = startTouchX;
+                        curlY = startTouchY;
+                        calculateCurlGeometry(curlX, curlY, w, h);
+                        return true;
+                    }
+                    break;
+                case MotionEvent.ACTION_MOVE:
+                    float dy = ev.getY() - startTouchY;
+                    float dx = ev.getX() - startTouchX;
+                    if ((dy < -dpf(14) || dx < -dpf(14)) && startTouchY > h - dpf(220)) {
+                        isCurling = true;
+                        if (getParent() != null) getParent().requestDisallowInterceptTouchEvent(true);
+                        return true;
+                    }
+                    break;
+            }
+            return super.onInterceptTouchEvent(ev);
+        }
+
+        @Override
+        public boolean onTouchEvent(MotionEvent ev) {
+            final float w = getWidth();
+            final float h = getHeight();
+            if (w <= 0 || h <= 0) return super.onTouchEvent(ev);
+
+            switch (ev.getActionMasked()) {
+                case MotionEvent.ACTION_DOWN:
+                    startTouchX = ev.getX();
+                    startTouchY = ev.getY();
+                    isCurling = true;
+                    curlX = startTouchX;
+                    curlY = startTouchY;
+                    calculateCurlGeometry(curlX, curlY, w, h);
+                    invalidate();
+                    return true;
+
+                case MotionEvent.ACTION_MOVE:
+                    if (isCurling) {
+                        curlX = ev.getX();
+                        curlY = ev.getY();
+                        calculateCurlGeometry(curlX, curlY, w, h);
+                        invalidate();
+                        return true;
+                    }
+                    break;
+
+                case MotionEvent.ACTION_UP:
+                case MotionEvent.ACTION_CANCEL:
+                    if (isCurling) {
+                        float pullDist = (float) Math.hypot(w - curlX, h - curlY);
+                        boolean shouldFlip = pullDist > Math.min(w, h) * 0.32f || curlY < h * 0.68f || curlX < w * 0.65f;
+
+                        if (shouldFlip) {
+                            // Animate curl off screen to complete the page turn
+                            if (curlAnimator != null && curlAnimator.isRunning()) curlAnimator.cancel();
+                            final float fromX = curlX;
+                            final float fromY = curlY;
+                            final float targetX = -w * 0.5f;
+                            final float targetY = -h * 0.3f;
+
+                            curlAnimator = ValueAnimator.ofFloat(0f, 1f);
+                            curlAnimator.setDuration(220);
+                            curlAnimator.setInterpolator(new DecelerateInterpolator(1.3f));
+                            curlAnimator.addUpdateListener(new ValueAnimator.AnimatorUpdateListener() {
+                                public void onAnimationUpdate(ValueAnimator va) {
+                                    float p = (Float) va.getAnimatedValue();
+                                    curlX = fromX + (targetX - fromX) * p;
+                                    curlY = fromY + (targetY - fromY) * p;
+                                    calculateCurlGeometry(curlX, curlY, w, h);
+                                    invalidate();
+                                }
+                            });
+                            curlAnimator.addListener(new AnimatorListenerAdapter() {
+                                @Override
+                                public void onAnimationEnd(Animator animation) {
+                                    isCarbonCopyMode = !isCarbonCopyMode;
+                                    MainActivity.this.hapticHeavyClick();
+                                    MainActivity.this.renderFullPageFolio();
+                                }
+                            });
+                            curlAnimator.start();
+                        } else {
+                            // Snap back flat
+                            if (curlAnimator != null && curlAnimator.isRunning()) curlAnimator.cancel();
+                            final float fromX = curlX;
+                            final float fromY = curlY;
+                            curlAnimator = ValueAnimator.ofFloat(0f, 1f);
+                            curlAnimator.setDuration(200);
+                            curlAnimator.setInterpolator(new OvershootInterpolator(1.15f));
+                            curlAnimator.addUpdateListener(new ValueAnimator.AnimatorUpdateListener() {
+                                public void onAnimationUpdate(ValueAnimator va) {
+                                    float p = (Float) va.getAnimatedValue();
+                                    curlX = fromX + (w - fromX) * p;
+                                    curlY = fromY + (h - fromY) * p;
+                                    calculateCurlGeometry(curlX, curlY, w, h);
+                                    invalidate();
+                                }
+                            });
+                            curlAnimator.addListener(new AnimatorListenerAdapter() {
+                                @Override
+                                public void onAnimationEnd(Animator animation) {
+                                    isCurling = false;
+                                    curlX = -1f;
+                                    curlY = -1f;
+                                    invalidate();
+                                }
+                            });
+                            curlAnimator.start();
+                        }
+                        return true;
+                    }
+                    break;
+            }
+            return super.onTouchEvent(ev);
+        }
+
+        @Override
+        protected boolean drawChild(Canvas canvas, View child, long drawingTime) {
+            if (child == topView && isCurling) {
+                canvas.save();
+                canvas.clipPath(topVisiblePath);
+                boolean res = super.drawChild(canvas, child, drawingTime);
+                canvas.restore();
+                return res;
+            }
+            return super.drawChild(canvas, child, drawingTime);
+        }
+
+        @Override
+        protected void dispatchDraw(Canvas canvas) {
+            super.dispatchDraw(canvas);
+            int w = getWidth();
+            int h = getHeight();
+            if (w <= 0 || h <= 0) return;
+
+            if (isCurling) {
+                // 1. Draw soft drop shadow along fold edge onto revealed underneath page
+                canvas.drawPath(shadowPath, shadowPaint);
+
+                // 2. Draw curled paper flap (underside of top sheet)
+                canvas.drawPath(curlFlapPath, flapPaint);
+
+                // 3. Draw 3D cylindrical lighting ridge on curled flap
+                canvas.drawPath(curlFlapPath, ridgeHighlightPaint);
+            } else {
+                // Draw realistic curled dog-ear hint tab at bottom-right corner
+                float earSize = dpf(42f);
+                Path earPath = new Path();
+                earPath.moveTo(w - earSize, h);
+                earPath.lineTo(w - dpf(10), h - dpf(10));
+                earPath.lineTo(w, h - earSize);
+                earPath.close();
+
+                dogEarPaint.setColor(isCarbonCopyMode ? 0xCCFDE047 : 0xCC38BDF8);
+                canvas.drawPath(earPath, dogEarPaint);
+
+                dogEarHintPaint.setTextSize(dpf(9.5f));
+                dogEarHintPaint.setColor(isCarbonCopyMode ? 0xFFFEF08A : colCyan);
+                String hint = isCarbonCopyMode ? "📄 PULL TO PEEL ORIGINAL ◹" : "🟡 PULL TO PEEL CARBON COPY ◹";
+                canvas.drawText(hint, w - dpf(14), h - dpf(12), dogEarHintPaint);
+            }
+        }
+    }
+
+    private View buildNotebookSheetView(boolean carbonMode) {
         // Styling based on Authentic Security Log Book Photos
-        int folioBg = isCarbonCopyMode ? 0xFF231D08 : 0xFF0B0F19;
-        int sheetCardBg = isCarbonCopyMode ? 0xFF2A230B : 0xFF111827;
-        int headerModeCol = isCarbonCopyMode ? 0xFFFDE047 : colCyan;
-        int dateCol = isCarbonCopyMode ? 0xFFFEF08A : colPale;
-        int pageNumCol = isCarbonCopyMode ? 0xFFFDE047 : colAccent;
-        int marginLineCol = isCarbonCopyMode ? 0x883B82F6 : 0x4438BDF8;
+        int sheetCardBg = carbonMode ? 0xFF231D08 : 0xFF111827;
+        int headerModeCol = carbonMode ? 0xFFFDE047 : colCyan;
+        int dateCol = carbonMode ? 0xFFFEF08A : colPale;
+        int pageNumCol = carbonMode ? 0xFFFDE047 : colAccent;
+        int marginLineCol = carbonMode ? 0x883B82F6 : 0x4438BDF8;
 
-        LinearLayout rootContainer = new LinearLayout(this);
-        rootContainer.setOrientation(LinearLayout.VERTICAL);
-        rootContainer.setBackgroundColor(folioBg);
-        final int padSide = isTablet && isLandscape ? dp(24) : dp(14);
-        final int padTop = isTablet && isLandscape ? dp(16) : dp(28);
-        rootContainer.setPadding(padSide, padTop, padSide, dp(14));
-
-        // 1. Top Control Bar (Back to Patrol, Mode Toggle, Share Report)
-        LinearLayout topBar = new LinearLayout(this);
-        topBar.setOrientation(LinearLayout.HORIZONTAL);
-        topBar.setGravity(Gravity.CENTER_VERTICAL);
-        topBar.setPadding(0, 0, 0, dp(10));
-
-        TextView btnBack = new TextView(this);
-        btnBack.setText("← 🛡️ PATROL DASHBOARD");
-        btnBack.setTextColor(colPale);
-        btnBack.setTextSize(11f);
-        btnBack.setTypeface(Typeface.DEFAULT_BOLD);
-        btnBack.setPadding(dp(10), dp(6), dp(10), dp(6));
-        btnBack.setBackground(rounded(colPanel2, dp(8)));
-        btnBack.setOnClickListener(new View.OnClickListener() {
-            public void onClick(View v) {
-                closeFullPageFolio(true);
-            }
-        });
-        topBar.addView(btnBack);
-
-        View spacer = new View(this);
-        LinearLayout.LayoutParams splp = new LinearLayout.LayoutParams(0, 0, 1f);
-        spacer.setLayoutParams(splp);
-        topBar.addView(spacer);
-
-        final TextView btnToggle = new TextView(this);
-        btnToggle.setText(isCarbonCopyMode ? "🟡 DUPLICATE CARBON" : "📄 ORIGINAL SHEET");
-        btnToggle.setTextColor(isCarbonCopyMode ? 0xFFFDE047 : colCyan);
-        btnToggle.setTextSize(10.5f);
-        btnToggle.setTypeface(Typeface.create(Typeface.MONOSPACE, Typeface.BOLD));
-        btnToggle.setPadding(dp(10), dp(6), dp(10), dp(6));
-        btnToggle.setBackground(rounded(isCarbonCopyMode ? 0x33FDE047 : 0x2206B6D4, dp(8)));
-        btnToggle.setOnClickListener(new View.OnClickListener() {
-            public void onClick(View v) {
-                flipFullPageCarbonMode();
-            }
-        });
-        topBar.addView(btnToggle);
-
-        TextView btnShare = new TextView(this);
-        btnShare.setText("📤 SHARE");
-        btnShare.setTextColor(colAccentInk);
-        btnShare.setTextSize(11f);
-        btnShare.setTypeface(Typeface.DEFAULT_BOLD);
-        btnShare.setPadding(dp(10), dp(6), dp(10), dp(6));
-        btnShare.setBackground(pressable(colAccent, dp(8)));
-        LinearLayout.LayoutParams shlp = new LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT);
-        shlp.leftMargin = dp(8);
-        btnShare.setLayoutParams(shlp);
-        btnShare.setOnClickListener(new View.OnClickListener() {
-            public void onClick(View v) {
-                hapticHeavyClick();
-                shareHandoverReport();
-            }
-        });
-        topBar.addView(btnShare);
-        rootContainer.addView(topBar);
-
-        // 2. Full Page Folio Sheet Card (Entire page are the records for the shift!)
         LinearLayout sheetCard = new LinearLayout(this);
         sheetCard.setOrientation(LinearLayout.VERTICAL);
         sheetCard.setBackground(rounded(sheetCardBg, dp(20)));
         sheetCard.setPadding(dp(16), dp(14), dp(16), dp(14));
-        LinearLayout.LayoutParams sclp = new LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT, 0, 1f);
-        sheetCard.setLayoutParams(sclp);
+        sheetCard.setLayoutParams(new FrameLayout.LayoutParams(
+                FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT));
 
         // Notebook Sheet Header (Left: Original/Duplicate, Center: Date, Right: Page 28)
         LinearLayout notebookHeader = new LinearLayout(this);
@@ -6352,7 +6613,7 @@ private void updateTabSelection(int tabIndex) {
         notebookHeader.setPadding(dp(4), dp(2), dp(4), dp(8));
 
         TextView tvMode = new TextView(this);
-        tvMode.setText(isCarbonCopyMode ? "Duplicate" : "Original");
+        tvMode.setText(carbonMode ? "Duplicate" : "Original");
         tvMode.setTextColor(headerModeCol);
         tvMode.setTextSize(13f);
         tvMode.setTypeface(Typeface.create(Typeface.DEFAULT, Typeface.BOLD_ITALIC));
@@ -6433,7 +6694,7 @@ private void updateTabSelection(int tabIndex) {
 
         TextView footLeft = new TextView(this);
         footLeft.setText("DSS-LOGBOOK-41207 · SPARK SHA-256");
-        footLeft.setTextColor(isCarbonCopyMode ? 0x99FDE047 : colQuiet);
+        footLeft.setTextColor(carbonMode ? 0x99FDE047 : colQuiet);
         footLeft.setTextSize(9f);
         footLeft.setTypeface(Typeface.MONOSPACE);
         LinearLayout.LayoutParams fll = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
@@ -6442,71 +6703,103 @@ private void updateTabSelection(int tabIndex) {
 
         TextView footRight = new TextView(this);
         footRight.setText("OFFICER L. DOHERTY #41207 ✓");
-        footRight.setTextColor(isCarbonCopyMode ? 0xFFFEF08A : colPale);
+        footRight.setTextColor(carbonMode ? 0xFFFEF08A : colPale);
         footRight.setTextSize(9f);
         footRight.setTypeface(Typeface.MONOSPACE);
         folioFoot.addView(footRight);
         sheetCard.addView(folioFoot);
 
-        // Bottom Flipboard 3D Flip Bar
-        LinearLayout flipHandle = new LinearLayout(this);
-        flipHandle.setOrientation(LinearLayout.HORIZONTAL);
-        flipHandle.setGravity(Gravity.CENTER);
-        flipHandle.setPadding(dp(12), dp(8), dp(12), dp(8));
-        flipHandle.setBackground(rounded(isCarbonCopyMode ? 0x33FDE047 : 0x2206B6D4, dp(10)));
-        flipHandle.setOnClickListener(new View.OnClickListener() {
+        return sheetCard;
+    }
+
+    private void renderFullPageFolio() {
+        if (fullPageFolioOverlay == null) return;
+        fullPageFolioOverlay.removeAllViews();
+
+        boolean isTablet = getResources().getConfiguration().smallestScreenWidthDp >= 600;
+        boolean isLandscape = getResources().getConfiguration().orientation == android.content.res.Configuration.ORIENTATION_LANDSCAPE;
+
+        int folioBg = isCarbonCopyMode ? 0xFF1C1705 : 0xFF080B12;
+
+        LinearLayout rootContainer = new LinearLayout(this);
+        rootContainer.setOrientation(LinearLayout.VERTICAL);
+        rootContainer.setBackgroundColor(folioBg);
+        final int padSide = isTablet && isLandscape ? dp(24) : dp(14);
+        final int padTop = isTablet && isLandscape ? dp(16) : dp(28);
+        rootContainer.setPadding(padSide, padTop, padSide, dp(14));
+
+        // 1. Top Control Bar (Back to Patrol, Mode Toggle, Share Report)
+        LinearLayout topBar = new LinearLayout(this);
+        topBar.setOrientation(LinearLayout.HORIZONTAL);
+        topBar.setGravity(Gravity.CENTER_VERTICAL);
+        topBar.setPadding(0, 0, 0, dp(10));
+
+        TextView btnBack = new TextView(this);
+        btnBack.setText("← 🛡️ PATROL DASHBOARD");
+        btnBack.setTextColor(colPale);
+        btnBack.setTextSize(11f);
+        btnBack.setTypeface(Typeface.DEFAULT_BOLD);
+        btnBack.setPadding(dp(10), dp(6), dp(10), dp(6));
+        btnBack.setBackground(rounded(colPanel2, dp(8)));
+        btnBack.setOnClickListener(new View.OnClickListener() {
             public void onClick(View v) {
-                flipFullPageCarbonMode();
+                closeFullPageFolio(true);
+            }
+        });
+        topBar.addView(btnBack);
+
+        View spacer = new View(this);
+        LinearLayout.LayoutParams splp = new LinearLayout.LayoutParams(0, 0, 1f);
+        spacer.setLayoutParams(splp);
+        topBar.addView(spacer);
+
+        final TextView btnToggle = new TextView(this);
+        btnToggle.setText(isCarbonCopyMode ? "🟡 DUPLICATE CARBON" : "📄 ORIGINAL SHEET");
+        btnToggle.setTextColor(isCarbonCopyMode ? 0xFFFDE047 : colCyan);
+        btnToggle.setTextSize(10.5f);
+        btnToggle.setTypeface(Typeface.create(Typeface.MONOSPACE, Typeface.BOLD));
+        btnToggle.setPadding(dp(10), dp(6), dp(10), dp(6));
+        btnToggle.setBackground(rounded(isCarbonCopyMode ? 0x33FDE047 : 0x2206B6D4, dp(8)));
+        topBar.addView(btnToggle);
+
+        TextView btnShare = new TextView(this);
+        btnShare.setText("📤 SHARE");
+        btnShare.setTextColor(colAccentInk);
+        btnShare.setTextSize(11f);
+        btnShare.setTypeface(Typeface.DEFAULT_BOLD);
+        btnShare.setPadding(dp(10), dp(6), dp(10), dp(6));
+        btnShare.setBackground(pressable(colAccent, dp(8)));
+        LinearLayout.LayoutParams shlp = new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+        shlp.leftMargin = dp(8);
+        btnShare.setLayoutParams(shlp);
+        btnShare.setOnClickListener(new View.OnClickListener() {
+            public void onClick(View v) {
+                hapticHeavyClick();
+                shareHandoverReport();
+            }
+        });
+        topBar.addView(btnShare);
+        rootContainer.addView(topBar);
+
+        // 2. Authentic Page Curl Folio Container (Peels from bottom to reveal carbon sheet underneath)
+        final AuthenticPageCurlFolioLayout curlLayout = new AuthenticPageCurlFolioLayout(this);
+        LinearLayout.LayoutParams clp = new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT, 0, 1f);
+        curlLayout.setLayoutParams(clp);
+
+        View underneathSheet = buildNotebookSheetView(!isCarbonCopyMode);
+        View topSheet = buildNotebookSheetView(isCarbonCopyMode);
+        curlLayout.setPages(underneathSheet, topSheet);
+
+        btnToggle.setOnClickListener(new View.OnClickListener() {
+            public void onClick(View v) {
+                hapticHeavyClick();
+                curlLayout.triggerPageCurlAnimation(!isCarbonCopyMode);
             }
         });
 
-        TextView fhIcon = new TextView(this);
-        fhIcon.setText(isCarbonCopyMode ? "📄" : "🟡");
-        fhIcon.setTextSize(14f);
-        fhIcon.setPadding(0, 0, dp(6), 0);
-        flipHandle.addView(fhIcon);
-
-        TextView fhText = new TextView(this);
-        fhText.setText(isCarbonCopyMode
-                ? "SWIPE UP OR TAP TO FLIP TO ORIGINAL TOP SHEET ▴"
-                : "SWIPE UP OR TAP TO FLIP TO CANARY CARBON DUPLICATE ▴");
-        fhText.setTextColor(isCarbonCopyMode ? 0xFFFEF08A : colCyan);
-        fhText.setTextSize(10.5f);
-        fhText.setTypeface(Typeface.create(Typeface.MONOSPACE, Typeface.BOLD));
-        flipHandle.addView(fhText);
-
-        sheetCard.addView(flipHandle);
-        rootContainer.addView(sheetCard);
-
-        // Touch gesture: swiping up flips page; swiping down at the top pulls back to patrol
-        rootContainer.setOnTouchListener(new View.OnTouchListener() {
-            private float downY = 0f;
-            private boolean hasFlipped = false;
-
-            @Override
-            public boolean onTouch(View v, MotionEvent event) {
-                switch (event.getActionMasked()) {
-                    case MotionEvent.ACTION_DOWN:
-                        downY = event.getY();
-                        hasFlipped = false;
-                        break;
-                    case MotionEvent.ACTION_MOVE:
-                        float dy = event.getY() - downY;
-                        if (dy < -dp(50) && !hasFlipped) {
-                            hasFlipped = true;
-                            flipFullPageCarbonMode();
-                            return true;
-                        } else if (dy > dp(70) && !hasFlipped) {
-                            hasFlipped = true;
-                            closeFullPageFolio(true);
-                            return true;
-                        }
-                        break;
-                }
-                return false;
-            }
-        });
-
+        rootContainer.addView(curlLayout);
         fullPageFolioOverlay.addView(rootContainer);
     }
 
