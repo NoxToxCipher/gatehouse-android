@@ -6279,60 +6279,56 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
             this.touchScaleAnimator.start();
         }
 
-        @Override // android.view.View
+                @Override // android.view.View
         public boolean onTouchEvent(MotionEvent motionEvent) {
             int width = getWidth();
-            if (width <= 0) {
-                return super.onTouchEvent(motionEvent);
-            }
-            float dpf = dpf(3.0f);
-            float length = (width - (dpf * 2.0f)) / this.titles.length;
+            if (width <= 0) return super.onTouchEvent(motionEvent);
+            float length = width / (float) this.titles.length;
             switch (motionEvent.getActionMasked()) {
-                case 0:
+                case MotionEvent.ACTION_DOWN:
                     this.isTouching = true;
                     this.isDragging = false;
                     this.touchDownX = motionEvent.getX();
                     this.touchDownY = motionEvent.getY();
                     getParent().requestDisallowInterceptTouchEvent(true);
-                    float max = Math.max(0.0f, Math.min(this.titles.length - 1, (motionEvent.getX() - dpf) / length));
-                    this.lastHoverIndex = Math.round(max);
-                    animateToPosition(max);
+                    int targetIdx = Math.max(0, Math.min(this.titles.length - 1, (int) (motionEvent.getX() / length)));
+                    animateToPosition(targetIdx);
                     animateTouchScale(1.04f);
                     MainActivity.this.hapticClick();
                     return true;
-                case 1:
+                case MotionEvent.ACTION_UP:
                     this.isTouching = false;
                     this.isDragging = false;
                     getParent().requestDisallowInterceptTouchEvent(false);
-                    int max2 = Math.max(0, Math.min(this.titles.length - 1, Math.round(Math.max(0.0f, Math.min(this.titles.length - 1, (motionEvent.getX() - dpf) / length)))));
-                    this.selectedIndex = max2;
-                    animateToPosition(max2);
+                    int sel = Math.max(0, Math.min(this.titles.length - 1, (int) (motionEvent.getX() / length)));
+                    this.selectedIndex = sel;
+                    animateToPosition(sel);
                     animateTouchScale(1.0f);
                     MainActivity.this.hapticClick();
-                    if (MainActivity.this.activeTheme != max2) {
-                        MainActivity.this.activeTheme = max2;
+                    if (MainActivity.this.activeTheme != sel) {
+                        MainActivity.this.activeTheme = sel;
                         MainActivity.this.rebuildCurrentScreen();
                     }
                     return true;
-                case 2:
+                case MotionEvent.ACTION_MOVE:
                     float abs = Math.abs(motionEvent.getX() - this.touchDownX);
                     float abs2 = Math.abs(motionEvent.getY() - this.touchDownY);
                     if (abs > dpf(6.0f) || abs2 > dpf(6.0f)) {
                         this.isDragging = true;
                     }
-                    float max3 = Math.max(0.0f, Math.min(this.titles.length - 1, (motionEvent.getX() - dpf) / length));
+                    float dragPos = Math.max(0.0f, Math.min((float) (this.titles.length - 1), (motionEvent.getX() - (length / 2.0f)) / length));
                     if (this.snapAnimator != null && this.snapAnimator.isRunning()) {
                         this.snapAnimator.cancel();
                     }
-                    this.indicatorPos = max3;
-                    int max4 = Math.max(0, Math.min(this.titles.length - 1, Math.round(max3)));
-                    if (max4 != this.lastHoverIndex) {
-                        this.lastHoverIndex = max4;
+                    this.indicatorPos = dragPos;
+                    int hover = Math.max(0, Math.min(this.titles.length - 1, (int) (motionEvent.getX() / length)));
+                    if (hover != this.lastHoverIndex) {
+                        this.lastHoverIndex = hover;
                         MainActivity.this.hapticClick();
                     }
                     invalidate();
                     return true;
-                case 3:
+                case MotionEvent.ACTION_CANCEL:
                     this.isTouching = false;
                     this.isDragging = false;
                     getParent().requestDisallowInterceptTouchEvent(false);
@@ -6522,57 +6518,53 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
             this.touchScaleAnimator.start();
         }
 
-        @Override // android.view.View
+                @Override // android.view.View
         public boolean onTouchEvent(MotionEvent motionEvent) {
             int width = getWidth();
-            if (width <= 0) {
-                return super.onTouchEvent(motionEvent);
-            }
-            float dpf = dpf(3.0f);
-            float length = (width - (dpf * 2.0f)) / this.titles.length;
+            if (width <= 0) return super.onTouchEvent(motionEvent);
+            float length = width / (float) this.titles.length;
             switch (motionEvent.getActionMasked()) {
-                case 0:
+                case MotionEvent.ACTION_DOWN:
                     this.isTouching = true;
                     this.isDragging = false;
                     this.touchDownX = motionEvent.getX();
                     this.touchDownY = motionEvent.getY();
                     getParent().requestDisallowInterceptTouchEvent(true);
-                    float max = Math.max(0.0f, Math.min(this.titles.length - 1, (motionEvent.getX() - dpf) / length));
-                    this.lastHoverIndex = Math.round(max);
-                    animateToPosition(max);
+                    int targetIdx = Math.max(0, Math.min(this.titles.length - 1, (int) (motionEvent.getX() / length)));
+                    animateToPosition(targetIdx);
                     animateTouchScale(1.04f);
                     MainActivity.this.hapticClick();
                     return true;
-                case 1:
+                case MotionEvent.ACTION_UP:
                     this.isTouching = false;
                     this.isDragging = false;
                     getParent().requestDisallowInterceptTouchEvent(false);
-                    int max2 = Math.max(0, Math.min(this.titles.length - 1, Math.round(Math.max(0.0f, Math.min(this.titles.length - 1, (motionEvent.getX() - dpf) / length)))));
-                    this.selectedIndex = max2;
-                    animateToPosition(max2);
+                    int sel = Math.max(0, Math.min(this.titles.length - 1, (int) (motionEvent.getX() / length)));
+                    this.selectedIndex = sel;
+                    animateToPosition(sel);
                     animateTouchScale(1.0f);
                     MainActivity.this.hapticClick();
-                    MainActivity.this.updateTabSelection(max2);
+                    MainActivity.this.updateTabSelection(sel);
                     return true;
-                case 2:
+                case MotionEvent.ACTION_MOVE:
                     float abs = Math.abs(motionEvent.getX() - this.touchDownX);
                     float abs2 = Math.abs(motionEvent.getY() - this.touchDownY);
                     if (abs > dpf(6.0f) || abs2 > dpf(6.0f)) {
                         this.isDragging = true;
                     }
-                    float max3 = Math.max(0.0f, Math.min(this.titles.length - 1, (motionEvent.getX() - dpf) / length));
+                    float dragPos = Math.max(0.0f, Math.min((float) (this.titles.length - 1), (motionEvent.getX() - (length / 2.0f)) / length));
                     if (this.snapAnimator != null && this.snapAnimator.isRunning()) {
                         this.snapAnimator.cancel();
                     }
-                    this.indicatorPos = max3;
-                    int max4 = Math.max(0, Math.min(this.titles.length - 1, Math.round(max3)));
-                    if (max4 != this.lastHoverIndex) {
-                        this.lastHoverIndex = max4;
+                    this.indicatorPos = dragPos;
+                    int hover = Math.max(0, Math.min(this.titles.length - 1, (int) (motionEvent.getX() / length)));
+                    if (hover != this.lastHoverIndex) {
+                        this.lastHoverIndex = hover;
                         MainActivity.this.hapticClick();
                     }
                     invalidate();
                     return true;
-                case 3:
+                case MotionEvent.ACTION_CANCEL:
                     this.isTouching = false;
                     this.isDragging = false;
                     getParent().requestDisallowInterceptTouchEvent(false);
