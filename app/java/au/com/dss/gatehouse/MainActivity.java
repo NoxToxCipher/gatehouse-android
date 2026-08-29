@@ -2587,8 +2587,8 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
             p.setTranslationX(offset);
 
             float dist = Math.abs(currentTabFloat - i);
-            if (dist > 1.15f) {
-                p.setVisibility(View.GONE);
+            if (dist > 1.0f) {
+                p.setVisibility(View.INVISIBLE);
             } else {
                 p.setVisibility(View.VISIBLE);
                 p.setAlpha(Math.max(0f, 1f - dist * 0.75f));
@@ -7727,6 +7727,8 @@ private void updateTabSelection(int tabIndex) {
 
         public FluidAnimatedThemeBarView(Context context) {
             super(context);
+            setClickable(true);
+            setFocusable(true);
             bgPaint.setStyle(Paint.Style.FILL);
             chipPaint.setStyle(Paint.Style.FILL);
             chipGlowPaint.setStyle(Paint.Style.STROKE);
@@ -7833,6 +7835,8 @@ private void updateTabSelection(int tabIndex) {
 
         public FluidAnimatedTabBarView(Context context) {
             super(context);
+            setClickable(true);
+            setFocusable(true);
             bgPaint.setStyle(Paint.Style.FILL);
             indicatorPaint.setStyle(Paint.Style.FILL);
             indicatorGlowPaint.setStyle(Paint.Style.STROKE);
