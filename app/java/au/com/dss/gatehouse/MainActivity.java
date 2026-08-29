@@ -947,7 +947,7 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
             fireHeader.setPadding(0, dp(10), 0, dp(6));
 
             TextView fTitle = new TextView(this);
-            fTitle.setText("FIRE & PUMP SYSTEMS (5) · 1,200 PSI OPTIMAL");
+            fTitle.setText("FIRE & PUMP SYSTEMS · 1,200 PSI");
             fTitle.setTextColor(colQuiet);
             fTitle.setTextSize(10);
             fTitle.setTypeface(Typeface.DEFAULT_BOLD);
@@ -1055,7 +1055,7 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
             fireHeader.setPadding(0, dp(10), 0, dp(6));
 
             TextView fTitle = new TextView(this);
-            fTitle.setText("FIRE & PUMP SYSTEMS (5) · 1,200 PSI OPTIMAL");
+            fTitle.setText("FIRE & PUMP SYSTEMS · 1,200 PSI");
             fTitle.setTextColor(colQuiet);
             fTitle.setTextSize(10);
             fTitle.setTypeface(Typeface.DEFAULT_BOLD);
@@ -2966,26 +2966,70 @@ private void updateTabSelection(int tabIndex) {
     }
 
     private LinearLayout buildToolsTab() {
+        boolean isTablet = getResources().getConfiguration().smallestScreenWidthDp >= 600;
+        boolean isLandscape = getResources().getConfiguration().orientation == android.content.res.Configuration.ORIENTATION_LANDSCAPE;
+
+        if (isTablet && isLandscape) {
+            LinearLayout container = new LinearLayout(this);
+            container.setOrientation(LinearLayout.HORIZONTAL);
+            container.setBaselineAligned(false);
+            container.setPadding(0, dp(6), 0, dp(24));
+
+            LinearLayout leftCol = new LinearLayout(this);
+            leftCol.setOrientation(LinearLayout.VERTICAL);
+            LinearLayout.LayoutParams lclp = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
+            lclp.rightMargin = dp(10);
+            leftCol.setLayoutParams(lclp);
+
+            leftCol.addView(contactsSectionHeader("📡 OFFLINE PEER MESH & NFC", colCyan));
+            leftCol.addView(buildMeshPreviewCard());
+
+            leftCol.addView(contactsSectionHeader("🌤️ SITE WEATHER & HYDRATION", colCyan));
+            leftCol.addView(buildDetailedWeatherCard());
+
+            leftCol.addView(contactsSectionHeader("🪪 OFFICER VAULT & CREDENTIALS", colPale));
+            leftCol.addView(buildCredentialPreviewCard());
+
+            LinearLayout rightCol = new LinearLayout(this);
+            rightCol.setOrientation(LinearLayout.VERTICAL);
+            LinearLayout.LayoutParams rclp = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
+            rclp.leftMargin = dp(10);
+            rightCol.setLayoutParams(rclp);
+
+            rightCol.addView(contactsSectionHeader("🔦 TACTICAL LIGHTING (SHAKE / CHOP)", colAccent));
+            rightCol.addView(buildLightingGrid());
+
+            rightCol.addView(contactsSectionHeader("🧭 SITE COMPASS & AZIMUTH", colCyan));
+            rightCol.addView(buildCompassCard());
+
+            rightCol.addView(contactsSectionHeader("🛰️ GNSS & SATELLITE RADAR", colEmerald));
+            rightCol.addView(buildGpsCard());
+
+            container.addView(leftCol);
+            container.addView(rightCol);
+            return container;
+        }
+
         LinearLayout container = new LinearLayout(this);
         container.setOrientation(LinearLayout.VERTICAL);
         container.setPadding(0, dp(6), 0, dp(24));
 
-        container.addView(contactsSectionHeader("📡 AUTONOMOUS PEER MESH & NFC PAIRING", colCyan));
+        container.addView(contactsSectionHeader("📡 OFFLINE PEER MESH & NFC", colCyan));
         container.addView(buildMeshPreviewCard());
 
-        container.addView(contactsSectionHeader("🌤️ KINGSTON SITE WEATHER, THERMAL & HYDRATION", colCyan));
+        container.addView(contactsSectionHeader("🌤️ SITE WEATHER & HYDRATION", colCyan));
         container.addView(buildDetailedWeatherCard());
 
-        container.addView(contactsSectionHeader("🪪 OFFICER CREDENTIALS & FIRST AID VAULT", colPale));
+        container.addView(contactsSectionHeader("🪪 OFFICER VAULT & CREDENTIALS", colPale));
         container.addView(buildCredentialPreviewCard());
 
-        container.addView(contactsSectionHeader("💡 TACTICAL LIGHTING (DOUBLE-CHOP SHAKE TO TOGGLE)", colAccent));
+        container.addView(contactsSectionHeader("🔦 TACTICAL LIGHTING (SHAKE / CHOP)", colAccent));
         container.addView(buildLightingGrid());
 
-        container.addView(contactsSectionHeader("🧭 360° ROTATING COMPASS & SITE AZIMUTH", colCyan));
+        container.addView(contactsSectionHeader("🧭 SITE COMPASS & AZIMUTH", colCyan));
         container.addView(buildCompassCard());
 
-        container.addView(contactsSectionHeader("🛰️ GPS TELEMETRY & SATELLITE RADAR", colEmerald));
+        container.addView(contactsSectionHeader("🛰️ GNSS & SATELLITE RADAR", colEmerald));
         container.addView(buildGpsCard());
 
         return container;
@@ -4111,23 +4155,23 @@ private void updateTabSelection(int tabIndex) {
         container.setOrientation(LinearLayout.VERTICAL);
         container.setPadding(0, dp(6), 0, dp(24));
 
-        container.addView(contactsSectionHeader("🚨 EMERGENCY SERVICES (IMMEDIATE RESPONSE)", colCrimson));
+        container.addView(contactsSectionHeader("🚨 EMERGENCY SERVICES (24/7)", colCrimson));
         container.addView(contactCard("Triple Zero (000)", "Police · Fire · Ambulance", "000", "24/7 PRIORITY", colCrimson));
         container.addView(contactCard("Logan District Police", "Kingston & Logan Central Station", "0738261888", "24/7 ATTENDANCE", colCrimson));
         container.addView(contactCard("SES Queensland", "Storm, Flood & Structural Damage", "132500", "24/7 DISPATCH", colCyan));
         container.addView(contactCard("Poisons Info Centre", "Chemical & Hazardous Substance Exposure", "131126", "24/7 SUPPORT", colAccent));
 
-        container.addView(contactsSectionHeader("🏢 DOHERTY SECURITY SERVICES (DSS)", colAccent));
+        container.addView(contactsSectionHeader("🛡️ DOHERTY SECURITY SERVICES", colAccent));
         container.addView(contactCard("DSS 24/7 Control Room", "Central Dispatch & Escalations", "1300377000", "24/7 MONITORING", colAccent));
         container.addView(contactCard("DSS Operations Manager", "Brisbane North & South Operations", "0418700120", "ON CALL", colAccent));
         container.addView(contactCard("DSS Field Patrol Supervisor", "Mobile Response Unit 4", "0422555810", "ON SHIFT 18:00–06:00", colEmerald));
 
-        container.addView(contactsSectionHeader("🏭 HUME DOORS & TIMBER (KINGSTON SITE)", colCyan));
+        container.addView(contactsSectionHeader("🏭 HUME DOORS & TIMBER", colCyan));
         container.addView(contactCard("Hume Site Operations Manager", "Kingston Plant Management", "0439123456", "PRIMARY CLIENT CONTACT", colCyan));
         container.addView(contactCard("Hume Facilities & Plant Engineer", "Power, Pump House & Gate Failures", "0411987654", "ON CALL MAINTENANCE", colCyan));
         container.addView(contactCard("Hume WHS / Safety Officer", "Workplace Safety & Incident Officer", "0423456789", "ON CALL SAFETY", colCyan));
 
-        container.addView(contactsSectionHeader("👥 ON-SITE & RELIEF GUARDS", colPale));
+        container.addView(contactsSectionHeader("👥 ON-SITE & RELIEF OFFICERS", colPale));
         container.addView(contactCard("Officer Lochran Doherty", "Current Static Guard · LIC #41207", "0455123789", "ON SITE (TONIGHT)", colEmerald));
         container.addView(contactCard("Relief / Day Crew Guard", "Morning Handover Officer (06:05)", "0400111222", "06:05 HANDOVER", colMuted));
 
@@ -4326,7 +4370,7 @@ private void updateTabSelection(int tabIndex) {
         guardRow.setGravity(Gravity.CENTER_VERTICAL);
 
         TextView who = new TextView(this);
-        who.setText("Officer Lochran Doherty  ");
+        who.setText("Officer Lochran Doherty");
         who.setTextColor(colPale);
         who.setTextSize(13);
         who.setTypeface(Typeface.DEFAULT_BOLD);
@@ -4335,16 +4379,27 @@ private void updateTabSelection(int tabIndex) {
         TextView lic = new TextView(this);
         lic.setText("LIC #41207 🪪");
         lic.setTextColor(colAccent);
-        lic.setTextSize(10);
+        lic.setTextSize(9.5f);
         lic.setTypeface(Typeface.MONOSPACE);
         lic.setPadding(dp(6), dp(2), dp(6), dp(2));
         lic.setBackground(rounded(colPanel3, dp(4)));
+        LinearLayout.LayoutParams llic = new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+        llic.leftMargin = dp(6);
+        lic.setLayoutParams(llic);
         guardRow.addView(lic);
 
         TextView shiftTime = new TextView(this);
-        shiftTime.setText("  · Shift 18:00–06:00");
+        shiftTime.setText("18:00–06:00");
         shiftTime.setTextColor(colQuiet);
-        shiftTime.setTextSize(12);
+        shiftTime.setTextSize(10.5f);
+        shiftTime.setTypeface(Typeface.MONOSPACE);
+        shiftTime.setPadding(dp(6), dp(2), dp(6), dp(2));
+        shiftTime.setBackground(rounded(colPanel2, dp(4)));
+        LinearLayout.LayoutParams lshift = new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+        lshift.leftMargin = dp(6);
+        shiftTime.setLayoutParams(lshift);
         guardRow.addView(shiftTime);
 
         guardRow.setPadding(0, dp(4), 0, 0);
@@ -4429,11 +4484,12 @@ private void updateTabSelection(int tabIndex) {
         TextView t = new TextView(this);
         t.setTag(name);
         t.setText(name);
-        t.setTextSize(13);
+        t.setTextSize(12.5f);
         t.setTypeface(Typeface.DEFAULT_BOLD);
+        t.setGravity(Gravity.CENTER);
         t.setTextColor(colPale);
-        t.setPadding(dp(14), dp(14), dp(14), dp(14));
-        t.setBackground(pressable(colPanel, dp(16)));
+        t.setPadding(dp(12), dp(14), dp(12), dp(14));
+        t.setBackground(pressable(colPanel, dp(14)));
         t.setOnClickListener(new View.OnClickListener() {
             public void onClick(View v) {
                 hapticClick();
@@ -4442,8 +4498,8 @@ private void updateTabSelection(int tabIndex) {
         });
         LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(
                 0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
-        lp.rightMargin = isLeft ? dp(5) : 0;
-        lp.leftMargin = isLeft ? 0 : dp(5);
+        lp.rightMargin = isLeft ? dp(4) : 0;
+        lp.leftMargin = isLeft ? 0 : dp(4);
         t.setLayoutParams(lp);
         return t;
     }
@@ -4452,11 +4508,11 @@ private void updateTabSelection(int tabIndex) {
         TextView b = new TextView(this);
         b.setTag(lotName);
         b.setText(lotName);
-        b.setTextSize(11);
+        b.setTextSize(11f);
         b.setTypeface(Typeface.DEFAULT_BOLD);
         b.setGravity(Gravity.CENTER);
         b.setTextColor(colPale);
-        b.setPadding(dp(8), dp(10), dp(8), dp(10));
+        b.setPadding(dp(6), dp(10), dp(6), dp(10));
         b.setBackground(pressable(colPanel, dp(12)));
         b.setOnClickListener(new View.OnClickListener() {
             public void onClick(View v) {
@@ -4466,7 +4522,7 @@ private void updateTabSelection(int tabIndex) {
         });
         LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(
                 0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
-        lp.rightMargin = isLast ? 0 : dp(5);
+        lp.rightMargin = isLast ? 0 : dp(4);
         b.setLayoutParams(lp);
         return b;
     }
@@ -6905,17 +6961,228 @@ private void updateTabSelection(int tabIndex) {
         }
     }
 
-    private void finishPeek(float dx, float vx) {
-        if (mainSurfaceContainer == null || rootFrame == null) return;
-        float w = rootFrame.getWidth();
-        if (w <= 0) return;
-
-        boolean commit = dx > w * 0.5f || vx > dp(1000);
-        if (commit) {
-            openDeputy(true);
-        } else {
-            closeDeputy(true);
+    public void syncDeputyData(final boolean userInitiated) {
+        if (deputyApi == null) return;
+        if (deputyStatusBadge != null) {
+            deputyStatusBadge.setText("● SYNCING...");
+            deputyStatusBadge.setTextColor(0xFF38BDF8);
+            deputyStatusBadge.setBackground(rounded(0x2238BDF8, dp(4)));
         }
+        deputyApi.syncRoster(new DeputyApi.ApiCallback<DeputyApi.DeputyRosterResult>() {
+            @Override
+            public void onSuccess(DeputyApi.DeputyRosterResult result) {
+                latestDeputyResult = result;
+                updateDeputyUi(result);
+                if (userInitiated) {
+                    int count = result.weekShifts != null ? result.weekShifts.size() : 0;
+                    Toast.makeText(MainActivity.this,
+                            result.isLive ? "Deputy: Live roster synced (" + count + " shifts)" : result.statusMessage,
+                            Toast.LENGTH_SHORT).show();
+                }
+            }
+
+            @Override
+            public void onError(String errorMessage) {
+                if (deputyStatusBadge != null) {
+                    deputyStatusBadge.setText("● OFFLINE");
+                    deputyStatusBadge.setTextColor(0xFFF87171);
+                    deputyStatusBadge.setBackground(rounded(0x22F87171, dp(4)));
+                }
+                if (userInitiated) {
+                    Toast.makeText(MainActivity.this, "Deputy error: " + errorMessage, Toast.LENGTH_LONG).show();
+                }
+            }
+        });
+    }
+
+    private void updateDeputyUi(DeputyApi.DeputyRosterResult result) {
+        if (result == null) return;
+
+        // 1. Status Badge
+        if (deputyStatusBadge != null) {
+            if (result.isLive) {
+                deputyStatusBadge.setText("● LIVE CONNECTED");
+                deputyStatusBadge.setTextColor(0xFF10B981);
+                deputyStatusBadge.setBackground(rounded(0x2210B981, dp(4)));
+            } else if (!deputyApi.hasToken()) {
+                deputyStatusBadge.setText("● API KEY NEEDED");
+                deputyStatusBadge.setTextColor(0xFFF59E0B);
+                deputyStatusBadge.setBackground(rounded(0x22F59E0B, dp(4)));
+            } else {
+                SimpleDateFormat sdf = new SimpleDateFormat("HH:mm", Locale.US);
+                String timeStr = result.syncTimestamp > 0 ? sdf.format(new Date(result.syncTimestamp)) : "--:--";
+                deputyStatusBadge.setText("● CACHED (" + timeStr + ")");
+                deputyStatusBadge.setTextColor(0xFF38BDF8);
+                deputyStatusBadge.setBackground(rounded(0x2238BDF8, dp(4)));
+            }
+        }
+
+        // 2. Org Header
+        if (deputyOrgName != null && result.companyName != null && !result.companyName.isEmpty()) {
+            deputyOrgName.setText(result.companyName);
+        }
+        if (deputyOrgRole != null && result.userName != null && !result.userName.isEmpty()) {
+            deputyOrgRole.setText("🛡️ Officer " + result.userName + " · LIC #41207 · Post 01 Gatehouse");
+        }
+
+        // 3. Live Shift Clock Card
+        if (result.activeShift != null) {
+            if (deputyClockStatus != null) {
+                deputyClockStatus.setText(result.activeShift.isLiveNow ? "● CLOCKED ON" : "● SCHEDULED");
+                deputyClockStatus.setTextColor(result.activeShift.isLiveNow ? 0xFF10B981 : 0xFF38BDF8);
+                deputyClockStatus.setBackground(rounded(result.activeShift.isLiveNow ? 0x2210B981 : 0x2238BDF8, dp(6)));
+            }
+            if (deputyClockTime != null) {
+                deputyClockTime.setText(result.activeShift.getFormattedHoursRange());
+            }
+            if (deputyClockSub != null) {
+                deputyClockSub.setText("Shift: " + result.activeShift.operationalUnit + " · Award MA000115 (Night Rate)");
+            }
+        } else {
+            if (deputyClockStatus != null) {
+                deputyClockStatus.setText("○ OFF DUTY");
+                deputyClockStatus.setTextColor(0xFF94A3B8);
+                deputyClockStatus.setBackground(rounded(0x2294A3B8, dp(6)));
+            }
+            if (deputyClockTime != null) {
+                deputyClockTime.setText("Next shift scheduled in Deputy");
+            }
+            if (deputyClockSub != null) {
+                deputyClockSub.setText("No active timesheet currently clocked on");
+            }
+        }
+
+        // 4. Weekly Roster List
+        if (deputyScheduleContainer != null) {
+            deputyScheduleContainer.removeAllViews();
+            if (result.weekShifts != null && !result.weekShifts.isEmpty()) {
+                for (DeputyApi.DeputyShift shift : result.weekShifts) {
+                    deputyScheduleContainer.addView(buildDeputyShiftCard(
+                            shift.getDayDisplayLabel(),
+                            shift.getFormattedHoursRange(),
+                            shift.guardName + " · " + shift.operationalUnit,
+                            shift.isLiveNow
+                    ));
+                }
+            } else {
+                TextView empty = new TextView(this);
+                empty.setText("No shifts returned from Deputy for current cycle.");
+                empty.setTextColor(0xFF64748B);
+                empty.setTextSize(12);
+                empty.setPadding(0, dp(8), 0, dp(8));
+                deputyScheduleContainer.addView(empty);
+            }
+        }
+    }
+
+    private void showDeputyApiConfigDialog() {
+        if (deputyApi == null) return;
+        hapticClick();
+
+        final Dialog dialog = new Dialog(this);
+        dialog.requestWindowFeature(Window.FEATURE_NO_TITLE);
+        if (dialog.getWindow() != null) {
+            dialog.getWindow().setBackgroundDrawable(new ColorDrawable(0xAA000000));
+        }
+
+        LinearLayout root = new LinearLayout(this);
+        root.setOrientation(LinearLayout.VERTICAL);
+        root.setBackground(rounded(0xFF0F172A, dp(18)));
+        root.setPadding(dp(20), dp(18), dp(20), dp(18));
+        root.setLayoutParams(new LinearLayout.LayoutParams(dp(340), LinearLayout.LayoutParams.WRAP_CONTENT));
+
+        TextView title = new TextView(this);
+        title.setText("🔑 DEPUTY API CONFIGURATION");
+        title.setTextColor(0xFF13C5BE);
+        title.setTextSize(14);
+        title.setTypeface(Typeface.DEFAULT_BOLD);
+        title.setLetterSpacing(0.08f);
+        root.addView(title);
+
+        TextView sub = new TextView(this);
+        sub.setText("Enter permanent OAuth token from Deputy Business Settings.");
+        sub.setTextColor(0xFF94A3B8);
+        sub.setTextSize(11);
+        sub.setPadding(0, dp(4), 0, dp(12));
+        root.addView(sub);
+
+        TextView tokenLbl = new TextView(this);
+        tokenLbl.setText("API TOKEN (BEARER / OAUTH):");
+        tokenLbl.setTextColor(0xFFCBD5E1);
+        tokenLbl.setTextSize(9.5f);
+        tokenLbl.setTypeface(Typeface.MONOSPACE);
+        root.addView(tokenLbl);
+
+        final EditText etToken = new EditText(this);
+        etToken.setText(deputyApi.getToken());
+        etToken.setHint("Paste Deputy API Token");
+        etToken.setHintTextColor(0xFF475569);
+        etToken.setTextColor(0xFFFFFFFF);
+        etToken.setTextSize(12);
+        etToken.setTypeface(Typeface.MONOSPACE);
+        etToken.setBackground(rounded(0xFF1E293B, dp(8)));
+        etToken.setPadding(dp(12), dp(10), dp(12), dp(10));
+        LinearLayout.LayoutParams etlp = new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+        etlp.topMargin = dp(4);
+        etlp.bottomMargin = dp(10);
+        etToken.setLayoutParams(etlp);
+        root.addView(etToken);
+
+        final TextView tvFeedback = new TextView(this);
+        tvFeedback.setTextSize(10.5f);
+        tvFeedback.setPadding(0, 0, 0, dp(10));
+        tvFeedback.setVisibility(View.GONE);
+        root.addView(tvFeedback);
+
+        LinearLayout btnRow = new LinearLayout(this);
+        btnRow.setOrientation(LinearLayout.HORIZONTAL);
+
+        TextView btnTest = actionButton("🧪 Test", 0xFF1E293B, 0xFF38BDF8);
+        btnTest.setTextSize(11.5f);
+        ((LinearLayout.LayoutParams) btnTest.getLayoutParams()).rightMargin = dp(4);
+        btnTest.setOnClickListener(new View.OnClickListener() {
+            public void onClick(View v) {
+                hapticClick();
+                final String t = etToken.getText().toString().trim();
+                tvFeedback.setVisibility(View.VISIBLE);
+                tvFeedback.setTextColor(0xFF38BDF8);
+                tvFeedback.setText("Testing Deputy API connection...");
+                deputyApi.testConnection(t, new DeputyApi.ApiCallback<String>() {
+                    @Override
+                    public void onSuccess(String msg) {
+                        tvFeedback.setTextColor(0xFF10B981);
+                        tvFeedback.setText("✓ " + msg);
+                    }
+
+                    @Override
+                    public void onError(String err) {
+                        tvFeedback.setTextColor(0xFFF87171);
+                        tvFeedback.setText("✗ " + err);
+                    }
+                });
+            }
+        });
+        btnRow.addView(btnTest);
+
+        TextView btnSave = actionButton("💾 Save & Sync", 0xFF13C5BE, 0xFF000000);
+        btnSave.setTextSize(11.5f);
+        ((LinearLayout.LayoutParams) btnSave.getLayoutParams()).leftMargin = dp(4);
+        btnSave.setOnClickListener(new View.OnClickListener() {
+            public void onClick(View v) {
+                hapticHeavyClick();
+                String t = etToken.getText().toString().trim();
+                deputyApi.setToken(t);
+                syncDeputyData(true);
+                dialog.dismiss();
+            }
+        });
+        btnRow.addView(btnSave);
+
+        root.addView(btnRow);
+
+        dialog.setContentView(root);
+        dialog.show();
     }
 
     private View buildDeputyView() {
@@ -6924,7 +7191,7 @@ private void updateTabSelection(int tabIndex) {
         depLayout.setPadding(dp(16), dp(16), dp(16), dp(36));
         depLayout.setFitsSystemWindows(true);
 
-        // 1. Deputy Branding & Return Bar
+        // 1. Deputy Branding & Controls Bar
         LinearLayout topBar = new LinearLayout(this);
         topBar.setOrientation(LinearLayout.HORIZONTAL);
         topBar.setGravity(Gravity.CENTER_VERTICAL);
@@ -6944,16 +7211,57 @@ private void updateTabSelection(int tabIndex) {
         });
         topBar.addView(btnReturn);
 
-        TextView depBrand = new TextView(this);
-        depBrand.setText("DEPUTY");
-        depBrand.setTextColor(0xFF13C5BE);
-        depBrand.setTextSize(14);
-        depBrand.setTypeface(Typeface.DEFAULT_BOLD);
-        depBrand.setLetterSpacing(0.08f);
-        depBrand.setGravity(Gravity.RIGHT | Gravity.CENTER_VERTICAL);
-        LinearLayout.LayoutParams dblp = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
-        depBrand.setLayoutParams(dblp);
-        topBar.addView(depBrand);
+        deputyStatusBadge = new TextView(this);
+        deputyStatusBadge.setText("● DEPUTY API");
+        deputyStatusBadge.setTextColor(0xFF38BDF8);
+        deputyStatusBadge.setTextSize(9);
+        deputyStatusBadge.setTypeface(Typeface.MONOSPACE);
+        deputyStatusBadge.setPadding(dp(8), dp(4), dp(8), dp(4));
+        deputyStatusBadge.setBackground(rounded(0x2238BDF8, dp(4)));
+        LinearLayout.LayoutParams sblp = new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+        sblp.leftMargin = dp(8);
+        deputyStatusBadge.setLayoutParams(sblp);
+        deputyStatusBadge.setOnClickListener(new View.OnClickListener() {
+            public void onClick(View v) {
+                showDeputyApiConfigDialog();
+            }
+        });
+        topBar.addView(deputyStatusBadge);
+
+        View spacer = new View(this);
+        LinearLayout.LayoutParams splp = new LinearLayout.LayoutParams(0, 1, 1f);
+        spacer.setLayoutParams(splp);
+        topBar.addView(spacer);
+
+        TextView btnSync = new TextView(this);
+        btnSync.setText("🔄");
+        btnSync.setTextSize(13);
+        btnSync.setPadding(dp(8), dp(4), dp(8), dp(4));
+        btnSync.setBackground(rounded(0x2238BDF8, dp(6)));
+        btnSync.setOnClickListener(new View.OnClickListener() {
+            public void onClick(View v) {
+                hapticClick();
+                syncDeputyData(true);
+            }
+        });
+        LinearLayout.LayoutParams bslp = new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+        bslp.rightMargin = dp(6);
+        btnSync.setLayoutParams(bslp);
+        topBar.addView(btnSync);
+
+        TextView btnConfig = new TextView(this);
+        btnConfig.setText("⚙️");
+        btnConfig.setTextSize(13);
+        btnConfig.setPadding(dp(8), dp(4), dp(8), dp(4));
+        btnConfig.setBackground(rounded(0x2213C5BE, dp(6)));
+        btnConfig.setOnClickListener(new View.OnClickListener() {
+            public void onClick(View v) {
+                showDeputyApiConfigDialog();
+            }
+        });
+        topBar.addView(btnConfig);
 
         depLayout.addView(topBar);
 
@@ -6967,26 +7275,26 @@ private void updateTabSelection(int tabIndex) {
         oclp.bottomMargin = dp(12);
         orgCard.setLayoutParams(oclp);
 
-        TextView orgSub = new TextView(this);
-        orgSub.setText("DOHERTY SECURITY SERVICES · WORKPLACE ROSTER");
-        orgSub.setTextColor(0xFFE5A93C);
-        orgSub.setTextSize(9.5f);
-        orgSub.setTypeface(Typeface.MONOSPACE);
-        orgCard.addView(orgSub);
+        deputyOrgSub = new TextView(this);
+        deputyOrgSub.setText("DOHERTY SECURITY SERVICES · WORKPLACE ROSTER");
+        deputyOrgSub.setTextColor(0xFFE5A93C);
+        deputyOrgSub.setTextSize(9.5f);
+        deputyOrgSub.setTypeface(Typeface.MONOSPACE);
+        orgCard.addView(deputyOrgSub);
 
-        TextView orgName = new TextView(this);
-        orgName.setText("Hume Doors & Timber (Kingston)");
-        orgName.setTextColor(0xFFFFFFFF);
-        orgName.setTextSize(16);
-        orgName.setTypeface(Typeface.DEFAULT_BOLD);
-        orgName.setPadding(0, dp(3), 0, dp(4));
-        orgCard.addView(orgName);
+        deputyOrgName = new TextView(this);
+        deputyOrgName.setText("Hume Doors & Timber (Kingston)");
+        deputyOrgName.setTextColor(0xFFFFFFFF);
+        deputyOrgName.setTextSize(16);
+        deputyOrgName.setTypeface(Typeface.DEFAULT_BOLD);
+        deputyOrgName.setPadding(0, dp(3), 0, dp(4));
+        orgCard.addView(deputyOrgName);
 
-        TextView orgRole = new TextView(this);
-        orgRole.setText("🛡️ Officer Lochran Doherty · LIC #41207 · Post 01 Gatehouse");
-        orgRole.setTextColor(0xFF94A3B8);
-        orgRole.setTextSize(11.5f);
-        orgCard.addView(orgRole);
+        deputyOrgRole = new TextView(this);
+        deputyOrgRole.setText("🛡️ Officer Lochran Doherty · LIC #41207 · Post 01 Gatehouse");
+        deputyOrgRole.setTextColor(0xFF94A3B8);
+        deputyOrgRole.setTextSize(11.5f);
+        orgCard.addView(deputyOrgRole);
 
         depLayout.addView(orgCard);
 
@@ -7013,30 +7321,30 @@ private void updateTabSelection(int tabIndex) {
         clockTitle.setLayoutParams(ctlp);
         clockTop.addView(clockTitle);
 
-        TextView clockStatus = new TextView(this);
-        clockStatus.setText("● CLOCKED ON");
-        clockStatus.setTextColor(0xFF10B981);
-        clockStatus.setTextSize(9.5f);
-        clockStatus.setTypeface(Typeface.MONOSPACE);
-        clockStatus.setPadding(dp(8), dp(3), dp(8), dp(3));
-        clockStatus.setBackground(rounded(0x2210B981, dp(6)));
-        clockTop.addView(clockStatus);
+        deputyClockStatus = new TextView(this);
+        deputyClockStatus.setText("● CLOCKED ON");
+        deputyClockStatus.setTextColor(0xFF10B981);
+        deputyClockStatus.setTextSize(9.5f);
+        deputyClockStatus.setTypeface(Typeface.MONOSPACE);
+        deputyClockStatus.setPadding(dp(8), dp(3), dp(8), dp(3));
+        deputyClockStatus.setBackground(rounded(0x2210B981, dp(6)));
+        clockTop.addView(deputyClockStatus);
         clockCard.addView(clockTop);
 
-        TextView clockTime = new TextView(this);
-        clockTime.setText("18:00 – 06:00 (12.0h)");
-        clockTime.setTextColor(0xFF38BDF8);
-        clockTime.setTextSize(20);
-        clockTime.setTypeface(Typeface.MONOSPACE);
-        clockTime.setPadding(0, dp(8), 0, dp(2));
-        clockCard.addView(clockTime);
+        deputyClockTime = new TextView(this);
+        deputyClockTime.setText("18:00 – 06:00 (12.0h)");
+        deputyClockTime.setTextColor(0xFF38BDF8);
+        deputyClockTime.setTextSize(20);
+        deputyClockTime.setTypeface(Typeface.MONOSPACE);
+        deputyClockTime.setPadding(0, dp(8), 0, dp(2));
+        clockCard.addView(deputyClockTime);
 
-        TextView clockSub = new TextView(this);
-        clockSub.setText("Clocked on at 17:55 · Security Award MA000115 (Night Rate)");
-        clockSub.setTextColor(0xFF94A3B8);
-        clockSub.setTextSize(11);
-        clockSub.setPadding(0, 0, 0, dp(12));
-        clockCard.addView(clockSub);
+        deputyClockSub = new TextView(this);
+        deputyClockSub.setText("Clocked on at 17:55 · Security Award MA000115 (Night Rate)");
+        deputyClockSub.setTextColor(0xFF94A3B8);
+        deputyClockSub.setTextSize(11);
+        deputyClockSub.setPadding(0, 0, 0, dp(12));
+        clockCard.addView(deputyClockSub);
 
         LinearLayout clockBtns = new LinearLayout(this);
         clockBtns.setOrientation(LinearLayout.HORIZONTAL);
@@ -7071,11 +7379,9 @@ private void updateTabSelection(int tabIndex) {
         // 4. Deputy Weekly Roster Schedule
         depLayout.addView(contactsSectionHeader("📅 DEPUTY CONFIRMED ROSTER (CURRENT CYCLE)", 0xFF38BDF8));
 
-        depLayout.addView(buildDeputyShiftCard("Tonight (Sat 29 Aug)", "18:00 – 06:00 (12.0h)", "Gatehouse Post 01 · Static Night", true));
-        depLayout.addView(buildDeputyShiftCard("Tomorrow (Sun 30 Aug)", "18:00 – 06:00 (12.0h)", "Gatehouse Post 01 · Static Night", false));
-        depLayout.addView(buildDeputyShiftCard("Monday (31 Aug)", "18:00 – 06:00 (12.0h)", "Gatehouse Post 01 · Static Night", false));
-        depLayout.addView(buildDeputyShiftCard("Tuesday (01 Sep)", "OFF DUTY (0.0h)", "Scheduled Rest Day / RDO", false));
-        depLayout.addView(buildDeputyShiftCard("Wednesday (02 Sep)", "18:00 – 06:00 (12.0h)", "Gatehouse Post 01 · Static Night", false));
+        deputyScheduleContainer = new LinearLayout(this);
+        deputyScheduleContainer.setOrientation(LinearLayout.VERTICAL);
+        depLayout.addView(deputyScheduleContainer);
 
         // 5. Deputy Shift Tasks
         depLayout.addView(contactsSectionHeader("📋 DEPUTY SHIFT TASKS (3 OF 4 COMPLETE)", 0xFF10B981));
@@ -7122,6 +7428,11 @@ private void updateTabSelection(int tabIndex) {
             }
         });
         depActions.addView(btnLeave);
+
+        depLayout.addView(depActions);
+
+        // Initial population from cached/sample data
+        updateDeputyUi(latestDeputyResult);
 
         return depLayout;
     }
@@ -7180,6 +7491,9 @@ private void updateTabSelection(int tabIndex) {
     }
 
     private View buildRosterView() {
+        boolean isTablet = getResources().getConfiguration().smallestScreenWidthDp >= 600;
+        boolean isLandscape = getResources().getConfiguration().orientation == android.content.res.Configuration.ORIENTATION_LANDSCAPE;
+
         LinearLayout rLayout = new LinearLayout(this);
         rLayout.setOrientation(LinearLayout.VERTICAL);
         rLayout.setPadding(dp(16), dp(16), dp(16), dp(36));
@@ -7217,6 +7531,125 @@ private void updateTabSelection(int tabIndex) {
         topBar.addView(title);
 
         rLayout.addView(topBar);
+
+        if (isTablet && isLandscape) {
+            LinearLayout split = new LinearLayout(this);
+            split.setOrientation(LinearLayout.HORIZONTAL);
+            split.setBaselineAligned(false);
+
+            LinearLayout leftCol = new LinearLayout(this);
+            leftCol.setOrientation(LinearLayout.VERTICAL);
+            LinearLayout.LayoutParams lclp = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 46f);
+            lclp.rightMargin = dp(10);
+            leftCol.setLayoutParams(lclp);
+
+            LinearLayout rightCol = new LinearLayout(this);
+            rightCol.setOrientation(LinearLayout.VERTICAL);
+            LinearLayout.LayoutParams rclp = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 54f);
+            rclp.leftMargin = dp(10);
+            rightCol.setLayoutParams(rclp);
+
+            leftCol.addView(buildLiveReliefRadarCard());
+
+            LinearLayout officerCard = new LinearLayout(this);
+            officerCard.setOrientation(LinearLayout.VERTICAL);
+            officerCard.setBackground(rounded(colPanel, dp(16)));
+            officerCard.setPadding(dp(16), dp(14), dp(16), dp(14));
+            LinearLayout.LayoutParams oclp = new LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+            oclp.bottomMargin = dp(12);
+            officerCard.setLayoutParams(oclp);
+
+            LinearLayout row1 = new LinearLayout(this);
+            row1.setOrientation(LinearLayout.HORIZONTAL);
+            row1.setGravity(Gravity.CENTER_VERTICAL);
+
+            TextView dssBrand = new TextView(this);
+            dssBrand.setText("DOHERTY SECURITY SERVICES · ROSTER DECK");
+            dssBrand.setTextColor(colAccent);
+            dssBrand.setTextSize(9.5f);
+            dssBrand.setTypeface(Typeface.MONOSPACE);
+            LinearLayout.LayoutParams dlp = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
+            dssBrand.setLayoutParams(dlp);
+            row1.addView(dssBrand);
+
+            TextView badgeStatus = new TextView(this);
+            badgeStatus.setText("● LIVE ROSTER");
+            badgeStatus.setTextColor(colEmerald);
+            badgeStatus.setTextSize(8.5f);
+            badgeStatus.setTypeface(Typeface.MONOSPACE);
+            badgeStatus.setPadding(dp(6), dp(2), dp(6), dp(2));
+            badgeStatus.setBackground(rounded(0x2210B981, dp(4)));
+            row1.addView(badgeStatus);
+            officerCard.addView(row1);
+
+            TextView facName = new TextView(this);
+            facName.setText("Hume Doors & Timber, Kingston");
+            facName.setTextColor(0xFFFFFFFF);
+            facName.setTextSize(16);
+            facName.setTypeface(Typeface.DEFAULT_BOLD);
+            facName.setPadding(0, dp(3), 0, dp(4));
+            officerCard.addView(facName);
+
+            TextView offInfo = new TextView(this);
+            offInfo.setText("🛡️ Officer Lochran Doherty · QLD Licence #41207 · Post 01 Gatehouse");
+            offInfo.setTextColor(0xFF94A3B8);
+            offInfo.setTextSize(11.5f);
+            officerCard.addView(offInfo);
+            leftCol.addView(officerCard);
+
+            leftCol.addView(contactsSectionHeader("📅 SELECT TIMELINE DAY", colCyan));
+            rosterScrubber = new FluidRosterDayScrubberView(this);
+            LinearLayout.LayoutParams rslp = new LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.MATCH_PARENT, dp(64));
+            rslp.bottomMargin = dp(12);
+            rosterScrubber.setLayoutParams(rslp);
+            leftCol.addView(rosterScrubber);
+
+            leftCol.addView(contactsSectionHeader("📊 FORTNIGHTLY WORKLOAD & PENALTIES", colCyan));
+            leftCol.addView(buildRosterFortnightCard());
+
+            LinearLayout actionsRow = new LinearLayout(this);
+            actionsRow.setOrientation(LinearLayout.HORIZONTAL);
+            actionsRow.setPadding(0, dp(8), 0, dp(12));
+
+            TextView btnSwap = actionButton("🔄 Request Shift Swap", colPanel, colCyan);
+            btnSwap.setTextSize(11.5f);
+            ((LinearLayout.LayoutParams) btnSwap.getLayoutParams()).rightMargin = dp(4);
+            btnSwap.setOnClickListener(new View.OnClickListener() {
+                public void onClick(View v) {
+                    hapticClick();
+                    showShiftSwapDialog();
+                }
+            });
+            actionsRow.addView(btnSwap);
+
+            TextView btnNotes = actionButton("📝 Handover Notes", colPanel, colAccent);
+            btnNotes.setTextSize(11.5f);
+            ((LinearLayout.LayoutParams) btnNotes.getLayoutParams()).leftMargin = dp(4);
+            btnNotes.setOnClickListener(new View.OnClickListener() {
+                public void onClick(View v) {
+                    hapticClick();
+                    showModernNotesSheet();
+                }
+            });
+            actionsRow.addView(btnNotes);
+            leftCol.addView(actionsRow);
+
+            rightCol.addView(contactsSectionHeader("🗓️ FULL-WEEK TEAM ROSTER BOARD (SWIPE ACROSS)", colAccent));
+            rightCol.addView(buildFullWeekTeamGrid());
+
+            rightCol.addView(contactsSectionHeader("🗂️ SELECTED SHIFT FOCUS & HANDOVER", colEmerald));
+            rosterDetailContainer = new LinearLayout(this);
+            rosterDetailContainer.setOrientation(LinearLayout.VERTICAL);
+            rightCol.addView(rosterDetailContainer);
+            updateRosterDayDetail(5); // Default to Saturday 29 Aug (Tonight)
+
+            split.addView(leftCol);
+            split.addView(rightCol);
+            rLayout.addView(split);
+            return rLayout;
+        }
 
         // 2. 🟢 LIVE ON-DUTY & NEXT RELIEF RADAR CARD
         rLayout.addView(buildLiveReliefRadarCard());
@@ -7344,7 +7777,7 @@ private void updateTabSelection(int tabIndex) {
         top.setGravity(Gravity.CENTER_VERTICAL);
 
         TextView tag = new TextView(this);
-        tag.setText("● ON-DUTY SITE RADAR");
+        tag.setText("● ON-DUTY SITE RADAR (DEPUTY)");
         tag.setTextColor(colEmerald);
         tag.setTextSize(10);
         tag.setTypeface(Typeface.MONOSPACE);
@@ -7353,7 +7786,7 @@ private void updateTabSelection(int tabIndex) {
         top.addView(tag);
 
         TextView nextPill = new TextView(this);
-        nextPill.setText("RELIEF IN 3h 57m");
+        nextPill.setText("LIVE RELIEF");
         nextPill.setTextColor(colAccent);
         nextPill.setTextSize(9);
         nextPill.setTypeface(Typeface.MONOSPACE);
@@ -7367,8 +7800,20 @@ private void updateTabSelection(int tabIndex) {
         activeRow.setOrientation(LinearLayout.HORIZONTAL);
         activeRow.setPadding(0, dp(8), 0, dp(8));
 
-        activeRow.addView(buildGuardRadarChip("🛡️ Lochran (You)", "Post 01 · until 06:00", colEmerald));
-        activeRow.addView(buildGuardRadarChip("🛡️ Chris Ireton", "Yard · until 00:00", colCyan));
+        if (latestDeputyResult != null && latestDeputyResult.onDutyGuards != null && !latestDeputyResult.onDutyGuards.isEmpty()) {
+            int count = 0;
+            for (DeputyApi.DeputyShift s : latestDeputyResult.onDutyGuards) {
+                if (count >= 2) break;
+                String gName = s.guardName + (s.isCurrentGuard ? " (You)" : "");
+                String sub = s.operationalUnit;
+                int col = (count == 0) ? colEmerald : colCyan;
+                activeRow.addView(buildGuardRadarChip("🛡️ " + gName, sub, col));
+                count++;
+            }
+        } else {
+            activeRow.addView(buildGuardRadarChip("🛡️ Lochran (You)", "Post 01 Gatehouse", colEmerald));
+            activeRow.addView(buildGuardRadarChip("🛡️ Chris Ireton", "Yard Patrol", colCyan));
+        }
         card.addView(activeRow);
 
         // Next Relief Alert Strip
@@ -7388,14 +7833,18 @@ private void updateTabSelection(int tabIndex) {
         reliefInfo.setOrientation(LinearLayout.VERTICAL);
 
         TextView reliefTitle = new TextView(this);
-        reliefTitle.setText("NEXT RELIEF: Brian Rush");
+        String relGuard = (latestDeputyResult != null && latestDeputyResult.nextRelief != null) ? latestDeputyResult.nextRelief.guardName : "Brian Rush";
+        String relHours = (latestDeputyResult != null && latestDeputyResult.nextRelief != null) ? latestDeputyResult.nextRelief.getFormattedHoursRange() : "00:00 – 06:00";
+        String relPost = (latestDeputyResult != null && latestDeputyResult.nextRelief != null) ? latestDeputyResult.nextRelief.operationalUnit : "Post 01 Handover";
+
+        reliefTitle.setText("NEXT RELIEF: " + relGuard);
         reliefTitle.setTextColor(colPale);
         reliefTitle.setTextSize(11);
         reliefTitle.setTypeface(Typeface.DEFAULT_BOLD);
         reliefInfo.addView(reliefTitle);
 
         TextView reliefSub = new TextView(this);
-        reliefSub.setText("Shift: 00:00 – 06:00 · Post 01 Handover");
+        reliefSub.setText("Shift: " + relHours + " · " + relPost);
         reliefSub.setTextColor(0xFF94A3B8);
         reliefSub.setTextSize(10);
         reliefInfo.addView(reliefSub);

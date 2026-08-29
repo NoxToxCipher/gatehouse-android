@@ -36,8 +36,8 @@ mkdir -p "$OUT/res" "$OUT/classes" "$OUT/lib/arm64-v8a"
 # disliked. So anything going to aapt2 is converted to a native path first.
 BS='\'
 native() { echo "$1" | sed "s|/|${BS}${BS}|g"; }
-W=$(native "$(pwd -W)")
-JARW=$(native "$(echo "$JAR" | sed 's|^/c|C:|')")
+W=$(native "$(pwd -W | sed 's|^/c/|C:/|' | sed 's|^c:|C:|')")
+JARW=$(native "$(echo "$JAR" | sed 's|^/c/|C:/|' | sed 's|^/c|C:|')")
 
 say() { printf '  %-34s' "$1"; }
 ok()  { echo "ok"; }
@@ -79,12 +79,12 @@ say "the library holds the core"
 NM="$NDK/toolchains/llvm/prebuilt/windows-x86_64/bin/llvm-nm.exe"
 for sym in gatehouse_report gatehouse_seal gatehouse_add_checkpoint \
            gatehouse_last_reason gatehouse_site_hash; do
-  "$NM" --defined-only "$OUT/lib/arm64-v8a/libgatehouse_core.so" \
+  "$NM" --defined-only "build/lib/arm64-v8a/libgatehouse_core.so" \
     | grep -q " $sym\$" || { echo "FAILED: $sym is missing"; exit 1; }
 done
 for sym in Java_au_com_dss_gatehouse_Core_report \
            Java_au_com_dss_gatehouse_Core_addCheckpoint; do
-  "$NM" --defined-only "$OUT/lib/arm64-v8a/libgatehouse.so" \
+  "$NM" --defined-only "build/lib/arm64-v8a/libgatehouse.so" \
     | grep -q " $sym\$" || { echo "FAILED: $sym is missing"; exit 1; }
 done
 ok
@@ -103,7 +103,8 @@ MSYS_NO_PATHCONV=1 "$BT/aapt2.exe" link \
   -I "$JARW" \
   --manifest "${W}${BS}app${BS}AndroidManifest.xml" \
   --min-sdk-version 26 --target-sdk-version 35 \
-  $(for fl in "$OUT"/res/*.flat; do printf "%s " "${W}${BS}build${BS}res${BS}$(basename "$fl")"; done)
+  $(for fl in "$OUT"/res/*.flat; do printf "%s " "${W}${BS}build${BS}res${BS}$(basename "$fl")"; done) > "$OUT/aapt2.log" 2>&1 \
+  || { echo "FAILED"; cat "$OUT/aapt2.log"; exit 1; }
 ok
 
 # ---- code -----------------------------------------------------------------
