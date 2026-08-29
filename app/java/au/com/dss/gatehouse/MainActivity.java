@@ -4264,13 +4264,13 @@ private void updateTabSelection(int tabIndex) {
             lclp.rightMargin = dp(10);
             leftCol.setLayoutParams(lclp);
 
-            leftCol.addView(contactsSectionHeader("🚨 EMERGENCY SERVICES (IMMEDIATE RESPONSE)", colCrimson));
+            leftCol.addView(contactsSectionHeader("🚨 EMERGENCY SERVICES (24/7)", colCrimson));
             leftCol.addView(contactCard("Triple Zero (000)", "Police · Fire · Ambulance", "000", "24/7 PRIORITY", colCrimson));
             leftCol.addView(contactCard("Logan District Police", "Kingston & Logan Central Station", "0738261888", "24/7 ATTENDANCE", colCrimson));
             leftCol.addView(contactCard("SES Queensland", "Storm, Flood & Structural Damage", "132500", "24/7 DISPATCH", colCyan));
             leftCol.addView(contactCard("Poisons Info Centre", "Chemical & Hazardous Substance Exposure", "131126", "24/7 SUPPORT", colAccent));
 
-            leftCol.addView(contactsSectionHeader("🏢 DOHERTY SECURITY SERVICES (DSS)", colAccent));
+            leftCol.addView(contactsSectionHeader("🛡️ DOHERTY SECURITY SERVICES", colAccent));
             leftCol.addView(contactCard("DSS 24/7 Control Room", "Central Dispatch & Escalations", "1300377000", "24/7 MONITORING", colAccent));
             leftCol.addView(contactCard("DSS Operations Manager", "Brisbane North & South Operations", "0418700120", "ON CALL", colAccent));
             leftCol.addView(contactCard("DSS Field Patrol Supervisor", "Mobile Response Unit 4", "0422555810", "ON SHIFT 18:00–06:00", colEmerald));
@@ -4281,12 +4281,12 @@ private void updateTabSelection(int tabIndex) {
             rclp.leftMargin = dp(10);
             rightCol.setLayoutParams(rclp);
 
-            rightCol.addView(contactsSectionHeader("🏭 HUME DOORS & TIMBER (KINGSTON SITE)", colCyan));
+            rightCol.addView(contactsSectionHeader("🏭 HUME DOORS & TIMBER", colCyan));
             rightCol.addView(contactCard("Hume Site Operations Manager", "Kingston Plant Management", "0439123456", "PRIMARY CLIENT CONTACT", colCyan));
             rightCol.addView(contactCard("Hume Facilities & Plant Engineer", "Power, Pump House & Gate Failures", "0411987654", "ON CALL MAINTENANCE", colCyan));
             rightCol.addView(contactCard("Hume WHS / Safety Officer", "Workplace Safety & Incident Officer", "0423456789", "ON CALL SAFETY", colCyan));
 
-            rightCol.addView(contactsSectionHeader("👥 ON-SITE & RELIEF GUARDS", colPale));
+            rightCol.addView(contactsSectionHeader("👥 ON-SITE & RELIEF OFFICERS", colPale));
             rightCol.addView(contactCard("Officer Lochran Doherty", "Current Static Guard · LIC #41207", "0455123789", "ON SITE (TONIGHT)", colEmerald));
             rightCol.addView(contactCard("Relief / Day Crew Guard", "Morning Handover Officer (06:05)", "0400111222", "06:05 HANDOVER", colMuted));
 
