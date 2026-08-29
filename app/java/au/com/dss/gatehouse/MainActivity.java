@@ -680,11 +680,16 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
         deputyContainer.setScaleY(0.94f);
         deputyContainer.setTranslationX(-dp(30));
 
+        boolean isTablet = getResources().getConfiguration().smallestScreenWidthDp >= 600;
+        int maxContentWidth = isTablet ? dp(660) : FrameLayout.LayoutParams.MATCH_PARENT;
+
         ScrollView deputyScroll = new ScrollView(this);
         deputyScroll.setVerticalScrollBarEnabled(false);
         deputyScroll.setPadding(0, dp(34), 0, 0);
-        deputyScroll.setLayoutParams(new FrameLayout.LayoutParams(
-                FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT));
+        FrameLayout.LayoutParams dslp = new FrameLayout.LayoutParams(
+                maxContentWidth, FrameLayout.LayoutParams.MATCH_PARENT);
+        dslp.gravity = Gravity.CENTER_HORIZONTAL;
+        deputyScroll.setLayoutParams(dslp);
         deputyScroll.addView(buildDeputyView());
         deputyContainer.addView(deputyScroll);
         rootFrame.addView(deputyContainer);
@@ -708,6 +713,10 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
         screenLayout.setOrientation(LinearLayout.VERTICAL);
         screenLayout.setBackgroundColor(colBg);
         screenLayout.setPadding(dp(14), dp(38), dp(14), 0);
+        FrameLayout.LayoutParams sllp = new FrameLayout.LayoutParams(
+                maxContentWidth, FrameLayout.LayoutParams.MATCH_PARENT);
+        sllp.gravity = Gravity.CENTER_HORIZONTAL;
+        screenLayout.setLayoutParams(sllp);
 
         // 1. 🎨 4-Theme Fluid Animated Sliding Switcher Bar
         animatedThemeBar = new FluidAnimatedThemeBarView(this);
