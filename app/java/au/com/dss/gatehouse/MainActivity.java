@@ -25,6 +25,7 @@ import android.os.Environment;
 import android.os.StrictMode;
 import android.graphics.Color;
 import android.graphics.LinearGradient;
+import android.graphics.RadialGradient;
 import android.graphics.Paint;
 import android.graphics.Path;
 import android.graphics.RectF;
@@ -875,314 +876,7 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
         root.setOrientation(LinearLayout.VERTICAL);
         root.setPadding(0, 0, 0, dp(36));
 
-        if (isTablet && isLandscape) {
-            patrolContent = new LinearLayout(this);
-            patrolContent.setOrientation(LinearLayout.HORIZONTAL);
-            patrolContent.setBaselineAligned(false);
-
-            LinearLayout leftCol = new LinearLayout(this);
-            leftCol.setOrientation(LinearLayout.VERTICAL);
-            LinearLayout.LayoutParams lclp = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 44f);
-            lclp.rightMargin = dp(10);
-            leftCol.setLayoutParams(lclp);
-
-            LinearLayout rightCol = new LinearLayout(this);
-            rightCol.setOrientation(LinearLayout.VERTICAL);
-            LinearLayout.LayoutParams rclp = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 56f);
-            rclp.leftMargin = dp(10);
-            rightCol.setLayoutParams(rclp);
-
-            leftCol.addView(headerCard());
-            leftCol.addView(buildChronographSection());
-
-            chainBannerView = new AnimatedChainBannerView(this);
-            LinearLayout.LayoutParams cbl = new LinearLayout.LayoutParams(
-                    LinearLayout.LayoutParams.MATCH_PARENT, dp(44));
-            cbl.topMargin = dp(4);
-            cbl.bottomMargin = dp(4);
-            chainBannerView.setLayoutParams(cbl);
-            leftCol.addView(chainBannerView);
-
-            pills = new LinearLayout(this);
-            pills.setOrientation(LinearLayout.HORIZONTAL);
-            pills.setPadding(0, dp(4), 0, dp(6));
-            leftCol.addView(pills);
-
-            banner = new TextView(this);
-            banner.setTextSize(13);
-            banner.setTextColor(colAccent);
-            banner.setPadding(dp(14), dp(12), dp(14), dp(12));
-            banner.setBackground(rounded(colPanel2, dp(12)));
-            banner.setVisibility(View.GONE);
-            LinearLayout.LayoutParams bl = new LinearLayout.LayoutParams(
-                    LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
-            bl.topMargin = dp(6);
-            bl.bottomMargin = dp(8);
-            banner.setLayoutParams(bl);
-            leftCol.addView(banner);
-
-            primary = new TextView(this);
-            primary.setTextSize(15);
-            primary.setTypeface(Typeface.DEFAULT_BOLD);
-            primary.setGravity(Gravity.CENTER);
-            primary.setPadding(dp(16), dp(18), dp(16), dp(18));
-            leftCol.addView(primary);
-
-            pageTitle = label("06:05 MORNING HANDOVER REPORT");
-            pageTitle.setPadding(0, dp(24), 0, dp(8));
-            pageTitle.setVisibility(View.GONE);
-            leftCol.addView(pageTitle);
-
-            page = new TextView(this);
-            page.setTextColor(colPale);
-            page.setTextSize(10);
-            page.setTypeface(Typeface.MONOSPACE);
-            page.setBackground(rounded(colPanel, dp(14)));
-            page.setPadding(dp(14), dp(14), dp(14), dp(14));
-            page.setVisibility(View.GONE);
-            leftCol.addView(page);
-
-            btnShareReport = new TextView(this);
-            btnShareReport.setText("📤 SHARE MORNING HANDOVER REPORT");
-            btnShareReport.setTextColor(colAccentInk);
-            btnShareReport.setTextSize(14);
-            btnShareReport.setTypeface(Typeface.DEFAULT_BOLD);
-            btnShareReport.setGravity(Gravity.CENTER);
-            btnShareReport.setPadding(dp(16), dp(16), dp(16), dp(16));
-            btnShareReport.setBackground(pressable(colAccent, dp(16)));
-            btnShareReport.setVisibility(View.GONE);
-            LinearLayout.LayoutParams spl = new LinearLayout.LayoutParams(
-                    LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
-            spl.topMargin = dp(12);
-            btnShareReport.setLayoutParams(spl);
-            btnShareReport.setOnClickListener(new View.OnClickListener() {
-                public void onClick(View v) {
-                    hapticHeavyClick();
-                    shareHandoverReport();
-                }
-            });
-            leftCol.addView(btnShareReport);
-
-            rightCol.addView(sectionHeader("External Patrols", null));
-            externalRow = new LinearLayout(this);
-            externalRow.setOrientation(LinearLayout.HORIZONTAL);
-            externalRow.setPadding(0, dp(2), 0, dp(8));
-
-            tileExternalFull = patrolActionCard("External (Full)", EXTERNAL_CHOICES[1], true);
-            tileExternalHalf = patrolActionCard("External (Half)", EXTERNAL_CHOICES[3], false);
-            externalRow.addView(tileExternalFull);
-            externalRow.addView(tileExternalHalf);
-            rightCol.addView(externalRow);
-
-            rightCol.addView(sectionHeader("Internal Factory Floors (Lots 14–18)", null));
-            internalBadgesRow = new LinearLayout(this);
-            internalBadgesRow.setOrientation(LinearLayout.HORIZONTAL);
-            internalBadgesRow.setPadding(0, dp(2), 0, dp(10));
-
-            for (int i = 0; i < INTERNAL_LOTS.length; i += 2) {
-                internalBadgesRow.addView(lotBadge(INTERNAL_LOTS[i], INTERNAL_LOTS[i + 1], i == INTERNAL_LOTS.length - 2));
-            }
-            rightCol.addView(internalBadgesRow);
-
-            LinearLayout fireHeader = new LinearLayout(this);
-            fireHeader.setOrientation(LinearLayout.HORIZONTAL);
-            fireHeader.setGravity(Gravity.CENTER_VERTICAL);
-            fireHeader.setPadding(0, dp(10), 0, dp(6));
-
-            TextView fTitle = new TextView(this);
-            fTitle.setText("FIRE & PUMP SYSTEMS · 1,200 PSI");
-            fTitle.setTextColor(colQuiet);
-            fTitle.setTextSize(10);
-            fTitle.setTypeface(Typeface.DEFAULT_BOLD);
-            fTitle.setLetterSpacing(0.12f);
-            LinearLayout.LayoutParams ftl = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
-            fTitle.setLayoutParams(ftl);
-            fireHeader.addView(fTitle);
-
-            fireStatusChip = new TextView(this);
-            fireStatusChip.setText("0/5 CHECKED");
-            fireStatusChip.setTextColor(colMuted);
-            fireStatusChip.setTextSize(10);
-            fireStatusChip.setTypeface(Typeface.MONOSPACE);
-            fireStatusChip.setPadding(dp(6), dp(2), dp(6), dp(2));
-            fireStatusChip.setBackground(rounded(colPanel2, dp(6)));
-            fireHeader.addView(fireStatusChip);
-            rightCol.addView(fireHeader);
-
-            fireCard = new LinearLayout(this);
-            fireCard.setOrientation(LinearLayout.VERTICAL);
-            fireCard.setBackground(rounded(colPanel, dp(14)));
-            fireCard.setPadding(dp(12), dp(8), dp(12), dp(8));
-
-            fireList = new LinearLayout(this);
-            fireList.setOrientation(LinearLayout.VERTICAL);
-            for (int i = 0; i < FIRE_POINTS.length; i += 2) {
-                fireList.addView(fireCompactRow(FIRE_POINTS[i], FIRE_POINTS[i + 1], i == FIRE_POINTS.length - 2));
-            }
-            fireCard.addView(fireList);
-            rightCol.addView(fireCard);
-
-            rightCol.addView(sectionHeader("Rapid Evidence Dock", null));
-            dock = buildCaptureDock();
-            rightCol.addView(dock);
-
-            rightCol.addView(tonightLabel());
-            tonight = new LinearLayout(this);
-            tonight.setOrientation(LinearLayout.VERTICAL);
-            tonight.setPadding(0, dp(4), 0, dp(20));
-            rightCol.addView(tonight);
-
-            patrolContent.addView(leftCol);
-            patrolContent.addView(rightCol);
-        } else {
-            patrolContent = new LinearLayout(this);
-            patrolContent.setOrientation(LinearLayout.VERTICAL);
-
-            // Header Card (Triple tap for Sun Conure!)
-            patrolContent.addView(headerCard());
-
-            // Shift Chronograph (Solar Dual-Arc)
-            patrolContent.addView(buildChronographSection());
-
-            // Chain Banner & Hash
-            chainBannerView = new AnimatedChainBannerView(this);
-            LinearLayout.LayoutParams cbl = new LinearLayout.LayoutParams(
-                    LinearLayout.LayoutParams.MATCH_PARENT, dp(44));
-            cbl.topMargin = dp(4);
-            cbl.bottomMargin = dp(4);
-            chainBannerView.setLayoutParams(cbl);
-            patrolContent.addView(chainBannerView);
-
-            pills = new LinearLayout(this);
-            pills.setOrientation(LinearLayout.HORIZONTAL);
-            pills.setPadding(0, dp(4), 0, dp(6));
-            patrolContent.addView(pills);
-
-            banner = new TextView(this);
-            banner.setTextSize(13);
-            banner.setTextColor(colAccent);
-            banner.setPadding(dp(14), dp(12), dp(14), dp(12));
-            banner.setBackground(rounded(colPanel2, dp(12)));
-            banner.setVisibility(View.GONE);
-            LinearLayout.LayoutParams bl = new LinearLayout.LayoutParams(
-                    LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
-            bl.topMargin = dp(6);
-            bl.bottomMargin = dp(8);
-            banner.setLayoutParams(bl);
-            patrolContent.addView(banner);
-
-            patrolContent.addView(sectionHeader("External Patrols", null));
-            externalRow = new LinearLayout(this);
-            externalRow.setOrientation(LinearLayout.HORIZONTAL);
-            externalRow.setPadding(0, dp(2), 0, dp(8));
-
-            tileExternalFull = patrolActionCard("External (Full)", EXTERNAL_CHOICES[1], true);
-            tileExternalHalf = patrolActionCard("External (Half)", EXTERNAL_CHOICES[3], false);
-            externalRow.addView(tileExternalFull);
-            externalRow.addView(tileExternalHalf);
-            patrolContent.addView(externalRow);
-
-            patrolContent.addView(sectionHeader("Internal Factory Floors (Lots 14–18)", null));
-            internalBadgesRow = new LinearLayout(this);
-            internalBadgesRow.setOrientation(LinearLayout.HORIZONTAL);
-            internalBadgesRow.setPadding(0, dp(2), 0, dp(10));
-
-            for (int i = 0; i < INTERNAL_LOTS.length; i += 2) {
-                internalBadgesRow.addView(lotBadge(INTERNAL_LOTS[i], INTERNAL_LOTS[i + 1], i == INTERNAL_LOTS.length - 2));
-            }
-            patrolContent.addView(internalBadgesRow);
-
-            LinearLayout fireHeader = new LinearLayout(this);
-            fireHeader.setOrientation(LinearLayout.HORIZONTAL);
-            fireHeader.setGravity(Gravity.CENTER_VERTICAL);
-            fireHeader.setPadding(0, dp(10), 0, dp(6));
-
-            TextView fTitle = new TextView(this);
-            fTitle.setText("FIRE & PUMP SYSTEMS · 1,200 PSI");
-            fTitle.setTextColor(colQuiet);
-            fTitle.setTextSize(10);
-            fTitle.setTypeface(Typeface.DEFAULT_BOLD);
-            fTitle.setLetterSpacing(0.12f);
-            LinearLayout.LayoutParams ftl = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
-            fTitle.setLayoutParams(ftl);
-            fireHeader.addView(fTitle);
-
-            fireStatusChip = new TextView(this);
-            fireStatusChip.setText("0/5 CHECKED");
-            fireStatusChip.setTextColor(colMuted);
-            fireStatusChip.setTextSize(10);
-            fireStatusChip.setTypeface(Typeface.MONOSPACE);
-            fireStatusChip.setPadding(dp(6), dp(2), dp(6), dp(2));
-            fireStatusChip.setBackground(rounded(colPanel2, dp(6)));
-            fireHeader.addView(fireStatusChip);
-            patrolContent.addView(fireHeader);
-
-            fireCard = new LinearLayout(this);
-            fireCard.setOrientation(LinearLayout.VERTICAL);
-            fireCard.setBackground(rounded(colPanel, dp(14)));
-            fireCard.setPadding(dp(12), dp(8), dp(12), dp(8));
-
-            fireList = new LinearLayout(this);
-            fireList.setOrientation(LinearLayout.VERTICAL);
-            for (int i = 0; i < FIRE_POINTS.length; i += 2) {
-                fireList.addView(fireCompactRow(FIRE_POINTS[i], FIRE_POINTS[i + 1], i == FIRE_POINTS.length - 2));
-            }
-            fireCard.addView(fireList);
-            patrolContent.addView(fireCard);
-
-            patrolContent.addView(sectionHeader("Rapid Evidence Dock", null));
-            dock = buildCaptureDock();
-            patrolContent.addView(dock);
-
-            patrolContent.addView(tonightLabel());
-            tonight = new LinearLayout(this);
-            tonight.setOrientation(LinearLayout.VERTICAL);
-            tonight.setPadding(0, dp(4), 0, dp(20));
-            patrolContent.addView(tonight);
-
-            primary = new TextView(this);
-            primary.setTextSize(15);
-            primary.setTypeface(Typeface.DEFAULT_BOLD);
-            primary.setGravity(Gravity.CENTER);
-            primary.setPadding(dp(16), dp(18), dp(16), dp(18));
-            patrolContent.addView(primary);
-
-            pageTitle = label("06:05 MORNING HANDOVER REPORT");
-            pageTitle.setPadding(0, dp(24), 0, dp(8));
-            pageTitle.setVisibility(View.GONE);
-            patrolContent.addView(pageTitle);
-
-            page = new TextView(this);
-            page.setTextColor(colPale);
-            page.setTextSize(10);
-            page.setTypeface(Typeface.MONOSPACE);
-            page.setBackground(rounded(colPanel, dp(14)));
-            page.setPadding(dp(14), dp(14), dp(14), dp(14));
-            page.setVisibility(View.GONE);
-            patrolContent.addView(page);
-
-            btnShareReport = new TextView(this);
-            btnShareReport.setText("📤 SHARE MORNING HANDOVER REPORT");
-            btnShareReport.setTextColor(colAccentInk);
-            btnShareReport.setTextSize(14);
-            btnShareReport.setTypeface(Typeface.DEFAULT_BOLD);
-            btnShareReport.setGravity(Gravity.CENTER);
-            btnShareReport.setPadding(dp(16), dp(16), dp(16), dp(16));
-            btnShareReport.setBackground(pressable(colAccent, dp(16)));
-            btnShareReport.setVisibility(View.GONE);
-            LinearLayout.LayoutParams spl = new LinearLayout.LayoutParams(
-                    LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
-            spl.topMargin = dp(12);
-            btnShareReport.setLayoutParams(spl);
-            btnShareReport.setOnClickListener(new View.OnClickListener() {
-                public void onClick(View v) {
-                    hapticHeavyClick();
-                    shareHandoverReport();
-                }
-            });
-            patrolContent.addView(btnShareReport);
-        }
-
+        patrolContent = buildPatrolTab();
         root.addView(patrolContent);
         scrollPatrol.addView(root);
         tabPagerFrame.addView(scrollPatrol);
@@ -4262,6 +3956,326 @@ private void updateTabSelection(int tabIndex) {
         });
 
         dlg.show();
+    }
+
+    // =========================================================================
+    // PATROL TAB
+    // =========================================================================
+
+    private LinearLayout buildPatrolTab() {
+        boolean isTablet = getResources().getConfiguration().smallestScreenWidthDp >= 600;
+        boolean isLandscape = getResources().getConfiguration().orientation == android.content.res.Configuration.ORIENTATION_LANDSCAPE;
+
+        if (isTablet && isLandscape) {
+            LinearLayout container = new LinearLayout(this);
+            container.setOrientation(LinearLayout.HORIZONTAL);
+            container.setBaselineAligned(false);
+
+            LinearLayout leftCol = new LinearLayout(this);
+            leftCol.setOrientation(LinearLayout.VERTICAL);
+            LinearLayout.LayoutParams lclp = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 44f);
+            lclp.rightMargin = dp(10);
+            leftCol.setLayoutParams(lclp);
+
+            LinearLayout rightCol = new LinearLayout(this);
+            rightCol.setOrientation(LinearLayout.VERTICAL);
+            LinearLayout.LayoutParams rclp = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 56f);
+            rclp.leftMargin = dp(10);
+            rightCol.setLayoutParams(rclp);
+
+            leftCol.addView(headerCard());
+            leftCol.addView(buildChronographSection());
+
+            chainBannerView = new AnimatedChainBannerView(this);
+            LinearLayout.LayoutParams cbl = new LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.MATCH_PARENT, dp(44));
+            cbl.topMargin = dp(4);
+            cbl.bottomMargin = dp(4);
+            chainBannerView.setLayoutParams(cbl);
+            leftCol.addView(chainBannerView);
+
+            pills = new LinearLayout(this);
+            pills.setOrientation(LinearLayout.HORIZONTAL);
+            pills.setPadding(0, dp(4), 0, dp(6));
+            leftCol.addView(pills);
+
+            banner = new TextView(this);
+            banner.setTextSize(13);
+            banner.setTextColor(colAccent);
+            banner.setPadding(dp(14), dp(12), dp(14), dp(12));
+            banner.setBackground(rounded(colPanel2, dp(12)));
+            banner.setVisibility(View.GONE);
+            LinearLayout.LayoutParams bl = new LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+            bl.topMargin = dp(6);
+            bl.bottomMargin = dp(8);
+            banner.setLayoutParams(bl);
+            leftCol.addView(banner);
+
+            primary = new TextView(this);
+            primary.setTextSize(15);
+            primary.setTypeface(Typeface.DEFAULT_BOLD);
+            primary.setGravity(Gravity.CENTER);
+            primary.setPadding(dp(16), dp(18), dp(16), dp(18));
+            leftCol.addView(primary);
+
+            pageTitle = label("06:05 MORNING HANDOVER REPORT");
+            pageTitle.setPadding(0, dp(24), 0, dp(8));
+            pageTitle.setVisibility(View.GONE);
+            leftCol.addView(pageTitle);
+
+            page = new TextView(this);
+            page.setTextColor(colPale);
+            page.setTextSize(10);
+            page.setTypeface(Typeface.MONOSPACE);
+            page.setBackground(rounded(colPanel, dp(14)));
+            page.setPadding(dp(14), dp(14), dp(14), dp(14));
+            page.setVisibility(View.GONE);
+            leftCol.addView(page);
+
+            btnShareReport = new TextView(this);
+            btnShareReport.setText("📤 SHARE MORNING HANDOVER REPORT");
+            btnShareReport.setTextColor(colAccentInk);
+            btnShareReport.setTextSize(14);
+            btnShareReport.setTypeface(Typeface.DEFAULT_BOLD);
+            btnShareReport.setGravity(Gravity.CENTER);
+            btnShareReport.setPadding(dp(16), dp(16), dp(16), dp(16));
+            btnShareReport.setBackground(pressable(colAccent, dp(16)));
+            btnShareReport.setVisibility(View.GONE);
+            LinearLayout.LayoutParams spl = new LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+            spl.topMargin = dp(12);
+            btnShareReport.setLayoutParams(spl);
+            btnShareReport.setOnClickListener(new View.OnClickListener() {
+                public void onClick(View v) {
+                    hapticHeavyClick();
+                    shareHandoverReport();
+                }
+            });
+            leftCol.addView(btnShareReport);
+
+            rightCol.addView(sectionHeader("External Patrols", null));
+            externalRow = new LinearLayout(this);
+            externalRow.setOrientation(LinearLayout.HORIZONTAL);
+            externalRow.setPadding(0, dp(2), 0, dp(8));
+
+            tileExternalFull = patrolActionCard("External (Full)", EXTERNAL_CHOICES[1], true);
+            tileExternalHalf = patrolActionCard("External (Half)", EXTERNAL_CHOICES[3], false);
+            externalRow.addView(tileExternalFull);
+            externalRow.addView(tileExternalHalf);
+            rightCol.addView(externalRow);
+
+            rightCol.addView(sectionHeader("Internal Factory Floors (Lots 14–18)", null));
+            internalBadgesRow = new LinearLayout(this);
+            internalBadgesRow.setOrientation(LinearLayout.HORIZONTAL);
+            internalBadgesRow.setPadding(0, dp(2), 0, dp(10));
+
+            for (int i = 0; i < INTERNAL_LOTS.length; i += 2) {
+                internalBadgesRow.addView(lotBadge(INTERNAL_LOTS[i], INTERNAL_LOTS[i + 1], i == INTERNAL_LOTS.length - 2));
+            }
+            rightCol.addView(internalBadgesRow);
+
+            LinearLayout fireHeader = new LinearLayout(this);
+            fireHeader.setOrientation(LinearLayout.HORIZONTAL);
+            fireHeader.setGravity(Gravity.CENTER_VERTICAL);
+            fireHeader.setPadding(0, dp(10), 0, dp(6));
+
+            TextView fTitle = new TextView(this);
+            fTitle.setText("FIRE & PUMP SYSTEMS · 1,200 PSI");
+            fTitle.setTextColor(colQuiet);
+            fTitle.setTextSize(10);
+            fTitle.setTypeface(Typeface.DEFAULT_BOLD);
+            fTitle.setLetterSpacing(0.12f);
+            LinearLayout.LayoutParams ftl = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
+            fTitle.setLayoutParams(ftl);
+            fireHeader.addView(fTitle);
+
+            fireStatusChip = new TextView(this);
+            fireStatusChip.setText("0/5 CHECKED");
+            fireStatusChip.setTextColor(colMuted);
+            fireStatusChip.setTextSize(10);
+            fireStatusChip.setTypeface(Typeface.MONOSPACE);
+            fireStatusChip.setPadding(dp(6), dp(2), dp(6), dp(2));
+            fireStatusChip.setBackground(rounded(colPanel2, dp(6)));
+            fireHeader.addView(fireStatusChip);
+            rightCol.addView(fireHeader);
+
+            fireCard = new LinearLayout(this);
+            fireCard.setOrientation(LinearLayout.VERTICAL);
+            fireCard.setBackground(rounded(colPanel, dp(14)));
+            fireCard.setPadding(dp(12), dp(8), dp(12), dp(8));
+
+            fireList = new LinearLayout(this);
+            fireList.setOrientation(LinearLayout.VERTICAL);
+            for (int i = 0; i < FIRE_POINTS.length; i += 2) {
+                fireList.addView(fireCompactRow(FIRE_POINTS[i], FIRE_POINTS[i + 1], i == FIRE_POINTS.length - 2));
+            }
+            fireCard.addView(fireList);
+            rightCol.addView(fireCard);
+
+            rightCol.addView(sectionHeader("Rapid Evidence Dock", null));
+            dock = buildCaptureDock();
+            rightCol.addView(dock);
+
+            rightCol.addView(tonightLabel());
+            tonight = new LinearLayout(this);
+            tonight.setOrientation(LinearLayout.VERTICAL);
+            tonight.setPadding(0, dp(4), 0, dp(20));
+            rightCol.addView(tonight);
+
+            container.addView(leftCol);
+            container.addView(rightCol);
+            return container;
+        } else {
+            LinearLayout container = new LinearLayout(this);
+            container.setOrientation(LinearLayout.VERTICAL);
+
+            // Header Card (Triple tap for Sun Conure!)
+            container.addView(headerCard());
+
+            // Shift Chronograph (Solar Dual-Arc)
+            container.addView(buildChronographSection());
+
+            // Chain Banner & Hash
+            chainBannerView = new AnimatedChainBannerView(this);
+            LinearLayout.LayoutParams cbl = new LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.MATCH_PARENT, dp(44));
+            cbl.topMargin = dp(4);
+            cbl.bottomMargin = dp(4);
+            chainBannerView.setLayoutParams(cbl);
+            container.addView(chainBannerView);
+
+            pills = new LinearLayout(this);
+            pills.setOrientation(LinearLayout.HORIZONTAL);
+            pills.setPadding(0, dp(4), 0, dp(6));
+            container.addView(pills);
+
+            banner = new TextView(this);
+            banner.setTextSize(13);
+            banner.setTextColor(colAccent);
+            banner.setPadding(dp(14), dp(12), dp(14), dp(12));
+            banner.setBackground(rounded(colPanel2, dp(12)));
+            banner.setVisibility(View.GONE);
+            LinearLayout.LayoutParams bl = new LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+            bl.topMargin = dp(6);
+            bl.bottomMargin = dp(8);
+            banner.setLayoutParams(bl);
+            container.addView(banner);
+
+            container.addView(sectionHeader("External Patrols", null));
+            externalRow = new LinearLayout(this);
+            externalRow.setOrientation(LinearLayout.HORIZONTAL);
+            externalRow.setPadding(0, dp(2), 0, dp(8));
+
+            tileExternalFull = patrolActionCard("External (Full)", EXTERNAL_CHOICES[1], true);
+            tileExternalHalf = patrolActionCard("External (Half)", EXTERNAL_CHOICES[3], false);
+            externalRow.addView(tileExternalFull);
+            externalRow.addView(tileExternalHalf);
+            container.addView(externalRow);
+
+            container.addView(sectionHeader("Internal Factory Floors (Lots 14–18)", null));
+            internalBadgesRow = new LinearLayout(this);
+            internalBadgesRow.setOrientation(LinearLayout.HORIZONTAL);
+            internalBadgesRow.setPadding(0, dp(2), 0, dp(10));
+
+            for (int i = 0; i < INTERNAL_LOTS.length; i += 2) {
+                internalBadgesRow.addView(lotBadge(INTERNAL_LOTS[i], INTERNAL_LOTS[i + 1], i == INTERNAL_LOTS.length - 2));
+            }
+            container.addView(internalBadgesRow);
+
+            LinearLayout fireHeader = new LinearLayout(this);
+            fireHeader.setOrientation(LinearLayout.HORIZONTAL);
+            fireHeader.setGravity(Gravity.CENTER_VERTICAL);
+            fireHeader.setPadding(0, dp(10), 0, dp(6));
+
+            TextView fTitle = new TextView(this);
+            fTitle.setText("FIRE & PUMP SYSTEMS · 1,200 PSI");
+            fTitle.setTextColor(colQuiet);
+            fTitle.setTextSize(10);
+            fTitle.setTypeface(Typeface.DEFAULT_BOLD);
+            fTitle.setLetterSpacing(0.12f);
+            LinearLayout.LayoutParams ftl = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
+            fTitle.setLayoutParams(ftl);
+            fireHeader.addView(fTitle);
+
+            fireStatusChip = new TextView(this);
+            fireStatusChip.setText("0/5 CHECKED");
+            fireStatusChip.setTextColor(colMuted);
+            fireStatusChip.setTextSize(10);
+            fireStatusChip.setTypeface(Typeface.MONOSPACE);
+            fireStatusChip.setPadding(dp(6), dp(2), dp(6), dp(2));
+            fireStatusChip.setBackground(rounded(colPanel2, dp(6)));
+            fireHeader.addView(fireStatusChip);
+            container.addView(fireHeader);
+
+            fireCard = new LinearLayout(this);
+            fireCard.setOrientation(LinearLayout.VERTICAL);
+            fireCard.setBackground(rounded(colPanel, dp(14)));
+            fireCard.setPadding(dp(12), dp(8), dp(12), dp(8));
+
+            fireList = new LinearLayout(this);
+            fireList.setOrientation(LinearLayout.VERTICAL);
+            for (int i = 0; i < FIRE_POINTS.length; i += 2) {
+                fireList.addView(fireCompactRow(FIRE_POINTS[i], FIRE_POINTS[i + 1], i == FIRE_POINTS.length - 2));
+            }
+            fireCard.addView(fireList);
+            container.addView(fireCard);
+
+            container.addView(sectionHeader("Rapid Evidence Dock", null));
+            dock = buildCaptureDock();
+            container.addView(dock);
+
+            container.addView(tonightLabel());
+            tonight = new LinearLayout(this);
+            tonight.setOrientation(LinearLayout.VERTICAL);
+            tonight.setPadding(0, dp(4), 0, dp(20));
+            container.addView(tonight);
+
+            primary = new TextView(this);
+            primary.setTextSize(15);
+            primary.setTypeface(Typeface.DEFAULT_BOLD);
+            primary.setGravity(Gravity.CENTER);
+            primary.setPadding(dp(16), dp(18), dp(16), dp(18));
+            container.addView(primary);
+
+            pageTitle = label("06:05 MORNING HANDOVER REPORT");
+            pageTitle.setPadding(0, dp(24), 0, dp(8));
+            pageTitle.setVisibility(View.GONE);
+            container.addView(pageTitle);
+
+            page = new TextView(this);
+            page.setTextColor(colPale);
+            page.setTextSize(10);
+            page.setTypeface(Typeface.MONOSPACE);
+            page.setBackground(rounded(colPanel, dp(14)));
+            page.setPadding(dp(14), dp(14), dp(14), dp(14));
+            page.setVisibility(View.GONE);
+            container.addView(page);
+
+            btnShareReport = new TextView(this);
+            btnShareReport.setText("📤 SHARE MORNING HANDOVER REPORT");
+            btnShareReport.setTextColor(colAccentInk);
+            btnShareReport.setTextSize(14);
+            btnShareReport.setTypeface(Typeface.DEFAULT_BOLD);
+            btnShareReport.setGravity(Gravity.CENTER);
+            btnShareReport.setPadding(dp(16), dp(16), dp(16), dp(16));
+            btnShareReport.setBackground(pressable(colAccent, dp(16)));
+            btnShareReport.setVisibility(View.GONE);
+            LinearLayout.LayoutParams spl = new LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+            spl.topMargin = dp(12);
+            btnShareReport.setLayoutParams(spl);
+            btnShareReport.setOnClickListener(new View.OnClickListener() {
+                public void onClick(View v) {
+                    hapticHeavyClick();
+                    shareHandoverReport();
+                }
+            });
+            container.addView(btnShareReport);
+
+            return container;
+        }
     }
 
     // =========================================================================
@@ -9559,11 +9573,12 @@ private void updateTabSelection(int tabIndex) {
     class ThemeShockwaveOverlayView extends View {
         private final Paint ringPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
         private final Paint glowPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+        private final Paint lensPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
         private final Paint particlePaint = new Paint(Paint.ANTI_ALIAS_FLAG);
         private final Paint starPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
         private final Path starPath = new Path();
 
-        private static final int PARTICLE_COUNT = 32;
+        private static final int PARTICLE_COUNT = 48;
         private final float[] pX = new float[PARTICLE_COUNT];
         private final float[] pY = new float[PARTICLE_COUNT];
         private final float[] pVx = new float[PARTICLE_COUNT];
@@ -9585,6 +9600,7 @@ private void updateTabSelection(int tabIndex) {
             super(context);
             ringPaint.setStyle(Paint.Style.STROKE);
             glowPaint.setStyle(Paint.Style.STROKE);
+            lensPaint.setStyle(Paint.Style.FILL);
             particlePaint.setStyle(Paint.Style.FILL);
             starPaint.setStyle(Paint.Style.FILL);
             setVisibility(View.GONE);
@@ -9601,19 +9617,19 @@ private void updateTabSelection(int tabIndex) {
             this.isActive = true;
             setVisibility(View.VISIBLE);
 
-            // Initialize 32 quantum starlight particles
+            // Initialize 48 quantum starlight particles
             java.util.Random rnd = new java.util.Random();
             for (int i = 0; i < PARTICLE_COUNT; i++) {
                 pX[i] = originX;
                 pY[i] = originY;
                 double angle = rnd.nextDouble() * Math.PI * 2.0;
-                float speed = dpf(2.5f + rnd.nextFloat() * 7.5f);
+                float speed = dpf(3f + rnd.nextFloat() * 8.5f);
                 pVx[i] = (float) (Math.cos(angle) * speed);
                 pVy[i] = (float) (Math.sin(angle) * speed);
-                pSize[i] = dpf(2f + rnd.nextFloat() * 4.5f);
+                pSize[i] = dpf(2f + rnd.nextFloat() * 5f);
                 pAlpha[i] = 1.0f;
                 pRot[i] = rnd.nextFloat() * 360f;
-                pRotSpeed[i] = (rnd.nextFloat() - 0.5f) * 18f;
+                pRotSpeed[i] = (rnd.nextFloat() - 0.5f) * 20f;
             }
 
             if (waveAnimator != null && waveAnimator.isRunning()) {
@@ -9621,20 +9637,20 @@ private void updateTabSelection(int tabIndex) {
             }
 
             waveAnimator = ValueAnimator.ofFloat(0f, 1f);
-            waveAnimator.setDuration(520);
-            waveAnimator.setInterpolator(new DecelerateInterpolator(1.4f));
+            waveAnimator.setDuration(580);
+            waveAnimator.setInterpolator(new DecelerateInterpolator(1.3f));
             waveAnimator.addUpdateListener(new ValueAnimator.AnimatorUpdateListener() {
                 public void onAnimationUpdate(ValueAnimator va) {
                     float f = (Float) va.getAnimatedValue();
-                    float maxDist = (float) Math.hypot(getWidth(), getHeight()) * 1.05f;
+                    float maxDist = (float) Math.hypot(getWidth(), getHeight()) * 1.1f;
                     shockwaveRadius = f * maxDist;
                     shockwaveAlpha = (1f - f);
 
                     for (int i = 0; i < PARTICLE_COUNT; i++) {
                         pX[i] += pVx[i];
                         pY[i] += pVy[i];
-                        pVy[i] += dpf(0.15f); // subtle gravity
-                        pAlpha[i] = Math.max(0f, (1f - f * 1.1f));
+                        pVy[i] += dpf(0.12f); // subtle physics gravity
+                        pAlpha[i] = Math.max(0f, (1f - f * 1.15f));
                         pRot[i] += pRotSpeed[i];
                     }
                     invalidate();
@@ -9655,20 +9671,29 @@ private void updateTabSelection(int tabIndex) {
             super.onDraw(canvas);
             if (!isActive) return;
 
-            // Draw glowing expanding shockwave ring
+            // 1. Draw glowing expanding chromatic radial gradient & lens shockwave ring
             if (shockwaveRadius > 0f && shockwaveAlpha > 0f) {
+                RadialGradient lensGrad = new RadialGradient(
+                        originX, originY, Math.max(1f, shockwaveRadius),
+                        new int[]{shockwaveColor, shockwaveColor & 0x00FFFFFF},
+                        new float[]{0.5f, 1.0f},
+                        Shader.TileMode.CLAMP);
+                lensPaint.setShader(lensGrad);
+                lensPaint.setAlpha((int) (shockwaveAlpha * 65));
+                canvas.drawCircle(originX, originY, shockwaveRadius, lensPaint);
+
                 glowPaint.setColor(shockwaveColor);
-                glowPaint.setStrokeWidth(dpf(24f));
-                glowPaint.setAlpha((int) (shockwaveAlpha * 70));
+                glowPaint.setStrokeWidth(dpf(28f));
+                glowPaint.setAlpha((int) (shockwaveAlpha * 85));
                 canvas.drawCircle(originX, originY, shockwaveRadius, glowPaint);
 
                 ringPaint.setColor(shockwaveColor);
-                ringPaint.setStrokeWidth(dpf(4f));
-                ringPaint.setAlpha((int) (shockwaveAlpha * 240));
+                ringPaint.setStrokeWidth(dpf(4.5f));
+                ringPaint.setAlpha((int) (shockwaveAlpha * 255));
                 canvas.drawCircle(originX, originY, shockwaveRadius, ringPaint);
             }
 
-            // Draw 32 sparkling starburst particles
+            // 2. Draw 48 sparkling starburst particles
             for (int i = 0; i < PARTICLE_COUNT; i++) {
                 if (pAlpha[i] <= 0.01f) continue;
                 particlePaint.setColor(shockwaveColor);
@@ -9702,33 +9727,89 @@ private void updateTabSelection(int tabIndex) {
         }
     }
 
-        public void triggerSunConureFlight() {
+    public void triggerSunConureFlight() {
         if (conureOverlay != null) {
             hapticDoublePulse();
             conureOverlay.triggerFlight();
         }
     }
 
-public void animateThemeChangeWithShockwave(final int newTheme, float origX, float origY) {
+    public void animateThemeChangeWithShockwave(final int newTheme, final float origX, final float origY) {
         if (newTheme == activeTheme) return;
-        hapticClick();
+        hapticHeavyClick();
+        final int oldTheme = activeTheme;
         activeTheme = newTheme;
 
-        int waveColor = (newTheme == 1 ? 0xFFFFB703 : (newTheme == 2 ? 0xFF00FF66 : (newTheme == 3 ? 0xFF94A3B8 : 0xFFFFD166)));
+        final int waveColor = (newTheme == 1 ? 0xFFFFB703 : (newTheme == 2 ? 0xFF00FF66 : (newTheme == 3 ? 0xFF94A3B8 : 0xFFFFD166)));
         if (shockwaveOverlay != null) {
             shockwaveOverlay.triggerShockwave(origX, origY, waveColor);
         }
 
-        applyThemeTokens();
-        if (root != null) root.setBackgroundColor(colBg);
-        if (rootFrame != null) rootFrame.setBackgroundColor(colBg);
-        if (scrollPatrol != null) scrollPatrol.setBackgroundColor(colBg);
-        if (scrollContacts != null) scrollContacts.setBackgroundColor(colBg);
-        if (scrollHandbook != null) scrollHandbook.setBackgroundColor(colBg);
-        if (scrollTools != null) scrollTools.setBackgroundColor(colBg);
+        ValueAnimator morphAnim = ValueAnimator.ofFloat((float) oldTheme, (float) newTheme);
+        morphAnim.setDuration(400);
+        morphAnim.setInterpolator(new DecelerateInterpolator(1.3f));
+        morphAnim.addUpdateListener(new ValueAnimator.AnimatorUpdateListener() {
+            public void onAnimationUpdate(ValueAnimator va) {
+                float v = (Float) va.getAnimatedValue();
+                applyDynamicColorMorph(v);
+                if (root != null) root.setBackgroundColor(colBg);
+                if (rootFrame != null) rootFrame.setBackgroundColor(colBg);
+                if (scrollPatrol != null) scrollPatrol.setBackgroundColor(colBg);
+                if (scrollContacts != null) scrollContacts.setBackgroundColor(colBg);
+                if (scrollHandbook != null) scrollHandbook.setBackgroundColor(colBg);
+                if (scrollTools != null) scrollTools.setBackgroundColor(colBg);
 
-        if (animatedThemeBar != null) animatedThemeBar.invalidate();
-        if (animatedTabBar != null) animatedTabBar.invalidate();
-        if (rosterScrubber != null) rosterScrubber.invalidate();
+                if (animatedThemeBar != null) animatedThemeBar.invalidate();
+                if (animatedTabBar != null) animatedTabBar.invalidate();
+                if (rosterScrubber != null) rosterScrubber.invalidate();
+                if (chronographView != null) chronographView.invalidate();
+            }
+        });
+        morphAnim.addListener(new AnimatorListenerAdapter() {
+            @Override
+            public void onAnimationEnd(Animator animation) {
+                applyThemeTokens();
+                rebuildActiveTabContents();
+                if (mainSurfaceContainer != null) {
+                    mainSurfaceContainer.setScaleX(0.985f);
+                    mainSurfaceContainer.setScaleY(0.985f);
+                    mainSurfaceContainer.animate()
+                            .scaleX(1.0f)
+                            .scaleY(1.0f)
+                            .setDuration(240)
+                            .setInterpolator(new OvershootInterpolator(1.1f))
+                            .start();
+                }
+            }
+        });
+        morphAnim.start();
+    }
+
+    public void rebuildActiveTabContents() {
+        if (scrollPatrol != null) {
+            scrollPatrol.removeAllViews();
+            root = new LinearLayout(this);
+            root.setOrientation(LinearLayout.VERTICAL);
+            root.setPadding(0, 0, 0, dp(36));
+            patrolContent = buildPatrolTab();
+            root.addView(patrolContent);
+            scrollPatrol.addView(root);
+        }
+        if (scrollContacts != null) {
+            scrollContacts.removeAllViews();
+            contactsContent = buildContactsTab();
+            scrollContacts.addView(contactsContent);
+        }
+        if (scrollHandbook != null) {
+            scrollHandbook.removeAllViews();
+            scrollHandbook.addView(buildRosterView());
+        }
+        if (scrollTools != null) {
+            scrollTools.removeAllViews();
+            toolsContent = buildToolsTab();
+            scrollTools.addView(toolsContent);
+        }
+        refresh();
+        updateDiagnostics();
     }
 }
