@@ -9614,38 +9614,43 @@ private void updateTabSelection(int tabIndex) {
 
 
     class ThemeShockwaveOverlayView extends View {
-        private final Paint ringPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
-        private final Paint glowPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
-        private final Paint lensPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
-        private final Paint particlePaint = new Paint(Paint.ANTI_ALIAS_FLAG);
-        private final Paint starPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+        private final Paint cloudPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+        private final Paint motePaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+        private final Paint starCorePaint = new Paint(Paint.ANTI_ALIAS_FLAG);
         private final Path starPath = new Path();
 
-        private static final int PARTICLE_COUNT = 48;
-        private final float[] pX = new float[PARTICLE_COUNT];
-        private final float[] pY = new float[PARTICLE_COUNT];
-        private final float[] pVx = new float[PARTICLE_COUNT];
-        private final float[] pVy = new float[PARTICLE_COUNT];
-        private final float[] pSize = new float[PARTICLE_COUNT];
-        private final float[] pAlpha = new float[PARTICLE_COUNT];
-        private final float[] pRot = new float[PARTICLE_COUNT];
-        private final float[] pRotSpeed = new float[PARTICLE_COUNT];
+        // 1. Nebula Cloud Puffs around colored UI areas
+        private static final int CLOUD_COUNT = 8;
+        private final float[] cloudX = new float[CLOUD_COUNT];
+        private final float[] cloudY = new float[CLOUD_COUNT];
+        private final float[] cloudBaseRadius = new float[CLOUD_COUNT];
+        private final float[] cloudTargetRadius = new float[CLOUD_COUNT];
+        private final float[] cloudAlphaMax = new float[CLOUD_COUNT];
+
+        // 2. Rising Starlight Motes & Fairy Dust
+        private static final int MOTE_COUNT = 48;
+        private final float[] moteX = new float[MOTE_COUNT];
+        private final float[] moteY = new float[MOTE_COUNT];
+        private final float[] moteVx = new float[MOTE_COUNT];
+        private final float[] moteVy = new float[MOTE_COUNT];
+        private final float[] moteSize = new float[MOTE_COUNT];
+        private final float[] moteAlpha = new float[MOTE_COUNT];
+        private final float[] moteRot = new float[MOTE_COUNT];
+        private final float[] moteRotSpeed = new float[MOTE_COUNT];
+        private final float[] motePhase = new float[MOTE_COUNT];
 
         private float originX = 0f;
         private float originY = 0f;
-        private float shockwaveRadius = 0f;
-        private float shockwaveAlpha = 0f;
-        private int shockwaveColor = 0xFFFFD166;
-        private ValueAnimator waveAnimator;
+        private int auraColor = 0xFFFFD166;
+        private float animProgress = 0f;
+        private ValueAnimator cloudAnimator;
         private boolean isActive = false;
 
         public ThemeShockwaveOverlayView(Context context) {
             super(context);
-            ringPaint.setStyle(Paint.Style.STROKE);
-            glowPaint.setStyle(Paint.Style.STROKE);
-            lensPaint.setStyle(Paint.Style.FILL);
-            particlePaint.setStyle(Paint.Style.FILL);
-            starPaint.setStyle(Paint.Style.FILL);
+            cloudPaint.setStyle(Paint.Style.FILL);
+            motePaint.setStyle(Paint.Style.FILL);
+            starCorePaint.setStyle(Paint.Style.FILL);
             setVisibility(View.GONE);
         }
 
@@ -9656,114 +9661,182 @@ private void updateTabSelection(int tabIndex) {
         public void triggerShockwave(float x, float y, int color) {
             this.originX = x;
             this.originY = y;
-            this.shockwaveColor = color;
+            this.auraColor = color;
             this.isActive = true;
             setVisibility(View.VISIBLE);
 
-            // Initialize 48 quantum starlight particles
+            float w = getWidth() > 0 ? getWidth() : getResources().getDisplayMetrics().widthPixels;
+            float h = getHeight() > 0 ? getHeight() : getResources().getDisplayMetrics().heightPixels;
+
             java.util.Random rnd = new java.util.Random();
-            for (int i = 0; i < PARTICLE_COUNT; i++) {
-                pX[i] = originX;
-                pY[i] = originY;
-                double angle = rnd.nextDouble() * Math.PI * 2.0;
-                float speed = dpf(3f + rnd.nextFloat() * 8.5f);
-                pVx[i] = (float) (Math.cos(angle) * speed);
-                pVy[i] = (float) (Math.sin(angle) * speed);
-                pSize[i] = dpf(2f + rnd.nextFloat() * 5f);
-                pAlpha[i] = 1.0f;
-                pRot[i] = rnd.nextFloat() * 360f;
-                pRotSpeed[i] = (rnd.nextFloat() - 0.5f) * 20f;
+
+            // Set up magical aura cloud centers positioned near key colored UI areas:
+            // 0: Touch origin
+            cloudX[0] = x;
+            cloudY[0] = y;
+            cloudBaseRadius[0] = dpf(30f);
+            cloudTargetRadius[0] = dpf(160f);
+            cloudAlphaMax[0] = 0.50f;
+
+            // 1: Top Theme Bar / Diagnostics Strip
+            cloudX[1] = w * 0.5f;
+            cloudY[1] = dpf(65f);
+            cloudBaseRadius[1] = dpf(35f);
+            cloudTargetRadius[1] = dpf(130f);
+            cloudAlphaMax[1] = 0.42f;
+
+            // 2: Shift Chronograph / Solar Dual-Arc Area
+            cloudX[2] = w * 0.35f;
+            cloudY[2] = dpf(160f);
+            cloudBaseRadius[2] = dpf(45f);
+            cloudTargetRadius[2] = dpf(180f);
+            cloudAlphaMax[2] = 0.48f;
+
+            // 3: Telemetry Pills & Chain Banner
+            cloudX[3] = w * 0.70f;
+            cloudY[3] = dpf(220f);
+            cloudBaseRadius[3] = dpf(30f);
+            cloudTargetRadius[3] = dpf(140f);
+            cloudAlphaMax[3] = 0.42f;
+
+            // 4: Patrol Action Cards (External Full / Half)
+            cloudX[4] = w * 0.40f;
+            cloudY[4] = dpf(340f);
+            cloudBaseRadius[4] = dpf(40f);
+            cloudTargetRadius[4] = dpf(160f);
+            cloudAlphaMax[4] = 0.45f;
+
+            // 5: Factory Floor Lot Badges (Lots 14-18)
+            cloudX[5] = w * 0.65f;
+            cloudY[5] = dpf(420f);
+            cloudBaseRadius[5] = dpf(35f);
+            cloudTargetRadius[5] = dpf(150f);
+            cloudAlphaMax[5] = 0.42f;
+
+            // 6: Fire Systems PSI Card
+            cloudX[6] = w * 0.30f;
+            cloudY[6] = dpf(530f);
+            cloudBaseRadius[6] = dpf(35f);
+            cloudTargetRadius[6] = dpf(150f);
+            cloudAlphaMax[6] = 0.40f;
+
+            // 7: Rapid Evidence Dock & Bottom Area
+            cloudX[7] = w * 0.55f;
+            cloudY[7] = Math.min(h - dpf(90f), dpf(680f));
+            cloudBaseRadius[7] = dpf(40f);
+            cloudTargetRadius[7] = dpf(160f);
+            cloudAlphaMax[7] = 0.42f;
+
+            // Initialize 48 sparkling starlight motes that gently swirl and drift upward
+            for (int i = 0; i < MOTE_COUNT; i++) {
+                int cIdx = i % CLOUD_COUNT;
+                float angle = rnd.nextFloat() * (float) Math.PI * 2f;
+                float dist = rnd.nextFloat() * cloudBaseRadius[cIdx] * 1.3f;
+                moteX[i] = cloudX[cIdx] + (float) Math.cos(angle) * dist;
+                moteY[i] = cloudY[cIdx] + (float) Math.sin(angle) * dist;
+                moteVx[i] = (rnd.nextFloat() - 0.5f) * dpf(1.8f);
+                moteVy[i] = -dpf(1.2f + rnd.nextFloat() * 2.8f); // Gentle upward drift
+                moteSize[i] = dpf(2.5f + rnd.nextFloat() * 4.5f);
+                moteAlpha[i] = 1.0f;
+                moteRot[i] = rnd.nextFloat() * 360f;
+                moteRotSpeed[i] = (rnd.nextFloat() - 0.5f) * 12f;
+                motePhase[i] = rnd.nextFloat() * 6.28f;
             }
 
-            if (waveAnimator != null && waveAnimator.isRunning()) {
-                waveAnimator.cancel();
+            if (cloudAnimator != null && cloudAnimator.isRunning()) {
+                cloudAnimator.cancel();
             }
 
-            waveAnimator = ValueAnimator.ofFloat(0f, 1f);
-            waveAnimator.setDuration(580);
-            waveAnimator.setInterpolator(new DecelerateInterpolator(1.3f));
-            waveAnimator.addUpdateListener(new ValueAnimator.AnimatorUpdateListener() {
+            cloudAnimator = ValueAnimator.ofFloat(0f, 1f);
+            cloudAnimator.setDuration(950);
+            cloudAnimator.setInterpolator(new DecelerateInterpolator(1.2f));
+            cloudAnimator.addUpdateListener(new ValueAnimator.AnimatorUpdateListener() {
                 public void onAnimationUpdate(ValueAnimator va) {
-                    float f = (Float) va.getAnimatedValue();
-                    float maxDist = (float) Math.hypot(getWidth(), getHeight()) * 1.1f;
-                    shockwaveRadius = f * maxDist;
-                    shockwaveAlpha = (1f - f);
+                    animProgress = (Float) va.getAnimatedValue();
 
-                    for (int i = 0; i < PARTICLE_COUNT; i++) {
-                        pX[i] += pVx[i];
-                        pY[i] += pVy[i];
-                        pVy[i] += dpf(0.12f); // subtle physics gravity
-                        pAlpha[i] = Math.max(0f, (1f - f * 1.15f));
-                        pRot[i] += pRotSpeed[i];
+                    // Update motes with gentle sin-wave turbulence
+                    for (int i = 0; i < MOTE_COUNT; i++) {
+                        moteX[i] += moteVx[i] + (float) Math.sin(animProgress * 8.0 + motePhase[i]) * dpf(0.8f);
+                        moteY[i] += moteVy[i];
+                        moteRot[i] += moteRotSpeed[i];
                     }
                     invalidate();
                 }
             });
-            waveAnimator.addListener(new AnimatorListenerAdapter() {
+            cloudAnimator.addListener(new AnimatorListenerAdapter() {
                 @Override
                 public void onAnimationEnd(Animator animation) {
                     isActive = false;
                     setVisibility(View.GONE);
                 }
             });
-            waveAnimator.start();
+            cloudAnimator.start();
         }
 
         @Override
         protected void onDraw(Canvas canvas) {
             super.onDraw(canvas);
-            if (!isActive) return;
+            if (!isActive || animProgress <= 0f || animProgress >= 1f) return;
 
-            // 1. Draw glowing expanding chromatic radial gradient & lens shockwave ring
-            if (shockwaveRadius > 0f && shockwaveAlpha > 0f) {
-                RadialGradient lensGrad = new RadialGradient(
-                        originX, originY, Math.max(1f, shockwaveRadius),
-                        new int[]{shockwaveColor, shockwaveColor & 0x00FFFFFF},
-                        new float[]{0.5f, 1.0f},
+            float p = animProgress;
+            // Smooth bell-curve envelope for natural cloud dissipation
+            float envelope = (float) Math.sin(p * Math.PI);
+            envelope = Math.max(0f, Math.min(1f, envelope));
+
+            int baseCol = auraColor;
+            int transparentCol = baseCol & 0x00FFFFFF;
+
+            // 1. Draw glowing magical nebula cloud aura around key colored areas
+            for (int i = 0; i < CLOUD_COUNT; i++) {
+                float curR = cloudBaseRadius[i] + (cloudTargetRadius[i] - cloudBaseRadius[i]) * p;
+                if (curR <= 1f) continue;
+
+                float cloudAlpha = cloudAlphaMax[i] * envelope;
+                if (cloudAlpha <= 0.01f) continue;
+
+                RadialGradient cloudGrad = new RadialGradient(
+                        cloudX[i], cloudY[i], curR,
+                        new int[]{baseCol, baseCol & 0x55FFFFFF, transparentCol},
+                        new float[]{0f, 0.45f, 1f},
                         Shader.TileMode.CLAMP);
-                lensPaint.setShader(lensGrad);
-                lensPaint.setAlpha((int) (shockwaveAlpha * 65));
-                canvas.drawCircle(originX, originY, shockwaveRadius, lensPaint);
-
-                glowPaint.setColor(shockwaveColor);
-                glowPaint.setStrokeWidth(dpf(28f));
-                glowPaint.setAlpha((int) (shockwaveAlpha * 85));
-                canvas.drawCircle(originX, originY, shockwaveRadius, glowPaint);
-
-                ringPaint.setColor(shockwaveColor);
-                ringPaint.setStrokeWidth(dpf(4.5f));
-                ringPaint.setAlpha((int) (shockwaveAlpha * 255));
-                canvas.drawCircle(originX, originY, shockwaveRadius, ringPaint);
+                cloudPaint.setShader(cloudGrad);
+                cloudPaint.setAlpha((int) (cloudAlpha * 255));
+                canvas.drawCircle(cloudX[i], cloudY[i], curR, cloudPaint);
             }
 
-            // 2. Draw 48 sparkling starburst particles
-            for (int i = 0; i < PARTICLE_COUNT; i++) {
-                if (pAlpha[i] <= 0.01f) continue;
-                particlePaint.setColor(shockwaveColor);
-                particlePaint.setAlpha((int) (pAlpha[i] * 230));
+            // 2. Draw sparkling starlight motes & twinkling fairy dust
+            for (int i = 0; i < MOTE_COUNT; i++) {
+                float moteLife = 1f - p;
+                float moteA = envelope * (0.4f + 0.6f * (float) Math.sin(p * 14.0 + motePhase[i]));
+                moteA = Math.max(0f, Math.min(1f, moteA * moteLife));
+                if (moteA <= 0.02f) continue;
 
                 canvas.save();
-                canvas.translate(pX[i], pY[i]);
-                canvas.rotate(pRot[i]);
+                canvas.translate(moteX[i], moteY[i]);
+                canvas.rotate(moteRot[i]);
 
-                float s = pSize[i];
+                float s = moteSize[i] * (0.8f + 0.3f * (float) Math.sin(p * 10.0 + motePhase[i]));
+
+                // Soft outer glowing mote aura
+                motePaint.setColor(baseCol);
+                motePaint.setAlpha((int) (moteA * 180));
+
                 starPath.reset();
                 starPath.moveTo(0, -s);
-                starPath.lineTo(s * 0.3f, -s * 0.3f);
+                starPath.lineTo(s * 0.32f, -s * 0.32f);
                 starPath.lineTo(s, 0);
-                starPath.lineTo(s * 0.3f, s * 0.3f);
+                starPath.lineTo(s * 0.32f, s * 0.32f);
                 starPath.lineTo(0, s);
-                starPath.lineTo(-s * 0.3f, s * 0.3f);
+                starPath.lineTo(-s * 0.32f, s * 0.32f);
                 starPath.lineTo(-s, 0);
-                starPath.lineTo(-s * 0.3f, -s * 0.3f);
+                starPath.lineTo(-s * 0.32f, -s * 0.32f);
                 starPath.close();
+                canvas.drawPath(starPath, motePaint);
 
-                canvas.drawPath(starPath, particlePaint);
-
-                // Core white sparkle center
-                starPaint.setColor(0xFFFFFFFF);
-                starPaint.setAlpha((int) (pAlpha[i] * 255));
-                canvas.drawCircle(0, 0, s * 0.35f, starPaint);
+                // Bright crystalline white core
+                starCorePaint.setColor(0xFFFFFFFF);
+                starCorePaint.setAlpha((int) (moteA * 240));
+                canvas.drawCircle(0, 0, s * 0.38f, starCorePaint);
 
                 canvas.restore();
             }
@@ -9789,7 +9862,7 @@ private void updateTabSelection(int tabIndex) {
         }
 
         ValueAnimator morphAnim = ValueAnimator.ofFloat((float) oldTheme, (float) newTheme);
-        morphAnim.setDuration(400);
+        morphAnim.setDuration(450);
         morphAnim.setInterpolator(new DecelerateInterpolator(1.3f));
         morphAnim.addUpdateListener(new ValueAnimator.AnimatorUpdateListener() {
             public void onAnimationUpdate(ValueAnimator va) {
@@ -9813,16 +9886,6 @@ private void updateTabSelection(int tabIndex) {
             public void onAnimationEnd(Animator animation) {
                 applyThemeTokens();
                 rebuildActiveTabContents();
-                if (mainSurfaceContainer != null) {
-                    mainSurfaceContainer.setScaleX(0.985f);
-                    mainSurfaceContainer.setScaleY(0.985f);
-                    mainSurfaceContainer.animate()
-                            .scaleX(1.0f)
-                            .scaleY(1.0f)
-                            .setDuration(240)
-                            .setInterpolator(new OvershootInterpolator(1.1f))
-                            .start();
-                }
             }
         });
         morphAnim.start();
