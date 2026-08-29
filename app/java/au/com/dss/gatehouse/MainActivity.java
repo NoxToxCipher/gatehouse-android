@@ -8948,9 +8948,23 @@ private void updateTabSelection(int tabIndex) {
                     getParent().requestDisallowInterceptTouchEvent(true);
                     float rawPos = (event.getX() - pad - segWidth / 2f) / segWidth;
                     float clamped = Math.max(0f, Math.min(days.length - 1, rawPos));
+                    indicatorPos = clamped;
+                    invalidate();
                     int hover = Math.round(clamped);
+                    if (hover != lastHover) {
+                        lastHover = hover;
+                        hapticClick();
+                        selectedRosterDay = hover;
+                        updateRosterDayDetail(hover);
+                    }
+                    return true;
 
-                    
+                case MotionEvent.ACTION_UP:
+                    getParent().requestDisallowInterceptTouchEvent(false);
+                    int target = Math.round(indicatorPos);
+                    selectedRosterDay = target;
+                    animateToPosition(target);
+                    updateRosterDayDetail(target);
                     return true;
 
                 case MotionEvent.ACTION_CANCEL:
