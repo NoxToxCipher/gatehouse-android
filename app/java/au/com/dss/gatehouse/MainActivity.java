@@ -917,7 +917,7 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
 
         root = new LinearLayout(this);
         root.setOrientation(LinearLayout.VERTICAL);
-        root.setPadding(0, 0, 0, dp(36));
+        root.setPadding(0, 0, 0, dp(56));
 
         patrolContent = buildPatrolTab();
         root.addView(patrolContent);
@@ -2874,7 +2874,7 @@ private void updateTabSelection(int tabIndex) {
             LinearLayout container = new LinearLayout(this);
             container.setOrientation(LinearLayout.HORIZONTAL);
             container.setBaselineAligned(false);
-            container.setPadding(0, dp(6), 0, dp(24));
+            container.setPadding(0, dp(6), 0, dp(56));
 
             LinearLayout leftCol = new LinearLayout(this);
             leftCol.setOrientation(LinearLayout.VERTICAL);
@@ -2913,7 +2913,7 @@ private void updateTabSelection(int tabIndex) {
 
         LinearLayout container = new LinearLayout(this);
         container.setOrientation(LinearLayout.VERTICAL);
-        container.setPadding(0, dp(6), 0, dp(24));
+        container.setPadding(0, dp(6), 0, dp(56));
 
         container.addView(contactsSectionHeader("📡 OFFLINE PEER MESH & NFC", colCyan));
         container.addView(buildMeshPreviewCard());
@@ -4333,7 +4333,7 @@ private void updateTabSelection(int tabIndex) {
             LinearLayout container = new LinearLayout(this);
             container.setOrientation(LinearLayout.HORIZONTAL);
             container.setBaselineAligned(false);
-            container.setPadding(0, dp(6), 0, dp(24));
+            container.setPadding(0, dp(6), 0, dp(56));
 
             LinearLayout leftCol = new LinearLayout(this);
             leftCol.setOrientation(LinearLayout.VERTICAL);
@@ -4374,7 +4374,7 @@ private void updateTabSelection(int tabIndex) {
 
         LinearLayout container = new LinearLayout(this);
         container.setOrientation(LinearLayout.VERTICAL);
-        container.setPadding(0, dp(6), 0, dp(24));
+        container.setPadding(0, dp(6), 0, dp(56));
 
         container.addView(contactsSectionHeader("🚨 EMERGENCY SERVICES (24/7)", colCrimson));
         container.addView(contactCard("Triple Zero (000)", "Police · Fire · Ambulance", "000", "24/7 PRIORITY", colCrimson));
@@ -9833,7 +9833,7 @@ private void updateTabSelection(int tabIndex) {
             scrollPatrol.removeAllViews();
             root = new LinearLayout(this);
             root.setOrientation(LinearLayout.VERTICAL);
-            root.setPadding(0, 0, 0, dp(36));
+            root.setPadding(0, 0, 0, dp(56));
             patrolContent = buildPatrolTab();
             root.addView(patrolContent);
             scrollPatrol.addView(root);
