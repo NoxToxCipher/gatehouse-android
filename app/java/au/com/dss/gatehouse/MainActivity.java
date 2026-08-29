@@ -6552,10 +6552,6 @@ private void updateTabSelection(int tabIndex) {
     }
 
     private View buildDeputyView() {
-        ScrollView depScroll = new ScrollView(this);
-        depScroll.setBackgroundColor(0xFF080C14);
-        depScroll.setVerticalScrollBarEnabled(false);
-
         LinearLayout depLayout = new LinearLayout(this);
         depLayout.setOrientation(LinearLayout.VERTICAL);
         depLayout.setPadding(dp(16), dp(16), dp(16), dp(36));
@@ -6760,10 +6756,7 @@ private void updateTabSelection(int tabIndex) {
         });
         depActions.addView(btnLeave);
 
-        depLayout.addView(depActions);
-
-        depScroll.addView(depLayout);
-        return depScroll;
+        return depLayout;
     }
 
     private LinearLayout buildDeputyShiftCard(String day, String hours, String details, boolean isCurrent) {
@@ -6820,10 +6813,6 @@ private void updateTabSelection(int tabIndex) {
     }
 
     private View buildRosterView() {
-        ScrollView rScroll = new ScrollView(this);
-        rScroll.setBackgroundColor(0xFF060A10);
-        rScroll.setVerticalScrollBarEnabled(false);
-
         LinearLayout rLayout = new LinearLayout(this);
         rLayout.setOrientation(LinearLayout.VERTICAL);
         rLayout.setPadding(dp(16), dp(16), dp(16), dp(36));
@@ -6966,10 +6955,7 @@ private void updateTabSelection(int tabIndex) {
         });
         actionsRow.addView(btnNotes);
 
-        rLayout.addView(actionsRow);
-
-        rScroll.addView(rLayout);
-        return rScroll;
+        return rLayout;
     }
 
     // =========================================================================
