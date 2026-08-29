@@ -6294,7 +6294,7 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
                     this.touchDownX = motionEvent.getX();
                     this.touchDownY = motionEvent.getY();
                     getParent().requestDisallowInterceptTouchEvent(true);
-                    float max = Math.max(0.0f, Math.min(this.titles.length - 1, ((motionEvent.getX() - dpf) - (length / 2.0f)) / length));
+                    float max = Math.max(0.0f, Math.min(this.titles.length - 1, (motionEvent.getX() - dpf) / length));
                     this.lastHoverIndex = Math.round(max);
                     animateToPosition(max);
                     animateTouchScale(1.04f);
@@ -6304,7 +6304,7 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
                     this.isTouching = false;
                     this.isDragging = false;
                     getParent().requestDisallowInterceptTouchEvent(false);
-                    int max2 = Math.max(0, Math.min(this.titles.length - 1, Math.round(Math.max(0.0f, Math.min(this.titles.length - 1, ((motionEvent.getX() - dpf) - (length / 2.0f)) / length)))));
+                    int max2 = Math.max(0, Math.min(this.titles.length - 1, Math.round(Math.max(0.0f, Math.min(this.titles.length - 1, (motionEvent.getX() - dpf) / length)))));
                     this.selectedIndex = max2;
                     animateToPosition(max2);
                     animateTouchScale(1.0f);
@@ -6320,7 +6320,7 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
                     if (abs > dpf(6.0f) || abs2 > dpf(6.0f)) {
                         this.isDragging = true;
                     }
-                    float max3 = Math.max(0.0f, Math.min(this.titles.length - 1, ((motionEvent.getX() - dpf) - (length / 2.0f)) / length));
+                    float max3 = Math.max(0.0f, Math.min(this.titles.length - 1, (motionEvent.getX() - dpf) / length));
                     if (this.snapAnimator != null && this.snapAnimator.isRunning()) {
                         this.snapAnimator.cancel();
                     }
@@ -6537,7 +6537,7 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
                     this.touchDownX = motionEvent.getX();
                     this.touchDownY = motionEvent.getY();
                     getParent().requestDisallowInterceptTouchEvent(true);
-                    float max = Math.max(0.0f, Math.min(this.titles.length - 1, ((motionEvent.getX() - dpf) - (length / 2.0f)) / length));
+                    float max = Math.max(0.0f, Math.min(this.titles.length - 1, (motionEvent.getX() - dpf) / length));
                     this.lastHoverIndex = Math.round(max);
                     animateToPosition(max);
                     animateTouchScale(1.04f);
@@ -6547,7 +6547,7 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
                     this.isTouching = false;
                     this.isDragging = false;
                     getParent().requestDisallowInterceptTouchEvent(false);
-                    int max2 = Math.max(0, Math.min(this.titles.length - 1, Math.round(Math.max(0.0f, Math.min(this.titles.length - 1, ((motionEvent.getX() - dpf) - (length / 2.0f)) / length)))));
+                    int max2 = Math.max(0, Math.min(this.titles.length - 1, Math.round(Math.max(0.0f, Math.min(this.titles.length - 1, (motionEvent.getX() - dpf) / length)))));
                     this.selectedIndex = max2;
                     animateToPosition(max2);
                     animateTouchScale(1.0f);
@@ -6560,7 +6560,7 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
                     if (abs > dpf(6.0f) || abs2 > dpf(6.0f)) {
                         this.isDragging = true;
                     }
-                    float max3 = Math.max(0.0f, Math.min(this.titles.length - 1, ((motionEvent.getX() - dpf) - (length / 2.0f)) / length));
+                    float max3 = Math.max(0.0f, Math.min(this.titles.length - 1, (motionEvent.getX() - dpf) / length));
                     if (this.snapAnimator != null && this.snapAnimator.isRunning()) {
                         this.snapAnimator.cancel();
                     }
