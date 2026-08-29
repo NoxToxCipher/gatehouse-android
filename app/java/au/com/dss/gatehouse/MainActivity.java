@@ -674,10 +674,31 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
         screenLayout.setFitsSystemWindows(true);
         screenLayout.setPadding(dp(16), dp(12), dp(16), 0);
 
-        // Sticky Top Dock
-        screenLayout.addView(modeBar());
+        // 1. 🎨 4-Theme Fluid Animated Sliding Switcher Bar
+        animatedThemeBar = new FluidAnimatedThemeBarView(this);
+        LinearLayout.LayoutParams tblp = new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT, dp(34));
+        tblp.bottomMargin = dp(6);
+        animatedThemeBar.setLayoutParams(tblp);
+        screenLayout.addView(animatedThemeBar);
+
+        // 2. ⚡ Real-Time Diagnostics Strip
         screenLayout.addView(buildDiagnosticsStrip());
-        screenLayout.addView(buildTabBar());
+
+        // 3. 🛡️ Site & Officer Header Card
+        screenLayout.addView(headerCard());
+
+        // 4. ⏱️ Tactical Chronograph Widget
+        screenLayout.addView(buildChronographSection());
+
+        // 5. 📱 4-Tab Synchronized Sliding Tab Bar
+        animatedTabBar = new FluidAnimatedTabBarView(this);
+        LinearLayout.LayoutParams abl = new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT, dp(42));
+        abl.topMargin = dp(6);
+        abl.bottomMargin = dp(8);
+        animatedTabBar.setLayoutParams(abl);
+        screenLayout.addView(animatedTabBar);
 
         // 4. SYNCHRONIZED 4-TAB HORIZONTAL PAGER CONTAINER
         tabPagerFrame = new FrameLayout(this) {
