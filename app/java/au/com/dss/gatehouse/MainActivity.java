@@ -736,8 +736,51 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
                 FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT));
         rootFrame.addView(deputyScrim);
 
-        // 3. MAIN GATEHOUSE SURFACE CONTAINER (Top Card)
-        mainSurfaceContainer = new FrameLayout(this);
+        mainSurfaceContainer = new FrameLayout(this) {
+            private float tapDownX, tapDownY;
+            private boolean isTapCandidate = false;
+
+            @Override
+            public boolean onInterceptTouchEvent(MotionEvent ev) {
+                if (isDeputyOpen) {
+                    // When Deputy is open, intercept touches on the shifted/angled main surface card
+                    // to prevent interacting with buttons/inputs on that page.
+                    return true;
+                }
+                return super.onInterceptTouchEvent(ev);
+            }
+
+            @Override
+            public boolean onTouchEvent(MotionEvent ev) {
+                if (isDeputyOpen) {
+                    switch (ev.getActionMasked()) {
+                        case MotionEvent.ACTION_DOWN:
+                            tapDownX = ev.getX();
+                            tapDownY = ev.getY();
+                            isTapCandidate = true;
+                            return true;
+                        case MotionEvent.ACTION_MOVE:
+                            float dx = Math.abs(ev.getX() - tapDownX);
+                            float dy = Math.abs(ev.getY() - tapDownY);
+                            if (dx > dp(14) || dy > dp(14)) {
+                                isTapCandidate = false;
+                            }
+                            return true;
+                        case MotionEvent.ACTION_UP:
+                            if (isTapCandidate) {
+                                isTapCandidate = false;
+                                closeDeputy(true);
+                            }
+                            return true;
+                        case MotionEvent.ACTION_CANCEL:
+                            isTapCandidate = false;
+                            return true;
+                    }
+                    return true;
+                }
+                return super.onTouchEvent(ev);
+            }
+        };
         mainSurfaceContainer.setBackgroundColor(colBg);
         FrameLayout.LayoutParams mslp = new FrameLayout.LayoutParams(
                 FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT);
