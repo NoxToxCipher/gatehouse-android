@@ -18,7 +18,11 @@ import android.content.IntentFilter;
 import android.content.pm.PackageManager;
 import android.content.res.ColorStateList;
 import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
 import android.graphics.Canvas;
+import android.provider.MediaStore;
+import android.os.Environment;
+import android.os.StrictMode;
 import android.graphics.Color;
 import android.graphics.LinearGradient;
 import android.graphics.Paint;
@@ -5130,116 +5134,140 @@ private void updateTabSelection(int tabIndex) {
         void onCaptured(Bitmap bmp, String sha256);
     }
 
+    private static final int REQ_CAPTURE_PHOTO = 801;
+    private File pendingPhotoFile;
+    private OnPhotoCapturedCallback pendingPhotoCallback;
+
     private void checkAndLaunchFastCamera(final OnPhotoCapturedCallback cb) {
         if (checkSelfPermission(Manifest.permission.CAMERA) != PackageManager.PERMISSION_GRANTED) {
             requestPermissions(new String[]{Manifest.permission.CAMERA}, REQ_PERM_CAMERA);
             return;
         }
-        openInAppCameraOverlay(cb);
+        showCameraAdvisoryDialog(cb);
     }
 
-    private void openInAppCameraOverlay(final OnPhotoCapturedCallback cb) {
-        final Dialog dlg = new Dialog(this, android.R.style.Theme_Black_NoTitleBar_Fullscreen);
-        dlg.requestWindowFeature(Window.FEATURE_NO_TITLE);
+    private void showCameraAdvisoryDialog(final OnPhotoCapturedCallback cb) {
+        final LinearLayout box = dialogContainer("📷 Photo Evidence & Smudge Check", "HARDWARE CAMERA", colEmerald);
 
-        final LinearLayout cameraRoot = new LinearLayout(this);
-        cameraRoot.setOrientation(LinearLayout.VERTICAL);
-        cameraRoot.setBackgroundColor(0xFF000000);
-        cameraRoot.setPadding(dp(16), dp(24), dp(16), dp(56));
+        TextView smudgeAlert = new TextView(this);
+        smudgeAlert.setText("🛡️ LENS SMUDGE & NIGHT VISION ADVISORY\nEnsure camera lens is wiped clean of fingerprints. Night-time flashlight glare off oily residue causes severe light bloom and starbursting on padlocks and perimeter fences.");
+        smudgeAlert.setTextColor(colCyan);
+        smudgeAlert.setTextSize(11.5f);
+        smudgeAlert.setTypeface(Typeface.DEFAULT_BOLD);
+        smudgeAlert.setPadding(dp(12), dp(10), dp(12), dp(10));
+        smudgeAlert.setBackground(rounded(0x2206B6D4, dp(10)));
+        box.addView(smudgeAlert);
 
-        LinearLayout topBar = new LinearLayout(this);
-        topBar.setOrientation(LinearLayout.HORIZONTAL);
-        topBar.setGravity(Gravity.CENTER_VERTICAL);
-        topBar.setPadding(0, 0, 0, dp(12));
-
-        TextView camTitle = new TextView(this);
-        camTitle.setText("📷 PHOTO EVIDENCE & LEVEL");
-        camTitle.setTextColor(colPale);
-        camTitle.setTextSize(13);
-        camTitle.setTypeface(Typeface.DEFAULT_BOLD);
-        LinearLayout.LayoutParams ctl = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
-        camTitle.setLayoutParams(ctl);
-        topBar.addView(camTitle);
-
-        TextView btnClose = new TextView(this);
-        btnClose.setText("✕");
-        btnClose.setTextColor(colPale);
-        btnClose.setTextSize(20);
-        btnClose.setPadding(dp(14), dp(4), dp(4), dp(4));
-        btnClose.setOnClickListener(new View.OnClickListener() {
-            public void onClick(View v) {
-                hapticClick();
-                dlg.dismiss();
-            }
-        });
-        topBar.addView(btnClose);
-        cameraRoot.addView(topBar);
-
-        FrameLayout viewfinderFrame = new FrameLayout(this);
-        LinearLayout.LayoutParams vfl = new LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT, 0, 1f);
-        vfl.bottomMargin = dp(12);
-        viewfinderFrame.setLayoutParams(vfl);
-
-        final TextureView textureView = new TextureView(this);
-        viewfinderFrame.addView(textureView, new FrameLayout.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
-
+        // Interactive Artificial Horizon Leveler Preview
         final HorizonLevelerView levelerView = new HorizonLevelerView(this);
         activeLevelerView = levelerView;
-        viewfinderFrame.addView(levelerView, new FrameLayout.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
+        LinearLayout.LayoutParams lvlP = new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT, dp(130));
+        lvlP.topMargin = dp(10);
+        lvlP.bottomMargin = dp(10);
+        levelerView.setLayoutParams(lvlP);
+        box.addView(levelerView);
 
-        cameraRoot.addView(viewfinderFrame);
-
-        LinearLayout bottomBar = new LinearLayout(this);
-        bottomBar.setOrientation(LinearLayout.HORIZONTAL);
-        bottomBar.setGravity(Gravity.CENTER);
-        bottomBar.setPadding(0, 0, 0, dp(6));
-
-        final TextView btnCapture = new TextView(this);
-        btnCapture.setText("🔘 CAPTURE PHOTO EVIDENCE");
-        btnCapture.setTextColor(colAccentInk);
-        btnCapture.setTextSize(15);
-        btnCapture.setTypeface(Typeface.DEFAULT_BOLD);
-        btnCapture.setGravity(Gravity.CENTER);
-        btnCapture.setPadding(dp(20), dp(16), dp(20), dp(16));
-        btnCapture.setBackground(pressable(colAccent, dp(18)));
-        LinearLayout.LayoutParams cbl = new LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
-        btnCapture.setLayoutParams(cbl);
-
-        final Runnable executeCapture = new Runnable() {
-            public void run() {
-                hapticDoublePulse();
-                registerActivity();
-                Bitmap bmp = textureView.getBitmap();
-                if (bmp != null) {
-                    dlg.dismiss();
-                    byte[] bytes = bitmapToJpegBytes(bmp);
-                    String hash = sha256Hex(bytes);
-                    if (cb != null) {
-                        cb.onCaptured(bmp, hash);
-                    } else {
-                        showPhotoReviewSheet(bmp);
-                    }
-                }
-            }
-        };
-
-        btnCapture.setOnClickListener(new View.OnClickListener() {
-            public void onClick(View v) { executeCapture.run(); }
-        });
-        bottomBar.addView(btnCapture);
-        cameraRoot.addView(bottomBar);
-
-        dlg.setContentView(cameraRoot);
+        final Dialog dlg = createDialogSheet(box);
         dlg.setOnDismissListener(new DialogInterface.OnDismissListener() {
             public void onDismiss(DialogInterface dialog) {
                 activeLevelerView = null;
             }
         });
+
+        LinearLayout btnRow = new LinearLayout(this);
+        btnRow.setOrientation(LinearLayout.HORIZONTAL);
+        btnRow.setPadding(0, dp(10), 0, 0);
+
+        TextView btnCancel = actionButton("✕ Cancel", colPanel3, colPale);
+        btnCancel.setOnClickListener(new View.OnClickListener() {
+            public void onClick(View v) {
+                hapticClick();
+                dlg.dismiss();
+            }
+        });
+        btnRow.addView(btnCancel);
+
+        TextView btnLaunch = actionButton("📷 Launch Night Camera", colEmerald, colAccentInk);
+        btnLaunch.setOnClickListener(new View.OnClickListener() {
+            public void onClick(View v) {
+                hapticDoublePulse();
+                dlg.dismiss();
+                launchSystemCamera(cb);
+            }
+        });
+        LinearLayout.LayoutParams blp = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1.6f);
+        blp.leftMargin = dp(8);
+        btnLaunch.setLayoutParams(blp);
+        btnRow.addView(btnLaunch);
+
+        box.addView(btnRow);
         dlg.show();
+    }
+
+    private void launchSystemCamera(final OnPhotoCapturedCallback cb) {
+        pendingPhotoCallback = cb;
+        try {
+            File storageDir = getExternalFilesDir(Environment.DIRECTORY_PICTURES);
+            if (storageDir == null) storageDir = getFilesDir();
+            if (!storageDir.exists()) storageDir.mkdirs();
+
+            String timeStamp = new SimpleDateFormat("yyyyMMdd_HHmmss", Locale.US).format(new Date());
+            pendingPhotoFile = new File(storageDir, "EVIDENCE_" + timeStamp + ".jpg");
+
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+                StrictMode.VmPolicy.Builder builder = new StrictMode.VmPolicy.Builder();
+                StrictMode.setVmPolicy(builder.build());
+            }
+
+            Intent takePictureIntent = new Intent(MediaStore.ACTION_IMAGE_CAPTURE);
+            takePictureIntent.putExtra(MediaStore.EXTRA_OUTPUT, Uri.fromFile(pendingPhotoFile));
+            takePictureIntent.putExtra("android.intent.extras.CAMERA_FACING", 0);
+            startActivityForResult(takePictureIntent, REQ_CAPTURE_PHOTO);
+        } catch (Exception e) {
+            try {
+                Intent fallback = new Intent(MediaStore.ACTION_IMAGE_CAPTURE);
+                startActivityForResult(fallback, REQ_CAPTURE_PHOTO);
+            } catch (Exception ex) {
+                Toast.makeText(this, "Unable to launch camera application", Toast.LENGTH_SHORT).show();
+            }
+        }
+    }
+
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+        super.onActivityResult(requestCode, resultCode, data);
+        if (requestCode == REQ_CAPTURE_PHOTO && resultCode == RESULT_OK) {
+            hapticDoublePulse();
+            registerActivity();
+            Bitmap bmp = null;
+            if (pendingPhotoFile != null && pendingPhotoFile.exists() && pendingPhotoFile.length() > 0) {
+                try {
+                    BitmapFactory.Options opts = new BitmapFactory.Options();
+                    opts.inJustDecodeBounds = true;
+                    BitmapFactory.decodeFile(pendingPhotoFile.getAbsolutePath(), opts);
+                    int maxDim = Math.max(opts.outWidth, opts.outHeight);
+                    opts.inSampleSize = Math.max(1, maxDim / 1600);
+                    opts.inJustDecodeBounds = false;
+                    bmp = BitmapFactory.decodeFile(pendingPhotoFile.getAbsolutePath(), opts);
+                } catch (Throwable t) {}
+            }
+            if (bmp == null && data != null && data.getExtras() != null) {
+                bmp = (Bitmap) data.getExtras().get("data");
+            }
+            if (bmp != null) {
+                byte[] bytes = bitmapToJpegBytes(bmp);
+                String hash = sha256Hex(bytes);
+                if (pendingPhotoCallback != null) {
+                    pendingPhotoCallback.onCaptured(bmp, hash);
+                    pendingPhotoCallback = null;
+                } else {
+                    showPhotoReviewSheet(bmp);
+                }
+            } else {
+                Toast.makeText(this, "Photo capture canceled", Toast.LENGTH_SHORT).show();
+            }
+        }
     }
 
     private void showPhotoReviewSheet(final Bitmap bmp) {
@@ -6830,10 +6858,33 @@ private void updateTabSelection(int tabIndex) {
             float cx = w / 2f;
             float cy = h / 2f;
 
-            float rollDeg = (float) Math.toDegrees(Math.atan2(lastAccel[0], Math.sqrt(lastAccel[1] * lastAccel[1] + lastAccel[2] * lastAccel[2])));
-            float pitchDeg = (float) Math.toDegrees(Math.atan2(-lastAccel[1], lastAccel[2]));
+            int rotation = Surface.ROTATION_0;
+            try {
+                rotation = getWindowManager().getDefaultDisplay().getRotation();
+            } catch (Exception e) {}
 
-            boolean isLevel = Math.abs(rollDeg) < 0.9f && Math.abs(pitchDeg) < 0.9f;
+            float ax = lastAccel[0];
+            float ay = lastAccel[1];
+            float az = lastAccel[2];
+
+            float screenX = ax;
+            float screenY = ay;
+
+            if (rotation == Surface.ROTATION_90) {
+                screenX = -ay;
+                screenY = ax;
+            } else if (rotation == Surface.ROTATION_180) {
+                screenX = -ax;
+                screenY = -ay;
+            } else if (rotation == Surface.ROTATION_270) {
+                screenX = ay;
+                screenY = -ax;
+            }
+
+            float rollDeg = (float) Math.toDegrees(Math.atan2(screenX, Math.sqrt(screenY * screenY + az * az)));
+            float pitchDeg = (float) Math.toDegrees(Math.atan2(-screenY, Math.sqrt(screenX * screenX + az * az)));
+
+            boolean isLevel = Math.abs(rollDeg) < 1.0f && Math.abs(pitchDeg) < 1.0f;
             int levelCol = isLevel ? colEmerald : colAccent;
 
             canvas.save();
