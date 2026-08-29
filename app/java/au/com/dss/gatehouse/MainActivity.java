@@ -4345,12 +4345,13 @@ private void updateTabSelection(int tabIndex) {
             leftCol.setLayoutParams(lclp);
 
             leftCol.addView(contactsSectionHeader("🏭 HUME DOORS AFTER HOURS CONTACTS", colCyan));
-            leftCol.addView(contactCard("Nicole Berryman", "Hume I.T. / Failures · Phone a/c #3020201", "0412538844", "I.T. & OPTUS", colCyan));
-            leftCol.addView(contactCard("Dean Buckley*", "Hume Doors After Hours Staff Contact", "0412216318", "AFTER HOURS", colAccent));
-            leftCol.addView(contactCard("Michael Buckley", "Hume Doors After Hours Staff Contact", "0478352547", "AFTER HOURS", colAccent));
-            leftCol.addView(contactCard("Graeme Buckley", "Hume Doors After Hours Staff Contact", "0422376468", "AFTER HOURS", colAccent));
             leftCol.addView(contactCard("Noel Johns*", "Hume Doors After Hours Staff Contact", "0403195061", "AFTER HOURS", colAccent));
             leftCol.addView(contactCard("Trevor Crane*", "Hume Doors After Hours Staff Contact", "0403195062", "AFTER HOURS", colAccent));
+            leftCol.addView(contactCard("Rees Brandon", "Hume Doors After Hours Staff Contact", "0403362525", "AFTER HOURS", colAccent));
+            leftCol.addView(contactCard("Nicole Berryman", "Hume I.T. / Failures · Phone a/c #3020201", "0412538844", "I.T. & OPTUS", colCyan));
+            leftCol.addView(contactCard("Dean Buckley*", "Hume Doors After Hours Staff Contact", "0412216318", "AFTER HOURS", colAccent));
+            leftCol.addView(contactCard("Graeme Buckley", "Hume Doors After Hours Staff Contact", "0422376468", "AFTER HOURS", colAccent));
+            leftCol.addView(contactCard("Michael Buckley", "Hume Doors After Hours Staff Contact", "0478352547", "AFTER HOURS", colAccent));
 
             LinearLayout rightCol = new LinearLayout(this);
             rightCol.setOrientation(LinearLayout.VERTICAL);
@@ -4383,12 +4384,13 @@ private void updateTabSelection(int tabIndex) {
         container.setPadding(0, dp(6), 0, dp(56));
 
         container.addView(contactsSectionHeader("🏭 HUME DOORS AFTER HOURS CONTACTS", colCyan));
-        container.addView(contactCard("Nicole Berryman", "Hume I.T. / Failures · Phone a/c #3020201", "0412538844", "I.T. & OPTUS", colCyan));
-        container.addView(contactCard("Dean Buckley*", "Hume Doors After Hours Staff Contact", "0412216318", "AFTER HOURS", colAccent));
-        container.addView(contactCard("Michael Buckley", "Hume Doors After Hours Staff Contact", "0478352547", "AFTER HOURS", colAccent));
-        container.addView(contactCard("Graeme Buckley", "Hume Doors After Hours Staff Contact", "0422376468", "AFTER HOURS", colAccent));
         container.addView(contactCard("Noel Johns*", "Hume Doors After Hours Staff Contact", "0403195061", "AFTER HOURS", colAccent));
         container.addView(contactCard("Trevor Crane*", "Hume Doors After Hours Staff Contact", "0403195062", "AFTER HOURS", colAccent));
+        container.addView(contactCard("Rees Brandon", "Hume Doors After Hours Staff Contact", "0403362525", "AFTER HOURS", colAccent));
+        container.addView(contactCard("Nicole Berryman", "Hume I.T. / Failures · Phone a/c #3020201", "0412538844", "I.T. & OPTUS", colCyan));
+        container.addView(contactCard("Dean Buckley*", "Hume Doors After Hours Staff Contact", "0412216318", "AFTER HOURS", colAccent));
+        container.addView(contactCard("Graeme Buckley", "Hume Doors After Hours Staff Contact", "0422376468", "AFTER HOURS", colAccent));
+        container.addView(contactCard("Michael Buckley", "Hume Doors After Hours Staff Contact", "0478352547", "AFTER HOURS", colAccent));
 
         container.addView(contactsSectionHeader("🛡️ SITE GATEHOUSE & SECURITY", colEmerald));
         container.addView(contactCard("Gatehouse Site Cell Phone", "Hume Kingston After Hours Duty Mobile", "0478352551", "DUTY PHONE", colEmerald));
