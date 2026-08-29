@@ -2884,7 +2884,7 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
         box.addView(chronographStatRow("First Light / Civil Dawn:", "05:41 AM (Kingston, QLD)"));
         box.addView(chronographStatRow("Active Entries:", Core.entryCount() + " verified in Ada chain"));
         box.addView(chronographStatRow("Welfare Status:", remainWelfareMins + " minutes until next check-in"));
-        box.addView(chronographStatRow("Assigned Officer:", "R. Kelso (LIC #41207)"));
+        box.addView(chronographStatRow("Assigned Officer:", "Lochran Doherty (LIC #41207)"));
 
         final Dialog dlg = createDialogSheet(box);
 
@@ -3989,7 +3989,7 @@ private void updateTabSelection(int tabIndex) {
 
                     subTextPaint.setColor(colPale);
                     subTextPaint.setTextSize(dp(16));
-                    canvas.drawText("KELSO, R.", dp(18), dp(84), subTextPaint);
+                    canvas.drawText("DOHERTY, L.", dp(18), dp(84), subTextPaint);
 
                     textPaint.setColor(colMuted);
                     textPaint.setTextSize(dp(9));
@@ -4214,7 +4214,7 @@ private void updateTabSelection(int tabIndex) {
         btnCopy.setOnClickListener(new View.OnClickListener() {
             public void onClick(View v) {
                 hapticClick();
-                String details = "Officer: R. Kelso | QLD Security Licence: #41207 (Class 1A/1C, Exp 14/10/2027) | "
+                String details = "Officer: Lochran Doherty | QLD Security Licence: #41207 (Class 1A/1C, Exp 14/10/2027) | "
                                + "First Aid: HLTAID011 / CPR HLTAID009 (SJA-QLD-849102-K) | Employer: Doherty Security Services";
                 ClipboardManager cm = (ClipboardManager) getSystemService(Context.CLIPBOARD_SERVICE);
                 cm.setPrimaryClip(ClipData.newPlainText("Officer Credentials", details));
@@ -6226,7 +6226,7 @@ private void updateTabSelection(int tabIndex) {
         }
         Core.sitePolicy(1, 240, 0);
         Core.setAttribution(Core.DEVICE_PERSONAL, Core.METHOD_SESSION);
-        Core.setGuard("g-kelso", "R. Kelso", "SAMPLE-LIC", "typed", "");
+        Core.setGuard("g-lochran", "Lochran Doherty", "LIC-41207", "typed", "");
         answer(Core.openShift(Core.genesis(), Core.siteHash(), t, t,
                               "on site, handover from day crew taken"));
         hidePage();
