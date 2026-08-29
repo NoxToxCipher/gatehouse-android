@@ -773,8 +773,6 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
 
         patrolContent = new LinearLayout(this);
         patrolContent.setOrientation(LinearLayout.VERTICAL);
-        patrolContent.addView(headerCard());
-        patrolContent.addView(buildChronographSection());
 
         chainBannerView = new AnimatedChainBannerView(this);
         LinearLayout.LayoutParams cbl = new LinearLayout.LayoutParams(
