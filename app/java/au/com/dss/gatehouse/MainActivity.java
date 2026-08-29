@@ -376,6 +376,15 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
         } catch (Exception e) {}
     }
 
+    private void hapticTick() {
+        if (vibrator == null) return;
+        try {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                vibrator.vibrate(VibrationEffect.createPredefined(VibrationEffect.EFFECT_TICK));
+            } else { vibrator.vibrate(8); }
+        } catch (Exception e) {}
+    }
+
     private void hapticHeavyClick() {
         if (vibrator == null) return;
         try {
@@ -485,93 +494,72 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
         if (chronographView != null) chronographView.invalidate();
     }
 
+    private static final int[][] THEME_PALETTES = {
+        // THEME_GOLD (0)
+        { 0xFF080C14, 0xFF101724, 0xFF182234, 0xFF1E2B40, 0xFF121B28, 0xFFE5A93C, 0xFF000000, 0x1AE5A93C, 0xFFF3F6FA, 0xFF94A3B8, 0xFF5B6B82, 0xFF10B981, 0x2210B981, 0xFFEF4444, 0x24EF4444, 0xFF06B6D4, 0x2406B6D4 },
+        // THEME_RED (1)
+        { 0xFF0D0303, 0xFF170606, 0xFF220909, 0xFF3D1212, 0xFF240A0A, 0xFFFF3333, 0xFF000000, 0x22FF3333, 0xFFFF8A8A, 0xFFC45555, 0xFF7A3333, 0xFFFF5555, 0x26FF5555, 0xFFFF1111, 0x33FF1111, 0xFFFF4444, 0x28FF4444 },
+        // THEME_NVG (2)
+        { 0xFF021206, 0xFF041E0A, 0xFF062A0F, 0xFF0A4418, 0xFF062B10, 0xFF00FF66, 0xFF000000, 0x2200FF66, 0xFFE0FFE8, 0xFF55DD77, 0xFF228844, 0xFF00FF66, 0x2600FF66, 0xFFFF5555, 0x24FF5555, 0xFF00FFCC, 0x2400FFCC },
+        // THEME_VIOLET (3)
+        { 0xFF0B0414, 0xFF140822, 0xFF1F0C35, 0xFF351559, 0xFF220C3A, 0xFFC084FC, 0xFF000000, 0x22C084FC, 0xFFF3E8FF, 0xFFA855F7, 0xFF6B21A8, 0xFF10B981, 0x2210B981, 0xFFF43F5E, 0x24F43F5E, 0xFF38BDF8, 0x2438BDF8 }
+    };
+
+    public static int lerpColor(int c1, int c2, float f) {
+        float clamped = Math.max(0f, Math.min(1f, f));
+        float inv = 1f - clamped;
+        int a = (int) (Color.alpha(c1) * inv + Color.alpha(c2) * clamped);
+        int r = (int) (Color.red(c1) * inv + Color.red(c2) * clamped);
+        int g = (int) (Color.green(c1) * inv + Color.green(c2) * clamped);
+        int b = (int) (Color.blue(c1) * inv + Color.blue(c2) * clamped);
+        return Color.argb(a, r, g, b);
+    }
+
+    public void applyDynamicColorMorph(float themeFloat) {
+        float clamped = Math.max(0f, Math.min(3f, themeFloat));
+        int i1 = (int) Math.floor(clamped);
+        int i2 = Math.min(3, i1 + 1);
+        float f = clamped - i1;
+
+        colBg = 0xFF000000;
+        colPanel = lerpColor(THEME_PALETTES[i1][0], THEME_PALETTES[i2][0], f);
+        colPanel2 = lerpColor(THEME_PALETTES[i1][1], THEME_PALETTES[i2][1], f);
+        colPanel3 = lerpColor(THEME_PALETTES[i1][2], THEME_PALETTES[i2][2], f);
+        colLine = lerpColor(THEME_PALETTES[i1][3], THEME_PALETTES[i2][3], f);
+        colLineSubtle = lerpColor(THEME_PALETTES[i1][4], THEME_PALETTES[i2][4], f);
+        colAccent = lerpColor(THEME_PALETTES[i1][5], THEME_PALETTES[i2][5], f);
+        colAccentInk = lerpColor(THEME_PALETTES[i1][6], THEME_PALETTES[i2][6], f);
+        colAccentSoft = lerpColor(THEME_PALETTES[i1][7], THEME_PALETTES[i2][7], f);
+        colPale = lerpColor(THEME_PALETTES[i1][8], THEME_PALETTES[i2][8], f);
+        colMuted = lerpColor(THEME_PALETTES[i1][9], THEME_PALETTES[i2][9], f);
+        colQuiet = lerpColor(THEME_PALETTES[i1][10], THEME_PALETTES[i2][10], f);
+        colEmerald = lerpColor(THEME_PALETTES[i1][11], THEME_PALETTES[i2][11], f);
+        colEmeraldSoft = lerpColor(THEME_PALETTES[i1][12], THEME_PALETTES[i2][12], f);
+        colCrimson = lerpColor(THEME_PALETTES[i1][13], THEME_PALETTES[i2][13], f);
+        colCrimsonSoft = lerpColor(THEME_PALETTES[i1][14], THEME_PALETTES[i2][14], f);
+        colCyan = lerpColor(THEME_PALETTES[i1][15], THEME_PALETTES[i2][15], f);
+        colCyanSoft = lerpColor(THEME_PALETTES[i1][16], THEME_PALETTES[i2][16], f);
+
+        if (root != null) root.setBackgroundColor(colBg);
+        if (rootFrame != null) rootFrame.setBackgroundColor(colBg);
+        if (scrollPatrol != null) scrollPatrol.setBackgroundColor(colBg);
+        if (scrollContacts != null) scrollContacts.setBackgroundColor(colBg);
+        if (scrollHandbook != null) scrollHandbook.setBackgroundColor(colBg);
+        if (scrollTools != null) scrollTools.setBackgroundColor(colBg);
+
+        if (animatedThemeBar != null) animatedThemeBar.invalidate();
+        if (animatedTabBar != null) animatedTabBar.invalidate();
+        if (rosterScrubber != null) rosterScrubber.invalidate();
+        if (chronographView != null) chronographView.invalidate();
+        if (activeCompassView != null) activeCompassView.invalidate();
+        if (activeLevelerView != null) activeLevelerView.invalidate();
+        if (satelliteRadarView != null) satelliteRadarView.invalidate();
+        if (chainBannerView != null) chainBannerView.invalidate();
+        if (activeHoloCard != null) activeHoloCard.invalidate();
+    }
+
     private void applyThemeTokens() {
-        switch (activeTheme) {
-            case THEME_RED:
-                colBg = 0xFF000000;
-                colPanel = 0xFF0D0303;
-                colPanel2 = 0xFF170606;
-                colPanel3 = 0xFF220909;
-                colLine = 0xFF3D1212;
-                colLineSubtle = 0xFF240A0A;
-                colAccent = 0xFFFF3333;
-                colAccentInk = 0xFF000000;
-                colAccentSoft = 0x22FF3333;
-                colPale = 0xFFFF8A8A;
-                colMuted = 0xFFC45555;
-                colQuiet = 0xFF7A3333;
-                colEmerald = 0xFFFF5555;
-                colEmeraldSoft = 0x26FF5555;
-                colCrimson = 0xFFFF1111;
-                colCrimsonSoft = 0x33FF1111;
-                colCyan = 0xFFFF4444;
-                colCyanSoft = 0x28FF4444;
-                break;
-
-            case THEME_NVG:
-                colBg = 0xFF000000;
-                colPanel = 0xFF021206;
-                colPanel2 = 0xFF041E0A;
-                colPanel3 = 0xFF062A0F;
-                colLine = 0xFF0A4418;
-                colLineSubtle = 0xFF062B10;
-                colAccent = 0xFF00FF66;
-                colAccentInk = 0xFF000000;
-                colAccentSoft = 0x2200FF66;
-                colPale = 0xFFE0FFE8;
-                colMuted = 0xFF55DD77;
-                colQuiet = 0xFF228844;
-                colEmerald = 0xFF00FF66;
-                colEmeraldSoft = 0x2600FF66;
-                colCrimson = 0xFFFF5555;
-                colCrimsonSoft = 0x24FF5555;
-                colCyan = 0xFF00FFCC;
-                colCyanSoft = 0x2400FFCC;
-                break;
-
-            case THEME_VIOLET:
-                colBg = 0xFF000000;
-                colPanel = 0xFF0B0414;
-                colPanel2 = 0xFF140822;
-                colPanel3 = 0xFF1F0C35;
-                colLine = 0xFF351559;
-                colLineSubtle = 0xFF220C3A;
-                colAccent = 0xFFC084FC;
-                colAccentInk = 0xFF000000;
-                colAccentSoft = 0x22C084FC;
-                colPale = 0xFFF3E8FF;
-                colMuted = 0xFFA855F7;
-                colQuiet = 0xFF6B21A8;
-                colEmerald = 0xFF10B981;
-                colEmeraldSoft = 0x2210B981;
-                colCrimson = 0xFFF43F5E;
-                colCrimsonSoft = 0x24F43F5E;
-                colCyan = 0xFF38BDF8;
-                colCyanSoft = 0x2438BDF8;
-                break;
-
-            case THEME_GOLD:
-            default:
-                colBg = 0xFF000000;
-                colPanel = 0xFF080C14;
-                colPanel2 = 0xFF101724;
-                colPanel3 = 0xFF182234;
-                colLine = 0xFF1E2B40;
-                colLineSubtle = 0xFF121B28;
-                colAccent = 0xFFE5A93C;
-                colAccentInk = 0xFF000000;
-                colAccentSoft = 0x1AE5A93C;
-                colPale = 0xFFF3F6FA;
-                colMuted = 0xFF94A3B8;
-                colQuiet = 0xFF5B6B82;
-                colEmerald = 0xFF10B981;
-                colEmeraldSoft = 0x2210B981;
-                colCrimson = 0xFFEF4444;
-                colCrimsonSoft = 0x24EF4444;
-                colCyan = 0xFF06B6D4;
-                colCyanSoft = 0x2406B6D4;
-                break;
-        }
+        applyDynamicColorMorph((float) activeTheme);
     }
 
     private void buildUi() {
@@ -7717,9 +7705,11 @@ private void updateTabSelection(int tabIndex) {
         private final RectF chipRect = new RectF();
 
         private final String[] themeNames = {"GOLD", "AMBER", "MATRIX", "SLATE"};
-        private final int[] themeColors = {0xFFFFD166, 0xFFFFB703, 0xFF00FF66, 0xFF94A3B8};
+        private final int[] themeColors = {0xFFFFD166, 0xFFFF3333, 0xFF00FF66, 0xFFC084FC};
         private float indicatorFloat = (float) activeTheme;
         private ValueAnimator indAnimator;
+        private boolean isThemeScrubbing = false;
+        private int lastHapticIndex = -1;
 
         private float dpf(float v) {
             return v * getResources().getDisplayMetrics().density;
@@ -7732,7 +7722,7 @@ private void updateTabSelection(int tabIndex) {
             bgPaint.setStyle(Paint.Style.FILL);
             chipPaint.setStyle(Paint.Style.FILL);
             chipGlowPaint.setStyle(Paint.Style.STROKE);
-            chipGlowPaint.setStrokeWidth(dpf(1.5f));
+            chipGlowPaint.setStrokeWidth(dpf(2f));
             labelPaint.setTextAlign(Paint.Align.CENTER);
             labelPaint.setTypeface(Typeface.create(Typeface.MONOSPACE, Typeface.BOLD));
         }
@@ -7742,14 +7732,31 @@ private void updateTabSelection(int tabIndex) {
             invalidate();
         }
 
-        public void animateToTheme(int targetTheme) {
+        public int getInterpolatedThemeColor(float pos) {
+            float clamped = Math.max(0f, Math.min(3f, pos));
+            int idx1 = (int) Math.floor(clamped);
+            int idx2 = Math.min(3, idx1 + 1);
+            float f = clamped - idx1;
+            return MainActivity.lerpColor(themeColors[idx1], themeColors[idx2], f);
+        }
+
+        public void animateToTheme(final int targetTheme) {
             if (indAnimator != null && indAnimator.isRunning()) indAnimator.cancel();
             indAnimator = ValueAnimator.ofFloat(indicatorFloat, (float) targetTheme);
-            indAnimator.setDuration(300);
-            indAnimator.setInterpolator(new OvershootInterpolator(1.2f));
+            indAnimator.setDuration(280);
+            indAnimator.setInterpolator(new OvershootInterpolator(1.15f));
             indAnimator.addUpdateListener(new ValueAnimator.AnimatorUpdateListener() {
                 public void onAnimationUpdate(ValueAnimator va) {
                     indicatorFloat = (Float) va.getAnimatedValue();
+                    MainActivity.this.applyDynamicColorMorph(indicatorFloat);
+                    invalidate();
+                }
+            });
+            indAnimator.addListener(new AnimatorListenerAdapter() {
+                @Override
+                public void onAnimationEnd(Animator animation) {
+                    indicatorFloat = (float) targetTheme;
+                    MainActivity.this.applyDynamicColorMorph((float) targetTheme);
                     invalidate();
                 }
             });
@@ -7758,19 +7765,46 @@ private void updateTabSelection(int tabIndex) {
 
         @Override
         public boolean onTouchEvent(MotionEvent event) {
-            if (event.getAction() == MotionEvent.ACTION_DOWN) {
-                float w = getWidth();
-                if (w > 0) {
-                    float segW = w / 4f;
-                    int theme = Math.max(0, Math.min(3, (int) (event.getX() / segW)));
-                    if (theme != activeTheme) {
-                        float cx = event.getRawX();
-                        float cy = event.getRawY();
-                        MainActivity.this.animateThemeChangeWithShockwave(theme, cx, cy);
-                        animateToTheme(theme);
+            float w = getWidth();
+            if (w <= 0) return super.onTouchEvent(event);
+
+            switch (event.getActionMasked()) {
+                case MotionEvent.ACTION_DOWN:
+                    if (getParent() != null) getParent().requestDisallowInterceptTouchEvent(true);
+                    if (indAnimator != null && indAnimator.isRunning()) indAnimator.cancel();
+                    isThemeScrubbing = true;
+                    float targetDown = Math.max(0f, Math.min(3f, (event.getX() / w) * 4f - 0.5f));
+                    indicatorFloat = targetDown;
+                    lastHapticIndex = Math.round(targetDown);
+                    MainActivity.this.applyDynamicColorMorph(indicatorFloat);
+                    invalidate();
+                    return true;
+
+                case MotionEvent.ACTION_MOVE:
+                    float targetMove = Math.max(0f, Math.min(3f, (event.getX() / w) * 4f - 0.5f));
+                    indicatorFloat = targetMove;
+                    int nearestTheme = Math.round(targetMove);
+                    if (nearestTheme != lastHapticIndex) {
+                        lastHapticIndex = nearestTheme;
+                        MainActivity.this.hapticTick();
+                    }
+                    MainActivity.this.applyDynamicColorMorph(indicatorFloat);
+                    invalidate();
+                    return true;
+
+                case MotionEvent.ACTION_UP:
+                case MotionEvent.ACTION_CANCEL:
+                    if (getParent() != null) getParent().requestDisallowInterceptTouchEvent(false);
+                    isThemeScrubbing = false;
+                    final int finalTheme = Math.max(0, Math.min(3, Math.round(indicatorFloat)));
+                    animateToTheme(finalTheme);
+                    if (finalTheme != activeTheme) {
+                        MainActivity.this.animateThemeChangeWithShockwave(finalTheme, event.getRawX(), event.getRawY());
+                    } else {
+                        MainActivity.this.applyThemeTokens();
+                        MainActivity.this.applyDynamicColorMorph((float) finalTheme);
                     }
                     return true;
-                }
             }
             return super.onTouchEvent(event);
         }
@@ -7793,9 +7827,16 @@ private void updateTabSelection(int tabIndex) {
 
             chipRect.set(chipX, pad, chipX + chipW, h - pad);
 
-            int curTheme = Math.max(0, Math.min(3, Math.round(indicatorFloat)));
-            chipPaint.setColor(themeColors[curTheme]);
+            int dynamicColor = getInterpolatedThemeColor(indicatorFloat);
+            chipPaint.setColor(dynamicColor);
             canvas.drawRoundRect(chipRect, dp(9), dp(9), chipPaint);
+
+            if (isThemeScrubbing) {
+                chipGlowPaint.setColor(dynamicColor);
+                chipGlowPaint.setAlpha(210);
+                chipGlowPaint.setStrokeWidth(dpf(2.5f));
+                canvas.drawRoundRect(chipRect, dp(9), dp(9), chipGlowPaint);
+            }
 
             labelPaint.setTextSize(dpf(9f));
             float textY = h / 2f + dpf(3.2f);
@@ -7828,6 +7869,8 @@ private void updateTabSelection(int tabIndex) {
         private final String[] tabTitles = {"🛡️ PATROL", "📞 CONTACTS", "📅 ROSTER", "🛠️ TOOLS"};
         private float indicatorFloat = 0f;
         private ValueAnimator indAnimator;
+        private boolean isTabScrubbing = false;
+        private int lastHapticTab = -1;
 
         private float dpf(float v) {
             return v * getResources().getDisplayMetrics().density;
@@ -7866,16 +7909,42 @@ private void updateTabSelection(int tabIndex) {
 
         @Override
         public boolean onTouchEvent(MotionEvent event) {
-            if (event.getAction() == MotionEvent.ACTION_DOWN || event.getAction() == MotionEvent.ACTION_MOVE) {
-                float w = getWidth();
-                if (w > 0) {
-                    float segW = w / 4f;
-                    int tab = Math.max(0, Math.min(3, (int) (event.getX() / segW)));
-                    if (event.getAction() == MotionEvent.ACTION_DOWN) {
-                        animateTabToPosition(tab);
-                    }
+            float w = getWidth();
+            if (w <= 0) return super.onTouchEvent(event);
+
+            switch (event.getActionMasked()) {
+                case MotionEvent.ACTION_DOWN:
+                    if (getParent() != null) getParent().requestDisallowInterceptTouchEvent(true);
+                    if (indAnimator != null && indAnimator.isRunning()) indAnimator.cancel();
+                    if (tabSlideAnimator != null && tabSlideAnimator.isRunning()) tabSlideAnimator.cancel();
+                    isTabScrubbing = true;
+                    float targetDown = Math.max(0f, Math.min(3f, (event.getX() / w) * 4f - 0.5f));
+                    indicatorFloat = targetDown;
+                    lastHapticTab = Math.round(targetDown);
+                    MainActivity.this.applyTabScrollPosition(indicatorFloat);
+                    invalidate();
                     return true;
-                }
+
+                case MotionEvent.ACTION_MOVE:
+                    float targetMove = Math.max(0f, Math.min(3f, (event.getX() / w) * 4f - 0.5f));
+                    indicatorFloat = targetMove;
+                    int nearestTab = Math.round(targetMove);
+                    if (nearestTab != lastHapticTab) {
+                        lastHapticTab = nearestTab;
+                        MainActivity.this.hapticTick();
+                    }
+                    MainActivity.this.applyTabScrollPosition(indicatorFloat);
+                    invalidate();
+                    return true;
+
+                case MotionEvent.ACTION_UP:
+                case MotionEvent.ACTION_CANCEL:
+                    if (getParent() != null) getParent().requestDisallowInterceptTouchEvent(false);
+                    isTabScrubbing = false;
+                    final int finalTab = Math.max(0, Math.min(3, Math.round(indicatorFloat)));
+                    MainActivity.this.animateTabToPosition(finalTab);
+                    invalidate();
+                    return true;
             }
             return super.onTouchEvent(event);
         }
@@ -7901,7 +7970,15 @@ private void updateTabSelection(int tabIndex) {
             indicatorPaint.setColor(colAccent);
             canvas.drawRoundRect(indRect, dp(11), dp(11), indicatorPaint);
 
-            indicatorGlowPaint.setColor(colAccentSoft);
+            if (isTabScrubbing) {
+                indicatorGlowPaint.setColor(colAccent);
+                indicatorGlowPaint.setAlpha(220);
+                indicatorGlowPaint.setStrokeWidth(dpf(2.5f));
+            } else {
+                indicatorGlowPaint.setColor(colAccentSoft);
+                indicatorGlowPaint.setAlpha(255);
+                indicatorGlowPaint.setStrokeWidth(dpf(1.5f));
+            }
             canvas.drawRoundRect(indRect, dp(11), dp(11), indicatorGlowPaint);
 
             textPaint.setTextSize(dpf(10.5f));
