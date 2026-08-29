@@ -94,6 +94,17 @@ import java.util.TimeZone;
  */
 public class MainActivity extends Activity implements SensorEventListener, LocationListener {
     // 📱 DEPUTY WORKPLACE ADD-IN & PEEK & FLOW NAVIGATION
+    private DeputyApi deputyApi;
+    private DeputyApi.DeputyRosterResult latestDeputyResult;
+    private TextView deputyStatusBadge;
+    private LinearLayout deputyScheduleContainer;
+    private TextView deputyClockStatus;
+    private TextView deputyClockTime;
+    private TextView deputyClockSub;
+    private TextView deputyOrgSub;
+    private TextView deputyOrgName;
+    private TextView deputyOrgRole;
+
     private FrameLayout deputyContainer;
     private SunConureFlightOverlayView conureOverlay;
     private long lastHeaderTapMs = 0L;
@@ -359,7 +370,14 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
         initSensorsAndGps();
         initCameraManager();
 
+        deputyApi = new DeputyApi(this);
+        latestDeputyResult = deputyApi.loadCachedResult();
+        if (latestDeputyResult == null) {
+            latestDeputyResult = deputyApi.createSampleFallback();
+        }
+
         buildUi();
+        syncDeputyData(false);
         loadPending();
         startShift();
         commitAll();
@@ -681,11 +699,12 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
         deputyContainer.setTranslationX(-dp(30));
 
         boolean isTablet = getResources().getConfiguration().smallestScreenWidthDp >= 600;
-        int maxContentWidth = isTablet ? dp(660) : FrameLayout.LayoutParams.MATCH_PARENT;
+        boolean isLandscape = getResources().getConfiguration().orientation == android.content.res.Configuration.ORIENTATION_LANDSCAPE;
+        int maxContentWidth = isTablet ? (isLandscape ? dp(1120) : dp(660)) : FrameLayout.LayoutParams.MATCH_PARENT;
 
         ScrollView deputyScroll = new ScrollView(this);
         deputyScroll.setVerticalScrollBarEnabled(false);
-        deputyScroll.setPadding(0, dp(34), 0, 0);
+        deputyScroll.setPadding(0, isTablet && isLandscape ? dp(24) : dp(34), 0, 0);
         FrameLayout.LayoutParams dslp = new FrameLayout.LayoutParams(
                 maxContentWidth, FrameLayout.LayoutParams.MATCH_PARENT);
         dslp.gravity = Gravity.CENTER_HORIZONTAL;
@@ -712,7 +731,9 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
         LinearLayout screenLayout = new LinearLayout(this);
         screenLayout.setOrientation(LinearLayout.VERTICAL);
         screenLayout.setBackgroundColor(colBg);
-        screenLayout.setPadding(dp(14), dp(38), dp(14), 0);
+        int padTop = isTablet && isLandscape ? dp(22) : dp(38);
+        int padSide = isTablet && isLandscape ? dp(18) : dp(14);
+        screenLayout.setPadding(padSide, padTop, padSide, 0);
         FrameLayout.LayoutParams sllp = new FrameLayout.LayoutParams(
                 maxContentWidth, FrameLayout.LayoutParams.MATCH_PARENT);
         sllp.gravity = Gravity.CENTER_HORIZONTAL;
@@ -811,152 +832,313 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
         root.setOrientation(LinearLayout.VERTICAL);
         root.setPadding(0, 0, 0, dp(36));
 
-        patrolContent = new LinearLayout(this);
-        patrolContent.setOrientation(LinearLayout.VERTICAL);
+        if (isTablet && isLandscape) {
+            patrolContent = new LinearLayout(this);
+            patrolContent.setOrientation(LinearLayout.HORIZONTAL);
+            patrolContent.setBaselineAligned(false);
 
-        // Header Card (Triple tap for Sun Conure!)
-        patrolContent.addView(headerCard());
+            LinearLayout leftCol = new LinearLayout(this);
+            leftCol.setOrientation(LinearLayout.VERTICAL);
+            LinearLayout.LayoutParams lclp = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 44f);
+            lclp.rightMargin = dp(10);
+            leftCol.setLayoutParams(lclp);
 
-        // Tactical Chronograph (Solar Dual-Arc)
-        patrolContent.addView(buildChronographSection());
+            LinearLayout rightCol = new LinearLayout(this);
+            rightCol.setOrientation(LinearLayout.VERTICAL);
+            LinearLayout.LayoutParams rclp = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 56f);
+            rclp.leftMargin = dp(10);
+            rightCol.setLayoutParams(rclp);
 
-        // Chain Banner & Hash
-        chainBannerView = new AnimatedChainBannerView(this);
-        LinearLayout.LayoutParams cbl = new LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT, dp(44));
-        cbl.topMargin = dp(4);
-        cbl.bottomMargin = dp(4);
-        chainBannerView.setLayoutParams(cbl);
-        patrolContent.addView(chainBannerView);
+            leftCol.addView(headerCard());
+            leftCol.addView(buildChronographSection());
 
-        pills = new LinearLayout(this);
-        pills.setOrientation(LinearLayout.HORIZONTAL);
-        pills.setPadding(0, dp(4), 0, dp(6));
-        patrolContent.addView(pills);
+            chainBannerView = new AnimatedChainBannerView(this);
+            LinearLayout.LayoutParams cbl = new LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.MATCH_PARENT, dp(44));
+            cbl.topMargin = dp(4);
+            cbl.bottomMargin = dp(4);
+            chainBannerView.setLayoutParams(cbl);
+            leftCol.addView(chainBannerView);
 
-        banner = new TextView(this);
-        banner.setTextSize(13);
-        banner.setTextColor(colAccent);
-        banner.setPadding(dp(14), dp(12), dp(14), dp(12));
-        banner.setBackground(rounded(colPanel2, dp(12)));
-        banner.setVisibility(View.GONE);
-        LinearLayout.LayoutParams bl = new LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
-        bl.topMargin = dp(6);
-        bl.bottomMargin = dp(8);
-        banner.setLayoutParams(bl);
-        patrolContent.addView(banner);
+            pills = new LinearLayout(this);
+            pills.setOrientation(LinearLayout.HORIZONTAL);
+            pills.setPadding(0, dp(4), 0, dp(6));
+            leftCol.addView(pills);
 
-        patrolContent.addView(sectionHeader("External Patrols", null));
-        externalRow = new LinearLayout(this);
-        externalRow.setOrientation(LinearLayout.HORIZONTAL);
-        externalRow.setPadding(0, dp(2), 0, dp(8));
+            banner = new TextView(this);
+            banner.setTextSize(13);
+            banner.setTextColor(colAccent);
+            banner.setPadding(dp(14), dp(12), dp(14), dp(12));
+            banner.setBackground(rounded(colPanel2, dp(12)));
+            banner.setVisibility(View.GONE);
+            LinearLayout.LayoutParams bl = new LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+            bl.topMargin = dp(6);
+            bl.bottomMargin = dp(8);
+            banner.setLayoutParams(bl);
+            leftCol.addView(banner);
 
-        tileExternalFull = patrolActionCard("External (Full)", EXTERNAL_CHOICES[1], true);
-        tileExternalHalf = patrolActionCard("External (Half)", EXTERNAL_CHOICES[3], false);
-        externalRow.addView(tileExternalFull);
-        externalRow.addView(tileExternalHalf);
-        patrolContent.addView(externalRow);
+            primary = new TextView(this);
+            primary.setTextSize(15);
+            primary.setTypeface(Typeface.DEFAULT_BOLD);
+            primary.setGravity(Gravity.CENTER);
+            primary.setPadding(dp(16), dp(18), dp(16), dp(18));
+            leftCol.addView(primary);
 
-        patrolContent.addView(sectionHeader("Internal Factory Floors (Lots 14–18)", null));
-        internalBadgesRow = new LinearLayout(this);
-        internalBadgesRow.setOrientation(LinearLayout.HORIZONTAL);
-        internalBadgesRow.setPadding(0, dp(2), 0, dp(10));
+            pageTitle = label("06:05 MORNING HANDOVER REPORT");
+            pageTitle.setPadding(0, dp(24), 0, dp(8));
+            pageTitle.setVisibility(View.GONE);
+            leftCol.addView(pageTitle);
 
-        for (int i = 0; i < INTERNAL_LOTS.length; i += 2) {
-            internalBadgesRow.addView(lotBadge(INTERNAL_LOTS[i], INTERNAL_LOTS[i + 1], i == INTERNAL_LOTS.length - 2));
-        }
-        patrolContent.addView(internalBadgesRow);
+            page = new TextView(this);
+            page.setTextColor(colPale);
+            page.setTextSize(10);
+            page.setTypeface(Typeface.MONOSPACE);
+            page.setBackground(rounded(colPanel, dp(14)));
+            page.setPadding(dp(14), dp(14), dp(14), dp(14));
+            page.setVisibility(View.GONE);
+            leftCol.addView(page);
 
-        LinearLayout fireHeader = new LinearLayout(this);
-        fireHeader.setOrientation(LinearLayout.HORIZONTAL);
-        fireHeader.setGravity(Gravity.CENTER_VERTICAL);
-        fireHeader.setPadding(0, dp(10), 0, dp(6));
+            btnShareReport = new TextView(this);
+            btnShareReport.setText("📤 SHARE MORNING HANDOVER REPORT");
+            btnShareReport.setTextColor(colAccentInk);
+            btnShareReport.setTextSize(14);
+            btnShareReport.setTypeface(Typeface.DEFAULT_BOLD);
+            btnShareReport.setGravity(Gravity.CENTER);
+            btnShareReport.setPadding(dp(16), dp(16), dp(16), dp(16));
+            btnShareReport.setBackground(pressable(colAccent, dp(16)));
+            btnShareReport.setVisibility(View.GONE);
+            LinearLayout.LayoutParams spl = new LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+            spl.topMargin = dp(12);
+            btnShareReport.setLayoutParams(spl);
+            btnShareReport.setOnClickListener(new View.OnClickListener() {
+                public void onClick(View v) {
+                    hapticHeavyClick();
+                    shareHandoverReport();
+                }
+            });
+            leftCol.addView(btnShareReport);
 
-        TextView fTitle = new TextView(this);
-        fTitle.setText("FIRE & PUMP SYSTEMS (5) · 1,200 PSI OPTIMAL");
-        fTitle.setTextColor(colQuiet);
-        fTitle.setTextSize(10);
-        fTitle.setTypeface(Typeface.DEFAULT_BOLD);
-        fTitle.setLetterSpacing(0.12f);
-        LinearLayout.LayoutParams ftl = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
-        fTitle.setLayoutParams(ftl);
-        fireHeader.addView(fTitle);
+            rightCol.addView(sectionHeader("External Patrols", null));
+            externalRow = new LinearLayout(this);
+            externalRow.setOrientation(LinearLayout.HORIZONTAL);
+            externalRow.setPadding(0, dp(2), 0, dp(8));
 
-        fireStatusChip = new TextView(this);
-        fireStatusChip.setText("0/5 CHECKED");
-        fireStatusChip.setTextColor(colMuted);
-        fireStatusChip.setTextSize(10);
-        fireStatusChip.setTypeface(Typeface.MONOSPACE);
-        fireStatusChip.setPadding(dp(6), dp(2), dp(6), dp(2));
-        fireStatusChip.setBackground(rounded(colPanel2, dp(6)));
-        fireHeader.addView(fireStatusChip);
-        patrolContent.addView(fireHeader);
+            tileExternalFull = patrolActionCard("External (Full)", EXTERNAL_CHOICES[1], true);
+            tileExternalHalf = patrolActionCard("External (Half)", EXTERNAL_CHOICES[3], false);
+            externalRow.addView(tileExternalFull);
+            externalRow.addView(tileExternalHalf);
+            rightCol.addView(externalRow);
 
-        fireCard = new LinearLayout(this);
-        fireCard.setOrientation(LinearLayout.VERTICAL);
-        fireCard.setBackground(rounded(colPanel, dp(14)));
-        fireCard.setPadding(dp(12), dp(8), dp(12), dp(8));
+            rightCol.addView(sectionHeader("Internal Factory Floors (Lots 14–18)", null));
+            internalBadgesRow = new LinearLayout(this);
+            internalBadgesRow.setOrientation(LinearLayout.HORIZONTAL);
+            internalBadgesRow.setPadding(0, dp(2), 0, dp(10));
 
-        fireList = new LinearLayout(this);
-        fireList.setOrientation(LinearLayout.VERTICAL);
-        for (int i = 0; i < FIRE_POINTS.length; i += 2) {
-            fireList.addView(fireCompactRow(FIRE_POINTS[i], FIRE_POINTS[i + 1], i == FIRE_POINTS.length - 2));
-        }
-        fireCard.addView(fireList);
-        patrolContent.addView(fireCard);
-
-        patrolContent.addView(sectionHeader("Rapid Evidence Dock", null));
-        dock = buildCaptureDock();
-        patrolContent.addView(dock);
-
-        patrolContent.addView(tonightLabel());
-        tonight = new LinearLayout(this);
-        tonight.setOrientation(LinearLayout.VERTICAL);
-        tonight.setPadding(0, dp(4), 0, dp(20));
-        patrolContent.addView(tonight);
-
-        primary = new TextView(this);
-        primary.setTextSize(15);
-        primary.setTypeface(Typeface.DEFAULT_BOLD);
-        primary.setGravity(Gravity.CENTER);
-        primary.setPadding(dp(16), dp(18), dp(16), dp(18));
-        patrolContent.addView(primary);
-
-        pageTitle = label("06:05 MORNING HANDOVER REPORT");
-        pageTitle.setPadding(0, dp(24), 0, dp(8));
-        pageTitle.setVisibility(View.GONE);
-        patrolContent.addView(pageTitle);
-
-        page = new TextView(this);
-        page.setTextColor(colPale);
-        page.setTextSize(10);
-        page.setTypeface(Typeface.MONOSPACE);
-        page.setBackground(rounded(colPanel, dp(14)));
-        page.setPadding(dp(14), dp(14), dp(14), dp(14));
-        page.setVisibility(View.GONE);
-        patrolContent.addView(page);
-
-        btnShareReport = new TextView(this);
-        btnShareReport.setText("📤 SHARE MORNING HANDOVER REPORT");
-        btnShareReport.setTextColor(colAccentInk);
-        btnShareReport.setTextSize(14);
-        btnShareReport.setTypeface(Typeface.DEFAULT_BOLD);
-        btnShareReport.setGravity(Gravity.CENTER);
-        btnShareReport.setPadding(dp(16), dp(16), dp(16), dp(16));
-        btnShareReport.setBackground(pressable(colAccent, dp(16)));
-        btnShareReport.setVisibility(View.GONE);
-        LinearLayout.LayoutParams spl = new LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
-        spl.topMargin = dp(12);
-        btnShareReport.setLayoutParams(spl);
-        btnShareReport.setOnClickListener(new View.OnClickListener() {
-            public void onClick(View v) {
-                hapticHeavyClick();
-                shareHandoverReport();
+            for (int i = 0; i < INTERNAL_LOTS.length; i += 2) {
+                internalBadgesRow.addView(lotBadge(INTERNAL_LOTS[i], INTERNAL_LOTS[i + 1], i == INTERNAL_LOTS.length - 2));
             }
-        });
-        patrolContent.addView(btnShareReport);
+            rightCol.addView(internalBadgesRow);
+
+            LinearLayout fireHeader = new LinearLayout(this);
+            fireHeader.setOrientation(LinearLayout.HORIZONTAL);
+            fireHeader.setGravity(Gravity.CENTER_VERTICAL);
+            fireHeader.setPadding(0, dp(10), 0, dp(6));
+
+            TextView fTitle = new TextView(this);
+            fTitle.setText("FIRE & PUMP SYSTEMS (5) · 1,200 PSI OPTIMAL");
+            fTitle.setTextColor(colQuiet);
+            fTitle.setTextSize(10);
+            fTitle.setTypeface(Typeface.DEFAULT_BOLD);
+            fTitle.setLetterSpacing(0.12f);
+            LinearLayout.LayoutParams ftl = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
+            fTitle.setLayoutParams(ftl);
+            fireHeader.addView(fTitle);
+
+            fireStatusChip = new TextView(this);
+            fireStatusChip.setText("0/5 CHECKED");
+            fireStatusChip.setTextColor(colMuted);
+            fireStatusChip.setTextSize(10);
+            fireStatusChip.setTypeface(Typeface.MONOSPACE);
+            fireStatusChip.setPadding(dp(6), dp(2), dp(6), dp(2));
+            fireStatusChip.setBackground(rounded(colPanel2, dp(6)));
+            fireHeader.addView(fireStatusChip);
+            rightCol.addView(fireHeader);
+
+            fireCard = new LinearLayout(this);
+            fireCard.setOrientation(LinearLayout.VERTICAL);
+            fireCard.setBackground(rounded(colPanel, dp(14)));
+            fireCard.setPadding(dp(12), dp(8), dp(12), dp(8));
+
+            fireList = new LinearLayout(this);
+            fireList.setOrientation(LinearLayout.VERTICAL);
+            for (int i = 0; i < FIRE_POINTS.length; i += 2) {
+                fireList.addView(fireCompactRow(FIRE_POINTS[i], FIRE_POINTS[i + 1], i == FIRE_POINTS.length - 2));
+            }
+            fireCard.addView(fireList);
+            rightCol.addView(fireCard);
+
+            rightCol.addView(sectionHeader("Rapid Evidence Dock", null));
+            dock = buildCaptureDock();
+            rightCol.addView(dock);
+
+            rightCol.addView(tonightLabel());
+            tonight = new LinearLayout(this);
+            tonight.setOrientation(LinearLayout.VERTICAL);
+            tonight.setPadding(0, dp(4), 0, dp(20));
+            rightCol.addView(tonight);
+
+            patrolContent.addView(leftCol);
+            patrolContent.addView(rightCol);
+        } else {
+            patrolContent = new LinearLayout(this);
+            patrolContent.setOrientation(LinearLayout.VERTICAL);
+
+            // Header Card (Triple tap for Sun Conure!)
+            patrolContent.addView(headerCard());
+
+            // Tactical Chronograph (Solar Dual-Arc)
+            patrolContent.addView(buildChronographSection());
+
+            // Chain Banner & Hash
+            chainBannerView = new AnimatedChainBannerView(this);
+            LinearLayout.LayoutParams cbl = new LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.MATCH_PARENT, dp(44));
+            cbl.topMargin = dp(4);
+            cbl.bottomMargin = dp(4);
+            chainBannerView.setLayoutParams(cbl);
+            patrolContent.addView(chainBannerView);
+
+            pills = new LinearLayout(this);
+            pills.setOrientation(LinearLayout.HORIZONTAL);
+            pills.setPadding(0, dp(4), 0, dp(6));
+            patrolContent.addView(pills);
+
+            banner = new TextView(this);
+            banner.setTextSize(13);
+            banner.setTextColor(colAccent);
+            banner.setPadding(dp(14), dp(12), dp(14), dp(12));
+            banner.setBackground(rounded(colPanel2, dp(12)));
+            banner.setVisibility(View.GONE);
+            LinearLayout.LayoutParams bl = new LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+            bl.topMargin = dp(6);
+            bl.bottomMargin = dp(8);
+            banner.setLayoutParams(bl);
+            patrolContent.addView(banner);
+
+            patrolContent.addView(sectionHeader("External Patrols", null));
+            externalRow = new LinearLayout(this);
+            externalRow.setOrientation(LinearLayout.HORIZONTAL);
+            externalRow.setPadding(0, dp(2), 0, dp(8));
+
+            tileExternalFull = patrolActionCard("External (Full)", EXTERNAL_CHOICES[1], true);
+            tileExternalHalf = patrolActionCard("External (Half)", EXTERNAL_CHOICES[3], false);
+            externalRow.addView(tileExternalFull);
+            externalRow.addView(tileExternalHalf);
+            patrolContent.addView(externalRow);
+
+            patrolContent.addView(sectionHeader("Internal Factory Floors (Lots 14–18)", null));
+            internalBadgesRow = new LinearLayout(this);
+            internalBadgesRow.setOrientation(LinearLayout.HORIZONTAL);
+            internalBadgesRow.setPadding(0, dp(2), 0, dp(10));
+
+            for (int i = 0; i < INTERNAL_LOTS.length; i += 2) {
+                internalBadgesRow.addView(lotBadge(INTERNAL_LOTS[i], INTERNAL_LOTS[i + 1], i == INTERNAL_LOTS.length - 2));
+            }
+            patrolContent.addView(internalBadgesRow);
+
+            LinearLayout fireHeader = new LinearLayout(this);
+            fireHeader.setOrientation(LinearLayout.HORIZONTAL);
+            fireHeader.setGravity(Gravity.CENTER_VERTICAL);
+            fireHeader.setPadding(0, dp(10), 0, dp(6));
+
+            TextView fTitle = new TextView(this);
+            fTitle.setText("FIRE & PUMP SYSTEMS (5) · 1,200 PSI OPTIMAL");
+            fTitle.setTextColor(colQuiet);
+            fTitle.setTextSize(10);
+            fTitle.setTypeface(Typeface.DEFAULT_BOLD);
+            fTitle.setLetterSpacing(0.12f);
+            LinearLayout.LayoutParams ftl = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
+            fTitle.setLayoutParams(ftl);
+            fireHeader.addView(fTitle);
+
+            fireStatusChip = new TextView(this);
+            fireStatusChip.setText("0/5 CHECKED");
+            fireStatusChip.setTextColor(colMuted);
+            fireStatusChip.setTextSize(10);
+            fireStatusChip.setTypeface(Typeface.MONOSPACE);
+            fireStatusChip.setPadding(dp(6), dp(2), dp(6), dp(2));
+            fireStatusChip.setBackground(rounded(colPanel2, dp(6)));
+            fireHeader.addView(fireStatusChip);
+            patrolContent.addView(fireHeader);
+
+            fireCard = new LinearLayout(this);
+            fireCard.setOrientation(LinearLayout.VERTICAL);
+            fireCard.setBackground(rounded(colPanel, dp(14)));
+            fireCard.setPadding(dp(12), dp(8), dp(12), dp(8));
+
+            fireList = new LinearLayout(this);
+            fireList.setOrientation(LinearLayout.VERTICAL);
+            for (int i = 0; i < FIRE_POINTS.length; i += 2) {
+                fireList.addView(fireCompactRow(FIRE_POINTS[i], FIRE_POINTS[i + 1], i == FIRE_POINTS.length - 2));
+            }
+            fireCard.addView(fireList);
+            patrolContent.addView(fireCard);
+
+            patrolContent.addView(sectionHeader("Rapid Evidence Dock", null));
+            dock = buildCaptureDock();
+            patrolContent.addView(dock);
+
+            patrolContent.addView(tonightLabel());
+            tonight = new LinearLayout(this);
+            tonight.setOrientation(LinearLayout.VERTICAL);
+            tonight.setPadding(0, dp(4), 0, dp(20));
+            patrolContent.addView(tonight);
+
+            primary = new TextView(this);
+            primary.setTextSize(15);
+            primary.setTypeface(Typeface.DEFAULT_BOLD);
+            primary.setGravity(Gravity.CENTER);
+            primary.setPadding(dp(16), dp(18), dp(16), dp(18));
+            patrolContent.addView(primary);
+
+            pageTitle = label("06:05 MORNING HANDOVER REPORT");
+            pageTitle.setPadding(0, dp(24), 0, dp(8));
+            pageTitle.setVisibility(View.GONE);
+            patrolContent.addView(pageTitle);
+
+            page = new TextView(this);
+            page.setTextColor(colPale);
+            page.setTextSize(10);
+            page.setTypeface(Typeface.MONOSPACE);
+            page.setBackground(rounded(colPanel, dp(14)));
+            page.setPadding(dp(14), dp(14), dp(14), dp(14));
+            page.setVisibility(View.GONE);
+            patrolContent.addView(page);
+
+            btnShareReport = new TextView(this);
+            btnShareReport.setText("📤 SHARE MORNING HANDOVER REPORT");
+            btnShareReport.setTextColor(colAccentInk);
+            btnShareReport.setTextSize(14);
+            btnShareReport.setTypeface(Typeface.DEFAULT_BOLD);
+            btnShareReport.setGravity(Gravity.CENTER);
+            btnShareReport.setPadding(dp(16), dp(16), dp(16), dp(16));
+            btnShareReport.setBackground(pressable(colAccent, dp(16)));
+            btnShareReport.setVisibility(View.GONE);
+            LinearLayout.LayoutParams spl = new LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+            spl.topMargin = dp(12);
+            btnShareReport.setLayoutParams(spl);
+            btnShareReport.setOnClickListener(new View.OnClickListener() {
+                public void onClick(View v) {
+                    hapticHeavyClick();
+                    shareHandoverReport();
+                }
+            });
+            patrolContent.addView(btnShareReport);
+        }
 
         root.addView(patrolContent);
         scrollPatrol.addView(root);
@@ -2251,22 +2433,23 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
         LinearLayout container = new LinearLayout(this);
         container.setOrientation(LinearLayout.VERTICAL);
         container.setBackground(rounded(colPanel, dp(18)));
-        container.setPadding(dp(16), dp(14), dp(16), dp(14));
+        container.setPadding(dp(16), dp(16), dp(16), dp(16));
         LinearLayout.LayoutParams clp = new LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
         clp.topMargin = dp(10);
-        clp.bottomMargin = dp(6);
+        clp.bottomMargin = dp(8);
         container.setLayoutParams(clp);
 
+        // 1. Header Bar
         LinearLayout top = new LinearLayout(this);
         top.setOrientation(LinearLayout.HORIZONTAL);
         top.setGravity(Gravity.CENTER_VERTICAL);
         top.setPadding(0, 0, 0, dp(8));
 
         TextView title = new TextView(this);
-        title.setText("CHRONOGRAPH & DAWN TRANSITION");
+        title.setText("⏱️ TACTICAL CHRONOGRAPH");
         title.setTextColor(colQuiet);
-        title.setTextSize(10);
+        title.setTextSize(10.5f);
         title.setTypeface(Typeface.DEFAULT_BOLD);
         title.setLetterSpacing(0.12f);
         LinearLayout.LayoutParams tl = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
@@ -2274,18 +2457,19 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
         top.addView(title);
 
         TextView tag = new TextView(this);
-        tag.setText("SOLAR DUAL-ARC");
+        tag.setText("SOLAR NIGHT SWEEP");
         tag.setTextColor(colAccent);
         tag.setTextSize(9);
         tag.setTypeface(Typeface.MONOSPACE);
-        tag.setPadding(dp(6), dp(2), dp(6), dp(2));
-        tag.setBackground(rounded(colPanel2, dp(4)));
+        tag.setPadding(dp(7), dp(3), dp(7), dp(3));
+        tag.setBackground(rounded(colPanel2, dp(6)));
         top.addView(tag);
         container.addView(top);
 
+        // 2. High-Precision Tactical Dual-Arc Dial View
         chronographView = new ChronographView(this);
         LinearLayout.LayoutParams cvl = new LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT, dp(150));
+                LinearLayout.LayoutParams.MATCH_PARENT, dp(200));
         chronographView.setLayoutParams(cvl);
         chronographView.setOnClickListener(new View.OnClickListener() {
             public void onClick(View v) {
@@ -2295,15 +2479,81 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
         });
         container.addView(chronographView);
 
+        // 3. Tactical 3-Pill Telemetry Deck (Cleanly Separated Below the Dial)
+        LinearLayout deck = new LinearLayout(this);
+        deck.setOrientation(LinearLayout.HORIZONTAL);
+        deck.setPadding(0, dp(10), 0, 0);
+
+        int nowMin = nowMinutes();
+        int currentMinWrapped = nowMin % 1440;
+        if (currentMinWrapped < 12 * 60) currentMinWrapped += 1440;
+        float shiftProgress = Math.max(0f, Math.min(1f, (currentMinWrapped - 1080) * 1.0f / (12 * 60)));
+        int pct = (int) (shiftProgress * 100);
+
+        long elapsedWelfareMs = SystemClock.elapsedRealtime() - lastActivityTimeMs;
+        long remainMins = Math.max(0, (WELFARE_INTERVAL_MS - elapsedWelfareMs) / 60000L);
+
+        deck.addView(chronoTelemetryCard("🌅 FIRST LIGHT", "05:41 AM", "Kingston Twilight", colCyan));
+        deck.addView(chronoTelemetryCard("🦺 WELFARE TIMER", remainMins + "m SAFE", "Tap to Reset", remainMins < 20 ? colCrimson : colEmerald));
+        deck.addView(chronoTelemetryCard("🔒 SHIFT PROGRESS", pct + "% DONE", "18:00 → 06:00", colAccent));
+
+        container.addView(deck);
+
         return container;
+    }
+
+    private LinearLayout chronoTelemetryCard(String title, String val, String sub, int accentColor) {
+        LinearLayout c = new LinearLayout(this);
+        c.setOrientation(LinearLayout.VERTICAL);
+        c.setGravity(Gravity.CENTER);
+        c.setBackground(rounded(colPanel2, dp(12)));
+        c.setPadding(dp(8), dp(8), dp(8), dp(8));
+        LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
+        lp.setMargins(dp(3), 0, dp(3), 0);
+        c.setLayoutParams(lp);
+
+        TextView tTitle = new TextView(this);
+        tTitle.setText(title);
+        tTitle.setTextColor(colQuiet);
+        tTitle.setTextSize(8.5f);
+        tTitle.setTypeface(Typeface.DEFAULT_BOLD);
+        tTitle.setLetterSpacing(0.06f);
+        c.addView(tTitle);
+
+        TextView tVal = new TextView(this);
+        tVal.setText(val);
+        tVal.setTextColor(accentColor);
+        tVal.setTextSize(13);
+        tVal.setTypeface(Typeface.create(Typeface.MONOSPACE, Typeface.BOLD));
+        tVal.setPadding(0, dp(2), 0, dp(1));
+        c.addView(tVal);
+
+        TextView tSub = new TextView(this);
+        tSub.setText(sub);
+        tSub.setTextColor(colMuted);
+        tSub.setTextSize(8.5f);
+        c.addView(tSub);
+
+        c.setOnClickListener(new View.OnClickListener() {
+            public void onClick(View v) {
+                hapticClick();
+                showChronographBreakdownDialog();
+            }
+        });
+
+        return c;
     }
 
     private class ChronographView extends View {
         private final Paint trackPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
         private final Paint outerArcPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+        private final Paint outerGlowPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
         private final Paint innerArcPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
-        private final Paint textPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
-        private final Paint subTextPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+        private final Paint innerGlowPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+        private final Paint tickPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+        private final Paint timeTextPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+        private final Paint labelPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+        private final Paint capPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
         private final RectF outerRect = new RectF();
         private final RectF innerRect = new RectF();
 
@@ -2313,12 +2563,24 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
             trackPaint.setStrokeCap(Paint.Cap.ROUND);
             outerArcPaint.setStyle(Paint.Style.STROKE);
             outerArcPaint.setStrokeCap(Paint.Cap.ROUND);
+            outerGlowPaint.setStyle(Paint.Style.STROKE);
+            outerGlowPaint.setStrokeCap(Paint.Cap.ROUND);
             innerArcPaint.setStyle(Paint.Style.STROKE);
             innerArcPaint.setStrokeCap(Paint.Cap.ROUND);
-            textPaint.setTextAlign(Paint.Align.CENTER);
-            textPaint.setTypeface(Typeface.create(Typeface.MONOSPACE, Typeface.BOLD));
-            subTextPaint.setTextAlign(Paint.Align.CENTER);
-            subTextPaint.setTypeface(Typeface.create(Typeface.DEFAULT, Typeface.BOLD));
+            innerGlowPaint.setStyle(Paint.Style.STROKE);
+            innerGlowPaint.setStrokeCap(Paint.Cap.ROUND);
+            tickPaint.setStyle(Paint.Style.STROKE);
+            tickPaint.setStrokeCap(Paint.Cap.ROUND);
+            capPaint.setStyle(Paint.Style.FILL);
+
+            timeTextPaint.setTextAlign(Paint.Align.CENTER);
+            timeTextPaint.setTypeface(Typeface.create(Typeface.MONOSPACE, Typeface.BOLD));
+            labelPaint.setTextAlign(Paint.Align.CENTER);
+            labelPaint.setTypeface(Typeface.create(Typeface.MONOSPACE, Typeface.BOLD));
+        }
+
+        private float dpf(float v) {
+            return v * getResources().getDisplayMetrics().density;
         }
 
         @Override
@@ -2326,75 +2588,134 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
             super.onDraw(canvas);
             int w = getWidth();
             int h = getHeight();
+            if (w <= 0 || h <= 0) return;
+
             float cx = w / 2f;
-            float cy = h / 2f - dp(2);
-            float rOuter = Math.min(w, h) / 2f - dp(10);
-            float rInner = rOuter - dp(14);
+            float cy = h / 2f - dpf(4);
+
+            float rOuter = Math.min(w * 0.42f, h * 0.42f);
+            float rInner = rOuter - dpf(13f);
 
             outerRect.set(cx - rOuter, cy - rOuter, cx + rOuter, cy + rOuter);
             innerRect.set(cx - rInner, cy - rInner, cx + rInner, cy + rInner);
 
+            // 1. Subtle Outer Track & Hourly Notches
             trackPaint.setColor(colLine);
-            trackPaint.setStrokeWidth(dp(7));
-            canvas.drawArc(outerRect, 135, 270, false, trackPaint);
+            trackPaint.setStrokeWidth(dpf(7f));
+            canvas.drawArc(outerRect, 135f, 270f, false, trackPaint);
 
+            // Hourly Ticks around the dial (12 shift hours: 18:00 to 06:00)
+            for (int i = 0; i <= 12; i++) {
+                float angleDeg = 135f + (i * 270f / 12f);
+                double rad = Math.toRadians(angleDeg);
+                float tLen = (i % 3 == 0) ? dpf(6f) : dpf(3.5f);
+                float x1 = cx + (float) Math.cos(rad) * (rOuter + dpf(5f));
+                float y1 = cy + (float) Math.sin(rad) * (rOuter + dpf(5f));
+                float x2 = cx + (float) Math.cos(rad) * (rOuter + dpf(5f) + tLen);
+                float y2 = cy + (float) Math.sin(rad) * (rOuter + dpf(5f) + tLen);
+
+                tickPaint.setColor((i == 0 || i == 12 || i == 6) ? colAccent : colQuiet);
+                tickPaint.setStrokeWidth(i % 3 == 0 ? dpf(1.8f) : dpf(1.0f));
+                canvas.drawLine(x1, y1, x2, y2, tickPaint);
+            }
+
+            // 2. Compute Shift Progress
             int nowMin = nowMinutes();
             int shiftStartMin = 18 * 60;
             int currentMinWrapped = nowMin % 1440;
             if (currentMinWrapped < 12 * 60) currentMinWrapped += 1440;
 
             float shiftProgress = Math.max(0f, Math.min(1f, (currentMinWrapped - shiftStartMin) * 1.0f / (12 * 60)));
-            float outerSweep = shiftProgress * 270f;
+            float outerSweep = Math.max(0.01f, shiftProgress * 270f);
 
+            // Dawn color shift if between 04:30 and 06:05 (first light)
             int curHourMin = nowMin % 1440;
             int arcColor = colAccent;
             if (curHourMin >= 270 && curHourMin <= 365) {
                 float dawnFrac = (curHourMin - 270) / 95.0f;
-                int r = (int) (Color.red(colAccent) * (1f - dawnFrac) + 255 * dawnFrac);
-                int g = (int) (Color.green(colAccent) * (1f - dawnFrac) + 140 * dawnFrac);
-                int b = (int) (Color.blue(colAccent) * (1f - dawnFrac) + 30 * dawnFrac);
-                arcColor = Color.rgb(r, g, b);
+                arcColor = MainActivity.lerpColor(colAccent, 0xFFFF7733, dawnFrac);
             }
 
-            outerArcPaint.setColor(arcColor);
-            outerArcPaint.setStrokeWidth(dp(7));
-            canvas.drawArc(outerRect, 135, outerSweep, false, outerArcPaint);
+            // Draw Outer Progress Arc & Glow
+            outerGlowPaint.setColor(arcColor);
+            outerGlowPaint.setAlpha(60);
+            outerGlowPaint.setStrokeWidth(dpf(12f));
+            canvas.drawArc(outerRect, 135f, outerSweep, false, outerGlowPaint);
 
-            trackPaint.setStrokeWidth(dp(5));
+            outerArcPaint.setColor(arcColor);
+            outerArcPaint.setStrokeWidth(dpf(7f));
+            canvas.drawArc(outerRect, 135f, outerSweep, false, outerArcPaint);
+
+            // Outer Arc Head Dot
+            double outerHeadRad = Math.toRadians(135f + outerSweep);
+            float headX = cx + (float) Math.cos(outerHeadRad) * rOuter;
+            float headY = cy + (float) Math.sin(outerHeadRad) * rOuter;
+            capPaint.setColor(0xFFFFFFFF);
+            canvas.drawCircle(headX, headY, dpf(2.5f), capPaint);
+
+            // 3. Inner Welfare Track & Arc
+            trackPaint.setStrokeWidth(dpf(4.5f));
             trackPaint.setColor(colLineSubtle);
-            canvas.drawArc(innerRect, 135, 270, false, trackPaint);
+            canvas.drawArc(innerRect, 135f, 270f, false, trackPaint);
 
             long elapsedWelfareMs = SystemClock.elapsedRealtime() - lastActivityTimeMs;
             float welfareFrac = Math.max(0f, Math.min(1f, elapsedWelfareMs * 1.0f / WELFARE_INTERVAL_MS));
-            float innerSweep = (1f - welfareFrac) * 270f;
+            float innerSweep = Math.max(0.01f, (1f - welfareFrac) * 270f);
 
             int welfareCol = colEmerald;
             if (welfareFrac > 0.85f) {
                 welfareCol = colCrimson;
             } else if (welfareFrac > 0.60f) {
-                welfareCol = colAccent;
+                welfareCol = 0xFFFFB703;
             }
-            innerArcPaint.setColor(welfareCol);
-            innerArcPaint.setStrokeWidth(dp(5));
-            canvas.drawArc(innerRect, 135, innerSweep, false, innerArcPaint);
 
+            innerGlowPaint.setColor(welfareCol);
+            innerGlowPaint.setAlpha(55);
+            innerGlowPaint.setStrokeWidth(dpf(9f));
+            canvas.drawArc(innerRect, 135f, innerSweep, false, innerGlowPaint);
+
+            innerArcPaint.setColor(welfareCol);
+            innerArcPaint.setStrokeWidth(dpf(4.5f));
+            canvas.drawArc(innerRect, 135f, innerSweep, false, innerArcPaint);
+
+            // 4. Center Tactical Core Display (Clean, High-Legibility, Zero Overlaps)
             long ms = System.currentTimeMillis();
             SimpleDateFormat sdf = new SimpleDateFormat("HH:mm:ss", Locale.US);
             sdf.setTimeZone(TimeZone.getDefault());
             String timeStr = sdf.format(new Date(ms));
 
-            textPaint.setColor(colPale);
-            textPaint.setTextSize(dp(18));
-            canvas.drawText(timeStr, cx, cy - dp(5), textPaint);
-
+            // Top Micro Label: Shift %
             int pct = (int) (shiftProgress * 100);
-            long remainMins = Math.max(0, (WELFARE_INTERVAL_MS - elapsedWelfareMs) / 60000L);
-            subTextPaint.setColor(curHourMin >= 270 && curHourMin <= 365 ? arcColor : welfareCol);
-            subTextPaint.setTextSize(dp(10));
-            String status = curHourMin >= 270 && curHourMin <= 365
-                ? String.format(Locale.US, "🌅 DAWN (05:41) · %d%% SHIFT", pct)
-                : (pct + "% SHIFT · 🦺 " + remainMins + "m SAFE");
-            canvas.drawText(status, cx, cy + dp(15), subTextPaint);
+            labelPaint.setColor(arcColor);
+            labelPaint.setTextSize(dpf(9.5f));
+            labelPaint.setLetterSpacing(0.08f);
+            canvas.drawText("SHIFT " + pct + "%", cx, cy - dpf(18f), labelPaint);
+
+            // Center Hero Time
+            timeTextPaint.setColor(0xFFFFFFFF);
+            timeTextPaint.setTextSize(dpf(21f));
+            canvas.drawText(timeStr, cx, cy + dpf(4f), timeTextPaint);
+
+            // Bottom Sub Label: Location / Timezone
+            labelPaint.setColor(colQuiet);
+            labelPaint.setTextSize(dpf(8.5f));
+            labelPaint.setLetterSpacing(0.12f);
+            canvas.drawText("AEST · BRISBANE", cx, cy + dpf(20f), labelPaint);
+
+            // 5. Endpoint Hour Markers at Dial Baseline
+            labelPaint.setTextSize(dpf(8.5f));
+            labelPaint.setColor(colMuted);
+            labelPaint.setLetterSpacing(0f);
+
+            double leftRad = Math.toRadians(135.0);
+            float lx = cx + (float) Math.cos(leftRad) * (rOuter + dpf(16f));
+            float ly = cy + (float) Math.sin(leftRad) * (rOuter + dpf(16f));
+            canvas.drawText("18:00", lx - dpf(2f), ly + dpf(8f), labelPaint);
+
+            double rightRad = Math.toRadians(45.0);
+            float rx = cx + (float) Math.cos(rightRad) * (rOuter + dpf(16f));
+            float ry = cy + (float) Math.sin(rightRad) * (rOuter + dpf(16f));
+            canvas.drawText("06:00", rx + dpf(2f), ry + dpf(8f), labelPaint);
         }
     }
 
@@ -3740,6 +4061,52 @@ private void updateTabSelection(int tabIndex) {
     // =========================================================================
 
     private LinearLayout buildContactsTab() {
+        boolean isTablet = getResources().getConfiguration().smallestScreenWidthDp >= 600;
+        boolean isLandscape = getResources().getConfiguration().orientation == android.content.res.Configuration.ORIENTATION_LANDSCAPE;
+
+        if (isTablet && isLandscape) {
+            LinearLayout container = new LinearLayout(this);
+            container.setOrientation(LinearLayout.HORIZONTAL);
+            container.setBaselineAligned(false);
+            container.setPadding(0, dp(6), 0, dp(24));
+
+            LinearLayout leftCol = new LinearLayout(this);
+            leftCol.setOrientation(LinearLayout.VERTICAL);
+            LinearLayout.LayoutParams lclp = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
+            lclp.rightMargin = dp(10);
+            leftCol.setLayoutParams(lclp);
+
+            leftCol.addView(contactsSectionHeader("🚨 EMERGENCY SERVICES (IMMEDIATE RESPONSE)", colCrimson));
+            leftCol.addView(contactCard("Triple Zero (000)", "Police · Fire · Ambulance", "000", "24/7 PRIORITY", colCrimson));
+            leftCol.addView(contactCard("Logan District Police", "Kingston & Logan Central Station", "0738261888", "24/7 ATTENDANCE", colCrimson));
+            leftCol.addView(contactCard("SES Queensland", "Storm, Flood & Structural Damage", "132500", "24/7 DISPATCH", colCyan));
+            leftCol.addView(contactCard("Poisons Info Centre", "Chemical & Hazardous Substance Exposure", "131126", "24/7 SUPPORT", colAccent));
+
+            leftCol.addView(contactsSectionHeader("🏢 DOHERTY SECURITY SERVICES (DSS)", colAccent));
+            leftCol.addView(contactCard("DSS 24/7 Control Room", "Central Dispatch & Escalations", "1300377000", "24/7 MONITORING", colAccent));
+            leftCol.addView(contactCard("DSS Operations Manager", "Brisbane North & South Operations", "0418700120", "ON CALL", colAccent));
+            leftCol.addView(contactCard("DSS Field Patrol Supervisor", "Mobile Response Unit 4", "0422555810", "ON SHIFT 18:00–06:00", colEmerald));
+
+            LinearLayout rightCol = new LinearLayout(this);
+            rightCol.setOrientation(LinearLayout.VERTICAL);
+            LinearLayout.LayoutParams rclp = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
+            rclp.leftMargin = dp(10);
+            rightCol.setLayoutParams(rclp);
+
+            rightCol.addView(contactsSectionHeader("🏭 HUME DOORS & TIMBER (KINGSTON SITE)", colCyan));
+            rightCol.addView(contactCard("Hume Site Operations Manager", "Kingston Plant Management", "0439123456", "PRIMARY CLIENT CONTACT", colCyan));
+            rightCol.addView(contactCard("Hume Facilities & Plant Engineer", "Power, Pump House & Gate Failures", "0411987654", "ON CALL MAINTENANCE", colCyan));
+            rightCol.addView(contactCard("Hume WHS / Safety Officer", "Workplace Safety & Incident Officer", "0423456789", "ON CALL SAFETY", colCyan));
+
+            rightCol.addView(contactsSectionHeader("👥 ON-SITE & RELIEF GUARDS", colPale));
+            rightCol.addView(contactCard("Officer Lochran Doherty", "Current Static Guard · LIC #41207", "0455123789", "ON SITE (TONIGHT)", colEmerald));
+            rightCol.addView(contactCard("Relief / Day Crew Guard", "Morning Handover Officer (06:05)", "0400111222", "06:05 HANDOVER", colMuted));
+
+            container.addView(leftCol);
+            container.addView(rightCol);
+            return container;
+        }
+
         LinearLayout container = new LinearLayout(this);
         container.setOrientation(LinearLayout.VERTICAL);
         container.setPadding(0, dp(6), 0, dp(24));
