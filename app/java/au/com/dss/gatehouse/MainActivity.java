@@ -4340,35 +4340,38 @@ private void updateTabSelection(int tabIndex) {
 
             LinearLayout leftCol = new LinearLayout(this);
             leftCol.setOrientation(LinearLayout.VERTICAL);
-            LinearLayout.LayoutParams lclp = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
+            LinearLayout.LayoutParams lclp = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1.05f);
             lclp.rightMargin = dp(10);
             leftCol.setLayoutParams(lclp);
 
-            leftCol.addView(contactsSectionHeader("🚨 EMERGENCY SERVICES (24/7)", colCrimson));
-            leftCol.addView(contactCard("Triple Zero (000)", "Police · Fire · Ambulance", "000", "24/7 PRIORITY", colCrimson));
-            leftCol.addView(contactCard("Logan District Police", "Kingston & Logan Central Station", "0738261888", "24/7 ATTENDANCE", colCrimson));
-            leftCol.addView(contactCard("SES Queensland", "Storm, Flood & Structural Damage", "132500", "24/7 DISPATCH", colCyan));
-            leftCol.addView(contactCard("Poisons Info Centre", "Chemical & Hazardous Substance Exposure", "131126", "24/7 SUPPORT", colAccent));
-
-            leftCol.addView(contactsSectionHeader("🛡️ DOHERTY SECURITY SERVICES", colAccent));
-            leftCol.addView(contactCard("DSS 24/7 Control Room", "Central Dispatch & Escalations", "1300377000", "24/7 MONITORING", colAccent));
-            leftCol.addView(contactCard("DSS Operations Manager", "Brisbane North & South Operations", "0418700120", "ON CALL", colAccent));
-            leftCol.addView(contactCard("DSS Field Patrol Supervisor", "Mobile Response Unit 4", "0422555810", "ON SHIFT 18:00–06:00", colEmerald));
+            leftCol.addView(contactsSectionHeader("🏭 HUME DOORS AFTER HOURS CONTACTS", colCyan));
+            leftCol.addView(contactCard("Nicole Berryman", "Hume I.T. / Failures · Phone a/c #3020201", "0412538844", "I.T. & OPTUS", colCyan));
+            leftCol.addView(contactCard("Dean Buckley*", "Hume Doors After Hours Staff Contact", "0412216318", "AFTER HOURS", colAccent));
+            leftCol.addView(contactCard("Michael Buckley", "Hume Doors After Hours Staff Contact", "0478352547", "AFTER HOURS", colAccent));
+            leftCol.addView(contactCard("Graeme Buckley", "Hume Doors After Hours Staff Contact", "0422376468", "AFTER HOURS", colAccent));
+            leftCol.addView(contactCard("Noel Johns*", "Hume Doors After Hours Staff Contact", "0403195061", "AFTER HOURS", colAccent));
+            leftCol.addView(contactCard("Trevor Crane*", "Hume Doors After Hours Staff Contact", "0403195062", "AFTER HOURS", colAccent));
 
             LinearLayout rightCol = new LinearLayout(this);
             rightCol.setOrientation(LinearLayout.VERTICAL);
-            LinearLayout.LayoutParams rclp = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
+            LinearLayout.LayoutParams rclp = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 0.95f);
             rclp.leftMargin = dp(10);
             rightCol.setLayoutParams(rclp);
 
-            rightCol.addView(contactsSectionHeader("🏭 HUME DOORS & TIMBER", colCyan));
-            rightCol.addView(contactCard("Hume Site Operations Manager", "Kingston Plant Management", "0439123456", "PRIMARY CLIENT CONTACT", colCyan));
-            rightCol.addView(contactCard("Hume Facilities & Plant Engineer", "Power, Pump House & Gate Failures", "0411987654", "ON CALL MAINTENANCE", colCyan));
-            rightCol.addView(contactCard("Hume WHS / Safety Officer", "Workplace Safety & Incident Officer", "0423456789", "ON CALL SAFETY", colCyan));
+            rightCol.addView(contactsSectionHeader("🛡️ SITE GATEHOUSE & SECURITY", colEmerald));
+            rightCol.addView(contactCard("Gatehouse Site Cell Phone", "Hume Kingston After Hours Duty Mobile", "0478352551", "DUTY PHONE", colEmerald));
+            rightCol.addView(contactCard("Officer Lochran Doherty", "G.J.G. Security · Static Guard LIC #41207", "0404530014", "ON SITE (TONIGHT)", colEmerald));
+            rightCol.addView(contactCard("Petrea Doherty", "G.J.G. Security Services Pty Ltd", "0401371724", "SECURITY OPS", colEmerald));
 
-            rightCol.addView(contactsSectionHeader("👥 ON-SITE & RELIEF OFFICERS", colPale));
-            rightCol.addView(contactCard("Officer Lochran Doherty", "Current Static Guard · LIC #41207", "0455123789", "ON SITE (TONIGHT)", colEmerald));
-            rightCol.addView(contactCard("Relief / Day Crew Guard", "Morning Handover Officer (06:05)", "0400111222", "06:05 HANDOVER", colMuted));
+            rightCol.addView(contactsSectionHeader("🚨 EMERGENCY SERVICES (24/7)", colCrimson));
+            rightCol.addView(contactCard("Triple Zero (000)", "Police · Fire · Ambulance Emergency", "000", "24/7 PRIORITY", colCrimson));
+            rightCol.addView(contactCard("Police Attendance (All Hrs)", "Police Non-Life Threatening (3364 6464)", "0733646464", "24/7 POLICE", colCrimson));
+            rightCol.addView(contactCard("Logan Central Police", "Local Station General Enquiries (3826 1888)", "0738261888", "LOCAL POLICE", colCrimson));
+            rightCol.addView(contactCard("Fire Brigade (Loganlea)", "Loganlea 3884 2550 · Woodridge 3287 8730", "0738842550", "FIRE STN", colCrimson));
+
+            rightCol.addView(contactsSectionHeader("⚡ ALARMS & PUMPHOUSE", colCyan));
+            rightCol.addView(contactCard("ADT Alarm Monitoring", "ASE Alarms Lots 15–18 · SAMC 1800 289 785", "1300360575", "ADT & ASE", colCyan));
+            rightCol.addView(contactCard("M.F.E. Fire Services", "Pumphouse Fire Audits & Testing (24hrs)", "0733906055", "PUMPHOUSE FIRE", colCyan));
 
             container.addView(leftCol);
             container.addView(rightCol);
@@ -4379,25 +4382,28 @@ private void updateTabSelection(int tabIndex) {
         container.setOrientation(LinearLayout.VERTICAL);
         container.setPadding(0, dp(6), 0, dp(56));
 
+        container.addView(contactsSectionHeader("🏭 HUME DOORS AFTER HOURS CONTACTS", colCyan));
+        container.addView(contactCard("Nicole Berryman", "Hume I.T. / Failures · Phone a/c #3020201", "0412538844", "I.T. & OPTUS", colCyan));
+        container.addView(contactCard("Dean Buckley*", "Hume Doors After Hours Staff Contact", "0412216318", "AFTER HOURS", colAccent));
+        container.addView(contactCard("Michael Buckley", "Hume Doors After Hours Staff Contact", "0478352547", "AFTER HOURS", colAccent));
+        container.addView(contactCard("Graeme Buckley", "Hume Doors After Hours Staff Contact", "0422376468", "AFTER HOURS", colAccent));
+        container.addView(contactCard("Noel Johns*", "Hume Doors After Hours Staff Contact", "0403195061", "AFTER HOURS", colAccent));
+        container.addView(contactCard("Trevor Crane*", "Hume Doors After Hours Staff Contact", "0403195062", "AFTER HOURS", colAccent));
+
+        container.addView(contactsSectionHeader("🛡️ SITE GATEHOUSE & SECURITY", colEmerald));
+        container.addView(contactCard("Gatehouse Site Cell Phone", "Hume Kingston After Hours Duty Mobile", "0478352551", "DUTY PHONE", colEmerald));
+        container.addView(contactCard("Officer Lochran Doherty", "G.J.G. Security · Static Guard LIC #41207", "0404530014", "ON SITE (TONIGHT)", colEmerald));
+        container.addView(contactCard("Petrea Doherty", "G.J.G. Security Services Pty Ltd", "0401371724", "SECURITY OPS", colEmerald));
+
         container.addView(contactsSectionHeader("🚨 EMERGENCY SERVICES (24/7)", colCrimson));
-        container.addView(contactCard("Triple Zero (000)", "Police · Fire · Ambulance", "000", "24/7 PRIORITY", colCrimson));
-        container.addView(contactCard("Logan District Police", "Kingston & Logan Central Station", "0738261888", "24/7 ATTENDANCE", colCrimson));
-        container.addView(contactCard("SES Queensland", "Storm, Flood & Structural Damage", "132500", "24/7 DISPATCH", colCyan));
-        container.addView(contactCard("Poisons Info Centre", "Chemical & Hazardous Substance Exposure", "131126", "24/7 SUPPORT", colAccent));
+        container.addView(contactCard("Triple Zero (000)", "Police · Fire · Ambulance Emergency", "000", "24/7 PRIORITY", colCrimson));
+        container.addView(contactCard("Police Attendance (All Hrs)", "Police Non-Life Threatening (3364 6464)", "0733646464", "24/7 POLICE", colCrimson));
+        container.addView(contactCard("Logan Central Police", "Local Station General Enquiries (3826 1888)", "0738261888", "LOCAL POLICE", colCrimson));
+        container.addView(contactCard("Fire Brigade (Loganlea)", "Loganlea 3884 2550 · Woodridge 3287 8730", "0738842550", "FIRE STN", colCrimson));
 
-        container.addView(contactsSectionHeader("🛡️ DOHERTY SECURITY SERVICES", colAccent));
-        container.addView(contactCard("DSS 24/7 Control Room", "Central Dispatch & Escalations", "1300377000", "24/7 MONITORING", colAccent));
-        container.addView(contactCard("DSS Operations Manager", "Brisbane North & South Operations", "0418700120", "ON CALL", colAccent));
-        container.addView(contactCard("DSS Field Patrol Supervisor", "Mobile Response Unit 4", "0422555810", "ON SHIFT 18:00–06:00", colEmerald));
-
-        container.addView(contactsSectionHeader("🏭 HUME DOORS & TIMBER", colCyan));
-        container.addView(contactCard("Hume Site Operations Manager", "Kingston Plant Management", "0439123456", "PRIMARY CLIENT CONTACT", colCyan));
-        container.addView(contactCard("Hume Facilities & Plant Engineer", "Power, Pump House & Gate Failures", "0411987654", "ON CALL MAINTENANCE", colCyan));
-        container.addView(contactCard("Hume WHS / Safety Officer", "Workplace Safety & Incident Officer", "0423456789", "ON CALL SAFETY", colCyan));
-
-        container.addView(contactsSectionHeader("👥 ON-SITE & RELIEF OFFICERS", colPale));
-        container.addView(contactCard("Officer Lochran Doherty", "Current Static Guard · LIC #41207", "0455123789", "ON SITE (TONIGHT)", colEmerald));
-        container.addView(contactCard("Relief / Day Crew Guard", "Morning Handover Officer (06:05)", "0400111222", "06:05 HANDOVER", colMuted));
+        container.addView(contactsSectionHeader("⚡ ALARMS & PUMPHOUSE", colCyan));
+        container.addView(contactCard("ADT Alarm Monitoring", "ASE Alarms Lots 15–18 · SAMC 1800 289 785", "1300360575", "ADT & ASE", colCyan));
+        container.addView(contactCard("M.F.E. Fire Services", "Pumphouse Fire Audits & Testing (24hrs)", "0733906055", "PUMPHOUSE FIRE", colCyan));
 
         return container;
     }
@@ -4541,6 +4547,12 @@ private void updateTabSelection(int tabIndex) {
         }
         if (raw.length() == 10 && raw.startsWith("1300")) {
             return "1300 " + raw.substring(4, 7) + " " + raw.substring(7);
+        }
+        if (raw.length() == 10 && raw.startsWith("1800")) {
+            return "1800 " + raw.substring(4, 7) + " " + raw.substring(7);
+        }
+        if (raw.length() == 8 && (raw.startsWith("3") || raw.startsWith("5"))) {
+            return "(07) " + raw.substring(0, 4) + " " + raw.substring(4);
         }
         if (raw.length() == 6 && (raw.startsWith("132") || raw.startsWith("131"))) {
             return raw.substring(0, 3) + " " + raw.substring(3);
