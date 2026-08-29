@@ -596,34 +596,56 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
                     case MotionEvent.ACTION_MOVE:
                         float dx = ev.getX() - peekDownX;
                         float dy = Math.abs(ev.getY() - peekDownY);
-                        // Pull right from left edge (first 100dp) to peek Deputy, or pull left to close Deputy
-                        if (!isDeputyOpen && peekDownX < dp(100) && dx > dp(18) && dx > dy * 1.2f) {
+                        if (!isDeputyOpen && peekDownX < dp(48) && dx > dp(16) && dx > dy * 1.2f) {
                             isPeekDragging = true;
-                            if (peekVelocityTracker != null) peekVelocityTracker.addMovement(ev);
+                            if (!peekBuzzed) {
+                                hapticClick();
+                                peekBuzzed = true;
+                            }
                             return true;
-                        } else if (isDeputyOpen && dx < -dp(18) && Math.abs(dx) > dy * 1.2f) {
+                        } else if (isDeputyOpen && dx < -dp(16) && Math.abs(dx) > dy * 1.2f) {
                             isPeekDragging = true;
-                            if (peekVelocityTracker != null) peekVelocityTracker.addMovement(ev);
                             return true;
                         }
                         break;
                 }
-                return super.onInterceptTouchEvent(ev);
+                return isPeekDragging;
             }
 
             @Override
             public boolean onTouchEvent(MotionEvent ev) {
-                if (peekVelocityTracker != null) peekVelocityTracker.addMovement(ev);
+                if (peekVelocityTracker != null) {
+                    peekVelocityTracker.addMovement(ev);
+                }
+                int w = getWidth();
+                if (w <= 0) return super.onTouchEvent(ev);
+
                 switch (ev.getActionMasked()) {
                     case MotionEvent.ACTION_DOWN:
                         return true;
                     case MotionEvent.ACTION_MOVE:
-                        float totalDx = ev.getX() - peekDownX;
                         if (isPeekDragging) {
+                            float totalDx = ev.getX() - peekDownX;
                             if (isDeputyOpen) {
-                                applyPeek(getWidth() + totalDx);
+                                float curTrans = Math.max(0f, Math.min(w, w + totalDx));
+                                if (mainSurfaceContainer != null) mainSurfaceContainer.setTranslationX(curTrans);
+                                if (deputyContainer != null) {
+                                    float pct = curTrans / w;
+                                    deputyContainer.setScaleX(0.94f + 0.06f * pct);
+                                    deputyContainer.setScaleY(0.94f + 0.06f * pct);
+                                    deputyContainer.setTranslationX(-dp(30) * (1f - pct));
+                                }
+                                if (deputyScrim != null) deputyScrim.setAlpha(0.65f * (1f - (curTrans / w)));
                             } else {
-                                applyPeek(totalDx);
+                                float curTrans = Math.max(0f, Math.min(w, totalDx));
+                                if (mainSurfaceContainer != null) mainSurfaceContainer.setTranslationX(curTrans);
+                                if (deputyContainer != null) {
+                                    float pct = curTrans / w;
+                                    deputyContainer.setScaleX(0.94f + 0.06f * pct);
+                                    deputyContainer.setScaleY(0.94f + 0.06f * pct);
+                                    deputyContainer.setTranslationX(-dp(30) * (1f - pct));
+                                }
+                                if (deputyScrim != null) deputyScrim.setAlpha(0.65f * (1f - (curTrans / w)));
                             }
                             return true;
                         }
@@ -632,16 +654,24 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
                     case MotionEvent.ACTION_CANCEL:
                         if (isPeekDragging) {
                             isPeekDragging = false;
+                            float totalDx = ev.getX() - peekDownX;
                             float vx = 0f;
                             if (peekVelocityTracker != null) {
                                 peekVelocityTracker.computeCurrentVelocity(1000);
                                 vx = peekVelocityTracker.getXVelocity();
                             }
-                            float finalDx = ev.getX() - peekDownX;
                             if (isDeputyOpen) {
-                                finishPeek(getWidth() + finalDx, vx);
+                                if (totalDx < -w * 0.25f || vx < -800) {
+                                    closeDeputy(true);
+                                } else {
+                                    openDeputy(true);
+                                }
                             } else {
-                                finishPeek(finalDx, vx);
+                                if (totalDx > w * 0.25f || vx > 800) {
+                                    openDeputy(true);
+                                } else {
+                                    closeDeputy(true);
+                                }
                             }
                             return true;
                         }
@@ -650,61 +680,67 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
                 return super.onTouchEvent(ev);
             }
         };
-        rootFrame.setBackgroundColor(0xFF080C14);
+        rootFrame.setBackgroundColor(0xFF000000);
 
-        // 1. UNDERNEATH LAYER: Deputy Workplace Deck
+        // 1. DEPUTY WORKPLACE CARD (Underneath)
         deputyContainer = new FrameLayout(this);
-        deputyContainer.addView(buildDeputyView(), new FrameLayout.LayoutParams(
-                FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT));
+        deputyContainer.setBackgroundColor(0xFF070B12);
+        FrameLayout.LayoutParams dlp = new FrameLayout.LayoutParams(
+                FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT);
+        deputyContainer.setLayoutParams(dlp);
         deputyContainer.setScaleX(0.94f);
         deputyContainer.setScaleY(0.94f);
         deputyContainer.setTranslationX(-dp(30));
+
+        ScrollView deputyScroll = new ScrollView(this);
+        deputyScroll.setVerticalScrollBarEnabled(false);
+        deputyScroll.setLayoutParams(new FrameLayout.LayoutParams(
+                FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT));
+        deputyScroll.addView(buildDeputyView());
+        deputyContainer.addView(deputyScroll);
         rootFrame.addView(deputyContainer);
 
-        // 2. SCRIM LAYER between Deputy and Gatehouse surface
+        // 2. SCRIM OVER DEPUTY
         deputyScrim = new View(this);
-        deputyScrim.setBackgroundColor(0xFF000000);
+        deputyScrim.setBackgroundColor(0xCC000000);
         deputyScrim.setAlpha(0.65f);
-        rootFrame.addView(deputyScrim, new FrameLayout.LayoutParams(
+        deputyScrim.setLayoutParams(new FrameLayout.LayoutParams(
                 FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT));
+        rootFrame.addView(deputyScrim);
 
-        // 3. TOP SLIDING LAYER: Main Gatehouse Surface Container
+        // 3. MAIN GATEHOUSE SURFACE CONTAINER (Top Card)
         mainSurfaceContainer = new FrameLayout(this);
         mainSurfaceContainer.setBackgroundColor(colBg);
+        FrameLayout.LayoutParams mslp = new FrameLayout.LayoutParams(
+                FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT);
+        mainSurfaceContainer.setLayoutParams(mslp);
 
         LinearLayout screenLayout = new LinearLayout(this);
         screenLayout.setOrientation(LinearLayout.VERTICAL);
         screenLayout.setBackgroundColor(colBg);
-        screenLayout.setFitsSystemWindows(true);
-        screenLayout.setPadding(dp(16), dp(12), dp(16), 0);
+        screenLayout.setPadding(dp(14), dp(10), dp(14), 0);
 
         // 1. 🎨 4-Theme Fluid Animated Sliding Switcher Bar
         animatedThemeBar = new FluidAnimatedThemeBarView(this);
         LinearLayout.LayoutParams tblp = new LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT, dp(34));
-        tblp.bottomMargin = dp(6);
+        tblp.bottomMargin = dp(4);
         animatedThemeBar.setLayoutParams(tblp);
         screenLayout.addView(animatedThemeBar);
 
         // 2. ⚡ Real-Time Diagnostics Strip
         screenLayout.addView(buildDiagnosticsStrip());
 
-        // 3. 🛡️ Site & Officer Header Card
-        screenLayout.addView(headerCard());
-
-        // 4. ⏱️ Tactical Chronograph Widget
-        screenLayout.addView(buildChronographSection());
-
-        // 5. 📱 4-Tab Synchronized Sliding Tab Bar
+        // 3. 📱 4-Tab Fluid Animated Sliding Tab Bar
         animatedTabBar = new FluidAnimatedTabBarView(this);
         LinearLayout.LayoutParams abl = new LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT, dp(42));
-        abl.topMargin = dp(6);
-        abl.bottomMargin = dp(8);
+        abl.topMargin = dp(4);
+        abl.bottomMargin = dp(6);
         animatedTabBar.setLayoutParams(abl);
         screenLayout.addView(animatedTabBar);
 
-        // 4. SYNCHRONIZED 4-TAB HORIZONTAL PAGER CONTAINER
+        // 4. 🎛️ 4-PAGE SYNCHRONIZED HORIZONTAL PAGER CONTAINER
         tabPagerFrame = new FrameLayout(this) {
             @Override
             public boolean onInterceptTouchEvent(MotionEvent ev) {
@@ -717,7 +753,6 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
                     case MotionEvent.ACTION_MOVE:
                         float dx = ev.getX() - pageSwipeDownX;
                         float dy = Math.abs(ev.getY() - pageSwipeDownY);
-                        // Horizontal swipe between tabs
                         if (Math.abs(dx) > dp(20) && Math.abs(dx) > dy * 1.3f) {
                             isPageSwiping = true;
                             getParent().requestDisallowInterceptTouchEvent(true);
@@ -749,10 +784,13 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
                             isPageSwiping = false;
                             getParent().requestDisallowInterceptTouchEvent(false);
                             float totalDx = ev.getX() - pageSwipeDownX;
-                            float deltaPages = -totalDx / w;
-                            float finalPos = currentTab + deltaPages;
-                            int targetTab = Math.max(0, Math.min(3, Math.round(finalPos)));
-                            animateTabToPosition(targetTab);
+                            if (totalDx < -w * 0.18f && currentTab < 3) {
+                                animateTabToPosition(currentTab + 1);
+                            } else if (totalDx > w * 0.18f && currentTab > 0) {
+                                animateTabToPosition(currentTab - 1);
+                            } else {
+                                animateTabToPosition(currentTab);
+                            }
                             return true;
                         }
                         break;
@@ -760,11 +798,11 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
                 return super.onTouchEvent(ev);
             }
         };
-        LinearLayout.LayoutParams tplp = new LinearLayout.LayoutParams(
+        LinearLayout.LayoutParams pflp = new LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT, 0, 1f);
-        tabPagerFrame.setLayoutParams(tplp);
+        tabPagerFrame.setLayoutParams(pflp);
 
-        // --- PAGE 1: PATROL ---
+        // --- PAGE 0: 🛡️ PATROL VIEW (Contains Header, Chronograph & All Patrol Actions) ---
         scrollPatrol = new ScrollView(this);
         scrollPatrol.setBackgroundColor(colBg);
         scrollPatrol.setVerticalScrollBarEnabled(false);
@@ -773,15 +811,22 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
 
         root = new LinearLayout(this);
         root.setOrientation(LinearLayout.VERTICAL);
-        root.setPadding(0, dp(4), 0, dp(28));
+        root.setPadding(0, 0, 0, dp(36));
 
         patrolContent = new LinearLayout(this);
         patrolContent.setOrientation(LinearLayout.VERTICAL);
 
+        // Header Card (Triple tap for Sun Conure!)
+        patrolContent.addView(headerCard());
+
+        // Tactical Chronograph (Solar Dual-Arc)
+        patrolContent.addView(buildChronographSection());
+
+        // Chain Banner & Hash
         chainBannerView = new AnimatedChainBannerView(this);
         LinearLayout.LayoutParams cbl = new LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT, dp(44));
-        cbl.topMargin = dp(10);
+        cbl.topMargin = dp(4);
         cbl.bottomMargin = dp(4);
         chainBannerView.setLayoutParams(cbl);
         patrolContent.addView(chainBannerView);
@@ -914,11 +959,12 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
             }
         });
         patrolContent.addView(btnShareReport);
+
         root.addView(patrolContent);
         scrollPatrol.addView(root);
         tabPagerFrame.addView(scrollPatrol);
 
-        // --- PAGE 2: CONTACTS ---
+        // --- PAGE 1: 📞 CONTACTS VIEW ---
         scrollContacts = new ScrollView(this);
         scrollContacts.setBackgroundColor(colBg);
         scrollContacts.setVerticalScrollBarEnabled(false);
@@ -928,7 +974,7 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
         scrollContacts.addView(contactsContent);
         tabPagerFrame.addView(scrollContacts);
 
-        // --- PAGE 3: HANDBOOK ---
+        // --- PAGE 2: 📅 UNIFIED DEPUTY ROSTER VIEW ---
         scrollHandbook = new ScrollView(this);
         scrollHandbook.setBackgroundColor(colBg);
         scrollHandbook.setVerticalScrollBarEnabled(false);
@@ -937,7 +983,7 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
         scrollHandbook.addView(buildRosterView());
         tabPagerFrame.addView(scrollHandbook);
 
-        // --- PAGE 4: TOOLS ---
+        // --- PAGE 3: 🛠️ TOOLS VIEW ---
         scrollTools = new ScrollView(this);
         scrollTools.setBackgroundColor(colBg);
         scrollTools.setVerticalScrollBarEnabled(false);
@@ -949,60 +995,27 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
 
         screenLayout.addView(tabPagerFrame);
         mainSurfaceContainer.addView(screenLayout);
+        rootFrame.addView(mainSurfaceContainer);
 
-        // Post-layout initialization for 1:1 page alignment
+        // 🌌 7. THEME SHOCKWAVE OVERLAY
+        shockwaveOverlay = new ThemeShockwaveOverlayView(this);
+        FrameLayout.LayoutParams sol = new FrameLayout.LayoutParams(
+                FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT);
+        shockwaveOverlay.setLayoutParams(sol);
+        rootFrame.addView(shockwaveOverlay);
+
+        // 🦜 8. SUN CONURE FLIGHT OVERLAY
+        conureOverlay = new SunConureFlightOverlayView(this);
+        FrameLayout.LayoutParams colayout = new FrameLayout.LayoutParams(
+                FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT);
+        conureOverlay.setLayoutParams(colayout);
+        rootFrame.addView(conureOverlay);
+
         tabPagerFrame.post(new Runnable() {
             public void run() {
-                applyTabScrollPosition((float) currentTab);
+                applyTabScrollPosition(0f);
             }
         });
-
-        // Peek Seam Drop Shadow
-        peekShadow = new View(this);
-        peekShadow.setBackground(new GradientDrawable(GradientDrawable.Orientation.RIGHT_LEFT,
-                new int[]{0x99000000, 0x44000000, 0x00000000}));
-        peekShadow.setAlpha(0f);
-        FrameLayout.LayoutParams pslp = new FrameLayout.LayoutParams(dp(30), FrameLayout.LayoutParams.MATCH_PARENT);
-        peekShadow.setLayoutParams(pslp);
-
-        rootFrame.addView(mainSurfaceContainer, new FrameLayout.LayoutParams(
-                FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT));
-        rootFrame.addView(peekShadow);
-
-        // Pulsing Scroll Indicator
-        scrollIndicator = new PulsingScrollIndicator(this);
-        FrameLayout.LayoutParams silp = new FrameLayout.LayoutParams(dp(5), FrameLayout.LayoutParams.MATCH_PARENT);
-        silp.gravity = Gravity.RIGHT;
-        silp.topMargin = dp(140);
-        silp.bottomMargin = dp(20);
-        silp.rightMargin = dp(2);
-        scrollIndicator.setLayoutParams(silp);
-        mainSurfaceContainer.addView(scrollIndicator);
-
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-            ScrollView activeScroll = (scrollPatrol != null ? scrollPatrol : scroll);
-            if (activeScroll != null) {
-                activeScroll.setOnScrollChangeListener(new View.OnScrollChangeListener() {
-                    public void onScrollChange(View v, int scrollX, int scrollY, int oldScrollX, int oldScrollY) {
-                        if (root != null && v != null) {
-                            int maxScroll = root.getHeight() - v.getHeight();
-                            if (maxScroll > 0) {
-                                float pct = Math.max(0f, Math.min(1f, (float) scrollY / maxScroll));
-                                if (scrollIndicator != null) {
-                                    scrollIndicator.setScrollProgress(pct);
-                                }
-                            }
-                        }
-                    }
-                });
-            }
-        }
-
-        // conureOverlay
-        // cnlp
-                
-        
-        
 
         setContentView(rootFrame);
     }
