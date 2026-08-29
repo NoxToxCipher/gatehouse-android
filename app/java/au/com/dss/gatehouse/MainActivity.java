@@ -118,6 +118,8 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
     private View peekShadow;
     private FrameLayout mainSurfaceContainer;
     private boolean isDeputyOpen = false;
+    private FrameLayout fullPageFolioOverlay;
+    private boolean isFullPageFolioOpen = false;
     private LinearLayout rosterDetailContainer;
     private FluidRosterDayScrubberView rosterScrubber;
     private int selectedRosterDay = 5;
@@ -955,6 +957,15 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
 
         screenLayout.addView(tabPagerFrame);
         mainSurfaceContainer.addView(screenLayout);
+
+        // 📖 FULL-PAGE LOGBOOK FOLIO OVERLAY (Flipboard 3D Flip from Bottom)
+        fullPageFolioOverlay = new FrameLayout(this);
+        fullPageFolioOverlay.setVisibility(View.GONE);
+        FrameLayout.LayoutParams folp = new FrameLayout.LayoutParams(
+                FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT);
+        fullPageFolioOverlay.setLayoutParams(folp);
+        mainSurfaceContainer.addView(fullPageFolioOverlay);
+
         rootFrame.addView(mainSurfaceContainer);
 
         // 🌌 7. THEME SHOCKWAVE OVERLAY
@@ -6133,13 +6144,31 @@ private void updateTabSelection(int tabIndex) {
         tonightTitle.setLayoutParams(tlp);
         row.addView(tonightTitle);
 
+        final TextView btnOpenFull = new TextView(this);
+        btnOpenFull.setText("📖 FULL-PAGE LOGBOOK ▴");
+        btnOpenFull.setTextColor(colAccentInk);
+        btnOpenFull.setTextSize(9.5f);
+        btnOpenFull.setTypeface(Typeface.create(Typeface.MONOSPACE, Typeface.BOLD));
+        btnOpenFull.setPadding(dp(8), dp(4), dp(8), dp(4));
+        btnOpenFull.setBackground(pressable(colAccent, dp(6)));
+        btnOpenFull.setOnClickListener(new View.OnClickListener() {
+            public void onClick(View v) {
+                openFullPageFolio(true);
+            }
+        });
+        row.addView(btnOpenFull);
+
         final TextView btnToggleCarbon = new TextView(this);
-        btnToggleCarbon.setText(isCarbonCopyMode ? "🟡 CARBON DUPLICATE (PAGE 28)" : "📄 ORIGINAL SHEET (PAGE 28)");
+        btnToggleCarbon.setText(isCarbonCopyMode ? "🟡 CARBON" : "📄 ORIGINAL");
         btnToggleCarbon.setTextColor(isCarbonCopyMode ? 0xFFFDE047 : colCyan);
         btnToggleCarbon.setTextSize(9.5f);
         btnToggleCarbon.setTypeface(Typeface.create(Typeface.MONOSPACE, Typeface.BOLD));
         btnToggleCarbon.setPadding(dp(8), dp(4), dp(8), dp(4));
         btnToggleCarbon.setBackground(rounded(isCarbonCopyMode ? 0x33FDE047 : 0x2206B6D4, dp(6)));
+        LinearLayout.LayoutParams cblp = new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+        cblp.leftMargin = dp(6);
+        btnToggleCarbon.setLayoutParams(cblp);
         btnToggleCarbon.setOnClickListener(new View.OnClickListener() {
             public void onClick(View v) {
                 hapticHeavyClick();
@@ -6148,6 +6177,345 @@ private void updateTabSelection(int tabIndex) {
         });
         row.addView(btnToggleCarbon);
         return row;
+    }
+
+    public void openFullPageFolio(boolean animate) {
+        if (fullPageFolioOverlay == null) return;
+        isFullPageFolioOpen = true;
+        hapticHeavyClick();
+        renderFullPageFolio();
+        fullPageFolioOverlay.setVisibility(View.VISIBLE);
+
+        if (animate) {
+            float h = fullPageFolioOverlay.getHeight() > 0 ? fullPageFolioOverlay.getHeight() : getResources().getDisplayMetrics().heightPixels;
+            fullPageFolioOverlay.setCameraDistance(dp(16000));
+            fullPageFolioOverlay.setPivotX(fullPageFolioOverlay.getWidth() / 2f);
+            fullPageFolioOverlay.setPivotY(h); // Pivot at the bottom like Flipboard!
+            fullPageFolioOverlay.setRotationX(90f);
+            fullPageFolioOverlay.setAlpha(0.2f);
+            fullPageFolioOverlay.animate()
+                    .rotationX(0f)
+                    .alpha(1f)
+                    .setDuration(360)
+                    .setInterpolator(new DecelerateInterpolator(1.4f))
+                    .start();
+        } else {
+            fullPageFolioOverlay.setRotationX(0f);
+            fullPageFolioOverlay.setAlpha(1f);
+        }
+    }
+
+    public void closeFullPageFolio(boolean animate) {
+        if (fullPageFolioOverlay == null || !isFullPageFolioOpen) return;
+        isFullPageFolioOpen = false;
+        hapticClick();
+
+        if (animate) {
+            float h = fullPageFolioOverlay.getHeight() > 0 ? fullPageFolioOverlay.getHeight() : getResources().getDisplayMetrics().heightPixels;
+            fullPageFolioOverlay.setCameraDistance(dp(16000));
+            fullPageFolioOverlay.setPivotX(fullPageFolioOverlay.getWidth() / 2f);
+            fullPageFolioOverlay.setPivotY(h);
+            fullPageFolioOverlay.animate()
+                    .rotationX(90f)
+                    .alpha(0f)
+                    .setDuration(280)
+                    .setInterpolator(new DecelerateInterpolator(1.4f))
+                    .withEndAction(new Runnable() {
+                        public void run() {
+                            fullPageFolioOverlay.setVisibility(View.GONE);
+                            fullPageFolioOverlay.setRotationX(0f);
+                        }
+                    })
+                    .start();
+        } else {
+            fullPageFolioOverlay.setVisibility(View.GONE);
+        }
+    }
+
+    public void flipFullPageCarbonMode() {
+        if (fullPageFolioOverlay == null || !isFullPageFolioOpen) return;
+        hapticHeavyClick();
+        isCarbonCopyMode = !isCarbonCopyMode;
+
+        float h = fullPageFolioOverlay.getHeight() > 0 ? fullPageFolioOverlay.getHeight() : getResources().getDisplayMetrics().heightPixels;
+        fullPageFolioOverlay.setCameraDistance(dp(16000));
+        fullPageFolioOverlay.setPivotX(fullPageFolioOverlay.getWidth() / 2f);
+        fullPageFolioOverlay.setPivotY(h); // Fold up from bottom
+
+        fullPageFolioOverlay.animate()
+                .rotationX(-90f)
+                .scaleX(0.96f)
+                .scaleY(0.96f)
+                .setDuration(180)
+                .withEndAction(new Runnable() {
+                    public void run() {
+                        renderFullPageFolio();
+                        fullPageFolioOverlay.setRotationX(90f);
+                        fullPageFolioOverlay.animate()
+                                .rotationX(0f)
+                                .scaleX(1f)
+                                .scaleY(1f)
+                                .setDuration(240)
+                                .setInterpolator(new OvershootInterpolator(1.08f))
+                                .start();
+                    }
+                })
+                .start();
+    }
+
+    private void renderFullPageFolio() {
+        if (fullPageFolioOverlay == null) return;
+        fullPageFolioOverlay.removeAllViews();
+
+        boolean isTablet = getResources().getConfiguration().smallestScreenWidthDp >= 600;
+        boolean isLandscape = getResources().getConfiguration().orientation == android.content.res.Configuration.ORIENTATION_LANDSCAPE;
+
+        // Styling based on Authentic Security Log Book Photos
+        int folioBg = isCarbonCopyMode ? 0xFF231D08 : 0xFF0B0F19;
+        int sheetCardBg = isCarbonCopyMode ? 0xFF2A230B : 0xFF111827;
+        int headerModeCol = isCarbonCopyMode ? 0xFFFDE047 : colCyan;
+        int dateCol = isCarbonCopyMode ? 0xFFFEF08A : colPale;
+        int pageNumCol = isCarbonCopyMode ? 0xFFFDE047 : colAccent;
+        int marginLineCol = isCarbonCopyMode ? 0x883B82F6 : 0x4438BDF8;
+
+        LinearLayout rootContainer = new LinearLayout(this);
+        rootContainer.setOrientation(LinearLayout.VERTICAL);
+        rootContainer.setBackgroundColor(folioBg);
+        final int padSide = isTablet && isLandscape ? dp(24) : dp(14);
+        final int padTop = isTablet && isLandscape ? dp(16) : dp(28);
+        rootContainer.setPadding(padSide, padTop, padSide, dp(14));
+
+        // 1. Top Control Bar (Back to Patrol, Mode Toggle, Share Report)
+        LinearLayout topBar = new LinearLayout(this);
+        topBar.setOrientation(LinearLayout.HORIZONTAL);
+        topBar.setGravity(Gravity.CENTER_VERTICAL);
+        topBar.setPadding(0, 0, 0, dp(10));
+
+        TextView btnBack = new TextView(this);
+        btnBack.setText("← 🛡️ PATROL DASHBOARD");
+        btnBack.setTextColor(colPale);
+        btnBack.setTextSize(11f);
+        btnBack.setTypeface(Typeface.DEFAULT_BOLD);
+        btnBack.setPadding(dp(10), dp(6), dp(10), dp(6));
+        btnBack.setBackground(rounded(colPanel2, dp(8)));
+        btnBack.setOnClickListener(new View.OnClickListener() {
+            public void onClick(View v) {
+                closeFullPageFolio(true);
+            }
+        });
+        topBar.addView(btnBack);
+
+        View spacer = new View(this);
+        LinearLayout.LayoutParams splp = new LinearLayout.LayoutParams(0, 0, 1f);
+        spacer.setLayoutParams(splp);
+        topBar.addView(spacer);
+
+        final TextView btnToggle = new TextView(this);
+        btnToggle.setText(isCarbonCopyMode ? "🟡 DUPLICATE CARBON" : "📄 ORIGINAL SHEET");
+        btnToggle.setTextColor(isCarbonCopyMode ? 0xFFFDE047 : colCyan);
+        btnToggle.setTextSize(10.5f);
+        btnToggle.setTypeface(Typeface.create(Typeface.MONOSPACE, Typeface.BOLD));
+        btnToggle.setPadding(dp(10), dp(6), dp(10), dp(6));
+        btnToggle.setBackground(rounded(isCarbonCopyMode ? 0x33FDE047 : 0x2206B6D4, dp(8)));
+        btnToggle.setOnClickListener(new View.OnClickListener() {
+            public void onClick(View v) {
+                flipFullPageCarbonMode();
+            }
+        });
+        topBar.addView(btnToggle);
+
+        TextView btnShare = new TextView(this);
+        btnShare.setText("📤 SHARE");
+        btnShare.setTextColor(colAccentInk);
+        btnShare.setTextSize(11f);
+        btnShare.setTypeface(Typeface.DEFAULT_BOLD);
+        btnShare.setPadding(dp(10), dp(6), dp(10), dp(6));
+        btnShare.setBackground(pressable(colAccent, dp(8)));
+        LinearLayout.LayoutParams shlp = new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+        shlp.leftMargin = dp(8);
+        btnShare.setLayoutParams(shlp);
+        btnShare.setOnClickListener(new View.OnClickListener() {
+            public void onClick(View v) {
+                hapticHeavyClick();
+                shareHandoverReport();
+            }
+        });
+        topBar.addView(btnShare);
+        rootContainer.addView(topBar);
+
+        // 2. Full Page Folio Sheet Card (Entire page are the records for the shift!)
+        LinearLayout sheetCard = new LinearLayout(this);
+        sheetCard.setOrientation(LinearLayout.VERTICAL);
+        sheetCard.setBackground(rounded(sheetCardBg, dp(20)));
+        sheetCard.setPadding(dp(16), dp(14), dp(16), dp(14));
+        LinearLayout.LayoutParams sclp = new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT, 0, 1f);
+        sheetCard.setLayoutParams(sclp);
+
+        // Notebook Sheet Header (Left: Original/Duplicate, Center: Date, Right: Page 28)
+        LinearLayout notebookHeader = new LinearLayout(this);
+        notebookHeader.setOrientation(LinearLayout.HORIZONTAL);
+        notebookHeader.setGravity(Gravity.CENTER_VERTICAL);
+        notebookHeader.setPadding(dp(4), dp(2), dp(4), dp(8));
+
+        TextView tvMode = new TextView(this);
+        tvMode.setText(isCarbonCopyMode ? "Duplicate" : "Original");
+        tvMode.setTextColor(headerModeCol);
+        tvMode.setTextSize(13f);
+        tvMode.setTypeface(Typeface.create(Typeface.DEFAULT, Typeface.BOLD_ITALIC));
+        LinearLayout.LayoutParams tml = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1.2f);
+        tvMode.setLayoutParams(tml);
+        notebookHeader.addView(tvMode);
+
+        TextView tvDate = new TextView(this);
+        tvDate.setText(getFormattedShiftDateHeader());
+        tvDate.setTextColor(dateCol);
+        tvDate.setTextSize(12.5f);
+        tvDate.setTypeface(Typeface.create(Typeface.MONOSPACE, Typeface.BOLD));
+        tvDate.setGravity(Gravity.CENTER);
+        LinearLayout.LayoutParams tdl = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 3.2f);
+        tvDate.setLayoutParams(tdl);
+        notebookHeader.addView(tvDate);
+
+        TextView tvPageNum = new TextView(this);
+        tvPageNum.setText("28");
+        tvPageNum.setTextColor(pageNumCol);
+        tvPageNum.setTextSize(14f);
+        tvPageNum.setTypeface(Typeface.create(Typeface.MONOSPACE, Typeface.BOLD));
+        tvPageNum.setGravity(Gravity.END);
+        LinearLayout.LayoutParams tpl = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 0.8f);
+        tvPageNum.setLayoutParams(tpl);
+        notebookHeader.addView(tvPageNum);
+
+        sheetCard.addView(notebookHeader);
+
+        // Top Double Rule Line
+        View topRule = new View(this);
+        topRule.setBackgroundColor(marginLineCol);
+        LinearLayout.LayoutParams trl = new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT, dp(2));
+        trl.bottomMargin = dp(4);
+        topRule.setLayoutParams(trl);
+        sheetCard.addView(topRule);
+
+        // Scrollable Ruled Grid filling the entire remaining height
+        ScrollView sheetScroll = new ScrollView(this);
+        sheetScroll.setVerticalScrollBarEnabled(false);
+        LinearLayout.LayoutParams sslp = new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT, 0, 1f);
+        sheetScroll.setLayoutParams(sslp);
+
+        LinearLayout gridContent = new LinearLayout(this);
+        gridContent.setOrientation(LinearLayout.VERTICAL);
+
+        int shown = 0;
+        for (int i = 1; ; i++) {
+            String line = Core.entryLine(i);
+            if (line.length() == 0) break;
+            gridContent.addView(entryRow(line, i));
+            shown++;
+        }
+
+        for (int i = 0; i < pending.size(); i++) {
+            gridContent.addView(pendingRow(pending.get(i)));
+        }
+        shown += pending.size();
+
+        // Fill remaining page lines down to bottom (minimum 18 lines for full sheet)
+        int minFullLines = 18;
+        if (shown < minFullLines) {
+            for (int k = shown + 1; k <= minFullLines; k++) {
+                gridContent.addView(blankRuledLine(k));
+            }
+        }
+
+        sheetScroll.addView(gridContent);
+        sheetCard.addView(sheetScroll);
+
+        // Bottom Seal & SPARK Attestation Line
+        LinearLayout folioFoot = new LinearLayout(this);
+        folioFoot.setOrientation(LinearLayout.HORIZONTAL);
+        folioFoot.setGravity(Gravity.CENTER_VERTICAL);
+        folioFoot.setPadding(dp(4), dp(8), dp(4), dp(4));
+
+        TextView footLeft = new TextView(this);
+        footLeft.setText("DSS-LOGBOOK-41207 · SPARK SHA-256");
+        footLeft.setTextColor(isCarbonCopyMode ? 0x99FDE047 : colQuiet);
+        footLeft.setTextSize(9f);
+        footLeft.setTypeface(Typeface.MONOSPACE);
+        LinearLayout.LayoutParams fll = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
+        footLeft.setLayoutParams(fll);
+        folioFoot.addView(footLeft);
+
+        TextView footRight = new TextView(this);
+        footRight.setText("OFFICER L. DOHERTY #41207 ✓");
+        footRight.setTextColor(isCarbonCopyMode ? 0xFFFEF08A : colPale);
+        footRight.setTextSize(9f);
+        footRight.setTypeface(Typeface.MONOSPACE);
+        folioFoot.addView(footRight);
+        sheetCard.addView(folioFoot);
+
+        // Bottom Flipboard 3D Flip Bar
+        LinearLayout flipHandle = new LinearLayout(this);
+        flipHandle.setOrientation(LinearLayout.HORIZONTAL);
+        flipHandle.setGravity(Gravity.CENTER);
+        flipHandle.setPadding(dp(12), dp(8), dp(12), dp(8));
+        flipHandle.setBackground(rounded(isCarbonCopyMode ? 0x33FDE047 : 0x2206B6D4, dp(10)));
+        flipHandle.setOnClickListener(new View.OnClickListener() {
+            public void onClick(View v) {
+                flipFullPageCarbonMode();
+            }
+        });
+
+        TextView fhIcon = new TextView(this);
+        fhIcon.setText(isCarbonCopyMode ? "📄" : "🟡");
+        fhIcon.setTextSize(14f);
+        fhIcon.setPadding(0, 0, dp(6), 0);
+        flipHandle.addView(fhIcon);
+
+        TextView fhText = new TextView(this);
+        fhText.setText(isCarbonCopyMode
+                ? "SWIPE UP OR TAP TO FLIP TO ORIGINAL TOP SHEET ▴"
+                : "SWIPE UP OR TAP TO FLIP TO CANARY CARBON DUPLICATE ▴");
+        fhText.setTextColor(isCarbonCopyMode ? 0xFFFEF08A : colCyan);
+        fhText.setTextSize(10.5f);
+        fhText.setTypeface(Typeface.create(Typeface.MONOSPACE, Typeface.BOLD));
+        flipHandle.addView(fhText);
+
+        sheetCard.addView(flipHandle);
+        rootContainer.addView(sheetCard);
+
+        // Touch gesture: swiping up flips page; swiping down at the top pulls back to patrol
+        rootContainer.setOnTouchListener(new View.OnTouchListener() {
+            private float downY = 0f;
+            private boolean hasFlipped = false;
+
+            @Override
+            public boolean onTouch(View v, MotionEvent event) {
+                switch (event.getActionMasked()) {
+                    case MotionEvent.ACTION_DOWN:
+                        downY = event.getY();
+                        hasFlipped = false;
+                        break;
+                    case MotionEvent.ACTION_MOVE:
+                        float dy = event.getY() - downY;
+                        if (dy < -dp(50) && !hasFlipped) {
+                            hasFlipped = true;
+                            flipFullPageCarbonMode();
+                            return true;
+                        } else if (dy > dp(70) && !hasFlipped) {
+                            hasFlipped = true;
+                            closeFullPageFolio(true);
+                            return true;
+                        }
+                        break;
+                }
+                return false;
+            }
+        });
+
+        fullPageFolioOverlay.addView(rootContainer);
     }
 
     private void flipLedgerPage() {
@@ -6275,7 +6643,7 @@ private void updateTabSelection(int tabIndex) {
         botRule.setLayoutParams(brl);
         ledgerCard.addView(botRule);
 
-        // Interactive Page Flip / Carbon Turning Bar
+        // Interactive Flipboard 3D Open & Carbon Turning Bar
         LinearLayout flipBar = new LinearLayout(this);
         flipBar.setOrientation(LinearLayout.HORIZONTAL);
         flipBar.setGravity(Gravity.CENTER_VERTICAL);
@@ -6283,21 +6651,18 @@ private void updateTabSelection(int tabIndex) {
         flipBar.setBackground(rounded(isCarbonCopyMode ? 0x33FDE047 : 0x2238BDF8, dp(8)));
         flipBar.setOnClickListener(new View.OnClickListener() {
             public void onClick(View v) {
-                hapticHeavyClick();
-                flipLedgerPage();
+                openFullPageFolio(true);
             }
         });
 
         TextView flipIcon = new TextView(this);
-        flipIcon.setText(isCarbonCopyMode ? "📄" : "🟡");
+        flipIcon.setText("📖");
         flipIcon.setTextSize(13f);
         flipIcon.setPadding(0, 0, dp(6), 0);
         flipBar.addView(flipIcon);
 
         TextView flipText = new TextView(this);
-        flipText.setText(isCarbonCopyMode
-                ? "FLIP BACK TO ORIGINAL (TOP SHEET) ▴"
-                : "FLIP TO CANARY CARBON COPY (DUPLICATE) ▾");
+        flipText.setText("FLIP UP TO FULL-PAGE SHIFT LOGBOOK ▴");
         flipText.setTextColor(isCarbonCopyMode ? 0xFFFEF08A : colCyan);
         flipText.setTextSize(10f);
         flipText.setTypeface(Typeface.create(Typeface.MONOSPACE, Typeface.BOLD));
@@ -6314,7 +6679,7 @@ private void updateTabSelection(int tabIndex) {
 
         ledgerCard.addView(flipBar);
 
-        // Touch listener for swipe down/up to flip page
+        // Touch listener for swipe down/up to flip page into full-screen logbook
         ledgerCard.setOnTouchListener(new View.OnTouchListener() {
             private float downY = 0f;
             private boolean isFlipping = false;
@@ -6328,10 +6693,9 @@ private void updateTabSelection(int tabIndex) {
                         break;
                     case MotionEvent.ACTION_MOVE:
                         float dy = event.getY() - downY;
-                        if (Math.abs(dy) > dp(45) && !isFlipping) {
+                        if (dy < -dp(45) && !isFlipping) {
                             isFlipping = true;
-                            hapticHeavyClick();
-                            flipLedgerPage();
+                            openFullPageFolio(true);
                             return true;
                         }
                         break;
@@ -7632,6 +7996,19 @@ private void updateTabSelection(int tabIndex) {
                 peekShadow.setTranslationX(-dp(30));
             }
         }
+    }
+
+    @Override
+    public void onBackPressed() {
+        if (isFullPageFolioOpen) {
+            closeFullPageFolio(true);
+            return;
+        }
+        if (isDeputyOpen) {
+            closeDeputy(true);
+            return;
+        }
+        super.onBackPressed();
     }
 
     private void applyPeek(float dx) {
