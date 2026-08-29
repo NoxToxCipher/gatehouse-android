@@ -50,9 +50,20 @@ JNIEXPORT jint JNICALL NS(siteAddPoint)(JNIEnv *e, jclass c,
   (void) c;
   const char *l = (*e)->GetStringUTFChars(e, label, 0);
   const char *u = (*e)->GetStringUTFChars(e, uid, 0);
-  int r = gatehouse_site_add_point(l, (int) strlen(l), u, (int) strlen(u));
+  int r = gatehouse_site_add_point(l, (int) strlen(l), u, (int) strlen(u), "", 0);
   (*e)->ReleaseStringUTFChars(e, label, l);
   (*e)->ReleaseStringUTFChars(e, uid, u);
+  return r;
+}
+
+JNIEXPORT jint JNICALL NS(siteAddOption)(JNIEnv *e, jclass c,
+                                        jstring label, jstring text) {
+  (void) c;
+  const char *l = (*e)->GetStringUTFChars(e, label, 0);
+  const char *t = (*e)->GetStringUTFChars(e, text, 0);
+  int r = gatehouse_site_add_option(l, (int) strlen(l), t, (int) strlen(t));
+  (*e)->ReleaseStringUTFChars(e, label, l);
+  (*e)->ReleaseStringUTFChars(e, text, t);
   return r;
 }
 

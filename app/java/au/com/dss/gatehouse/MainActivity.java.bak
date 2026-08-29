@@ -2,12 +2,20 @@ package au.com.dss.gatehouse;
 
 import android.Manifest;
 import android.animation.ValueAnimator;
-import android.animation.Animator;
-import android.animation.AnimatorListenerAdapter;
-import android.widget.Toast;
-
 import android.app.Activity;
 import android.app.Dialog;
+import android.app.Notification;
+import android.app.NotificationChannel;
+import android.app.NotificationManager;
+import android.app.PendingIntent;
+import android.appwidget.AppWidgetManager;
+import android.content.ComponentName;
+import android.os.Build;
+import android.content.pm.ShortcutInfo;
+import android.content.pm.ShortcutManager;
+import android.graphics.drawable.Icon;
+import java.util.Arrays;
+
 import android.content.BroadcastReceiver;
 import android.content.ClipData;
 import android.content.ClipboardManager;
@@ -44,6 +52,10 @@ import android.media.MediaRecorder;
 import android.net.Uri;
 import android.os.BatteryManager;
 import android.os.Build;
+import android.content.pm.ShortcutInfo;
+import android.content.pm.ShortcutManager;
+import android.graphics.drawable.Icon;
+import java.util.Arrays;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.HandlerThread;
@@ -59,8 +71,6 @@ import android.view.MotionEvent;
 import android.view.Surface;
 import android.view.TextureView;
 import android.view.View;
-import android.view.VelocityTracker;
-import android.widget.Toast;
 import android.view.ViewGroup;
 import android.view.Window;
 import android.view.WindowInsets;
@@ -92,30 +102,6 @@ import java.util.TimeZone;
  * Configured specifically for Hume Doors & Timber, Kingston.
  */
 public class MainActivity extends Activity implements SensorEventListener, LocationListener {
-    // 📱 DEPUTY WORKPLACE ADD-IN & PEEK & FLOW NAVIGATION
-    private FrameLayout deputyContainer;
-    private View deputyScrim;
-    private View peekShadow;
-    private FrameLayout mainSurfaceContainer;
-    private boolean isDeputyOpen = false;
-    private LinearLayout rosterDetailContainer;
-    private FluidRosterDayScrubberView rosterScrubber;
-    private int selectedRosterDay = 5;
-    private LinearLayout handbookContent;
-
-    private boolean isPeekDragging = false;
-    private boolean peekBuzzed = false;
-    private float peekDownX = 0f;
-    private float peekDownY = 0f;
-    private VelocityTracker peekVelocityTracker;
-
-    // 🎨 FLUID THEME & TAB BARS
-    private FluidAnimatedThemeBarView animatedThemeBar;
-    private FluidAnimatedTabBarView animatedTabBar;
-    private ThemeShockwaveOverlayView shockwaveOverlay;
-    private ValueAnimator themeMorphAnimator;
-    private BroadcastReceiver widgetReceiver;
-
 
     public static final int THEME_GOLD = 0;
     public static final int THEME_RED = 1;
@@ -124,18 +110,6 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
 
     private int activeTheme = THEME_GOLD;
     private int currentTab = 0;
-    // 📱 SYNCHRONIZED 4-TAB HORIZONTAL PAGER
-    private FrameLayout tabPagerFrame;
-    private ScrollView scrollPatrol;
-    private ScrollView scrollContacts;
-    private ScrollView scrollHandbook;
-    private ScrollView scrollTools;
-    private float currentTabFloat = 0f;
-    private ValueAnimator tabSlideAnimator;
-    private float pageSwipeDownX = 0f;
-    private float pageSwipeDownY = 0f;
-    private boolean isPageSwiping = false;
-
 
     private int colBg = 0xFF000000;
     private int colPanel = 0xFF080C14;
@@ -187,7 +161,7 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
 
     private static final String[] PUMP_OPTIONS = {
         "✓ Pressure Normal (175 PSI In Spec)",
-        "⚠️ Low Pressure Warning (< 1,000 PSI)",
+        "⚠️ Low Pressure Warning (< 145 PSI)",
         "⚠️ Jockey Pump Cycling Excessively",
         "⚠️ Diesel Booster Fuel Tank Below 75%",
         "⚠️ Minor Valve / Pipe Fitting Weep Noted"
@@ -278,6 +252,8 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
     private boolean hasAccel = false;
     private boolean hasMag = false;
     private float currentAzimuth = 0f;
+    private float smoothAzimuth = 0f;
+    private float displayedCompassAzimuth = 0f;
 
     // 🔦 Robust Double-Chop Shake Detector
     private float[] lastGravity = new float[3];
@@ -344,9 +320,170 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
         return (int) ((ms + TimeZone.getDefault().getOffset(ms)) / 60000L);
     }
 
-    @Override
+    // =========================================================================
+    // 🔔 LIVE SHIFT NOTIFICATION & WIDGET ENGINE (NOTHING OS / GLANCE)
+    // =========================================================================
+
+    private static final String NOTIF_CHANNEL_ID = "gatehouse_shift_live";
+    private static final int NOTIF_ID = 1001;
+    private BroadcastReceiver widgetReceiver;
+
+    
+    private void publishAppShortcuts() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N_MR1) {
+            try {
+                ShortcutManager sm = getSystemService(ShortcutManager.class);
+                if (sm != null) {
+                    Intent incIntent = new Intent(this, MainActivity.class);
+                    incIntent.setAction(Intent.ACTION_VIEW);
+                    incIntent.putExtra("ACTION", "INCIDENT");
+
+                    ShortcutInfo sIncident = new ShortcutInfo.Builder(this, "sc_incident")
+                            .setShortLabel("Incident")
+                            .setLongLabel("🚨 Log Security Incident")
+                            .setIcon(Icon.createWithResource(this, android.R.drawable.ic_dialog_alert))
+                            .setIntent(incIntent)
+                            .setRank(1)
+                            .build();
+
+                    Intent noteIntent = new Intent(this, MainActivity.class);
+                    noteIntent.setAction(Intent.ACTION_VIEW);
+                    noteIntent.putExtra("ACTION", "NOTE");
+
+                    ShortcutInfo sNote = new ShortcutInfo.Builder(this, "sc_note")
+                            .setShortLabel("Shift Note")
+                            .setLongLabel("📝 Log Shift Note")
+                            .setIcon(Icon.createWithResource(this, android.R.drawable.ic_menu_edit))
+                            .setIntent(noteIntent)
+                            .setRank(2)
+                            .build();
+
+                    Intent mainIntent = new Intent(this, MainActivity.class);
+                    mainIntent.setAction(Intent.ACTION_VIEW);
+
+                    ShortcutInfo sFire = new ShortcutInfo.Builder(this, "sc_fire")
+                            .setShortLabel("1,200 PSI Fire")
+                            .setLongLabel("🚰 Check Fire Gauges (1,200 PSI)")
+                            .setIcon(Icon.createWithResource(this, android.R.drawable.ic_dialog_info))
+                            .setIntent(mainIntent)
+                            .setRank(3)
+                            .build();
+
+                    sm.setDynamicShortcuts(Arrays.asList(sIncident, sNote, sFire));
+                }
+            } catch (Exception e) {}
+        }
+    }
+
+    private void initNotificationChannel() {
+        try {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                NotificationChannel channel = new NotificationChannel(
+                        NOTIF_CHANNEL_ID,
+                        "Gatehouse Live Shift Telemetry",
+                        NotificationManager.IMPORTANCE_LOW
+                );
+                channel.setDescription("Real-time patrol due countdown, 1,200 PSI fire telemetry, and quick actions");
+                channel.setShowBadge(true);
+                NotificationManager nm = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
+                if (nm != null) {
+                    nm.createNotificationChannel(channel);
+                }
+            }
+
+            if (Build.VERSION.SDK_INT >= 33) {
+                if (checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
+                    requestPermissions(new String[]{Manifest.permission.POST_NOTIFICATIONS}, 109);
+                }
+            }
+
+            // Broadcast receiver for widget/notif actions with Android 14+ flags
+            if (widgetReceiver == null) {
+                widgetReceiver = new BroadcastReceiver() {
+                    @Override
+                    public void onReceive(Context context, Intent intent) {
+                        try {
+                            if (intent != null && "au.com.dss.gatehouse.ACTION_TOGGLE_TORCH".equals(intent.getAction())) {
+                                hapticDoublePulse();
+                                toggleHardwareTorch();
+                                updateShiftNotification();
+                            }
+                        } catch (Throwable t) {}
+                    }
+                };
+                IntentFilter filter = new IntentFilter("au.com.dss.gatehouse.ACTION_TOGGLE_TORCH");
+                if (Build.VERSION.SDK_INT >= 33) {
+                    registerReceiver(widgetReceiver, filter, Context.RECEIVER_NOT_EXPORTED);
+                } else {
+                    registerReceiver(widgetReceiver, filter);
+                }
+            }
+        } catch (Throwable t) {}
+    }
+
+    public void updateShiftNotification() {
+        try {
+            NotificationManager nm = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
+            if (nm == null) return;
+
+            Intent openIntent = new Intent(this, MainActivity.class);
+            openIntent.setFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP | Intent.FLAG_ACTIVITY_CLEAR_TOP);
+            PendingIntent pOpen = PendingIntent.getActivity(this, 0, openIntent, PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
+
+            Intent torchIntent = new Intent("au.com.dss.gatehouse.ACTION_TOGGLE_TORCH");
+            torchIntent.setPackage(getPackageName());
+            PendingIntent pTorch = PendingIntent.getBroadcast(this, 1, torchIntent, PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
+
+            Intent incidentIntent = new Intent(this, MainActivity.class);
+            incidentIntent.putExtra("ACTION", "INCIDENT");
+            PendingIntent pIncident = PendingIntent.getActivity(this, 2, incidentIntent, PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
+
+            Intent noteIntent = new Intent(this, MainActivity.class);
+            noteIntent.putExtra("ACTION", "NOTE");
+            PendingIntent pNote = PendingIntent.getActivity(this, 3, noteIntent, PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
+
+            Notification.Builder nb;
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                nb = new Notification.Builder(this, NOTIF_CHANNEL_ID);
+            } else {
+                nb = new Notification.Builder(this);
+            }
+
+            String nextText = "Next Patrol: 00:00 (External)";
+            String psiText = "1,200 PSI Optimal";
+            String title = "🛡️ Gatehouse: Post 01 Active";
+            String body = nextText + " · " + psiText + " · Shift Normal";
+
+            nb.setContentTitle(title)
+              .setContentText(body)
+              .setSmallIcon(android.R.drawable.stat_notify_sync)
+              .setContentIntent(pOpen)
+              .setOngoing(true)
+              .setAutoCancel(false)
+              .setShowWhen(true)
+              .addAction(0, isHardwareTorchOn ? "🔦 Torch OFF" : "🔦 Torch ON", pTorch)
+              .addAction(0, "🚨 Incident", pIncident)
+              .addAction(0, "📝 Note", pNote);
+
+            nm.notify(NOTIF_ID, nb.build());
+
+            // Update any home screen widgets
+            AppWidgetManager awm = AppWidgetManager.getInstance(this);
+            ComponentName cn = new ComponentName(this, GatehouseWidgetProvider.class);
+            int[] ids = awm.getAppWidgetIds(cn);
+            if (ids != null && ids.length > 0) {
+                for (int id : ids) {
+                    GatehouseWidgetProvider.updateAppWidget(this, awm, id);
+                }
+            }
+        } catch (Throwable t) {}
+    }
+    
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        initNotificationChannel();
+        publishAppShortcuts();
+        handleIntentAction(getIntent());
         lastActivityTimeMs = SystemClock.elapsedRealtime();
         vibrator = (Vibrator) getSystemService(Context.VIBRATOR_SERVICE);
 
@@ -573,187 +710,32 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
     private void buildUi() {
         applyThemeTokens();
 
-        rootFrame = new FrameLayout(this) {
-            @Override
-            public boolean onInterceptTouchEvent(MotionEvent ev) {
-                switch (ev.getActionMasked()) {
-                    case MotionEvent.ACTION_DOWN:
-                        peekDownX = ev.getX();
-                        peekDownY = ev.getY();
-                        isPeekDragging = false;
-                        peekBuzzed = false;
-                        if (peekVelocityTracker != null) {
-                            peekVelocityTracker.recycle();
-                            peekVelocityTracker = null;
-                        }
-                        peekVelocityTracker = VelocityTracker.obtain();
-                        peekVelocityTracker.addMovement(ev);
-                        break;
-                    case MotionEvent.ACTION_MOVE:
-                        float dx = ev.getX() - peekDownX;
-                        float dy = Math.abs(ev.getY() - peekDownY);
-                        // Pull right from left edge (first 100dp) to peek Deputy, or pull left to close Deputy
-                        if (!isDeputyOpen && peekDownX < dp(100) && dx > dp(18) && dx > dy * 1.2f) {
-                            isPeekDragging = true;
-                            if (peekVelocityTracker != null) peekVelocityTracker.addMovement(ev);
-                            return true;
-                        } else if (isDeputyOpen && dx < -dp(18) && Math.abs(dx) > dy * 1.2f) {
-                            isPeekDragging = true;
-                            if (peekVelocityTracker != null) peekVelocityTracker.addMovement(ev);
-                            return true;
-                        }
-                        break;
-                }
-                return super.onInterceptTouchEvent(ev);
-            }
-
-            @Override
-            public boolean onTouchEvent(MotionEvent ev) {
-                if (peekVelocityTracker != null) peekVelocityTracker.addMovement(ev);
-                switch (ev.getActionMasked()) {
-                    case MotionEvent.ACTION_DOWN:
-                        return true;
-                    case MotionEvent.ACTION_MOVE:
-                        float totalDx = ev.getX() - peekDownX;
-                        if (isPeekDragging) {
-                            if (isDeputyOpen) {
-                                applyPeek(getWidth() + totalDx);
-                            } else {
-                                applyPeek(totalDx);
-                            }
-                            return true;
-                        }
-                        break;
-                    case MotionEvent.ACTION_UP:
-                    case MotionEvent.ACTION_CANCEL:
-                        if (isPeekDragging) {
-                            isPeekDragging = false;
-                            float vx = 0f;
-                            if (peekVelocityTracker != null) {
-                                peekVelocityTracker.computeCurrentVelocity(1000);
-                                vx = peekVelocityTracker.getXVelocity();
-                            }
-                            float finalDx = ev.getX() - peekDownX;
-                            if (isDeputyOpen) {
-                                finishPeek(getWidth() + finalDx, vx);
-                            } else {
-                                finishPeek(finalDx, vx);
-                            }
-                            return true;
-                        }
-                        break;
-                }
-                return super.onTouchEvent(ev);
-            }
-        };
-        rootFrame.setBackgroundColor(0xFF080C14);
-
-        // 1. UNDERNEATH LAYER: Deputy Workplace Deck
-        deputyContainer = new FrameLayout(this);
-        deputyContainer.addView(buildDeputyView(), new FrameLayout.LayoutParams(
-                FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT));
-        deputyContainer.setScaleX(0.94f);
-        deputyContainer.setScaleY(0.94f);
-        deputyContainer.setTranslationX(-dp(30));
-        rootFrame.addView(deputyContainer);
-
-        // 2. SCRIM LAYER between Deputy and Gatehouse surface
-        deputyScrim = new View(this);
-        deputyScrim.setBackgroundColor(0xFF000000);
-        deputyScrim.setAlpha(0.65f);
-        rootFrame.addView(deputyScrim, new FrameLayout.LayoutParams(
-                FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT));
-
-        // 3. TOP SLIDING LAYER: Main Gatehouse Surface Container
-        mainSurfaceContainer = new FrameLayout(this);
-        mainSurfaceContainer.setBackgroundColor(colBg);
-
-        LinearLayout screenLayout = new LinearLayout(this);
-        screenLayout.setOrientation(LinearLayout.VERTICAL);
-        screenLayout.setBackgroundColor(colBg);
-        screenLayout.setFitsSystemWindows(true);
-        screenLayout.setPadding(dp(16), dp(12), dp(16), 0);
-
-        // Sticky Top Dock
-        screenLayout.addView(modeBar());
-        screenLayout.addView(buildDiagnosticsStrip());
-        screenLayout.addView(buildTabBar());
-
-        // 4. SYNCHRONIZED 4-TAB HORIZONTAL PAGER CONTAINER
-        tabPagerFrame = new FrameLayout(this) {
-            @Override
-            public boolean onInterceptTouchEvent(MotionEvent ev) {
-                switch (ev.getActionMasked()) {
-                    case MotionEvent.ACTION_DOWN:
-                        pageSwipeDownX = ev.getX();
-                        pageSwipeDownY = ev.getY();
-                        isPageSwiping = false;
-                        break;
-                    case MotionEvent.ACTION_MOVE:
-                        float dx = ev.getX() - pageSwipeDownX;
-                        float dy = Math.abs(ev.getY() - pageSwipeDownY);
-                        // Horizontal swipe between tabs
-                        if (Math.abs(dx) > dp(20) && Math.abs(dx) > dy * 1.3f) {
-                            isPageSwiping = true;
-                            getParent().requestDisallowInterceptTouchEvent(true);
-                            return true;
-                        }
-                        break;
-                }
-                return super.onInterceptTouchEvent(ev);
-            }
-
-            @Override
-            public boolean onTouchEvent(MotionEvent ev) {
-                int w = getWidth();
-                if (w <= 0) return super.onTouchEvent(ev);
-                switch (ev.getActionMasked()) {
-                    case MotionEvent.ACTION_DOWN:
-                        return true;
-                    case MotionEvent.ACTION_MOVE:
-                        if (isPageSwiping) {
-                            float totalDx = ev.getX() - pageSwipeDownX;
-                            float deltaPages = -totalDx / w;
-                            applyTabScrollPosition(currentTab + deltaPages);
-                            return true;
-                        }
-                        break;
-                    case MotionEvent.ACTION_UP:
-                    case MotionEvent.ACTION_CANCEL:
-                        if (isPageSwiping) {
-                            isPageSwiping = false;
-                            getParent().requestDisallowInterceptTouchEvent(false);
-                            float totalDx = ev.getX() - pageSwipeDownX;
-                            float deltaPages = -totalDx / w;
-                            float finalPos = currentTab + deltaPages;
-                            int targetTab = Math.max(0, Math.min(3, Math.round(finalPos)));
-                            animateTabToPosition(targetTab);
-                            return true;
-                        }
-                        break;
-                }
-                return super.onTouchEvent(ev);
-            }
-        };
-        LinearLayout.LayoutParams tplp = new LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT, 0, 1f);
-        tabPagerFrame.setLayoutParams(tplp);
-
-        // --- PAGE 1: PATROL ---
-        scrollPatrol = new ScrollView(this);
-        scrollPatrol.setBackgroundColor(colBg);
-        scrollPatrol.setVerticalScrollBarEnabled(false);
-        scrollPatrol.setLayoutParams(new FrameLayout.LayoutParams(
-                FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT));
+        rootFrame = new FrameLayout(this);
+        rootFrame.setBackgroundColor(colBg);
 
         root = new LinearLayout(this);
         root.setOrientation(LinearLayout.VERTICAL);
-        root.setPadding(0, dp(4), 0, dp(28));
+        root.setBackgroundColor(colBg);
+        root.setPadding(dp(16), dp(16), dp(16), dp(32));
 
+        // 1. 4-Theme Switcher Bar
+        root.addView(modeBar());
+
+        // 2. Real-Time Ambient Weather & Power Bar
+        root.addView(buildDiagnosticsStrip());
+
+        // 3. Site Header Card
+        root.addView(headerCard());
+
+        // 4. Chronograph Widget
+        root.addView(buildChronographSection());
+
+        // 5. 3-Tab Bar
+        root.addView(buildTabBar());
+
+        // 6. TAB 1: Patrol View
         patrolContent = new LinearLayout(this);
         patrolContent.setOrientation(LinearLayout.VERTICAL);
-        patrolContent.addView(headerCard());
-        patrolContent.addView(buildChronographSection());
 
         chainBannerView = new AnimatedChainBannerView(this);
         LinearLayout.LayoutParams cbl = new LinearLayout.LayoutParams(
@@ -892,91 +874,41 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
         });
         patrolContent.addView(btnShareReport);
         root.addView(patrolContent);
-        scrollPatrol.addView(root);
-        tabPagerFrame.addView(scrollPatrol);
 
-        // --- PAGE 2: CONTACTS ---
-        scrollContacts = new ScrollView(this);
-        scrollContacts.setBackgroundColor(colBg);
-        scrollContacts.setVerticalScrollBarEnabled(false);
-        scrollContacts.setLayoutParams(new FrameLayout.LayoutParams(
-                FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT));
+        // 7. TAB 2: Contacts View
         contactsContent = buildContactsTab();
-        scrollContacts.addView(contactsContent);
-        tabPagerFrame.addView(scrollContacts);
+        root.addView(contactsContent);
 
-        // --- PAGE 3: HANDBOOK ---
-        scrollHandbook = new ScrollView(this);
-        scrollHandbook.setBackgroundColor(colBg);
-        scrollHandbook.setVerticalScrollBarEnabled(false);
-        scrollHandbook.setLayoutParams(new FrameLayout.LayoutParams(
-                FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT));
-        scrollHandbook.addView(buildRosterView());
-        tabPagerFrame.addView(scrollHandbook);
-
-        // --- PAGE 4: TOOLS ---
-        scrollTools = new ScrollView(this);
-        scrollTools.setBackgroundColor(colBg);
-        scrollTools.setVerticalScrollBarEnabled(false);
-        scrollTools.setLayoutParams(new FrameLayout.LayoutParams(
-                FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT));
+        // 8. TAB 3: Tools View
         toolsContent = buildToolsTab();
-        scrollTools.addView(toolsContent);
-        tabPagerFrame.addView(scrollTools);
+        root.addView(toolsContent);
 
-        screenLayout.addView(tabPagerFrame);
-        mainSurfaceContainer.addView(screenLayout);
+        updateTabSelection(currentTab);
 
-        // Post-layout initialization for 1:1 page alignment
-        tabPagerFrame.post(new Runnable() {
-            public void run() {
-                applyTabScrollPosition((float) currentTab);
-            }
-        });
+        scroll = new ScrollView(this);
+        scroll.setBackgroundColor(colBg);
+        scroll.setFitsSystemWindows(true);
+        scroll.setVerticalScrollBarEnabled(false);
+        scroll.addView(root);
 
-        // Peek Seam Drop Shadow
-        peekShadow = new View(this);
-        peekShadow.setBackground(new GradientDrawable(GradientDrawable.Orientation.RIGHT_LEFT,
-                new int[]{0x99000000, 0x44000000, 0x00000000}));
-        peekShadow.setAlpha(0f);
-        FrameLayout.LayoutParams pslp = new FrameLayout.LayoutParams(dp(30), FrameLayout.LayoutParams.MATCH_PARENT);
-        peekShadow.setLayoutParams(pslp);
+        rootFrame.addView(scroll);
 
-        rootFrame.addView(mainSurfaceContainer, new FrameLayout.LayoutParams(
-                FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT));
-        rootFrame.addView(peekShadow);
-
-        // Pulsing Scroll Indicator
+        // 🔮 Subtle Pulsing Right-Hand Scroll Indicator
         scrollIndicator = new PulsingScrollIndicator(this);
-        FrameLayout.LayoutParams silp = new FrameLayout.LayoutParams(dp(5), FrameLayout.LayoutParams.MATCH_PARENT);
-        silp.gravity = Gravity.RIGHT;
-        silp.topMargin = dp(140);
-        silp.bottomMargin = dp(20);
-        silp.rightMargin = dp(2);
-        scrollIndicator.setLayoutParams(silp);
-        mainSurfaceContainer.addView(scrollIndicator);
+        FrameLayout.LayoutParams sil = new FrameLayout.LayoutParams(dp(4), ViewGroup.LayoutParams.MATCH_PARENT);
+        sil.gravity = Gravity.END;
+        scrollIndicator.setLayoutParams(sil);
+        rootFrame.addView(scrollIndicator);
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
             scroll.setOnScrollChangeListener(new View.OnScrollChangeListener() {
                 public void onScrollChange(View v, int scrollX, int scrollY, int oldScrollX, int oldScrollY) {
-                    if (root != null && scroll != null) {
-                        int maxScroll = root.getHeight() - scroll.getHeight();
-                        if (maxScroll > 0) {
-                            float pct = Math.max(0f, Math.min(1f, (float) scrollY / maxScroll));
-                            if (scrollIndicator != null) {
-                                scrollIndicator.setScrollProgress(pct);
-                            }
-                        }
-                    }
+                    int maxScroll = scroll.getChildAt(0).getHeight() - scroll.getHeight();
+                    float pct = maxScroll > 0 ? (scrollY * 1.0f / maxScroll) : 0f;
+                    scrollIndicator.setScrollProgress(pct);
                 }
             });
         }
-
-        // conureOverlay
-        // cnlp
-                
-        
-        
 
         setContentView(rootFrame);
     }
@@ -1003,6 +935,26 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
     }
 
     @Override
+    protected void onNewIntent(Intent intent) {
+        super.onNewIntent(intent);
+        setIntent(intent);
+        handleIntentAction(intent);
+    }
+
+    private void handleIntentAction(Intent intent) {
+        if (intent == null) return;
+        String action = intent.getStringExtra("ACTION");
+        if ("INCIDENT".equals(action)) {
+            getWindow().getDecorView().post(new Runnable() {
+                public void run() { showModernIncidentSheet(); }
+            });
+        } else if ("NOTE".equals(action)) {
+            getWindow().getDecorView().post(new Runnable() {
+                public void run() { showModernNotesSheet(); }
+            });
+        }
+    }
+
     protected void onDestroy() {
         super.onDestroy();
         ticker.removeCallbacks(tick);
@@ -1166,7 +1118,11 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
             canvas.drawCircle(cx, cy, r - dp(10), bezelPaint);
 
             canvas.save();
-            canvas.rotate(-currentAzimuth, cx, cy);
+            float compDelta = currentAzimuth - displayedCompassAzimuth;
+            while (compDelta > 180f) compDelta -= 360f;
+            while (compDelta < -180f) compDelta += 360f;
+            displayedCompassAzimuth += compDelta * 0.22f;
+            canvas.rotate(-displayedCompassAzimuth, cx, cy);
 
             for (int deg = 0; deg < 360; deg += 5) {
                 double rad = Math.toRadians(deg - 90);
@@ -1239,13 +1195,13 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
 
     @Override
     public void onSensorChanged(SensorEvent event) {
-        float azimuthDegrees = 0;
+        float rawAzimuth = -1f;
         if (event.sensor.getType() == Sensor.TYPE_ROTATION_VECTOR) {
             float[] rotationMatrix = new float[9];
             SensorManager.getRotationMatrixFromVector(rotationMatrix, event.values);
             float[] orientation = new float[3];
             SensorManager.getOrientation(rotationMatrix, orientation);
-            azimuthDegrees = (float) Math.toDegrees(orientation[0]);
+            rawAzimuth = (float) Math.toDegrees(orientation[0]);
         } else if (event.sensor.getType() == Sensor.TYPE_ACCELEROMETER) {
             System.arraycopy(event.values, 0, lastAccel, 0, 3);
             hasAccel = true;
@@ -1265,7 +1221,6 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
 
             long now = SystemClock.elapsedRealtime();
 
-            // Detect sharp chopping flick (13.0 m/s^2 linear acceleration)
             if (linearMag > 13.0f && (now - lastToggleCooldown > 900)) {
                 if (chopCount == 0) {
                     chopCount = 1;
@@ -1294,13 +1249,27 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
             if (SensorManager.getRotationMatrix(r, i, lastAccel, lastMag)) {
                 float[] orientation = new float[3];
                 SensorManager.getOrientation(r, orientation);
-                azimuthDegrees = (float) Math.toDegrees(orientation[0]);
+                rawAzimuth = (float) Math.toDegrees(orientation[0]);
             }
         }
 
-        if (azimuthDegrees < 0) azimuthDegrees += 360;
-        currentAzimuth = azimuthDegrees;
-        updateCompassDisplay(azimuthDegrees);
+        if (rawAzimuth >= -180f) {
+            if (rawAzimuth < 0) rawAzimuth += 360f;
+
+            // 🧭 Continuous Adaptive Circular EWMA Filter (Zero Jitter)
+            float delta = rawAzimuth - smoothAzimuth;
+            while (delta > 180f) delta -= 360f;
+            while (delta < -180f) delta += 360f;
+
+            float absDelta = Math.abs(delta);
+            float smoothFactor = 0.045f + 0.20f * Math.min(1.0f, absDelta / 18.0f);
+            smoothAzimuth += delta * smoothFactor;
+            if (smoothAzimuth < 0f) smoothAzimuth += 360f;
+            if (smoothAzimuth >= 360f) smoothAzimuth -= 360f;
+
+            currentAzimuth = smoothAzimuth;
+            updateCompassDisplay(smoothAzimuth);
+        }
     }
 
     @Override
@@ -1398,11 +1367,11 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
     }
 
     // =========================================================================
-    // #4 ⏱️ INTERACTIVE ANALOG PRESSURE GAUGE (0 - 1,600 PSI · 175 PSI OPTIMAL)
+    // #4 ⏱️ INTERACTIVE ANALOG PRESSURE GAUGE (0 - 250 PSI · 175 PSI OPTIMAL)
     // =========================================================================
 
     interface OnPressureChangedListener {
-        void onPressureChanged(int psi);
+        void onPressureChanged(int kpa);
     }
 
     private class PressureGaugeView extends View {
@@ -2529,63 +2498,7 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
         return tab;
     }
 
-    
-    public void applyTabScrollPosition(float pos) {
-        currentTabFloat = Math.max(0f, Math.min(3f, pos));
-        if (animatedTabBar != null) {
-            animatedTabBar.setIndicatorFloat(currentTabFloat);
-        }
-        if (tabPagerFrame == null) return;
-        int w = tabPagerFrame.getWidth();
-        if (w <= 0) return;
-
-        final ScrollView[] pages = {scrollPatrol, scrollContacts, scrollHandbook, scrollTools};
-        for (int i = 0; i < pages.length; i++) {
-            ScrollView p = pages[i];
-            if (p == null) continue;
-            float offset = (i - currentTabFloat) * w;
-            p.setTranslationX(offset);
-
-            float dist = Math.abs(currentTabFloat - i);
-            if (dist > 1.15f) {
-                p.setVisibility(View.GONE);
-            } else {
-                p.setVisibility(View.VISIBLE);
-                p.setAlpha(Math.max(0f, 1f - dist * 0.75f));
-                float scale = Math.max(0.95f, 1f - dist * 0.05f);
-                p.setScaleX(scale);
-                p.setScaleY(scale);
-            }
-        }
-    }
-
-    public void animateTabToPosition(int targetTab) {
-        if (tabSlideAnimator != null && tabSlideAnimator.isRunning()) {
-            tabSlideAnimator.cancel();
-        }
-        final int target = Math.max(0, Math.min(3, targetTab));
-        currentTab = target;
-        hapticClick();
-
-        tabSlideAnimator = ValueAnimator.ofFloat(currentTabFloat, (float) target);
-        tabSlideAnimator.setDuration(260);
-        tabSlideAnimator.setInterpolator(new OvershootInterpolator(1.05f));
-        tabSlideAnimator.addUpdateListener(new ValueAnimator.AnimatorUpdateListener() {
-            public void onAnimationUpdate(ValueAnimator va) {
-                float f = (Float) va.getAnimatedValue();
-                applyTabScrollPosition(f);
-            }
-        });
-        tabSlideAnimator.addListener(new AnimatorListenerAdapter() {
-            @Override
-            public void onAnimationEnd(Animator animation) {
-                applyTabScrollPosition((float) target);
-            }
-        });
-        tabSlideAnimator.start();
-    }
-
-private void updateTabSelection(int tabIndex) {
+    private void updateTabSelection(int tabIndex) {
         currentTab = tabIndex;
 
         tabPatrol.setTextColor(tabIndex == 0 ? colAccentInk : colMuted);
@@ -2816,7 +2729,7 @@ private void updateTabSelection(int tabIndex) {
         top.setGravity(Gravity.CENTER_VERTICAL);
 
         TextView title = new TextView(this);
-        title.setText("🛡️ Officer Lochran Doherty · LIC #41207");
+        title.setText("🛡️ Officer R. Kelso · LIC #41207");
         title.setTextColor(colPale);
         title.setTextSize(14);
         title.setTypeface(Typeface.DEFAULT_BOLD);
@@ -3485,7 +3398,7 @@ private void updateTabSelection(int tabIndex) {
 
                     subTextPaint.setColor(colPale);
                     subTextPaint.setTextSize(dp(16));
-                    canvas.drawText("Officer Lochran Doherty", dp(18), dp(84), subTextPaint);
+                    canvas.drawText("Officer R. Kelso", dp(18), dp(84), subTextPaint);
 
                     textPaint.setColor(colMuted);
                     textPaint.setTextSize(dp(9));
@@ -3724,7 +3637,7 @@ private void updateTabSelection(int tabIndex) {
         container.addView(contactCard("Hume WHS / Safety Officer", "Workplace Safety & Incident Officer", "0423456789", "ON CALL SAFETY", colCyan));
 
         container.addView(contactsSectionHeader("👥 ON-SITE & RELIEF GUARDS", colPale));
-        container.addView(contactCard("Officer Lochran Doherty", "Current Static Guard · LIC #41207", "0455123789", "ON SITE (TONIGHT)", colEmerald));
+        container.addView(contactCard("Officer R. Kelso", "Current Static Guard · LIC #41207", "0455123789", "ON SITE (TONIGHT)", colEmerald));
         container.addView(contactCard("Relief / Day Crew Guard", "Morning Handover Officer (06:05)", "0400111222", "06:05 HANDOVER", colMuted));
 
         return container;
@@ -3922,7 +3835,7 @@ private void updateTabSelection(int tabIndex) {
         guardRow.setGravity(Gravity.CENTER_VERTICAL);
 
         TextView who = new TextView(this);
-        who.setText("Officer Lochran Doherty  ");
+        who.setText("Officer R. Kelso  ");
         who.setTextColor(colPale);
         who.setTextSize(13);
         who.setTypeface(Typeface.DEFAULT_BOLD);
@@ -5973,7 +5886,7 @@ private void updateTabSelection(int tabIndex) {
         String lastPressureStr = "";
         if (list != null && !list.isEmpty()) {
             PressureRecord lastPr = list.get(list.size() - 1);
-            lastPressureStr = " · " + lastPr.pressureKpa + " PSI";
+            lastPressureStr = " · " + lastPr.pressureKpa + " kPa";
         }
 
         if (visits <= 0) {
@@ -6083,7 +5996,7 @@ private void updateTabSelection(int tabIndex) {
             public void onClick(View v) {
                 hapticHeavyClick();
                 registerActivity();
-                note(Core.TOPIC_ROUTINE, "[WELFARE] Officer Lochran Doherty confirmed active on duty (WHS Check)");
+                note(Core.TOPIC_ROUTINE, "[WELFARE] Officer R. Kelso confirmed active on duty (WHS Check)");
                 isWelfareDialogShowing = false;
                 dlg.dismiss();
             }
@@ -6381,1652 +6294,5 @@ private void updateTabSelection(int tabIndex) {
             String msg = isTouching ? String.format(Locale.US, "AFFIRMING %d%%", (int) (sweepProgress * 100)) : "TOUCH & HOLD 2.5s";
             canvas.drawText(msg, cx, cy + dp(22), textPaint);
         }
-    }
-
-    // =========================================================================
-    // 📱 DEPUTY WORKPLACE ADD-IN & PEEK & FLOW ENGINE (DECK LAUNCHER PHYSICS)
-    // =========================================================================
-
-    public void openDeputy(boolean animate) {
-        if (mainSurfaceContainer == null || rootFrame == null) return;
-        final int w = rootFrame.getWidth();
-        if (w <= 0) return;
-        isDeputyOpen = true;
-        hapticHeavyClick();
-
-        if (animate) {
-            if (deputyContainer != null) {
-                deputyContainer.animate().scaleX(1f).scaleY(1f).translationX(0f).setDuration(220)
-                        .setInterpolator(new DecelerateInterpolator()).start();
-            }
-            if (deputyScrim != null) {
-                deputyScrim.animate().alpha(0f).setDuration(200).start();
-            }
-            if (peekShadow != null) {
-                peekShadow.animate().alpha(0.85f).translationX(w - dp(30)).setDuration(220).start();
-            }
-            mainSurfaceContainer.animate().translationX(w).setDuration(220)
-                    .setInterpolator(new DecelerateInterpolator()).start();
-        } else {
-            if (deputyContainer != null) {
-                deputyContainer.setScaleX(1f);
-                deputyContainer.setScaleY(1f);
-                deputyContainer.setTranslationX(0f);
-            }
-            if (deputyScrim != null) deputyScrim.setAlpha(0f);
-            if (peekShadow != null) {
-                peekShadow.setAlpha(0.85f);
-                peekShadow.setTranslationX(w - dp(30));
-            }
-            mainSurfaceContainer.setTranslationX(w);
-        }
-    }
-
-    public void closeDeputy(boolean animate) {
-        if (mainSurfaceContainer == null) return;
-        isDeputyOpen = false;
-        hapticClick();
-
-        if (animate) {
-            if (deputyContainer != null) {
-                deputyContainer.animate().scaleX(0.94f).scaleY(0.94f).translationX(-dp(30)).setDuration(240)
-                        .setInterpolator(new DecelerateInterpolator()).start();
-            }
-            if (deputyScrim != null) {
-                deputyScrim.animate().alpha(0.65f).setDuration(220).start();
-            }
-            if (peekShadow != null) {
-                peekShadow.animate().alpha(0f).translationX(-dp(30)).setDuration(200).start();
-            }
-            mainSurfaceContainer.animate().translationX(0f).setDuration(240)
-                    .setInterpolator(new DecelerateInterpolator()).start();
-        } else {
-            if (deputyContainer != null) {
-                deputyContainer.setScaleX(0.94f);
-                deputyContainer.setScaleY(0.94f);
-                deputyContainer.setTranslationX(-dp(30));
-            }
-            if (deputyScrim != null) deputyScrim.setAlpha(0.65f);
-            if (peekShadow != null) {
-                peekShadow.setAlpha(0f);
-                peekShadow.setTranslationX(-dp(30));
-            }
-            mainSurfaceContainer.setTranslationX(0f);
-        }
-    }
-
-    private void applyPeek(float dx) {
-        if (mainSurfaceContainer == null || rootFrame == null) return;
-        float w = rootFrame.getWidth();
-        if (w <= 0) return;
-
-        float x = Math.max(0f, Math.min(dx, w));
-        mainSurfaceContainer.setTranslationX(x);
-        float p = Math.min(1f, x / (w * 0.55f));
-
-        if (deputyScrim != null) {
-            deputyScrim.setAlpha((1f - p) * 0.65f);
-        }
-        if (deputyContainer != null) {
-            float s = 0.94f + 0.06f * p;
-            deputyContainer.setScaleX(s);
-            deputyContainer.setScaleY(s);
-            deputyContainer.setTranslationX(-dp(30) * (1f - p));
-        }
-        if (peekShadow != null) {
-            peekShadow.setTranslationX(x - dp(30));
-            peekShadow.setAlpha(Math.min(0.85f, p * 1.4f));
-        }
-
-        if (!peekBuzzed && x > w * 0.5f) {
-            peekBuzzed = true;
-            hapticClick();
-        } else if (peekBuzzed && x < w * 0.45f) {
-            peekBuzzed = false;
-        }
-    }
-
-    private void finishPeek(float dx, float vx) {
-        if (mainSurfaceContainer == null || rootFrame == null) return;
-        float w = rootFrame.getWidth();
-        if (w <= 0) return;
-
-        boolean commit = dx > w * 0.5f || vx > dp(1000);
-        if (commit) {
-            openDeputy(true);
-        } else {
-            closeDeputy(true);
-        }
-    }
-
-    private View buildDeputyView() {
-        ScrollView depScroll = new ScrollView(this);
-        depScroll.setBackgroundColor(0xFF080C14);
-        depScroll.setVerticalScrollBarEnabled(false);
-
-        LinearLayout depLayout = new LinearLayout(this);
-        depLayout.setOrientation(LinearLayout.VERTICAL);
-        depLayout.setPadding(dp(16), dp(16), dp(16), dp(36));
-        depLayout.setFitsSystemWindows(true);
-
-        // 1. Deputy Branding & Return Bar
-        LinearLayout topBar = new LinearLayout(this);
-        topBar.setOrientation(LinearLayout.HORIZONTAL);
-        topBar.setGravity(Gravity.CENTER_VERTICAL);
-        topBar.setPadding(0, dp(6), 0, dp(14));
-
-        TextView btnReturn = new TextView(this);
-        btnReturn.setText("← GATEHOUSE");
-        btnReturn.setTextColor(0xFF13C5BE);
-        btnReturn.setTextSize(11);
-        btnReturn.setTypeface(Typeface.create(Typeface.MONOSPACE, Typeface.BOLD));
-        btnReturn.setPadding(dp(10), dp(6), dp(10), dp(6));
-        btnReturn.setBackground(rounded(0x2213C5BE, dp(8)));
-        btnReturn.setOnClickListener(new View.OnClickListener() {
-            public void onClick(View v) {
-                closeDeputy(true);
-            }
-        });
-        topBar.addView(btnReturn);
-
-        TextView depBrand = new TextView(this);
-        depBrand.setText("DEPUTY");
-        depBrand.setTextColor(0xFF13C5BE);
-        depBrand.setTextSize(14);
-        depBrand.setTypeface(Typeface.DEFAULT_BOLD);
-        depBrand.setLetterSpacing(0.08f);
-        depBrand.setGravity(Gravity.RIGHT | Gravity.CENTER_VERTICAL);
-        LinearLayout.LayoutParams dblp = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
-        depBrand.setLayoutParams(dblp);
-        topBar.addView(depBrand);
-
-        depLayout.addView(topBar);
-
-        // 2. Deputy Workplace Facility Header
-        LinearLayout orgCard = new LinearLayout(this);
-        orgCard.setOrientation(LinearLayout.VERTICAL);
-        orgCard.setBackground(rounded(0xFF0F172A, dp(16)));
-        orgCard.setPadding(dp(16), dp(14), dp(16), dp(14));
-        LinearLayout.LayoutParams oclp = new LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
-        oclp.bottomMargin = dp(12);
-        orgCard.setLayoutParams(oclp);
-
-        TextView orgSub = new TextView(this);
-        orgSub.setText("DOHERTY SECURITY SERVICES · WORKPLACE ROSTER");
-        orgSub.setTextColor(0xFFE5A93C);
-        orgSub.setTextSize(9.5f);
-        orgSub.setTypeface(Typeface.MONOSPACE);
-        orgCard.addView(orgSub);
-
-        TextView orgName = new TextView(this);
-        orgName.setText("Hume Doors & Timber (Kingston)");
-        orgName.setTextColor(0xFFFFFFFF);
-        orgName.setTextSize(16);
-        orgName.setTypeface(Typeface.DEFAULT_BOLD);
-        orgName.setPadding(0, dp(3), 0, dp(4));
-        orgCard.addView(orgName);
-
-        TextView orgRole = new TextView(this);
-        orgRole.setText("🛡️ Officer Lochran Doherty · LIC #41207 · Post 01 Gatehouse");
-        orgRole.setTextColor(0xFF94A3B8);
-        orgRole.setTextSize(11.5f);
-        orgCard.addView(orgRole);
-
-        depLayout.addView(orgCard);
-
-        // 3. Live Shift Time Clock & Timesheet Status
-        LinearLayout clockCard = new LinearLayout(this);
-        clockCard.setOrientation(LinearLayout.VERTICAL);
-        clockCard.setBackground(rounded(0xFF0F1C24, dp(16)));
-        clockCard.setPadding(dp(16), dp(16), dp(16), dp(16));
-        LinearLayout.LayoutParams cclp = new LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
-        cclp.bottomMargin = dp(12);
-        clockCard.setLayoutParams(cclp);
-
-        LinearLayout clockTop = new LinearLayout(this);
-        clockTop.setOrientation(LinearLayout.HORIZONTAL);
-        clockTop.setGravity(Gravity.CENTER_VERTICAL);
-
-        TextView clockTitle = new TextView(this);
-        clockTitle.setText("LIVE SHIFT TIME CLOCK");
-        clockTitle.setTextColor(0xFFE2E8F0);
-        clockTitle.setTextSize(12);
-        clockTitle.setTypeface(Typeface.DEFAULT_BOLD);
-        LinearLayout.LayoutParams ctlp = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
-        clockTitle.setLayoutParams(ctlp);
-        clockTop.addView(clockTitle);
-
-        TextView clockStatus = new TextView(this);
-        clockStatus.setText("● CLOCKED ON");
-        clockStatus.setTextColor(0xFF10B981);
-        clockStatus.setTextSize(9.5f);
-        clockStatus.setTypeface(Typeface.MONOSPACE);
-        clockStatus.setPadding(dp(8), dp(3), dp(8), dp(3));
-        clockStatus.setBackground(rounded(0x2210B981, dp(6)));
-        clockTop.addView(clockStatus);
-        clockCard.addView(clockTop);
-
-        TextView clockTime = new TextView(this);
-        clockTime.setText("18:00 – 06:00 (12.0h)");
-        clockTime.setTextColor(0xFF38BDF8);
-        clockTime.setTextSize(20);
-        clockTime.setTypeface(Typeface.MONOSPACE);
-        clockTime.setPadding(0, dp(8), 0, dp(2));
-        clockCard.addView(clockTime);
-
-        TextView clockSub = new TextView(this);
-        clockSub.setText("Clocked on at 17:55 · Security Award MA000115 (Night Rate)");
-        clockSub.setTextColor(0xFF94A3B8);
-        clockSub.setTextSize(11);
-        clockSub.setPadding(0, 0, 0, dp(12));
-        clockCard.addView(clockSub);
-
-        LinearLayout clockBtns = new LinearLayout(this);
-        clockBtns.setOrientation(LinearLayout.HORIZONTAL);
-
-        TextView btnBreak = actionButton("☕ Meal Break", 0xFF1E293B, 0xFFE2E8F0);
-        btnBreak.setTextSize(11);
-        btnBreak.setPadding(dp(8), dp(10), dp(8), dp(10));
-        ((LinearLayout.LayoutParams) btnBreak.getLayoutParams()).rightMargin = dp(4);
-        btnBreak.setOnClickListener(new View.OnClickListener() {
-            public void onClick(View v) {
-                hapticClick();
-                Toast.makeText(MainActivity.this, "Deputy: 30m Meal Break recorded", Toast.LENGTH_SHORT).show();
-            }
-        });
-        clockBtns.addView(btnBreak);
-
-        TextView btnClockOut = actionButton("⏱️ Clock Out", 0xFF334155, 0xFFF87171);
-        btnClockOut.setTextSize(11);
-        btnClockOut.setPadding(dp(8), dp(10), dp(8), dp(10));
-        ((LinearLayout.LayoutParams) btnClockOut.getLayoutParams()).leftMargin = dp(4);
-        btnClockOut.setOnClickListener(new View.OnClickListener() {
-            public void onClick(View v) {
-                hapticHeavyClick();
-                Toast.makeText(MainActivity.this, "Deputy: Scheduled Clock-Out at 06:00 AM", Toast.LENGTH_SHORT).show();
-            }
-        });
-        clockBtns.addView(btnClockOut);
-
-        clockCard.addView(clockBtns);
-        depLayout.addView(clockCard);
-
-        // 4. Deputy Weekly Roster Schedule
-        depLayout.addView(contactsSectionHeader("📅 DEPUTY CONFIRMED ROSTER (CURRENT CYCLE)", 0xFF38BDF8));
-
-        depLayout.addView(buildDeputyShiftCard("Tonight (Sat 29 Aug)", "18:00 – 06:00 (12.0h)", "Gatehouse Post 01 · Static Night", true));
-        depLayout.addView(buildDeputyShiftCard("Tomorrow (Sun 30 Aug)", "18:00 – 06:00 (12.0h)", "Gatehouse Post 01 · Static Night", false));
-        depLayout.addView(buildDeputyShiftCard("Monday (31 Aug)", "18:00 – 06:00 (12.0h)", "Gatehouse Post 01 · Static Night", false));
-        depLayout.addView(buildDeputyShiftCard("Tuesday (01 Sep)", "OFF DUTY (0.0h)", "Scheduled Rest Day / RDO", false));
-        depLayout.addView(buildDeputyShiftCard("Wednesday (02 Sep)", "18:00 – 06:00 (12.0h)", "Gatehouse Post 01 · Static Night", false));
-
-        // 5. Deputy Shift Tasks
-        depLayout.addView(contactsSectionHeader("📋 DEPUTY SHIFT TASKS (3 OF 4 COMPLETE)", 0xFF10B981));
-
-        LinearLayout taskBox = new LinearLayout(this);
-        taskBox.setOrientation(LinearLayout.VERTICAL);
-        taskBox.setBackground(rounded(0xFF0F172A, dp(16)));
-        taskBox.setPadding(dp(16), dp(14), dp(16), dp(14));
-        LinearLayout.LayoutParams tblp = new LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
-        tblp.bottomMargin = dp(12);
-        taskBox.setLayoutParams(tblp);
-
-        taskBox.addView(deputyTaskItem("✓ Gate A & Kingston Rd entry logbooks verified", true));
-        taskBox.addView(deputyTaskItem("✓ Factory internal lockups (Lots 14-18)", true));
-        taskBox.addView(deputyTaskItem("✓ Fire booster & pump pressure check (175 PSI)", true));
-        taskBox.addView(deputyTaskItem("○ 05:30 AM Pre-dawn perimeter lighting & gate unlock", false));
-
-        depLayout.addView(taskBox);
-
-        // 6. Deputy Shift Swap & Request Bar
-        LinearLayout depActions = new LinearLayout(this);
-        depActions.setOrientation(LinearLayout.HORIZONTAL);
-        depActions.setPadding(0, dp(4), 0, dp(10));
-
-        TextView btnSwap = actionButton("🔄 Shift Swap", 0xFF1E293B, 0xFF38BDF8);
-        btnSwap.setTextSize(11);
-        ((LinearLayout.LayoutParams) btnSwap.getLayoutParams()).rightMargin = dp(4);
-        btnSwap.setOnClickListener(new View.OnClickListener() {
-            public void onClick(View v) {
-                hapticClick();
-                Toast.makeText(MainActivity.this, "Deputy: Shift swap request open", Toast.LENGTH_SHORT).show();
-            }
-        });
-        depActions.addView(btnSwap);
-
-        TextView btnLeave = actionButton("🌴 Request Leave", 0xFF1E293B, 0xFFE5A93C);
-        btnLeave.setTextSize(11);
-        ((LinearLayout.LayoutParams) btnLeave.getLayoutParams()).leftMargin = dp(4);
-        btnLeave.setOnClickListener(new View.OnClickListener() {
-            public void onClick(View v) {
-                hapticClick();
-                Toast.makeText(MainActivity.this, "Deputy: Leave request portal open", Toast.LENGTH_SHORT).show();
-            }
-        });
-        depActions.addView(btnLeave);
-
-        depLayout.addView(depActions);
-
-        depScroll.addView(depLayout);
-        return depScroll;
-    }
-
-    private LinearLayout buildDeputyShiftCard(String day, String hours, String details, boolean isCurrent) {
-        LinearLayout card = new LinearLayout(this);
-        card.setOrientation(LinearLayout.VERTICAL);
-        card.setBackground(rounded(isCurrent ? 0xFF162536 : 0xFF0F172A, dp(14)));
-        card.setPadding(dp(14), dp(12), dp(14), dp(12));
-        LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
-        lp.bottomMargin = dp(8);
-        card.setLayoutParams(lp);
-
-        LinearLayout top = new LinearLayout(this);
-        top.setOrientation(LinearLayout.HORIZONTAL);
-        top.setGravity(Gravity.CENTER_VERTICAL);
-
-        TextView tvDay = new TextView(this);
-        tvDay.setText(day);
-        tvDay.setTextColor(isCurrent ? 0xFF38BDF8 : 0xFFE2E8F0);
-        tvDay.setTextSize(12.5f);
-        tvDay.setTypeface(Typeface.DEFAULT_BOLD);
-        LinearLayout.LayoutParams dlp = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
-        tvDay.setLayoutParams(dlp);
-        top.addView(tvDay);
-
-        TextView tvStatus = new TextView(this);
-        tvStatus.setText(isCurrent ? "ACTIVE SHIFT" : (hours.contains("OFF") ? "REST DAY" : "CONFIRMED"));
-        tvStatus.setTextColor(isCurrent ? 0xFF10B981 : (hours.contains("OFF") ? 0xFF64748B : 0xFF38BDF8));
-        tvStatus.setTextSize(8.5f);
-        tvStatus.setTypeface(Typeface.MONOSPACE);
-        tvStatus.setPadding(dp(6), dp(2), dp(6), dp(2));
-        tvStatus.setBackground(rounded(isCurrent ? 0x2210B981 : 0x2238BDF8, dp(4)));
-        top.addView(tvStatus);
-        card.addView(top);
-
-        TextView tvHours = new TextView(this);
-        tvHours.setText(hours + " · " + details);
-        tvHours.setTextColor(0xFF94A3B8);
-        tvHours.setTextSize(11);
-        tvHours.setPadding(0, dp(4), 0, 0);
-        card.addView(tvHours);
-
-        return card;
-    }
-
-    private TextView deputyTaskItem(String text, boolean done) {
-        TextView tv = new TextView(this);
-        tv.setText(text);
-        tv.setTextColor(done ? 0xFF10B981 : 0xFFE2E8F0);
-        tv.setTextSize(11.5f);
-        tv.setTypeface(Typeface.DEFAULT);
-        tv.setPadding(0, dp(4), 0, dp(4));
-        return tv;
-    }
-
-    private View buildRosterView() {
-        ScrollView rScroll = new ScrollView(this);
-        rScroll.setBackgroundColor(0xFF060A10);
-        rScroll.setVerticalScrollBarEnabled(false);
-
-        LinearLayout rLayout = new LinearLayout(this);
-        rLayout.setOrientation(LinearLayout.VERTICAL);
-        rLayout.setPadding(dp(16), dp(16), dp(16), dp(36));
-        rLayout.setFitsSystemWindows(true);
-
-        // 1. Header Bar with Back Button & DSS Roster Title
-        LinearLayout topBar = new LinearLayout(this);
-        topBar.setOrientation(LinearLayout.HORIZONTAL);
-        topBar.setGravity(Gravity.CENTER_VERTICAL);
-        topBar.setPadding(0, dp(4), 0, dp(14));
-
-        TextView btnReturn = new TextView(this);
-        btnReturn.setText("← GATEHOUSE");
-        btnReturn.setTextColor(colAccent);
-        btnReturn.setTextSize(11);
-        btnReturn.setTypeface(Typeface.create(Typeface.MONOSPACE, Typeface.BOLD));
-        btnReturn.setPadding(dp(10), dp(6), dp(10), dp(6));
-        btnReturn.setBackground(rounded(0x22E5A93C, dp(8)));
-        btnReturn.setOnClickListener(new View.OnClickListener() {
-            public void onClick(View v) {
-                closeDeputy(true);
-            }
-        });
-        topBar.addView(btnReturn);
-
-        TextView title = new TextView(this);
-        title.setText("MASTER SHIFT ROSTER");
-        title.setTextColor(colPale);
-        title.setTextSize(13);
-        title.setTypeface(Typeface.DEFAULT_BOLD);
-        title.setLetterSpacing(0.12f);
-        title.setGravity(Gravity.RIGHT | Gravity.CENTER_VERTICAL);
-        LinearLayout.LayoutParams tlp = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
-        title.setLayoutParams(tlp);
-        topBar.addView(title);
-
-        rLayout.addView(topBar);
-
-        // 2. 🟢 LIVE ON-DUTY & NEXT RELIEF RADAR CARD
-        rLayout.addView(buildLiveReliefRadarCard());
-
-        // 3. Officer & Facility Station Badge Card
-        LinearLayout officerCard = new LinearLayout(this);
-        officerCard.setOrientation(LinearLayout.VERTICAL);
-        officerCard.setBackground(rounded(colPanel, dp(16)));
-        officerCard.setPadding(dp(16), dp(14), dp(16), dp(14));
-        LinearLayout.LayoutParams oclp = new LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
-        oclp.bottomMargin = dp(12);
-        officerCard.setLayoutParams(oclp);
-
-        LinearLayout row1 = new LinearLayout(this);
-        row1.setOrientation(LinearLayout.HORIZONTAL);
-        row1.setGravity(Gravity.CENTER_VERTICAL);
-
-        TextView dssBrand = new TextView(this);
-        dssBrand.setText("DOHERTY SECURITY SERVICES · ROSTER DECK");
-        dssBrand.setTextColor(colAccent);
-        dssBrand.setTextSize(9.5f);
-        dssBrand.setTypeface(Typeface.MONOSPACE);
-        LinearLayout.LayoutParams dlp = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
-        dssBrand.setLayoutParams(dlp);
-        row1.addView(dssBrand);
-
-        TextView badgeStatus = new TextView(this);
-        badgeStatus.setText("● LIVE ROSTER");
-        badgeStatus.setTextColor(colEmerald);
-        badgeStatus.setTextSize(8.5f);
-        badgeStatus.setTypeface(Typeface.MONOSPACE);
-        badgeStatus.setPadding(dp(6), dp(2), dp(6), dp(2));
-        badgeStatus.setBackground(rounded(0x2210B981, dp(4)));
-        row1.addView(badgeStatus);
-        officerCard.addView(row1);
-
-        TextView facName = new TextView(this);
-        facName.setText("Hume Doors & Timber, Kingston");
-        facName.setTextColor(0xFFFFFFFF);
-        facName.setTextSize(16);
-        facName.setTypeface(Typeface.DEFAULT_BOLD);
-        facName.setPadding(0, dp(3), 0, dp(4));
-        officerCard.addView(facName);
-
-        TextView offInfo = new TextView(this);
-        offInfo.setText("🛡️ Officer Lochran Doherty · QLD Licence #41207 · Post 01 Gatehouse");
-        offInfo.setTextColor(0xFF94A3B8);
-        offInfo.setTextSize(11.5f);
-        officerCard.addView(offInfo);
-
-        rLayout.addView(officerCard);
-
-        // 4. Interactive 7-Day Timeline Scrubber
-        rLayout.addView(contactsSectionHeader("📅 SELECT TIMELINE DAY", colCyan));
-
-        rosterScrubber = new FluidRosterDayScrubberView(this);
-        LinearLayout.LayoutParams rslp = new LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT, dp(64));
-        rslp.bottomMargin = dp(12);
-        rosterScrubber.setLayoutParams(rslp);
-        rLayout.addView(rosterScrubber);
-
-        // 5. 🗓️ FULL-WEEK TEAM GRID BOARD (Horizontal 7-Column Master Schedule)
-        rLayout.addView(contactsSectionHeader("🗓️ FULL-WEEK TEAM ROSTER BOARD (SWIPE ACROSS)", colAccent));
-        rLayout.addView(buildFullWeekTeamGrid());
-
-        // 6. Dynamic Shift Detail Focus Container
-        rLayout.addView(contactsSectionHeader("🗂️ SELECTED SHIFT FOCUS & HANDOVER", colEmerald));
-        rosterDetailContainer = new LinearLayout(this);
-        rosterDetailContainer.setOrientation(LinearLayout.VERTICAL);
-        rLayout.addView(rosterDetailContainer);
-        updateRosterDayDetail(5); // Default to Saturday 29 Aug (Tonight)
-
-        // 7. Fortnightly Hours & Penalty Progress Deck
-        rLayout.addView(contactsSectionHeader("📊 FORTNIGHTLY WORKLOAD & PENALTIES", colCyan));
-        rLayout.addView(buildRosterFortnightCard());
-
-        // 8. Shift Actions Bar (Swap Request & Handover)
-        LinearLayout actionsRow = new LinearLayout(this);
-        actionsRow.setOrientation(LinearLayout.HORIZONTAL);
-        actionsRow.setPadding(0, dp(8), 0, dp(12));
-
-        TextView btnSwap = actionButton("🔄 Request Shift Swap", colPanel, colCyan);
-        btnSwap.setTextSize(11.5f);
-        ((LinearLayout.LayoutParams) btnSwap.getLayoutParams()).rightMargin = dp(4);
-        btnSwap.setOnClickListener(new View.OnClickListener() {
-            public void onClick(View v) {
-                hapticClick();
-                showShiftSwapDialog();
-            }
-        });
-        actionsRow.addView(btnSwap);
-
-        TextView btnNotes = actionButton("📝 Handover Notes", colPanel, colAccent);
-        btnNotes.setTextSize(11.5f);
-        ((LinearLayout.LayoutParams) btnNotes.getLayoutParams()).leftMargin = dp(4);
-        btnNotes.setOnClickListener(new View.OnClickListener() {
-            public void onClick(View v) {
-                hapticClick();
-                showModernNotesSheet();
-            }
-        });
-        actionsRow.addView(btnNotes);
-
-        rLayout.addView(actionsRow);
-
-        rScroll.addView(rLayout);
-        return rScroll;
-    }
-
-    // =========================================================================
-    // 🟢 "ON DUTY NOW & NEXT RELIEF" RADAR CARD
-    // =========================================================================
-
-    private LinearLayout buildLiveReliefRadarCard() {
-        LinearLayout card = new LinearLayout(this);
-        card.setOrientation(LinearLayout.VERTICAL);
-        card.setBackground(rounded(0xFF0F1E19, dp(16)));
-        card.setPadding(dp(16), dp(14), dp(16), dp(14));
-        LinearLayout.LayoutParams clp = new LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
-        clp.bottomMargin = dp(12);
-        card.setLayoutParams(clp);
-
-        LinearLayout top = new LinearLayout(this);
-        top.setOrientation(LinearLayout.HORIZONTAL);
-        top.setGravity(Gravity.CENTER_VERTICAL);
-
-        TextView tag = new TextView(this);
-        tag.setText("● ON-DUTY SITE RADAR");
-        tag.setTextColor(colEmerald);
-        tag.setTextSize(10);
-        tag.setTypeface(Typeface.MONOSPACE);
-        LinearLayout.LayoutParams tlp = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
-        tag.setLayoutParams(tlp);
-        top.addView(tag);
-
-        TextView nextPill = new TextView(this);
-        nextPill.setText("RELIEF IN 3h 57m");
-        nextPill.setTextColor(colAccent);
-        nextPill.setTextSize(9);
-        nextPill.setTypeface(Typeface.MONOSPACE);
-        nextPill.setPadding(dp(6), dp(2), dp(6), dp(2));
-        nextPill.setBackground(rounded(0x22E5A93C, dp(4)));
-        top.addView(nextPill);
-        card.addView(top);
-
-        // Active Guards Row
-        LinearLayout activeRow = new LinearLayout(this);
-        activeRow.setOrientation(LinearLayout.HORIZONTAL);
-        activeRow.setPadding(0, dp(8), 0, dp(8));
-
-        activeRow.addView(buildGuardRadarChip("🛡️ Lochran (You)", "Post 01 · until 06:00", colEmerald));
-        activeRow.addView(buildGuardRadarChip("🛡️ Chris Ireton", "Yard · until 00:00", colCyan));
-        card.addView(activeRow);
-
-        // Next Relief Alert Strip
-        LinearLayout reliefBox = new LinearLayout(this);
-        reliefBox.setOrientation(LinearLayout.HORIZONTAL);
-        reliefBox.setGravity(Gravity.CENTER_VERTICAL);
-        reliefBox.setBackground(rounded(0x20000000, dp(8)));
-        reliefBox.setPadding(dp(10), dp(8), dp(10), dp(8));
-
-        TextView reliefIcon = new TextView(this);
-        reliefIcon.setText("🤝");
-        reliefIcon.setTextSize(14);
-        reliefIcon.setPadding(0, 0, dp(8), 0);
-        reliefBox.addView(reliefIcon);
-
-        LinearLayout reliefInfo = new LinearLayout(this);
-        reliefInfo.setOrientation(LinearLayout.VERTICAL);
-
-        TextView reliefTitle = new TextView(this);
-        reliefTitle.setText("NEXT RELIEF: Brian Rush");
-        reliefTitle.setTextColor(colPale);
-        reliefTitle.setTextSize(11);
-        reliefTitle.setTypeface(Typeface.DEFAULT_BOLD);
-        reliefInfo.addView(reliefTitle);
-
-        TextView reliefSub = new TextView(this);
-        reliefSub.setText("Shift: 00:00 – 06:00 · Post 01 Handover");
-        reliefSub.setTextColor(0xFF94A3B8);
-        reliefSub.setTextSize(10);
-        reliefInfo.addView(reliefSub);
-
-        reliefBox.addView(reliefInfo);
-        card.addView(reliefBox);
-
-        return card;
-    }
-
-    private LinearLayout buildGuardRadarChip(String name, String sub, int color) {
-        LinearLayout chip = new LinearLayout(this);
-        chip.setOrientation(LinearLayout.VERTICAL);
-        chip.setBackground(rounded(0x18000000, dp(8)));
-        chip.setPadding(dp(10), dp(6), dp(10), dp(6));
-        LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
-        lp.rightMargin = dp(4);
-        chip.setLayoutParams(lp);
-
-        TextView tvName = new TextView(this);
-        tvName.setText(name);
-        tvName.setTextColor(color);
-        tvName.setTextSize(11);
-        tvName.setTypeface(Typeface.DEFAULT_BOLD);
-        chip.addView(tvName);
-
-        TextView tvSub = new TextView(this);
-        tvSub.setText(sub);
-        tvSub.setTextColor(0xFF94A3B8);
-        tvSub.setTextSize(9.5f);
-        chip.addView(tvSub);
-
-        return chip;
-    }
-
-    // =========================================================================
-    // 🗓️ FULL-WEEK TEAM GRID BOARD (HORIZONTAL 7-COLUMN SCHEDULE)
-    // =========================================================================
-
-    private HorizontalScrollView fullWeekScrollView;
-
-    private View buildFullWeekTeamGrid() {
-        fullWeekScrollView = new HorizontalScrollView(this);
-        fullWeekScrollView.setHorizontalScrollBarEnabled(false);
-        LinearLayout.LayoutParams svlp = new LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
-        svlp.bottomMargin = dp(14);
-        fullWeekScrollView.setLayoutParams(svlp);
-
-        LinearLayout gridRow = new LinearLayout(this);
-        gridRow.setOrientation(LinearLayout.HORIZONTAL);
-
-        final String[][][] weeklyData = {
-            // MON 24
-            {
-                {"00:00 - 06:00", "Bill", "CONFIRMED", "Post 01"},
-                {"00:00 - 05:10", "Brian Rush", "CONFIRMED", "Mobile 4"},
-                {"16:00 - 00:00", "Lochran", "DONE", "Gatehouse"}
-            },
-            // TUE 25
-            {
-                {"00:00 - 06:00", "Bill", "CONFIRMED", "Post 01"},
-                {"16:00 - 00:00", "Chris Ireton", "DONE", "Yard"},
-                {"23:54 - 06:00", "Brian Rush", "DONE", "Gatehouse"}
-            },
-            // WED 26
-            {
-                {"15:35 - 22:26", "Jon Naylor", "DONE", "Factory"},
-                {"22:00 - 06:00", "Chris Ireton", "DONE", "Gatehouse"}
-            },
-            // THU 27
-            {
-                {"15:43 - 21:53", "Jon Naylor", "DONE", "Factory"},
-                {"21:57 - 06:00", "Brian Rush", "DONE", "Gatehouse"}
-            },
-            // FRI 28
-            {
-                {"16:00 - 03:00", "Bill", "DONE", "Post 01"},
-                {"19:59 - 05:05", "Brian Rush", "DONE", "Gatehouse"}
-            },
-            // SAT 29 (TODAY)
-            {
-                {"02:00 - 07:00", "Lochran", "DONE", "Gatehouse"},
-                {"07:00 - 16:00", "Ken", "DONE", "Day Sup."},
-                {"16:00 - 00:00", "Chris Ireton", "ACTIVE", "Yard"},
-                {"20:00 - 05:00", "Josh", "ACTIVE", "Mobile"}
-            },
-            // SUN 30 (TOMORROW)
-            {
-                {"00:00 - 06:00", "Bill", "SCHEDULED", "Post 01"},
-                {"06:00 - 18:00", "Lochran", "ACTIVE", "Gatehouse"},
-                {"18:00 - 00:00", "Chris Ireton", "SCHEDULED", "Yard"},
-                {"20:00 - 00:00", "Brian Rush", "SCHEDULED", "Mobile"}
-            }
-        };
-
-        final String[] dayLabels = {"MON 24", "TUE 25", "WED 26", "THU 27", "FRI 28", "SAT 29", "SUN 30"};
-
-        for (int d = 0; d < dayLabels.length; d++) {
-            final int dayIndex = d;
-            boolean isToday = d == 5; // Saturday 29 Aug
-
-            LinearLayout col = new LinearLayout(this);
-            col.setOrientation(LinearLayout.VERTICAL);
-            col.setBackground(rounded(isToday ? 0xFF141F30 : colPanel, dp(14)));
-            col.setPadding(dp(8), dp(8), dp(8), dp(8));
-            LinearLayout.LayoutParams clp = new LinearLayout.LayoutParams(dp(110), LinearLayout.LayoutParams.WRAP_CONTENT);
-            clp.rightMargin = dp(8);
-            col.setLayoutParams(clp);
-
-            // Column Day Header
-            TextView tvDayHead = new TextView(this);
-            tvDayHead.setText(dayLabels[d]);
-            tvDayHead.setTextColor(isToday ? colAccent : colPale);
-            tvDayHead.setTextSize(11.5f);
-            tvDayHead.setTypeface(Typeface.DEFAULT_BOLD);
-            tvDayHead.setGravity(Gravity.CENTER);
-            tvDayHead.setPadding(0, dp(2), 0, dp(6));
-            col.addView(tvDayHead);
-
-            // Stacked Guard Shift Tiles
-            String[][] shifts = weeklyData[d];
-            for (int s = 0; s < shifts.length; s++) {
-                final String[] shift = shifts[s];
-                final boolean isActive = "ACTIVE".equals(shift[2]);
-                final boolean isDone = "DONE".equals(shift[2]);
-
-                LinearLayout tile = new LinearLayout(this);
-                tile.setOrientation(LinearLayout.VERTICAL);
-                tile.setBackground(rounded(isActive ? 0xFF0F3820 : (isDone ? 0xFF0D1420 : 0xFF16253A), dp(8)));
-                tile.setPadding(dp(6), dp(6), dp(6), dp(6));
-                LinearLayout.LayoutParams tlp = new LinearLayout.LayoutParams(
-                        LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
-                tlp.bottomMargin = dp(6);
-                tile.setLayoutParams(tlp);
-
-                TextView tvTime = new TextView(this);
-                tvTime.setText(shift[0]);
-                tvTime.setTextColor(isActive ? 0xFF4ADE80 : (isDone ? 0xFF64748B : 0xFFE2E8F0));
-                tvTime.setTextSize(9);
-                tvTime.setTypeface(Typeface.create(Typeface.MONOSPACE, Typeface.BOLD));
-                tile.addView(tvTime);
-
-                TextView tvGuard = new TextView(this);
-                tvGuard.setText(shift[1]);
-                tvGuard.setTextColor(shift[1].contains("Lochran") ? colAccent : (isActive ? 0xFFFFFFFF : 0xFFCBD5E1));
-                tvGuard.setTextSize(10.5f);
-                tvGuard.setTypeface(Typeface.DEFAULT_BOLD);
-                tvGuard.setPadding(0, dp(2), 0, 0);
-                tile.addView(tvGuard);
-
-                TextView tvStatus = new TextView(this);
-                tvStatus.setText(shift[2] + " · " + shift[3]);
-                tvStatus.setTextColor(isActive ? colEmerald : (isDone ? colQuiet : colCyan));
-                tvStatus.setTextSize(7.5f);
-                tvStatus.setTypeface(Typeface.MONOSPACE);
-                tvStatus.setPadding(0, dp(2), 0, 0);
-                tile.addView(tvStatus);
-
-                tile.setOnClickListener(new View.OnClickListener() {
-                    public void onClick(View v) {
-                        hapticClick();
-                        if (rosterScrubber != null) rosterScrubber.animateToPosition(dayIndex);
-                        updateRosterDayDetail(dayIndex);
-                    }
-                });
-
-                col.addView(tile);
-            }
-
-            gridRow.addView(col);
-        }
-
-        fullWeekScrollView.addView(gridRow);
-
-        // Auto-scroll to center on Saturday (Today)
-        fullWeekScrollView.post(new Runnable() {
-            public void run() {
-                if (fullWeekScrollView != null) {
-                    fullWeekScrollView.smoothScrollTo(dp(118 * 4), 0);
-                }
-            }
-        });
-
-        return fullWeekScrollView;
-    }
-
-    // =========================================================================
-    // 🗂️ 3D HYBRID DECK SHIFT FOCUS & HANDOVER CARD
-    // =========================================================================
-
-    private void updateRosterDayDetail(final int dayIndex) {
-        if (rosterDetailContainer == null) return;
-        final int prevIndex = selectedRosterDay;
-        final boolean isForward = dayIndex >= prevIndex;
-        selectedRosterDay = dayIndex;
-
-        rosterDetailContainer.removeAllViews();
-
-        final String[][] daysData = {
-            {"Mon 24 Aug", "16:00 – 00:00 (8.0h)", "COMPLETED", "Gatehouse Post 01 · Static Guarding", "Bill (00:00 Relief)", "15% Night Loading", "Lochran Doherty"},
-            {"Tue 25 Aug", "23:54 – 06:00 (6.1h)", "COMPLETED", "Gatehouse Post 01 · Static Guarding", "Chris Ireton (16:00 Relief)", "15% Night Loading", "Brian Rush"},
-            {"Wed 26 Aug", "22:00 – 06:00 (8.0h)", "COMPLETED", "Gatehouse Post 01 · Static Guarding", "Jon Naylor (15:35 Relief)", "15% Night Loading", "Chris Ireton"},
-            {"Thu 27 Aug", "21:57 – 06:00 (8.0h)", "COMPLETED", "Gatehouse Post 01 · Static Guarding", "Jon Naylor (15:43 Relief)", "15% Night Loading", "Brian Rush"},
-            {"Fri 28 Aug", "19:59 – 05:05 (9.1h)", "COMPLETED", "Gatehouse Post 01 · Static Guarding", "Bill (16:00 Relief)", "15% Night Loading", "Brian Rush"},
-            {"Sat 29 Aug (Tonight)", "18:00 – 06:00 (12.0h)", "ACTIVE SHIFT", "Gatehouse Post 01 · Static Guarding", "Brian Rush (00:00 Handover Relief)", "15% Night Loading + Sat Weekend Rate", "Lochran Doherty"},
-            {"Sun 30 Aug (Tomorrow)", "06:00 – 18:00 (12.0h)", "CONFIRMED", "Gatehouse Post 01 · Static Guarding", "Bill (00:00 Relief)", "15% Night Loading + Sun Weekend Rate", "Lochran Doherty"}
-        };
-
-        final String[] dayInfo = daysData[Math.max(0, Math.min(daysData.length - 1, dayIndex))];
-        boolean isTonight = dayIndex == 5; // Saturday 29 Aug
-
-        final LinearLayout card = new LinearLayout(this);
-        card.setOrientation(LinearLayout.VERTICAL);
-        card.setBackground(rounded(isTonight ? 0xFF131D2E : colPanel, dp(16)));
-        card.setPadding(dp(16), dp(16), dp(16), dp(16));
-        LinearLayout.LayoutParams clp = new LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
-        clp.bottomMargin = dp(12);
-        card.setLayoutParams(clp);
-
-        // Enable 3D perspective
-        card.setCameraDistance(dp(8000));
-
-        // Horizontal Swipe detector directly on the card to cycle days
-        card.setOnTouchListener(new View.OnTouchListener() {
-            private float downX, downY;
-            public boolean onTouch(View v, MotionEvent ev) {
-                switch (ev.getActionMasked()) {
-                    case MotionEvent.ACTION_DOWN:
-                        downX = ev.getX();
-                        downY = ev.getY();
-                        return true;
-                    case MotionEvent.ACTION_UP:
-                        float dx = ev.getX() - downX;
-                        float dy = Math.abs(ev.getY() - downY);
-                        if (Math.abs(dx) > dp(36) && Math.abs(dx) > dy * 1.2f) {
-                            if (dx < 0 && dayIndex < daysData.length - 1) {
-                                hapticClick();
-                                if (rosterScrubber != null) rosterScrubber.animateToPosition(dayIndex + 1);
-                                updateRosterDayDetail(dayIndex + 1);
-                                return true;
-                            } else if (dx > 0 && dayIndex > 0) {
-                                hapticClick();
-                                if (rosterScrubber != null) rosterScrubber.animateToPosition(dayIndex - 1);
-                                updateRosterDayDetail(dayIndex - 1);
-                                return true;
-                            }
-                        }
-                        break;
-                }
-                return false;
-            }
-        });
-
-        // Header Row: Day name + Status Chip
-        LinearLayout hRow = new LinearLayout(this);
-        hRow.setOrientation(LinearLayout.HORIZONTAL);
-        hRow.setGravity(Gravity.CENTER_VERTICAL);
-
-        TextView tvDay = new TextView(this);
-        tvDay.setText(dayInfo[0]);
-        tvDay.setTextColor(isTonight ? colAccent : 0xFFFFFFFF);
-        tvDay.setTextSize(14);
-        tvDay.setTypeface(Typeface.DEFAULT_BOLD);
-        LinearLayout.LayoutParams dlp = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
-        tvDay.setLayoutParams(dlp);
-        hRow.addView(tvDay);
-
-        TextView tvStatus = new TextView(this);
-        tvStatus.setText(dayInfo[2]);
-        tvStatus.setTextColor(isTonight ? colEmerald : colCyan);
-        tvStatus.setTextSize(9);
-        tvStatus.setTypeface(Typeface.MONOSPACE);
-        tvStatus.setPadding(dp(7), dp(3), dp(7), dp(3));
-        tvStatus.setBackground(rounded(isTonight ? 0x2210B981 : 0x2206B6D4, dp(6)));
-        hRow.addView(tvStatus);
-        card.addView(hRow);
-
-        // Timing & Scope
-        TextView tvHours = new TextView(this);
-        tvHours.setText(dayInfo[1]);
-        tvHours.setTextColor(isTonight ? 0xFF38BDF8 : 0xFFE2E8F0);
-        tvHours.setTextSize(18);
-        tvHours.setTypeface(Typeface.create(Typeface.MONOSPACE, Typeface.BOLD));
-        tvHours.setPadding(0, dp(8), 0, dp(2));
-        card.addView(tvHours);
-
-        TextView tvPost = new TextView(this);
-        tvPost.setText("📍 " + dayInfo[3] + " · Guard: " + dayInfo[6]);
-        tvPost.setTextColor(0xFF94A3B8);
-        tvPost.setTextSize(12);
-        tvPost.setPadding(0, 0, 0, dp(10));
-        card.addView(tvPost);
-
-        // Relief & Team on Shift
-        LinearLayout teamBox = new LinearLayout(this);
-        teamBox.setOrientation(LinearLayout.VERTICAL);
-        teamBox.setBackground(rounded(0x18000000, dp(10)));
-        teamBox.setPadding(dp(12), dp(10), dp(12), dp(10));
-        LinearLayout.LayoutParams tblp = new LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
-        tblp.bottomMargin = dp(10);
-        teamBox.setLayoutParams(tblp);
-
-        TextView teamLbl = new TextView(this);
-        teamLbl.setText("ON-SHIFT TEAM & HANDOVER RELIEF");
-        teamLbl.setTextColor(colQuiet);
-        teamLbl.setTextSize(8.5f);
-        teamLbl.setTypeface(Typeface.MONOSPACE);
-        teamBox.addView(teamLbl);
-
-        TextView teamRelief = new TextView(this);
-        teamRelief.setText("🤝 Relief: " + dayInfo[4]);
-        teamRelief.setTextColor(colPale);
-        teamRelief.setTextSize(11.5f);
-        teamRelief.setPadding(0, dp(2), 0, 0);
-        teamBox.addView(teamRelief);
-
-        TextView rateLbl = new TextView(this);
-        rateLbl.setText("⭐ Rate: " + dayInfo[5]);
-        rateLbl.setTextColor(colAccent);
-        rateLbl.setTextSize(10.5f);
-        rateLbl.setPadding(0, dp(2), 0, 0);
-        teamBox.addView(rateLbl);
-
-        card.addView(teamBox);
-
-        // Pre-Shift Checklist
-        card.addView(rosterCheckItem("✓ Master key ring & electronic gate fobs verified", true));
-        card.addView(rosterCheckItem("✓ Bodycam charged & memory cleared", true));
-        card.addView(rosterCheckItem("✓ LED tactical torches inspected", true));
-        card.addView(rosterCheckItem("○ 05:18 AM Civil Dawn perimeter round scheduled", false));
-
-        // 3D Hybrid Deck Cascade Animation Entrance
-        float startX = isForward ? dp(28) : -dp(28);
-        float startRotY = isForward ? 6f : -6f;
-        card.setAlpha(0f);
-        card.setTranslationX(startX);
-        card.setScaleX(0.96f);
-        card.setScaleY(0.96f);
-        card.setRotationY(startRotY);
-
-        rosterDetailContainer.addView(card);
-
-        card.animate()
-                .alpha(1f)
-                .translationX(0f)
-                .scaleX(1f)
-                .scaleY(1f)
-                .rotationY(0f)
-                .setDuration(240)
-                .setInterpolator(new OvershootInterpolator(1.06f))
-                .start();
-    }
-
-    private LinearLayout rosterCheckItem(final String text, final boolean initialDone) {
-        final LinearLayout row = new LinearLayout(this);
-        row.setOrientation(LinearLayout.HORIZONTAL);
-        row.setGravity(Gravity.CENTER_VERTICAL);
-        row.setPadding(0, dp(4), 0, dp(4));
-
-        final TextView tv = new TextView(this);
-        tv.setText(text);
-        tv.setTextColor(initialDone ? colEmerald : colPale);
-        tv.setTextSize(11.5f);
-        row.addView(tv);
-
-        row.setOnClickListener(new View.OnClickListener() {
-            boolean done = initialDone;
-            public void onClick(View v) {
-                hapticClick();
-                done = !done;
-                String clean = text.substring(2);
-                tv.setText((done ? "✓ " : "○ ") + clean);
-                tv.setTextColor(done ? colEmerald : colPale);
-            }
-        });
-
-        return row;
-    }
-
-    private LinearLayout buildRosterFortnightCard() {
-        LinearLayout card = new LinearLayout(this);
-        card.setOrientation(LinearLayout.VERTICAL);
-        card.setBackground(rounded(colPanel, dp(16)));
-        card.setPadding(dp(16), dp(14), dp(16), dp(14));
-        LinearLayout.LayoutParams clp = new LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
-        clp.bottomMargin = dp(12);
-        card.setLayoutParams(clp);
-
-        LinearLayout top = new LinearLayout(this);
-        top.setOrientation(LinearLayout.HORIZONTAL);
-        top.setGravity(Gravity.CENTER_VERTICAL);
-
-        TextView tvHours = new TextView(this);
-        tvHours.setText("48.0h / 76.0h");
-        tvHours.setTextColor(colEmerald);
-        tvHours.setTextSize(16);
-        tvHours.setTypeface(Typeface.create(Typeface.MONOSPACE, Typeface.BOLD));
-        LinearLayout.LayoutParams hlp = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
-        tvHours.setLayoutParams(hlp);
-        top.addView(tvHours);
-
-        TextView tvPct = new TextView(this);
-        tvPct.setText("63% COMPLETE");
-        tvPct.setTextColor(colPale);
-        tvPct.setTextSize(10);
-        tvPct.setTypeface(Typeface.MONOSPACE);
-        top.addView(tvPct);
-        card.addView(top);
-
-        // Liquid Progress Track
-        FrameLayout track = new FrameLayout(this);
-        track.setBackground(rounded(0x33FFFFFF, dp(4)));
-        LinearLayout.LayoutParams trlp = new LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT, dp(8));
-        trlp.topMargin = dp(8);
-        trlp.bottomMargin = dp(10);
-        track.setLayoutParams(trlp);
-
-        View fill = new View(this);
-        fill.setBackground(rounded(colEmerald, dp(4)));
-        FrameLayout.LayoutParams flp = new FrameLayout.LayoutParams(0, FrameLayout.LayoutParams.MATCH_PARENT);
-        fill.setLayoutParams(flp);
-        track.addView(fill);
-        card.addView(track);
-
-        // Animate fill bar width
-        track.post(new Runnable() {
-            public void run() {
-                int totalW = track.getWidth();
-                if (totalW > 0) {
-                    ValueAnimator anim = ValueAnimator.ofInt(0, (int) (totalW * 0.63f));
-                    anim.setDuration(600);
-                    anim.setInterpolator(new DecelerateInterpolator());
-                    anim.addUpdateListener(new ValueAnimator.AnimatorUpdateListener() {
-                        public void onAnimationUpdate(ValueAnimator va) {
-                            FrameLayout.LayoutParams lp = (FrameLayout.LayoutParams) fill.getLayoutParams();
-                            lp.width = (Integer) va.getAnimatedValue();
-                            fill.setLayoutParams(lp);
-                        }
-                    });
-                    anim.start();
-                }
-            }
-        });
-
-        TextView sub = new TextView(this);
-        sub.setText("Current Pay Period: 24 Aug – 06 Sep · 4 shifts completed, 2 remaining");
-        sub.setTextColor(0xFF94A3B8);
-        sub.setTextSize(10.5f);
-        card.addView(sub);
-
-        return card;
-    }
-
-    private void showShiftSwapDialog() {
-        final LinearLayout box = dialogContainer("🔄 Request Shift Swap", "ROSTER CO-ORDINATION", colCyan);
-
-        box.addView(formSectionLabel("SELECT TARGET SHIFT"));
-        String[] shifts = {"Sun 30 Aug (18:00 - 06:00)", "Mon 31 Aug (18:00 - 06:00)", "Wed 02 Sep (18:00 - 06:00)"};
-        final String[] selShift = {shifts[0]};
-        box.addView(buildChipGroup(shifts, selShift, true, colCyan));
-
-        box.addView(formSectionLabel("PROPOSE COVER WITH GUARD"));
-        String[] guards = {"Officer Chris Ireton", "Officer Brian Rush", "Officer Bill", "Officer Jon Naylor"};
-        final String[] selGuard = {guards[0]};
-        box.addView(buildChipGroup(guards, selGuard, true, colAccent));
-
-        final Dialog dlg = createTacticalDialog(box);
-
-        LinearLayout btnRow = new LinearLayout(this);
-        btnRow.setOrientation(LinearLayout.HORIZONTAL);
-        btnRow.setPadding(0, dp(16), 0, 0);
-
-        TextView btnCancel = actionButton("Cancel", colLine, colMuted);
-        btnCancel.setOnClickListener(new View.OnClickListener() {
-            public void onClick(View v) {
-                hapticClick();
-                dlg.dismiss();
-            }
-        });
-        btnRow.addView(btnCancel);
-
-        TextView btnSend = actionButton("Send Request", colCyan, 0xFF000000);
-        btnSend.setOnClickListener(new View.OnClickListener() {
-            public void onClick(View v) {
-                hapticHeavyClick();
-                Toast.makeText(MainActivity.this, "Shift swap proposal dispatched to " + selGuard[0], Toast.LENGTH_SHORT).show();
-                dlg.dismiss();
-            }
-        });
-        LinearLayout.LayoutParams sllp = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1.4f);
-        sllp.leftMargin = dp(8);
-        btnSend.setLayoutParams(sllp);
-        btnRow.addView(btnSend);
-
-        box.addView(btnRow);
-        dlg.show();
-    }
-
-    // =========================================================================
-    // 🌊 FLUID 7-DAY ROSTER SCRUBBER VIEW
-    // =========================================================================
-
-    private class FluidRosterDayScrubberView extends View {
-        private final String[] titles = {"SAT 29", "SUN 30", "MON 31", "TUE 01", "WED 02", "THU 03", "FRI 04"};
-        
-        private final Paint trackPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
-        private final Paint borderPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
-        private final Paint pillPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
-        private final Paint pillGlowPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
-        private final Paint dayPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
-        private final Paint datePaint = new Paint(Paint.ANTI_ALIAS_FLAG);
-        private final Paint dotPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
-        private final RectF trackRect = new RectF();
-        private final RectF pillRect = new RectF();
-        private final RectF glowRect = new RectF();
-
-        private final String[] days = {"MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN"};
-        private final String[] dates = {"24", "25", "26", "27", "28", "29", "30"};
-        private final boolean[] isShift = {true, true, true, true, true, true, true};
-
-        private float indicatorPos = 5f; // Default to Saturday 29 Aug
-        private ValueAnimator snapAnimator;
-        private int lastHover = 5;
-
-        public FluidRosterDayScrubberView(Context context) {
-            super(context);
-            trackPaint.setStyle(Paint.Style.FILL);
-            borderPaint.setStyle(Paint.Style.STROKE);
-            borderPaint.setStrokeWidth(dpf(1f));
-            pillPaint.setStyle(Paint.Style.FILL);
-            pillGlowPaint.setStyle(Paint.Style.FILL);
-            dayPaint.setTextAlign(Paint.Align.CENTER);
-            dayPaint.setTypeface(Typeface.create(Typeface.MONOSPACE, Typeface.BOLD));
-            datePaint.setTextAlign(Paint.Align.CENTER);
-            datePaint.setTypeface(Typeface.create(Typeface.DEFAULT, Typeface.BOLD));
-            dotPaint.setStyle(Paint.Style.FILL);
-        }
-
-        private float dpf(float v) {
-            return v * getResources().getDisplayMetrics().density;
-        }
-
-        @Override
-        public boolean onTouchEvent(MotionEvent event) {
-            int w = getWidth();
-            if (w <= 0) return super.onTouchEvent(event);
-
-            float pad = dpf(4f);
-            float usableWidth = w - pad * 2;
-            float segWidth = usableWidth / days.length;
-
-            switch (event.getActionMasked()) {
-                case MotionEvent.ACTION_DOWN:
-                case MotionEvent.ACTION_MOVE:
-                    getParent().requestDisallowInterceptTouchEvent(true);
-                    float rawPos = (event.getX() - pad - segWidth / 2f) / segWidth;
-                    float clamped = Math.max(0f, Math.min(days.length - 1, rawPos));
-                    int hover = Math.round(clamped);
-
-                    
-                    return true;
-
-                case MotionEvent.ACTION_CANCEL:
-                    getParent().requestDisallowInterceptTouchEvent(false);
-                    animateToPosition(selectedRosterDay);
-                    return true;
-            }
-            return super.onTouchEvent(event);
-        }
-
-        public void animateToPosition(int targetIndex) {
-            if (snapAnimator != null && snapAnimator.isRunning()) snapAnimator.cancel();
-            snapAnimator = ValueAnimator.ofFloat(indicatorPos, targetIndex);
-            snapAnimator.setDuration(220);
-            snapAnimator.setInterpolator(new OvershootInterpolator(1.1f));
-            snapAnimator.addUpdateListener(new ValueAnimator.AnimatorUpdateListener() {
-                public void onAnimationUpdate(ValueAnimator va) {
-                    indicatorPos = (Float) va.getAnimatedValue();
-                    invalidate();
-                }
-            });
-            snapAnimator.start();
-        }
-
-        @Override
-        protected void onDraw(Canvas canvas) {
-            super.onDraw(canvas);
-            int w = getWidth();
-            int h = getHeight();
-            if (w <= 0 || h <= 0) return;
-
-            float pad = dpf(4f);
-            float cornerRadius = dpf(16f);
-            float pillCorner = dpf(12f);
-
-            // 1. Draw track
-            trackRect.set(0, 0, w, h);
-            trackPaint.setColor(colPanel);
-            canvas.drawRoundRect(trackRect, cornerRadius, cornerRadius, trackPaint);
-            borderPaint.setColor(colLine);
-            canvas.drawRoundRect(trackRect, cornerRadius, cornerRadius, borderPaint);
-
-            // 2. Sliding indicator pill
-            float usableWidth = w - pad * 2;
-            float segWidth = usableWidth / days.length;
-
-            float pillLeft = pad + indicatorPos * segWidth;
-            float pillRight = pillLeft + segWidth;
-            float pillTop = pad;
-            float pillBottom = h - pad;
-            pillRect.set(pillLeft, pillTop, pillRight, pillBottom);
-
-            // Pill glow & body
-            pillGlowPaint.setColor(colAccent);
-            pillGlowPaint.setAlpha(45);
-            glowRect.set(pillRect.left - dpf(2f), pillRect.top - dpf(1f), pillRect.right + dpf(2f), pillRect.bottom + dpf(1f));
-            canvas.drawRoundRect(glowRect, pillCorner + dpf(1f), pillCorner + dpf(1f), pillGlowPaint);
-
-            pillPaint.setColor(colAccent);
-            canvas.drawRoundRect(pillRect, pillCorner, pillCorner, pillPaint);
-
-            // 3. Draw day labels
-            for (int i = 0; i < days.length; i++) {
-                float segCenterX = pad + (i + 0.5f) * segWidth;
-                float dist = Math.abs(indicatorPos - i);
-
-                boolean isSelected = dist < 0.5f;
-
-                dayPaint.setTextSize(dpf(9f));
-                dayPaint.setColor(isSelected ? colAccentInk : (isShift[i] ? colPale : colQuiet));
-                canvas.drawText(days[i], segCenterX, h / 2f - dpf(4f), dayPaint);
-
-                datePaint.setTextSize(dpf(12.5f));
-                datePaint.setColor(isSelected ? colAccentInk : (isShift[i] ? 0xFFFFFFFF : colQuiet));
-                canvas.drawText(dates[i], segCenterX, h / 2f + dpf(12f), datePaint);
-
-                // Small shift dot under date
-                if (isShift[i]) {
-                    dotPaint.setColor(isSelected ? colAccentInk : colEmerald);
-                    canvas.drawCircle(segCenterX, h - pad - dpf(5f), dpf(2f), dotPaint);
-                }
-            }
-        }
-    }
-
-
-
-
-    // =========================================================================
-    // 🌌 THEME SHOCKWAVE & QUANTUM PARTICLE BURST OVERLAY
-    // =========================================================================
-
-    
-    // =========================================================================
-    // 🎨 FLUID ANIMATED THEME BAR VIEW
-    // =========================================================================
-
-    class FluidAnimatedThemeBarView extends View {
-        private final Paint bgPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
-        private final Paint chipPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
-        private final Paint chipGlowPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
-        private final Paint labelPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
-        private final RectF bgRect = new RectF();
-        private final RectF chipRect = new RectF();
-
-        private final String[] themeNames = {"GOLD", "AMBER", "MATRIX", "SLATE"};
-        private final int[] themeColors = {0xFFFFD166, 0xFFFFB703, 0xFF00FF66, 0xFF94A3B8};
-        private float indicatorFloat = (float) activeTheme;
-        private ValueAnimator indAnimator;
-
-        private float dpf(float v) {
-            return v * getResources().getDisplayMetrics().density;
-        }
-
-        public FluidAnimatedThemeBarView(Context context) {
-            super(context);
-            bgPaint.setStyle(Paint.Style.FILL);
-            chipPaint.setStyle(Paint.Style.FILL);
-            chipGlowPaint.setStyle(Paint.Style.STROKE);
-            chipGlowPaint.setStrokeWidth(dpf(1.5f));
-            labelPaint.setTextAlign(Paint.Align.CENTER);
-            labelPaint.setTypeface(Typeface.create(Typeface.MONOSPACE, Typeface.BOLD));
-        }
-
-        public void setIndicatorFloat(float f) {
-            this.indicatorFloat = Math.max(0f, Math.min(3f, f));
-            invalidate();
-        }
-
-        public void animateToTheme(int targetTheme) {
-            if (indAnimator != null && indAnimator.isRunning()) indAnimator.cancel();
-            indAnimator = ValueAnimator.ofFloat(indicatorFloat, (float) targetTheme);
-            indAnimator.setDuration(300);
-            indAnimator.setInterpolator(new OvershootInterpolator(1.2f));
-            indAnimator.addUpdateListener(new ValueAnimator.AnimatorUpdateListener() {
-                public void onAnimationUpdate(ValueAnimator va) {
-                    indicatorFloat = (Float) va.getAnimatedValue();
-                    invalidate();
-                }
-            });
-            indAnimator.start();
-        }
-
-        @Override
-        public boolean onTouchEvent(MotionEvent event) {
-            if (event.getAction() == MotionEvent.ACTION_DOWN) {
-                float w = getWidth();
-                if (w > 0) {
-                    float segW = w / 4f;
-                    int theme = Math.max(0, Math.min(3, (int) (event.getX() / segW)));
-                    if (theme != activeTheme) {
-                        float cx = event.getRawX();
-                        float cy = event.getRawY();
-                        MainActivity.this.animateThemeChangeWithShockwave(theme, cx, cy);
-                        animateToTheme(theme);
-                    }
-                    return true;
-                }
-            }
-            return super.onTouchEvent(event);
-        }
-
-        @Override
-        protected void onDraw(Canvas canvas) {
-            super.onDraw(canvas);
-            int w = getWidth();
-            int h = getHeight();
-            if (w <= 0 || h <= 0) return;
-
-            bgRect.set(0, 0, w, h);
-            bgPaint.setColor(colPanel);
-            canvas.drawRoundRect(bgRect, dp(12), dp(12), bgPaint);
-
-            float segW = w / 4f;
-            float pad = dpf(2.5f);
-            float chipX = indicatorFloat * segW + pad;
-            float chipW = segW - pad * 2;
-
-            chipRect.set(chipX, pad, chipX + chipW, h - pad);
-
-            int curTheme = Math.max(0, Math.min(3, Math.round(indicatorFloat)));
-            chipPaint.setColor(themeColors[curTheme]);
-            canvas.drawRoundRect(chipRect, dp(9), dp(9), chipPaint);
-
-            labelPaint.setTextSize(dpf(9f));
-            float textY = h / 2f + dpf(3.2f);
-
-            for (int i = 0; i < 4; i++) {
-                float tx = i * segW + segW / 2f;
-                float dist = Math.abs(indicatorFloat - i);
-                if (dist < 0.5f) {
-                    labelPaint.setColor(0xFF000000);
-                } else {
-                    labelPaint.setColor(colMuted);
-                }
-                canvas.drawText(themeNames[i], tx, textY, labelPaint);
-            }
-        }
-    }
-
-    // =========================================================================
-    // 📱 FLUID ANIMATED TAB BAR VIEW
-    // =========================================================================
-
-    class FluidAnimatedTabBarView extends View {
-        private final Paint bgPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
-        private final Paint indicatorPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
-        private final Paint indicatorGlowPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
-        private final Paint textPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
-        private final RectF bgRect = new RectF();
-        private final RectF indRect = new RectF();
-
-        private final String[] tabTitles = {"🛡️ PATROL", "📞 CONTACTS", "📅 ROSTER", "🛠️ TOOLS"};
-        private float indicatorFloat = 0f;
-        private ValueAnimator indAnimator;
-
-        private float dpf(float v) {
-            return v * getResources().getDisplayMetrics().density;
-        }
-
-        public FluidAnimatedTabBarView(Context context) {
-            super(context);
-            bgPaint.setStyle(Paint.Style.FILL);
-            indicatorPaint.setStyle(Paint.Style.FILL);
-            indicatorGlowPaint.setStyle(Paint.Style.STROKE);
-            indicatorGlowPaint.setStrokeWidth(dpf(1.5f));
-            textPaint.setTextAlign(Paint.Align.CENTER);
-            textPaint.setTypeface(Typeface.DEFAULT_BOLD);
-        }
-
-        public void setIndicatorFloat(float f) {
-            this.indicatorFloat = Math.max(0f, Math.min(3f, f));
-            invalidate();
-        }
-
-        public void animateToTab(int targetTab) {
-            if (indAnimator != null && indAnimator.isRunning()) indAnimator.cancel();
-            indAnimator = ValueAnimator.ofFloat(indicatorFloat, (float) targetTab);
-            indAnimator.setDuration(280);
-            indAnimator.setInterpolator(new OvershootInterpolator(1.15f));
-            indAnimator.addUpdateListener(new ValueAnimator.AnimatorUpdateListener() {
-                public void onAnimationUpdate(ValueAnimator va) {
-                    indicatorFloat = (Float) va.getAnimatedValue();
-                    invalidate();
-                }
-            });
-            indAnimator.start();
-        }
-
-        @Override
-        public boolean onTouchEvent(MotionEvent event) {
-            if (event.getAction() == MotionEvent.ACTION_DOWN || event.getAction() == MotionEvent.ACTION_MOVE) {
-                float w = getWidth();
-                if (w > 0) {
-                    float segW = w / 4f;
-                    int tab = Math.max(0, Math.min(3, (int) (event.getX() / segW)));
-                    if (event.getAction() == MotionEvent.ACTION_DOWN) {
-                        animateTabToPosition(tab);
-                    }
-                    return true;
-                }
-            }
-            return super.onTouchEvent(event);
-        }
-
-        @Override
-        protected void onDraw(Canvas canvas) {
-            super.onDraw(canvas);
-            int w = getWidth();
-            int h = getHeight();
-            if (w <= 0 || h <= 0) return;
-
-            bgRect.set(0, 0, w, h);
-            bgPaint.setColor(colPanel);
-            canvas.drawRoundRect(bgRect, dp(14), dp(14), bgPaint);
-
-            float segW = w / 4f;
-            float indPad = dp(3);
-            float indX = indicatorFloat * segW + indPad;
-            float indW = segW - indPad * 2;
-
-            indRect.set(indX, indPad, indX + indW, h - indPad);
-
-            indicatorPaint.setColor(colAccent);
-            canvas.drawRoundRect(indRect, dp(11), dp(11), indicatorPaint);
-
-            indicatorGlowPaint.setColor(colAccentSoft);
-            canvas.drawRoundRect(indRect, dp(11), dp(11), indicatorGlowPaint);
-
-            textPaint.setTextSize(dpf(10.5f));
-            float textY = h / 2f + dpf(3.8f);
-
-            for (int i = 0; i < 4; i++) {
-                float tx = i * segW + segW / 2f;
-                float dist = Math.abs(indicatorFloat - i);
-                if (dist < 0.5f) {
-                    textPaint.setColor(colAccentInk);
-                } else {
-                    textPaint.setColor(colMuted);
-                }
-                canvas.drawText(tabTitles[i], tx, textY, textPaint);
-            }
-        }
-    }
-
-    class ThemeShockwaveOverlayView extends View {
-        private final Paint ringPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
-        private final Paint glowPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
-        private final Paint particlePaint = new Paint(Paint.ANTI_ALIAS_FLAG);
-        private final Paint starPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
-        private final Path starPath = new Path();
-
-        private static final int PARTICLE_COUNT = 32;
-        private final float[] pX = new float[PARTICLE_COUNT];
-        private final float[] pY = new float[PARTICLE_COUNT];
-        private final float[] pVx = new float[PARTICLE_COUNT];
-        private final float[] pVy = new float[PARTICLE_COUNT];
-        private final float[] pSize = new float[PARTICLE_COUNT];
-        private final float[] pAlpha = new float[PARTICLE_COUNT];
-        private final float[] pRot = new float[PARTICLE_COUNT];
-        private final float[] pRotSpeed = new float[PARTICLE_COUNT];
-
-        private float originX = 0f;
-        private float originY = 0f;
-        private float shockwaveRadius = 0f;
-        private float shockwaveAlpha = 0f;
-        private int shockwaveColor = 0xFFFFD166;
-        private ValueAnimator waveAnimator;
-        private boolean isActive = false;
-
-        public ThemeShockwaveOverlayView(Context context) {
-            super(context);
-            ringPaint.setStyle(Paint.Style.STROKE);
-            glowPaint.setStyle(Paint.Style.STROKE);
-            particlePaint.setStyle(Paint.Style.FILL);
-            starPaint.setStyle(Paint.Style.FILL);
-            setVisibility(View.GONE);
-        }
-
-        private float dpf(float v) {
-            return v * getResources().getDisplayMetrics().density;
-        }
-
-        public void triggerShockwave(float x, float y, int color) {
-            this.originX = x;
-            this.originY = y;
-            this.shockwaveColor = color;
-            this.isActive = true;
-            setVisibility(View.VISIBLE);
-
-            // Initialize 32 quantum starlight particles
-            java.util.Random rnd = new java.util.Random();
-            for (int i = 0; i < PARTICLE_COUNT; i++) {
-                pX[i] = originX;
-                pY[i] = originY;
-                double angle = rnd.nextDouble() * Math.PI * 2.0;
-                float speed = dpf(2.5f + rnd.nextFloat() * 7.5f);
-                pVx[i] = (float) (Math.cos(angle) * speed);
-                pVy[i] = (float) (Math.sin(angle) * speed);
-                pSize[i] = dpf(2f + rnd.nextFloat() * 4.5f);
-                pAlpha[i] = 1.0f;
-                pRot[i] = rnd.nextFloat() * 360f;
-                pRotSpeed[i] = (rnd.nextFloat() - 0.5f) * 18f;
-            }
-
-            if (waveAnimator != null && waveAnimator.isRunning()) {
-                waveAnimator.cancel();
-            }
-
-            waveAnimator = ValueAnimator.ofFloat(0f, 1f);
-            waveAnimator.setDuration(520);
-            waveAnimator.setInterpolator(new DecelerateInterpolator(1.4f));
-            waveAnimator.addUpdateListener(new ValueAnimator.AnimatorUpdateListener() {
-                public void onAnimationUpdate(ValueAnimator va) {
-                    float f = (Float) va.getAnimatedValue();
-                    float maxDist = (float) Math.hypot(getWidth(), getHeight()) * 1.05f;
-                    shockwaveRadius = f * maxDist;
-                    shockwaveAlpha = (1f - f);
-
-                    for (int i = 0; i < PARTICLE_COUNT; i++) {
-                        pX[i] += pVx[i];
-                        pY[i] += pVy[i];
-                        pVy[i] += dpf(0.15f); // subtle gravity
-                        pAlpha[i] = Math.max(0f, (1f - f * 1.1f));
-                        pRot[i] += pRotSpeed[i];
-                    }
-                    invalidate();
-                }
-            });
-            waveAnimator.addListener(new AnimatorListenerAdapter() {
-                @Override
-                public void onAnimationEnd(Animator animation) {
-                    isActive = false;
-                    setVisibility(View.GONE);
-                }
-            });
-            waveAnimator.start();
-        }
-
-        @Override
-        protected void onDraw(Canvas canvas) {
-            super.onDraw(canvas);
-            if (!isActive) return;
-
-            // Draw glowing expanding shockwave ring
-            if (shockwaveRadius > 0f && shockwaveAlpha > 0f) {
-                glowPaint.setColor(shockwaveColor);
-                glowPaint.setStrokeWidth(dpf(24f));
-                glowPaint.setAlpha((int) (shockwaveAlpha * 70));
-                canvas.drawCircle(originX, originY, shockwaveRadius, glowPaint);
-
-                ringPaint.setColor(shockwaveColor);
-                ringPaint.setStrokeWidth(dpf(4f));
-                ringPaint.setAlpha((int) (shockwaveAlpha * 240));
-                canvas.drawCircle(originX, originY, shockwaveRadius, ringPaint);
-            }
-
-            // Draw 32 sparkling starburst particles
-            for (int i = 0; i < PARTICLE_COUNT; i++) {
-                if (pAlpha[i] <= 0.01f) continue;
-                particlePaint.setColor(shockwaveColor);
-                particlePaint.setAlpha((int) (pAlpha[i] * 230));
-
-                canvas.save();
-                canvas.translate(pX[i], pY[i]);
-                canvas.rotate(pRot[i]);
-
-                float s = pSize[i];
-                starPath.reset();
-                starPath.moveTo(0, -s);
-                starPath.lineTo(s * 0.3f, -s * 0.3f);
-                starPath.lineTo(s, 0);
-                starPath.lineTo(s * 0.3f, s * 0.3f);
-                starPath.lineTo(0, s);
-                starPath.lineTo(-s * 0.3f, s * 0.3f);
-                starPath.lineTo(-s, 0);
-                starPath.lineTo(-s * 0.3f, -s * 0.3f);
-                starPath.close();
-
-                canvas.drawPath(starPath, particlePaint);
-
-                // Core white sparkle center
-                starPaint.setColor(0xFFFFFFFF);
-                starPaint.setAlpha((int) (pAlpha[i] * 255));
-                canvas.drawCircle(0, 0, s * 0.35f, starPaint);
-
-                canvas.restore();
-            }
-        }
-    }
-
-    public void animateThemeChangeWithShockwave(final int newTheme, float origX, float origY) {
-        if (newTheme == activeTheme) return;
-        hapticClick();
-        activeTheme = newTheme;
-
-        int waveColor = (newTheme == 1 ? 0xFFFFB703 : (newTheme == 2 ? 0xFF00FF66 : (newTheme == 3 ? 0xFF94A3B8 : 0xFFFFD166)));
-        if (shockwaveOverlay != null) {
-            shockwaveOverlay.triggerShockwave(origX, origY, waveColor);
-        }
-
-        applyThemeTokens();
-        if (root != null) root.setBackgroundColor(colBg);
-        if (rootFrame != null) rootFrame.setBackgroundColor(colBg);
-        if (scrollPatrol != null) scrollPatrol.setBackgroundColor(colBg);
-        if (scrollContacts != null) scrollContacts.setBackgroundColor(colBg);
-        if (scrollHandbook != null) scrollHandbook.setBackgroundColor(colBg);
-        if (scrollTools != null) scrollTools.setBackgroundColor(colBg);
-
-        if (animatedThemeBar != null) animatedThemeBar.invalidate();
-        if (animatedTabBar != null) animatedTabBar.invalidate();
-        if (rosterScrubber != null) rosterScrubber.invalidate();
     }
 }

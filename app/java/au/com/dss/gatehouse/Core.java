@@ -32,6 +32,7 @@ public final class Core {
 
     public static native int siteBegin(String name);
     public static native int siteAddPoint(String label, String uid);
+    public static native int siteAddOption(String label, String text);
     public static native int sitePolicy(int everyPoint, int maxGap, int rounds);
     public static native String siteHash();
     public static native String genesis();

@@ -1,0 +1,810 @@
+﻿<!doctype html>
+<html lang="en-AU">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
+<title>Gatehouse · Doherty Security Services UI Reimagined</title>
+<style>
+  :root {
+    --ground: #080B10;
+    --surface-1: #0F1622;
+    --surface-2: #162030;
+    --surface-3: #1E2B40;
+    --border: #24344D;
+    --border-subtle: #182333;
+    --ink: #F1F5F9;
+    --ink-dim: #94A3B8;
+    --ink-faint: #64748B;
+    --gold: #E5A93C;
+    --gold-dim: #996F20;
+    --gold-glow: rgba(229, 169, 60, 0.18);
+    --gold-soft: rgba(229, 169, 60, 0.08);
+    --emerald: #10B981;
+    --emerald-dim: rgba(16, 185, 129, 0.16);
+    --crimson: #EF4444;
+    --crimson-dim: rgba(239, 68, 68, 0.16);
+    --sans: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    --mono: ui-monospace, "SF Mono", "Cascadia Mono", Menlo, monospace;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+  body {
+    background: #040609;
+    color: var(--ink);
+    font-family: var(--sans);
+    min-height: 100vh;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 16px;
+    font-size: 15px;
+    line-height: 1.5;
+  }
+
+  .device-frame {
+    width: 100%;
+    max-width: 420px;
+    background: var(--ground);
+    border-radius: 40px;
+    box-shadow: 0 25px 60px rgba(0,0,0,0.85), 0 0 0 1px rgba(255,255,255,0.08);
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    height: 890px;
+    position: relative;
+  }
+
+  .status-bar {
+    height: 44px;
+    padding: 0 24px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--ink-dim);
+    background: var(--ground);
+    z-index: 10;
+  }
+  .status-bar .right-icons {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+  }
+
+  .screen-content {
+    flex: 1;
+    overflow-y: auto;
+    padding: 8px 18px 100px 18px;
+    scroll-behavior: smooth;
+  }
+  .screen-content::-webkit-scrollbar { width: 4px; }
+  .screen-content::-webkit-scrollbar-thumb { background: var(--surface-3); border-radius: 4px; }
+
+  .brand-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    padding: 8px 0 14px 0;
+    border-bottom: 1px solid var(--border-subtle);
+  }
+  .brand-meta {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+  .company-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--gold);
+  }
+  .company-badge svg { width: 12px; height: 12px; fill: var(--gold); }
+  .site-title {
+    font-size: 20px;
+    font-weight: 700;
+    color: #FFF;
+    letter-spacing: -0.02em;
+    margin-top: 2px;
+  }
+  .guard-profile {
+    font-size: 12px;
+    color: var(--ink-dim);
+    display: flex;
+    gap: 6px;
+    align-items: center;
+  }
+  .guard-licence {
+    background: var(--surface-2);
+    color: var(--gold);
+    padding: 1px 6px;
+    border-radius: 4px;
+    font-family: var(--mono);
+    font-size: 10px;
+  }
+
+  .chain-pill {
+    background: var(--surface-1);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 10px 14px;
+    margin: 14px 0;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+  }
+  .chain-info {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .chain-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--emerald);
+    box-shadow: 0 0 10px var(--emerald);
+    animation: pulse 2s infinite;
+  }
+  @keyframes pulse {
+    0%, 100% { transform: scale(1); opacity: 1; }
+    50% { transform: scale(1.25); opacity: 0.6; }
+  }
+  .chain-title {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--ink);
+  }
+  .chain-hash {
+    font-family: var(--mono);
+    font-size: 10px;
+    color: var(--ink-dim);
+  }
+  .chain-count {
+    background: var(--emerald-dim);
+    color: var(--emerald);
+    border: 1px solid rgba(16, 185, 129, 0.3);
+    padding: 3px 8px;
+    border-radius: 8px;
+    font-size: 11px;
+    font-weight: 700;
+    font-family: var(--mono);
+  }
+
+  .section-label {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--ink-faint);
+    margin: 18px 0 10px 0;
+  }
+  .section-action {
+    color: var(--gold);
+    text-decoration: none;
+    font-size: 11px;
+    cursor: pointer;
+  }
+
+  .patrol-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+  }
+  .checkpoint-card {
+    background: var(--surface-1);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 14px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    min-height: 108px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    position: relative;
+    overflow: hidden;
+  }
+  .checkpoint-card:active {
+    transform: scale(0.97);
+    background: var(--surface-2);
+    border-color: var(--gold);
+  }
+  .checkpoint-card.due {
+    border-color: rgba(229, 169, 60, 0.4);
+    background: linear-gradient(135deg, var(--surface-1), var(--gold-soft));
+  }
+  .checkpoint-card.due::after {
+    content: "DUE";
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    background: var(--gold);
+    color: #000;
+    font-size: 9px;
+    font-weight: 800;
+    padding: 1px 5px;
+    border-radius: 4px;
+  }
+  .cp-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+  }
+  .cp-name {
+    font-size: 15px;
+    font-weight: 700;
+    color: var(--ink);
+  }
+  .cp-visits {
+    font-size: 11px;
+    color: var(--gold);
+    font-family: var(--mono);
+    font-weight: 600;
+  }
+  .cp-bottom {
+    margin-top: 14px;
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+  }
+  .cp-time {
+    font-size: 11px;
+    color: var(--ink-dim);
+  }
+  .cp-tag-icon {
+    width: 22px;
+    height: 22px;
+    border-radius: 6px;
+    background: var(--surface-2);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .cp-tag-icon svg { width: 12px; height: 12px; fill: var(--ink-dim); }
+
+  .undo-banner {
+    background: var(--gold-soft);
+    border: 1px solid var(--gold);
+    border-radius: 14px;
+    padding: 12px 14px;
+    margin: 14px 0 6px 0;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    position: relative;
+    overflow: hidden;
+  }
+  .undo-progress-bar {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    height: 3px;
+    background: var(--gold);
+    width: 72%;
+    border-radius: 2px;
+    transition: width 1s linear;
+  }
+  .undo-text {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+  .undo-title {
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--gold);
+  }
+  .undo-subtitle {
+    font-size: 11px;
+    color: var(--ink-dim);
+  }
+  .btn-undo {
+    background: var(--gold);
+    color: #0C1017;
+    border: none;
+    padding: 6px 12px;
+    border-radius: 8px;
+    font-size: 11px;
+    font-weight: 700;
+    cursor: pointer;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.4);
+  }
+
+  .timeline-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  .event-card {
+    background: var(--surface-1);
+    border: 1px solid var(--border-subtle);
+    border-radius: 14px;
+    padding: 12px 14px;
+    display: flex;
+    gap: 12px;
+    align-items: flex-start;
+  }
+  .event-time {
+    font-family: var(--mono);
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--gold);
+    background: var(--surface-2);
+    padding: 2px 6px;
+    border-radius: 6px;
+    flex-shrink: 0;
+  }
+  .event-body {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+  .event-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  .event-title {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--ink);
+  }
+  .event-badge {
+    font-size: 9px;
+    font-weight: 700;
+    text-transform: uppercase;
+    padding: 2px 6px;
+    border-radius: 4px;
+  }
+  .badge-incident { background: var(--crimson-dim); color: var(--crimson); border: 1px solid rgba(239,68,68,0.3); }
+  .badge-daycrew { background: var(--gold-soft); color: var(--gold); border: 1px solid rgba(229,169,60,0.3); }
+  .badge-checkpoint { background: var(--surface-2); color: var(--ink-dim); }
+  .event-desc {
+    font-size: 12px;
+    color: var(--ink-dim);
+    line-height: 1.4;
+  }
+  .event-meta-tags {
+    display: flex;
+    gap: 6px;
+    margin-top: 4px;
+  }
+  .meta-chip {
+    font-size: 10px;
+    font-family: var(--mono);
+    color: var(--ink-faint);
+    background: var(--surface-2);
+    padding: 2px 6px;
+    border-radius: 4px;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+  }
+
+  .action-dock {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 8px;
+    margin: 16px 0;
+  }
+  .dock-btn {
+    background: var(--surface-1);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 12px 6px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .dock-btn:active {
+    background: var(--surface-3);
+    border-color: var(--gold);
+    transform: scale(0.95);
+  }
+  .dock-btn svg { width: 20px; height: 20px; fill: var(--gold); }
+  .dock-btn span {
+    font-size: 10px;
+    font-weight: 600;
+    color: var(--ink-dim);
+    text-align: center;
+    line-height: 1.2;
+  }
+
+  .bottom-bar {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    padding: 14px 20px 24px 20px;
+    background: linear-gradient(to top, var(--ground) 80%, transparent);
+    z-index: 20;
+  }
+  .btn-seal-shift {
+    width: 100%;
+    background: linear-gradient(135deg, #E5A93C, #C88D26);
+    color: #090D14;
+    border: none;
+    border-radius: 16px;
+    padding: 16px 20px;
+    font-size: 15px;
+    font-weight: 800;
+    letter-spacing: 0.04em;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 10px;
+    cursor: pointer;
+    box-shadow: 0 8px 24px rgba(229, 169, 60, 0.28);
+    transition: all 0.2s;
+  }
+  .btn-seal-shift:active {
+    transform: scale(0.98);
+    box-shadow: 0 4px 12px rgba(229, 169, 60, 0.2);
+  }
+  .btn-seal-shift svg { width: 18px; height: 18px; fill: #090D14; }
+
+  .modal-overlay {
+    position: absolute;
+    inset: 0;
+    background: rgba(4, 6, 9, 0.92);
+    backdrop-filter: blur(12px);
+    z-index: 50;
+    display: none;
+    flex-direction: column;
+    padding: 20px;
+    animation: fadeIn 0.2s ease;
+  }
+  @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+  .modal-card {
+    background: var(--surface-1);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+  .modal-header {
+    padding: 16px 18px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  .modal-title { font-size: 16px; font-weight: 700; color: #FFF; }
+  .modal-close {
+    background: var(--surface-2);
+    border: none;
+    color: var(--ink-dim);
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    cursor: pointer;
+    font-weight: bold;
+  }
+  .modal-content {
+    flex: 1;
+    padding: 16px;
+    overflow-y: auto;
+    font-family: var(--mono);
+    font-size: 11px;
+    line-height: 1.6;
+    color: #E2E8F0;
+    white-space: pre-wrap;
+    background: #0B0F16;
+  }
+  .modal-footer {
+    padding: 14px 18px;
+    border-top: 1px solid var(--border);
+    display: flex;
+    gap: 10px;
+  }
+  .btn-modal-action {
+    flex: 1;
+    padding: 12px;
+    border-radius: 12px;
+    font-weight: 700;
+    font-size: 13px;
+    cursor: pointer;
+    border: none;
+  }
+  .btn-sign { background: var(--gold); color: #000; }
+  .btn-cancel { background: var(--surface-2); color: var(--ink-dim); }
+
+</style>
+</head>
+<body>
+
+<div class="device-frame">
+  <!-- Status Bar -->
+  <div class="status-bar">
+    <span>01:48</span>
+    <div class="right-icons">
+      <span>5G</span>
+      <span style="color:var(--emerald);">NFC READY</span>
+      <span>92%</span>
+    </div>
+  </div>
+
+  <!-- Scrollable Screen Content -->
+  <div class="screen-content">
+    
+    <!-- Brand & Site Header -->
+    <div class="brand-header">
+      <div class="brand-meta">
+        <div class="company-badge">
+          <svg viewBox="0 0 24 24"><path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4zm0 10.99h7c-.53 4.12-3.28 7.79-7 8.94V12H5V6.3l7-3.11v8.8z"/></svg>
+          DOHERTY SECURITY SERVICES
+        </div>
+        <div class="site-title">Northgate Rise, Stage 2</div>
+        <div class="guard-profile">
+          <span>Officer R. Kelso</span>
+          <span class="guard-licence">LIC #41207</span>
+          <span style="color:var(--ink-faint);">· 18:00 - 06:00</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Live Cryptographic Hash-Chain Banner -->
+    <div class="chain-pill">
+      <div class="chain-info">
+        <div class="chain-dot"></div>
+        <div>
+          <div class="chain-title">Chain Verified · SHA-256</div>
+          <div class="chain-hash">Head: d97df6...2c02</div>
+        </div>
+      </div>
+      <div class="chain-count">23 ENTRIES</div>
+    </div>
+
+    <!-- Active Undo Window Notification -->
+    <div class="undo-banner" id="undoToast">
+      <div class="undo-text">
+        <div class="undo-title">Gate A Checkpoint Recorded</div>
+        <div class="undo-subtitle">Held in buffer · 01:42 left to undo</div>
+      </div>
+      <button class="btn-undo" onclick="cancelPending()">Take Back</button>
+      <div class="undo-progress-bar" id="undoProgress"></div>
+    </div>
+
+    <!-- Patrol Checkpoints (2x2 Matrix) -->
+    <div class="section-label">
+      <span>Patrol Points (4)</span>
+      <span class="section-action" onclick="simulateNFCTap()">Simulate NFC Tap</span>
+    </div>
+    
+    <div class="patrol-grid">
+      <!-- Card 1 -->
+      <div class="checkpoint-card" onclick="tapCard('Gate A')">
+        <div class="cp-top">
+          <div class="cp-name">Gate A</div>
+          <div class="cp-visits">4 visits</div>
+        </div>
+        <div class="cp-bottom">
+          <div class="cp-time">Last: 12m ago</div>
+          <div class="cp-tag-icon"><svg viewBox="0 0 24 24"><path d="M20 2H4c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm-8 16c-3.31 0-6-2.69-6-6s2.69-6 6-6 6 2.69 6 6-2.69 6-6 6z"/></svg></div>
+        </div>
+      </div>
+
+      <!-- Card 2 -->
+      <div class="checkpoint-card" onclick="tapCard('Compound')">
+        <div class="cp-top">
+          <div class="cp-name">Compound</div>
+          <div class="cp-visits">3 visits</div>
+        </div>
+        <div class="cp-bottom">
+          <div class="cp-time">Last: 28m ago</div>
+          <div class="cp-tag-icon"><svg viewBox="0 0 24 24"><path d="M20 2H4c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm-8 16c-3.31 0-6-2.69-6-6s2.69-6 6-6 6 2.69 6 6-2.69 6-6 6z"/></svg></div>
+        </div>
+      </div>
+
+      <!-- Card 3 -->
+      <div class="checkpoint-card" onclick="tapCard('East Fence')">
+        <div class="cp-top">
+          <div class="cp-name">East Fence</div>
+          <div class="cp-visits">2 visits</div>
+        </div>
+        <div class="cp-bottom">
+          <div class="cp-time">Last: 58m ago</div>
+          <div class="cp-tag-icon"><svg viewBox="0 0 24 24"><path d="M20 2H4c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm-8 16c-3.31 0-6-2.69-6-6s2.69-6 6-6 6 2.69 6 6-2.69 6-6 6z"/></svg></div>
+        </div>
+      </div>
+
+      <!-- Card 4 (Due) -->
+      <div class="checkpoint-card due" onclick="tapCard('Crane Base')">
+        <div class="cp-top">
+          <div class="cp-name">Crane Base</div>
+          <div class="cp-visits" style="color:var(--gold);">Due now</div>
+        </div>
+        <div class="cp-bottom">
+          <div class="cp-time" style="color:var(--gold);">Not visited yet</div>
+          <div class="cp-tag-icon" style="background:var(--gold-soft);"><svg style="fill:var(--gold);" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.8 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/></svg></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Quick Action Dock -->
+    <div class="section-label"><span>Quick Entry</span></div>
+    <div class="action-dock">
+      <div class="dock-btn" onclick="openPrompt('Incident')">
+        <svg viewBox="0 0 24 24"><path d="M1 21h22L12 2 1 21zm12-3h-2v-2h2v2zm0-4h-2v-4h2v4z"/></svg>
+        <span>Incident Log</span>
+      </div>
+      <div class="dock-btn" onclick="openPrompt('Day Crew Note')">
+        <svg viewBox="0 0 24 24"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-5 14H7v-2h7v2zm3-4H7v-2h10v2zm0-4H7V7h10v2z"/></svg>
+        <span>Day Crew Note</span>
+      </div>
+      <div class="dock-btn" onclick="openPrompt('Photo Anchor')">
+        <svg viewBox="0 0 24 24"><path d="M21 19V5c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2zM8.5 13.5l2.5 3.01L14.5 12l4.5 6H5l3.5-4.5z"/></svg>
+        <span>Photo Anchor</span>
+      </div>
+      <div class="dock-btn" onclick="openPrompt('Voice Memo')">
+        <svg viewBox="0 0 24 24"><path d="M12 14c1.66 0 2.99-1.34 2.99-3L15 5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3zm5.3-3c0 3-2.54 5.1-5.3 5.1S6.7 14 6.7 11H5c0 3.41 2.72 6.23 6 6.72V21h2v-3.28c3.28-.48 6-3.3 6-6.72h-1.7z"/></svg>
+        <span>Voice Memo</span>
+      </div>
+    </div>
+
+    <!-- Verified Event Timeline Stream -->
+    <div class="section-label">
+      <span>Tonight's Shift Log (23)</span>
+      <span style="color:var(--emerald);font-size:10px;font-family:var(--mono);">✓ HASH VERIFIED</span>
+    </div>
+
+    <div class="timeline-list">
+      <!-- Item 1 -->
+      <div class="event-card">
+        <div class="event-time">01:02</div>
+        <div class="event-body">
+          <div class="event-header">
+            <div class="event-title">Perimeter Audio Note</div>
+            <span class="event-badge badge-daycrew">VOICE ANCHOR</span>
+          </div>
+          <div class="event-desc">Sandbags moved against the shed door due to stormwater buildup.</div>
+          <div class="event-meta-tags">
+            <span class="meta-chip">🎙️ hash: bf02c248</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Item 2 -->
+      <div class="event-card">
+        <div class="event-time">00:38</div>
+        <div class="event-body">
+          <div class="event-header">
+            <div class="event-title">Drainage & Plinth Alert</div>
+            <span class="event-badge badge-daycrew">CORRECTION</span>
+          </div>
+          <div class="event-desc">Water reached the switchboard plinth, not only the shed.</div>
+          <div class="event-meta-tags">
+            <span class="meta-chip">📷 photo: b9d2a3d4</span>
+            <span class="meta-chip">supersedes #14</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Item 3 -->
+      <div class="event-card">
+        <div class="event-time">00:14</div>
+        <div class="event-body">
+          <div class="event-header">
+            <div class="event-title">Trespass Suspicion</div>
+            <span class="event-badge badge-incident">INCIDENT</span>
+          </div>
+          <div class="event-desc">Two persons spotted at east fence material store in dark jackets. Moved off north when torch was illuminated. Perimeter mesh intact.</div>
+          <div class="event-meta-tags">
+            <span class="meta-chip">📷 photo: d93d3c28</span>
+            <span class="meta-chip">00:22 follow-up logged</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Item 4 -->
+      <div class="event-card">
+        <div class="event-time">20:26</div>
+        <div class="event-body">
+          <div class="event-header">
+            <div class="event-title">Maintenance Note</div>
+            <span class="event-badge badge-daycrew">FOR DAY CREW</span>
+          </div>
+          <div class="event-desc">Floodlight out over the east stack. Gate B padlock stiff, needs oil.</div>
+          <div class="event-meta-tags">
+            <span class="meta-chip">📷 photo: e36296e4</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Bottom Floating Action Bar -->
+  <div class="bottom-bar">
+    <button class="btn-seal-shift" onclick="openHandoverModal()">
+      <svg viewBox="0 0 24 24"><path d="M18 8h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2zm-6 9c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2zm3.1-9H8.9V6c0-1.71 1.39-3.1 3.1-3.1 1.71 0 3.1 1.39 3.1 3.1v2z"/></svg>
+      Seal Shift & Handover (06:05)
+    </button>
+  </div>
+
+  <!-- Handover Modal -->
+  <div class="modal-overlay" id="handoverModal">
+    <div class="modal-card">
+      <div class="modal-header">
+        <div class="modal-title">06:05 Handover Report</div>
+        <button class="modal-close" onclick="closeHandoverModal()">✕</button>
+      </div>
+      <div class="modal-content" id="reportText">Overnight handover, Northgate Rise, stage 2
+2026-08-21 18:00 to 2026-08-22 06:00
+guard: R. Kelso
+site secured: yes   entries: 23
+
+Action required today, 4 items
+  20:26  floodlight out over east stack   [photo e36296e4]
+  20:58  gate B padlock stiff, needs oil
+  00:38  water reached switchboard plinth [photo b9d2a3d4]
+  05:12  excavator unlocked, keys secured in site office
+
+Incidents, 1 item
+  00:14  two people at east fence material store. Moved off north. Intact. [photo d93d3c28]
+
+Coverage, 4 of 4 points reached (100% compliance)
+  gate A        visits 4   longest gap 1h 20m
+  compound      visits 3   longest gap 1h 45m
+  east fence    visits 2   longest gap 2h 10m
+  crane base    visits 1   longest gap 3h 15m
+
+Record sealed: SHA-256 d97df6b9a0ed632298e72c28601fab9ee7c0b1ea2a3cadf63a6c896024ae2c02</div>
+      <div class="modal-footer">
+        <button class="btn-modal-action btn-cancel" onclick="closeHandoverModal()">Back to Shift</button>
+        <button class="btn-modal-action btn-sign" onclick="alert('Record Cryptographically Sealed and Archived.')">Sign & Seal Night</button>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+  function tapCard(name) {
+    const toast = document.getElementById('undoToast');
+    toast.style.display = 'flex';
+    toast.querySelector('.undo-title').innerText = name + ' Checkpoint Recorded';
+    toast.querySelector('.undo-subtitle').innerText = 'Held in buffer · 02:00 left to undo';
+  }
+
+  function cancelPending() {
+    document.getElementById('undoToast').style.display = 'none';
+  }
+
+  function simulateNFCTap() {
+    tapCard('NFC Tag: Crane Base (NTAG215)');
+  }
+
+  function openPrompt(type) {
+    const text = prompt('Enter write-up for ' + type + ':');
+    if (text) {
+      alert('Recorded: "' + text + '"\nAnchored with SHA-256 hash.');
+    }
+  }
+
+  function openHandoverModal() {
+    document.getElementById('handoverModal').style.display = 'flex';
+  }
+
+  function closeHandoverModal() {
+    document.getElementById('handoverModal').style.display = 'none';
+  }
+</script>
+
+</body>
+</html>

@@ -116,8 +116,9 @@ fi
 ok
 
 say "dex"
+"$JDK/bin/jar.exe" cf "$OUT/classes.jar" -C "$OUT/classes" .
 if ! "$BT/d8.bat" --min-api 26 --output "$OUT" \
-     $(find "$OUT/classes" -name "*.class") > "$OUT/d8.log" 2>&1
+     "$OUT/classes.jar" > "$OUT/d8.log" 2>&1
 then
   echo "FAILED"; cat "$OUT/d8.log"; exit 1
 fi
