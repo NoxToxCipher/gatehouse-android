@@ -65,6 +65,7 @@ import android.view.ViewGroup;
 import android.view.Window;
 import android.view.WindowInsets;
 import android.view.animation.DecelerateInterpolator;
+import android.view.animation.LinearInterpolator;
 import android.view.animation.OvershootInterpolator;
 import android.widget.EditText;
 import android.widget.FrameLayout;
@@ -94,6 +95,9 @@ import java.util.TimeZone;
 public class MainActivity extends Activity implements SensorEventListener, LocationListener {
     // 📱 DEPUTY WORKPLACE ADD-IN & PEEK & FLOW NAVIGATION
     private FrameLayout deputyContainer;
+    private SunConureFlightOverlayView conureOverlay;
+    private long lastHeaderTapMs = 0L;
+    private int headerTapCount = 0;
     private View deputyScrim;
     private View peekShadow;
     private FrameLayout mainSurfaceContainer;
@@ -3973,6 +3977,21 @@ private void updateTabSelection(int tabIndex) {
         });
 
         card.addView(guardRow);
+                card.setOnClickListener(new View.OnClickListener() {
+            public void onClick(View v) {
+                long now = SystemClock.elapsedRealtime();
+                if (now - lastHeaderTapMs < 450) {
+                    headerTapCount++;
+                    if (headerTapCount >= 3) {
+                        headerTapCount = 0;
+                        triggerSunConureFlight();
+                    }
+                } else {
+                    headerTapCount = 1;
+                }
+                lastHeaderTapMs = now;
+            }
+        });
         return card;
     }
 
@@ -7883,6 +7902,199 @@ private void updateTabSelection(int tabIndex) {
         }
     }
 
+    class SunConureFlightOverlayView extends View {
+        private final Paint bodyPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+        private final Paint wingYellowPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+        private final Paint wingSheenPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+        private final Paint maskPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+        private final Paint wingBluePaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+        private final Paint beakPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+        private final Paint sparklePaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+
+        private final Path bodyPath = new Path();
+        private final Path maskPath = new Path();
+        private final Path leftWing = new Path();
+        private final Path rightWing = new Path();
+        private final Path beakPath = new Path();
+
+        private ValueAnimator flightAnimator;
+        private float flightProgress = 0f;
+        private boolean isFlying = false;
+
+        public SunConureFlightOverlayView(Context context) {
+            super(context);
+            initPaints();
+            setVisibility(View.GONE);
+        }
+
+        private float dpf(float v) {
+            return v * getResources().getDisplayMetrics().density;
+        }
+
+        private void initPaints() {
+            bodyPaint.setColor(0xFFFFEA00); // Brilliant Canary / Pure Sunshine Yellow
+            bodyPaint.setStyle(Paint.Style.FILL);
+
+            wingYellowPaint.setColor(0xFFFFD600); // Luminous Sunburst Yellow
+            wingYellowPaint.setStyle(Paint.Style.FILL);
+
+            wingSheenPaint.setColor(0xFFFFF59D); // Warm Sunlit Highlight
+            wingSheenPaint.setStyle(Paint.Style.STROKE);
+            wingSheenPaint.setStrokeWidth(dpf(1.5f));
+
+            maskPaint.setColor(0xFFFF9100); // Warm Tangerine cheek blush
+            maskPaint.setStyle(Paint.Style.FILL);
+
+            wingBluePaint.setColor(0xFF2979FF); // Royal Cobalt primary wingtip rim
+            wingBluePaint.setStyle(Paint.Style.STROKE);
+            wingBluePaint.setStrokeWidth(dpf(1.2f));
+
+            beakPaint.setColor(0xFF212121); // Charcoal beak
+            beakPaint.setStyle(Paint.Style.FILL);
+
+            sparklePaint.setStyle(Paint.Style.FILL);
+        }
+
+        public void triggerFlight() {
+            if (flightAnimator != null && flightAnimator.isRunning()) {
+                flightAnimator.cancel();
+            }
+            setVisibility(View.VISIBLE);
+            isFlying = true;
+            flightProgress = 0f;
+
+            flightAnimator = ValueAnimator.ofFloat(0f, 1f);
+            flightAnimator.setDuration(2200);
+            flightAnimator.setInterpolator(new LinearInterpolator());
+            flightAnimator.addUpdateListener(new ValueAnimator.AnimatorUpdateListener() {
+                public void onAnimationUpdate(ValueAnimator va) {
+                    flightProgress = (Float) va.getAnimatedValue();
+                    invalidate();
+                }
+            });
+            flightAnimator.addListener(new AnimatorListenerAdapter() {
+                @Override
+                public void onAnimationEnd(Animator animation) {
+                    isFlying = false;
+                    setVisibility(View.GONE);
+                }
+            });
+            flightAnimator.start();
+        }
+
+        @Override
+        public boolean onTouchEvent(MotionEvent event) {
+            return false;
+        }
+
+        @Override
+        protected void onDraw(Canvas canvas) {
+            super.onDraw(canvas);
+            if (!isFlying || flightProgress <= 0.001f || flightProgress >= 0.999f) return;
+
+            float w = getWidth();
+            float h = getHeight();
+            if (w <= 0 || h <= 0) return;
+
+            float density = getResources().getDisplayMetrics().density;
+            float t = flightProgress;
+
+            // Energetic Right-to-Left Swoop across screen (Quadratic Bezier)
+            float startX = w + 120f * density;
+            float endX = -140f * density;
+            float u = 1f - t;
+            float cx = u * u * startX + 2 * u * t * (w * 0.48f) + t * t * endX;
+            float cy = u * u * (h * 0.30f) + 2 * u * t * (h * 0.65f) + t * t * (h * 0.22f);
+
+            // Velocity Heading pointing in direction of flight
+            float vx = 2 * u * (w * 0.48f - startX) + 2 * t * (endX - w * 0.48f);
+            float vy = 2 * u * (h * 0.65f - h * 0.30f) + 2 * t * (h * 0.22f - h * 0.65f);
+            float angleDeg = (float) Math.toDegrees(Math.atan2(vy, vx));
+
+            float flapSin = (float) Math.sin(t * 44.0); // Rapid wing beats
+            float wingSpanFactor = 0.55f + 0.45f * flapSin;
+
+            // Sparkling feather dust particles in wake
+            for (int i = 1; i <= 5; i++) {
+                float trailT = Math.max(0f, t - i * 0.022f);
+                if (trailT > 0f && trailT < 1f) {
+                    float tu = 1f - trailT;
+                    float tx = tu * tu * startX + 2 * tu * trailT * (w * 0.48f) + trailT * trailT * endX;
+                    float ty = tu * tu * (h * 0.30f) + 2 * tu * trailT * (h * 0.65f) + trailT * trailT * (h * 0.22f) + (float) Math.sin(i * 3.7) * dpf(8f);
+                    sparklePaint.setColor(i % 2 == 0 ? 0xFFFFD700 : 0xFFFF9100);
+                    sparklePaint.setAlpha((int) ((1f - i * 0.18f) * 180));
+                    canvas.drawCircle(tx, ty, dpf(2.5f - i * 0.35f), sparklePaint);
+                }
+            }
+
+            canvas.save();
+            canvas.translate(cx, cy);
+            canvas.rotate(angleDeg);
+            float scale = 1.40f * density;
+            canvas.scale(scale, scale);
+
+            // Paths
+            bodyPath.reset();
+            bodyPath.moveTo(18f, 0f);
+            bodyPath.lineTo(6f, 4f);
+            bodyPath.lineTo(-12f, 3f);
+            bodyPath.lineTo(-24f, 1.5f); // Conure tapered tail
+            bodyPath.lineTo(-24f, -1.5f);
+            bodyPath.lineTo(-12f, -3f);
+            bodyPath.lineTo(6f, -4f);
+            bodyPath.close();
+
+            maskPath.reset();
+            maskPath.moveTo(16f, 0f);
+            maskPath.lineTo(7f, 3.5f);
+            maskPath.lineTo(1f, 2.5f);
+            maskPath.lineTo(1f, -2.5f);
+            maskPath.lineTo(7f, -3.5f);
+            maskPath.close();
+
+            float wingSpread = 22f * wingSpanFactor;
+            leftWing.reset();
+            leftWing.moveTo(4f, -2f);
+            leftWing.lineTo(-6f, -wingSpread);
+            leftWing.lineTo(-14f, -wingSpread * 0.85f);
+            leftWing.lineTo(-10f, -2f);
+            leftWing.close();
+
+            rightWing.reset();
+            rightWing.moveTo(4f, 2f);
+            rightWing.lineTo(-6f, wingSpread);
+            rightWing.lineTo(-14f, wingSpread * 0.85f);
+            rightWing.lineTo(-10f, 2f);
+            rightWing.close();
+
+            beakPath.reset();
+            beakPath.moveTo(18f, 0f);
+            beakPath.lineTo(8f, 3.5f);
+            beakPath.lineTo(8f, -3.5f);
+            beakPath.close();
+
+            // Draw Conure Wings (Luminous Yellow with subtle Cobalt rim)
+            canvas.drawPath(leftWing, wingYellowPaint);
+            canvas.drawPath(rightWing, wingYellowPaint);
+            canvas.drawPath(leftWing, wingSheenPaint);
+            canvas.drawPath(rightWing, wingSheenPaint);
+            canvas.drawPath(leftWing, wingBluePaint);
+            canvas.drawPath(rightWing, wingBluePaint);
+
+            // Draw Golden Yellow Body
+            canvas.drawPath(bodyPath, bodyPaint);
+
+            // Draw Fiery Orange Mask & Cheeks
+            canvas.drawPath(maskPath, maskPaint);
+
+            // Draw Slate Beak
+            canvas.drawPath(beakPath, beakPaint);
+
+            canvas.restore();
+        }
+    }
+
+
     class ThemeShockwaveOverlayView extends View {
         private final Paint ringPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
         private final Paint glowPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
@@ -8029,7 +8241,14 @@ private void updateTabSelection(int tabIndex) {
         }
     }
 
-    public void animateThemeChangeWithShockwave(final int newTheme, float origX, float origY) {
+        public void triggerSunConureFlight() {
+        if (conureOverlay != null) {
+            hapticDoublePulse();
+            conureOverlay.triggerFlight();
+        }
+    }
+
+public void animateThemeChangeWithShockwave(final int newTheme, float origX, float origY) {
         if (newTheme == activeTheme) return;
         hapticClick();
         activeTheme = newTheme;
