@@ -694,6 +694,7 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
 
         ScrollView deputyScroll = new ScrollView(this);
         deputyScroll.setVerticalScrollBarEnabled(false);
+        deputyScroll.setPadding(0, dp(34), 0, 0);
         deputyScroll.setLayoutParams(new FrameLayout.LayoutParams(
                 FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT));
         deputyScroll.addView(buildDeputyView());
@@ -718,7 +719,7 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
         LinearLayout screenLayout = new LinearLayout(this);
         screenLayout.setOrientation(LinearLayout.VERTICAL);
         screenLayout.setBackgroundColor(colBg);
-        screenLayout.setPadding(dp(14), dp(10), dp(14), 0);
+        screenLayout.setPadding(dp(14), dp(38), dp(14), 0);
 
         // 1. 🎨 4-Theme Fluid Animated Sliding Switcher Bar
         animatedThemeBar = new FluidAnimatedThemeBarView(this);
