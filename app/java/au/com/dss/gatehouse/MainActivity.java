@@ -134,8 +134,6 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
     // 🎨 FLUID THEME & TAB BARS
     private FluidAnimatedThemeBarView animatedThemeBar;
     private FluidAnimatedTabBarView animatedTabBar;
-    private ThemeShockwaveOverlayView shockwaveOverlay;
-    private ValueAnimator themeMorphAnimator;
     private BroadcastReceiver widgetReceiver;
 
 
@@ -384,6 +382,7 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
         initCameraManager();
 
         DeputyNotifier.initChannels(this);
+        DeputyNotifier.clearNotificationHistory(this);
         DeputyNotifier.schedulePeriodicAlarm(this);
         if (Build.VERSION.SDK_INT >= 33 && checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
             requestPermissions(new String[]{Manifest.permission.POST_NOTIFICATIONS}, 101);
@@ -968,14 +967,7 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
 
         rootFrame.addView(mainSurfaceContainer);
 
-        // 🌌 7. THEME SHOCKWAVE OVERLAY
-        shockwaveOverlay = new ThemeShockwaveOverlayView(this);
-        FrameLayout.LayoutParams sol = new FrameLayout.LayoutParams(
-                FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT);
-        shockwaveOverlay.setLayoutParams(sol);
-        rootFrame.addView(shockwaveOverlay);
-
-        // 🦜 8. SUN CONURE FLIGHT OVERLAY
+        // 🦜 7. SUN CONURE FLIGHT OVERLAY
         conureOverlay = new SunConureFlightOverlayView(this);
         FrameLayout.LayoutParams colayout = new FrameLayout.LayoutParams(
                 FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT);
@@ -9654,7 +9646,7 @@ private void updateTabSelection(int tabIndex) {
 
         private final String[] themeNames = {"GOLD", "AMBER", "MATRIX", "SLATE"};
         private final int[] themeColors = {0xFFFFD166, 0xFFFF3333, 0xFF00FF66, 0xFFC084FC};
-        private float indicatorFloat = (float) activeTheme;
+        public float indicatorFloat = (float) activeTheme;
         private ValueAnimator indAnimator;
         private boolean isThemeScrubbing = false;
         private int lastHapticIndex = -1;
@@ -9691,12 +9683,11 @@ private void updateTabSelection(int tabIndex) {
         public void animateToTheme(final int targetTheme) {
             if (indAnimator != null && indAnimator.isRunning()) indAnimator.cancel();
             indAnimator = ValueAnimator.ofFloat(indicatorFloat, (float) targetTheme);
-            indAnimator.setDuration(280);
-            indAnimator.setInterpolator(new OvershootInterpolator(1.15f));
+            indAnimator.setDuration(220);
+            indAnimator.setInterpolator(new OvershootInterpolator(1.12f));
             indAnimator.addUpdateListener(new ValueAnimator.AnimatorUpdateListener() {
                 public void onAnimationUpdate(ValueAnimator va) {
                     indicatorFloat = (Float) va.getAnimatedValue();
-                    MainActivity.this.applyDynamicColorMorph(indicatorFloat);
                     invalidate();
                 }
             });
@@ -9704,7 +9695,6 @@ private void updateTabSelection(int tabIndex) {
                 @Override
                 public void onAnimationEnd(Animator animation) {
                     indicatorFloat = (float) targetTheme;
-                    MainActivity.this.applyDynamicColorMorph((float) targetTheme);
                     invalidate();
                 }
             });
@@ -9724,19 +9714,20 @@ private void updateTabSelection(int tabIndex) {
                     float targetDown = Math.max(0f, Math.min(3f, (event.getX() / w) * 4f - 0.5f));
                     indicatorFloat = targetDown;
                     lastHapticIndex = Math.round(targetDown);
-                    MainActivity.this.applyDynamicColorMorph(indicatorFloat);
                     invalidate();
                     return true;
 
                 case MotionEvent.ACTION_MOVE:
                     float targetMove = Math.max(0f, Math.min(3f, (event.getX() / w) * 4f - 0.5f));
                     indicatorFloat = targetMove;
-                    int nearestTheme = Math.round(targetMove);
+                    int nearestTheme = Math.max(0, Math.min(3, Math.round(targetMove)));
                     if (nearestTheme != lastHapticIndex) {
                         lastHapticIndex = nearestTheme;
                         MainActivity.this.hapticTick();
+                        if (nearestTheme != activeTheme) {
+                            MainActivity.this.switchTheme(nearestTheme);
+                        }
                     }
-                    MainActivity.this.applyDynamicColorMorph(indicatorFloat);
                     invalidate();
                     return true;
 
@@ -9745,13 +9736,7 @@ private void updateTabSelection(int tabIndex) {
                     if (getParent() != null) getParent().requestDisallowInterceptTouchEvent(false);
                     isThemeScrubbing = false;
                     final int finalTheme = Math.max(0, Math.min(3, Math.round(indicatorFloat)));
-                    animateToTheme(finalTheme);
-                    if (finalTheme != activeTheme) {
-                        MainActivity.this.animateThemeChangeWithShockwave(finalTheme, event.getRawX(), event.getRawY());
-                    } else {
-                        MainActivity.this.applyThemeTokens();
-                        MainActivity.this.applyDynamicColorMorph((float) finalTheme);
-                    }
+                    MainActivity.this.switchTheme(finalTheme);
                     return true;
             }
             return super.onTouchEvent(event);
@@ -10138,236 +10123,6 @@ private void updateTabSelection(int tabIndex) {
     }
 
 
-    class ThemeShockwaveOverlayView extends View {
-        private final Paint cloudPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
-        private final Paint motePaint = new Paint(Paint.ANTI_ALIAS_FLAG);
-        private final Paint starCorePaint = new Paint(Paint.ANTI_ALIAS_FLAG);
-        private final Path starPath = new Path();
-
-        // 1. Nebula Cloud Puffs around colored UI areas
-        private static final int CLOUD_COUNT = 8;
-        private final float[] cloudX = new float[CLOUD_COUNT];
-        private final float[] cloudY = new float[CLOUD_COUNT];
-        private final float[] cloudBaseRadius = new float[CLOUD_COUNT];
-        private final float[] cloudTargetRadius = new float[CLOUD_COUNT];
-        private final float[] cloudAlphaMax = new float[CLOUD_COUNT];
-
-        // 2. Rising Starlight Motes & Fairy Dust
-        private static final int MOTE_COUNT = 48;
-        private final float[] moteX = new float[MOTE_COUNT];
-        private final float[] moteY = new float[MOTE_COUNT];
-        private final float[] moteVx = new float[MOTE_COUNT];
-        private final float[] moteVy = new float[MOTE_COUNT];
-        private final float[] moteSize = new float[MOTE_COUNT];
-        private final float[] moteAlpha = new float[MOTE_COUNT];
-        private final float[] moteRot = new float[MOTE_COUNT];
-        private final float[] moteRotSpeed = new float[MOTE_COUNT];
-        private final float[] motePhase = new float[MOTE_COUNT];
-
-        private float originX = 0f;
-        private float originY = 0f;
-        private int auraColor = 0xFFFFD166;
-        private float animProgress = 0f;
-        private ValueAnimator cloudAnimator;
-        private boolean isActive = false;
-
-        public ThemeShockwaveOverlayView(Context context) {
-            super(context);
-            cloudPaint.setStyle(Paint.Style.FILL);
-            motePaint.setStyle(Paint.Style.FILL);
-            starCorePaint.setStyle(Paint.Style.FILL);
-            setVisibility(View.GONE);
-        }
-
-        private float dpf(float v) {
-            return v * getResources().getDisplayMetrics().density;
-        }
-
-        public void triggerShockwave(float x, float y, int color) {
-            this.originX = x;
-            this.originY = y;
-            this.auraColor = color;
-            this.isActive = true;
-            setVisibility(View.VISIBLE);
-
-            float w = getWidth() > 0 ? getWidth() : getResources().getDisplayMetrics().widthPixels;
-            float h = getHeight() > 0 ? getHeight() : getResources().getDisplayMetrics().heightPixels;
-
-            java.util.Random rnd = new java.util.Random();
-
-            // Set up magical aura cloud centers positioned near key colored UI areas:
-            // 0: Touch origin
-            cloudX[0] = x;
-            cloudY[0] = y;
-            cloudBaseRadius[0] = dpf(30f);
-            cloudTargetRadius[0] = dpf(160f);
-            cloudAlphaMax[0] = 0.50f;
-
-            // 1: Top Theme Bar / Diagnostics Strip
-            cloudX[1] = w * 0.5f;
-            cloudY[1] = dpf(65f);
-            cloudBaseRadius[1] = dpf(35f);
-            cloudTargetRadius[1] = dpf(130f);
-            cloudAlphaMax[1] = 0.42f;
-
-            // 2: Shift Chronograph / Solar Dual-Arc Area
-            cloudX[2] = w * 0.35f;
-            cloudY[2] = dpf(160f);
-            cloudBaseRadius[2] = dpf(45f);
-            cloudTargetRadius[2] = dpf(180f);
-            cloudAlphaMax[2] = 0.48f;
-
-            // 3: Telemetry Pills & Chain Banner
-            cloudX[3] = w * 0.70f;
-            cloudY[3] = dpf(220f);
-            cloudBaseRadius[3] = dpf(30f);
-            cloudTargetRadius[3] = dpf(140f);
-            cloudAlphaMax[3] = 0.42f;
-
-            // 4: Patrol Action Cards (External Full / Half)
-            cloudX[4] = w * 0.40f;
-            cloudY[4] = dpf(340f);
-            cloudBaseRadius[4] = dpf(40f);
-            cloudTargetRadius[4] = dpf(160f);
-            cloudAlphaMax[4] = 0.45f;
-
-            // 5: Factory Floor Lot Badges (Lots 14-18)
-            cloudX[5] = w * 0.65f;
-            cloudY[5] = dpf(420f);
-            cloudBaseRadius[5] = dpf(35f);
-            cloudTargetRadius[5] = dpf(150f);
-            cloudAlphaMax[5] = 0.42f;
-
-            // 6: Fire Systems PSI Card
-            cloudX[6] = w * 0.30f;
-            cloudY[6] = dpf(530f);
-            cloudBaseRadius[6] = dpf(35f);
-            cloudTargetRadius[6] = dpf(150f);
-            cloudAlphaMax[6] = 0.40f;
-
-            // 7: Rapid Evidence Dock & Bottom Area
-            cloudX[7] = w * 0.55f;
-            cloudY[7] = Math.min(h - dpf(90f), dpf(680f));
-            cloudBaseRadius[7] = dpf(40f);
-            cloudTargetRadius[7] = dpf(160f);
-            cloudAlphaMax[7] = 0.42f;
-
-            // Initialize 48 sparkling starlight motes that gently swirl and drift upward
-            for (int i = 0; i < MOTE_COUNT; i++) {
-                int cIdx = i % CLOUD_COUNT;
-                float angle = rnd.nextFloat() * (float) Math.PI * 2f;
-                float dist = rnd.nextFloat() * cloudBaseRadius[cIdx] * 1.3f;
-                moteX[i] = cloudX[cIdx] + (float) Math.cos(angle) * dist;
-                moteY[i] = cloudY[cIdx] + (float) Math.sin(angle) * dist;
-                moteVx[i] = (rnd.nextFloat() - 0.5f) * dpf(1.8f);
-                moteVy[i] = -dpf(1.2f + rnd.nextFloat() * 2.8f); // Gentle upward drift
-                moteSize[i] = dpf(2.5f + rnd.nextFloat() * 4.5f);
-                moteAlpha[i] = 1.0f;
-                moteRot[i] = rnd.nextFloat() * 360f;
-                moteRotSpeed[i] = (rnd.nextFloat() - 0.5f) * 12f;
-                motePhase[i] = rnd.nextFloat() * 6.28f;
-            }
-
-            if (cloudAnimator != null && cloudAnimator.isRunning()) {
-                cloudAnimator.cancel();
-            }
-
-            cloudAnimator = ValueAnimator.ofFloat(0f, 1f);
-            cloudAnimator.setDuration(950);
-            cloudAnimator.setInterpolator(new DecelerateInterpolator(1.2f));
-            cloudAnimator.addUpdateListener(new ValueAnimator.AnimatorUpdateListener() {
-                public void onAnimationUpdate(ValueAnimator va) {
-                    animProgress = (Float) va.getAnimatedValue();
-
-                    // Update motes with gentle sin-wave turbulence
-                    for (int i = 0; i < MOTE_COUNT; i++) {
-                        moteX[i] += moteVx[i] + (float) Math.sin(animProgress * 8.0 + motePhase[i]) * dpf(0.8f);
-                        moteY[i] += moteVy[i];
-                        moteRot[i] += moteRotSpeed[i];
-                    }
-                    invalidate();
-                }
-            });
-            cloudAnimator.addListener(new AnimatorListenerAdapter() {
-                @Override
-                public void onAnimationEnd(Animator animation) {
-                    isActive = false;
-                    setVisibility(View.GONE);
-                }
-            });
-            cloudAnimator.start();
-        }
-
-        @Override
-        protected void onDraw(Canvas canvas) {
-            super.onDraw(canvas);
-            if (!isActive || animProgress <= 0f || animProgress >= 1f) return;
-
-            float p = animProgress;
-            // Smooth bell-curve envelope for natural cloud dissipation
-            float envelope = (float) Math.sin(p * Math.PI);
-            envelope = Math.max(0f, Math.min(1f, envelope));
-
-            int baseCol = auraColor;
-            int transparentCol = baseCol & 0x00FFFFFF;
-
-            // 1. Draw glowing magical nebula cloud aura around key colored areas
-            for (int i = 0; i < CLOUD_COUNT; i++) {
-                float curR = cloudBaseRadius[i] + (cloudTargetRadius[i] - cloudBaseRadius[i]) * p;
-                if (curR <= 1f) continue;
-
-                float cloudAlpha = cloudAlphaMax[i] * envelope;
-                if (cloudAlpha <= 0.01f) continue;
-
-                RadialGradient cloudGrad = new RadialGradient(
-                        cloudX[i], cloudY[i], curR,
-                        new int[]{baseCol, baseCol & 0x55FFFFFF, transparentCol},
-                        new float[]{0f, 0.45f, 1f},
-                        Shader.TileMode.CLAMP);
-                cloudPaint.setShader(cloudGrad);
-                cloudPaint.setAlpha((int) (cloudAlpha * 255));
-                canvas.drawCircle(cloudX[i], cloudY[i], curR, cloudPaint);
-            }
-
-            // 2. Draw sparkling starlight motes & twinkling fairy dust
-            for (int i = 0; i < MOTE_COUNT; i++) {
-                float moteLife = 1f - p;
-                float moteA = envelope * (0.4f + 0.6f * (float) Math.sin(p * 14.0 + motePhase[i]));
-                moteA = Math.max(0f, Math.min(1f, moteA * moteLife));
-                if (moteA <= 0.02f) continue;
-
-                canvas.save();
-                canvas.translate(moteX[i], moteY[i]);
-                canvas.rotate(moteRot[i]);
-
-                float s = moteSize[i] * (0.8f + 0.3f * (float) Math.sin(p * 10.0 + motePhase[i]));
-
-                // Soft outer glowing mote aura
-                motePaint.setColor(baseCol);
-                motePaint.setAlpha((int) (moteA * 180));
-
-                starPath.reset();
-                starPath.moveTo(0, -s);
-                starPath.lineTo(s * 0.32f, -s * 0.32f);
-                starPath.lineTo(s, 0);
-                starPath.lineTo(s * 0.32f, s * 0.32f);
-                starPath.lineTo(0, s);
-                starPath.lineTo(-s * 0.32f, s * 0.32f);
-                starPath.lineTo(-s, 0);
-                starPath.lineTo(-s * 0.32f, -s * 0.32f);
-                starPath.close();
-                canvas.drawPath(starPath, motePaint);
-
-                // Bright crystalline white core
-                starCorePaint.setColor(0xFFFFFFFF);
-                starCorePaint.setAlpha((int) (moteA * 240));
-                canvas.drawCircle(0, 0, s * 0.38f, starCorePaint);
-
-                canvas.restore();
-            }
-        }
-    }
-
     public void triggerSunConureFlight() {
         if (conureOverlay != null) {
             hapticDoublePulse();
@@ -10375,48 +10130,21 @@ private void updateTabSelection(int tabIndex) {
         }
     }
 
-    public void animateThemeChangeWithShockwave(final int newTheme, final float origX, final float origY) {
-        if (newTheme == activeTheme) return;
+    public void switchTheme(final int targetTheme) {
+        if (targetTheme < 0 || targetTheme > 3) return;
+        activeTheme = targetTheme;
         hapticHeavyClick();
-        final int oldTheme = activeTheme;
-        activeTheme = newTheme;
-
-        final int waveColor = (newTheme == 1 ? 0xFFFFB703 : (newTheme == 2 ? 0xFF00FF66 : (newTheme == 3 ? 0xFF94A3B8 : 0xFFFFD166)));
-        if (shockwaveOverlay != null) {
-            shockwaveOverlay.triggerShockwave(origX, origY, waveColor);
+        applyThemeTokens();
+        if (animatedThemeBar != null) {
+            animatedThemeBar.animateToTheme(targetTheme);
         }
-
-        ValueAnimator morphAnim = ValueAnimator.ofFloat((float) oldTheme, (float) newTheme);
-        morphAnim.setDuration(450);
-        morphAnim.setInterpolator(new DecelerateInterpolator(1.3f));
-        morphAnim.addUpdateListener(new ValueAnimator.AnimatorUpdateListener() {
-            public void onAnimationUpdate(ValueAnimator va) {
-                float v = (Float) va.getAnimatedValue();
-                applyDynamicColorMorph(v);
-                if (root != null) root.setBackgroundColor(colBg);
-                if (rootFrame != null) rootFrame.setBackgroundColor(colBg);
-                if (scrollPatrol != null) scrollPatrol.setBackgroundColor(colBg);
-                if (scrollContacts != null) scrollContacts.setBackgroundColor(colBg);
-                if (scrollHandbook != null) scrollHandbook.setBackgroundColor(colBg);
-                if (scrollTools != null) scrollTools.setBackgroundColor(colBg);
-
-                if (animatedThemeBar != null) animatedThemeBar.invalidate();
-                if (animatedTabBar != null) animatedTabBar.invalidate();
-                if (rosterScrubber != null) rosterScrubber.invalidate();
-                if (chronographView != null) chronographView.invalidate();
-            }
-        });
-        morphAnim.addListener(new AnimatorListenerAdapter() {
-            @Override
-            public void onAnimationEnd(Animator animation) {
-                applyThemeTokens();
-                rebuildActiveTabContents();
-            }
-        });
-        morphAnim.start();
+        rebuildActiveTabContents();
     }
 
     public void rebuildActiveTabContents() {
+        if (root != null) root.setBackgroundColor(colBg);
+        if (rootFrame != null) rootFrame.setBackgroundColor(colBg);
+        if (mainSurfaceContainer != null) mainSurfaceContainer.setBackgroundColor(colBg);
         if (scrollPatrol != null) {
             scrollPatrol.removeAllViews();
             root = new LinearLayout(this);
@@ -10425,20 +10153,31 @@ private void updateTabSelection(int tabIndex) {
             patrolContent = buildPatrolTab();
             root.addView(patrolContent);
             scrollPatrol.addView(root);
+            scrollPatrol.setBackgroundColor(colBg);
         }
         if (scrollContacts != null) {
             scrollContacts.removeAllViews();
             contactsContent = buildContactsTab();
             scrollContacts.addView(contactsContent);
+            scrollContacts.setBackgroundColor(colBg);
         }
         if (scrollHandbook != null) {
             scrollHandbook.removeAllViews();
             scrollHandbook.addView(buildRosterView());
+            scrollHandbook.setBackgroundColor(colBg);
         }
         if (scrollTools != null) {
             scrollTools.removeAllViews();
             toolsContent = buildToolsTab();
             scrollTools.addView(toolsContent);
+            scrollTools.setBackgroundColor(colBg);
+        }
+        if (animatedTabBar != null) animatedTabBar.invalidate();
+        if (animatedThemeBar != null) animatedThemeBar.invalidate();
+        if (rosterScrubber != null) rosterScrubber.invalidate();
+        if (chronographView != null) chronographView.invalidate();
+        if (isFullPageFolioOpen) {
+            renderFullPageFolio();
         }
         refresh();
         updateDiagnostics();
