@@ -348,8 +348,9 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
     private int waterIntakeMl = 750;
     private static final int WATER_TARGET_ML = 2000;
 
-    // 🔥 Local 10km Fire Radar & Danger Level State
+    // 🔥 Local 10km Fire & Airspace Radar State
     private FireRadarManager.FireRadarSnapshot currentFireSnapshot = new FireRadarManager.FireRadarSnapshot();
+    private AirspaceRadarManager.AirspaceSnapshot currentAirspaceSnapshot = new AirspaceRadarManager.AirspaceSnapshot();
     private FireRadarSweepView fireRadarView;
 
     private static class Pending {
@@ -451,6 +452,8 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
         updateDiagnostics();
         FireRadarManager.initChannels(this);
         refreshFireRadar();
+        AirspaceRadarManager.initChannels(this);
+        refreshAirspaceRadar();
         LicenceVerificationManager.initChannels(this);
         LicenceVerificationManager.checkAndNotifyLicenceExpiry(this);
         try {
@@ -477,6 +480,26 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
                         currentFireSnapshot = snapshot;
                         if (fireRadarView != null) {
                             fireRadarView.setSnapshot(snapshot);
+                        }
+                    }
+                });
+            }
+
+            @Override
+            public void onError(String error) {}
+        });
+    }
+
+    private void refreshAirspaceRadar() {
+        AirspaceRadarManager.fetchAirspaceRadar(this, new AirspaceRadarManager.AirspaceCallback() {
+            @Override
+            public void onDataLoaded(final AirspaceRadarManager.AirspaceSnapshot snapshot) {
+                runOnUiThread(new Runnable() {
+                    @Override
+                    public void run() {
+                        currentAirspaceSnapshot = snapshot;
+                        if (fireRadarView != null) {
+                            fireRadarView.setAirspaceSnapshot(snapshot);
                         }
                     }
                 });
@@ -3288,12 +3311,46 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
         }));
         grid.addView(r5);
 
+        boolean isLandscape = getResources().getConfiguration().orientation == android.content.res.Configuration.ORIENTATION_LANDSCAPE;
+        if (isLandscape) {
+            LinearLayout split = new LinearLayout(this);
+            split.setOrientation(LinearLayout.HORIZONTAL);
+            split.setBaselineAligned(false);
+
+            LinearLayout leftCol = new LinearLayout(this);
+            leftCol.setOrientation(LinearLayout.VERTICAL);
+            LinearLayout.LayoutParams lclp = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1.05f);
+            lclp.rightMargin = dp(10);
+            leftCol.setLayoutParams(lclp);
+            leftCol.addView(contactsSectionHeader("💬 TESTER HUB & FIELD TELEMETRY", colCyan));
+            leftCol.addView(buildTesterFeedbackCard());
+
+            leftCol.addView(contactsSectionHeader("🛰️ REGIONAL FIRE & WEATHER SENSORS", colCyan));
+            FireRadarSweepView radarMini = new FireRadarSweepView(this);
+            radarMini.setLayoutParams(new LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.MATCH_PARENT, dp(220)));
+            leftCol.addView(radarMini);
+
+            LinearLayout rightCol = new LinearLayout(this);
+            rightCol.setOrientation(LinearLayout.VERTICAL);
+            LinearLayout.LayoutParams rclp = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 0.95f);
+            rclp.leftMargin = dp(10);
+            rightCol.setLayoutParams(rclp);
+            rightCol.addView(contactsSectionHeader("🎛️ OPERATIONAL SENSOR & TOOL DECK", colAccent));
+            rightCol.addView(grid);
+
+            split.addView(leftCol);
+            split.addView(rightCol);
+            container.addView(split);
+            return container;
+        }
+
         container.addView(grid);
         return container;
     }
 
     private LinearLayout buildCompactToolTile(String iconGlyph, String titleStr, String badgeStr, int badgeCol, String descStr, final View.OnClickListener onClick) {
-        LinearLayout tile = new LinearLayout(this);
+        final LinearLayout tile = new LinearLayout(this);
         tile.setOrientation(LinearLayout.VERTICAL);
         tile.setBackground(rounded(colPanel, dp(14)));
         tile.setPadding(dp(12), dp(12), dp(12), dp(12));
@@ -3344,6 +3401,22 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
         desc.setTextColor(colMuted);
         desc.setTextSize(10.5f);
         tile.addView(desc);
+
+        tile.setOnTouchListener(new View.OnTouchListener() {
+            @Override
+            public boolean onTouch(View v, MotionEvent event) {
+                switch (event.getActionMasked()) {
+                    case MotionEvent.ACTION_DOWN:
+                        v.animate().scaleX(0.94f).scaleY(0.94f).setDuration(80).start();
+                        break;
+                    case MotionEvent.ACTION_UP:
+                    case MotionEvent.ACTION_CANCEL:
+                        v.animate().scaleX(1.0f).scaleY(1.0f).setDuration(160).setInterpolator(new OvershootInterpolator(1.2f)).start();
+                        break;
+                }
+                return false;
+            }
+        });
 
         tile.setOnClickListener(new View.OnClickListener() {
             public void onClick(View v) {
@@ -4842,14 +4915,118 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
         top.addView(badge);
         card.addView(top);
 
-        // 10km Concentric Fire Radar Sweep HUD (2.5km, 5km, 7.5km, 10km, Wind Vector & AFDRS Badge)
+        // Radar Mode Switcher: [ 🔥 Fire & Weather ] vs [ 🚁 Airspace & POLAIR ]
+        LinearLayout modeRow = new LinearLayout(this);
+        modeRow.setOrientation(LinearLayout.HORIZONTAL);
+        modeRow.setPadding(0, dp(4), 0, dp(8));
+
+        final TextView btnModeFire = new TextView(this);
+        btnModeFire.setText("🔥 FIRE & STORM RADAR");
+        btnModeFire.setTextSize(9.5f);
+        btnModeFire.setTypeface(Typeface.DEFAULT_BOLD);
+        btnModeFire.setGravity(Gravity.CENTER);
+        btnModeFire.setPadding(dp(8), dp(6), dp(8), dp(6));
+        btnModeFire.setBackground(rounded(colCyan, dp(6)));
+        btnModeFire.setTextColor(0xFF0A0F1D);
+        LinearLayout.LayoutParams mflp = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
+        mflp.rightMargin = dp(4);
+        btnModeFire.setLayoutParams(mflp);
+        modeRow.addView(btnModeFire);
+
+        final TextView btnModeAir = new TextView(this);
+        btnModeAir.setText("🚁 AIRSPACE & POLAIR");
+        btnModeAir.setTextSize(9.5f);
+        btnModeAir.setTypeface(Typeface.DEFAULT_BOLD);
+        btnModeAir.setGravity(Gravity.CENTER);
+        btnModeAir.setPadding(dp(8), dp(6), dp(8), dp(6));
+        btnModeAir.setBackground(rounded(colPanel2, dp(6)));
+        btnModeAir.setTextColor(colQuiet);
+        LinearLayout.LayoutParams malp = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
+        malp.leftMargin = dp(4);
+        btnModeAir.setLayoutParams(malp);
+        modeRow.addView(btnModeAir);
+
+        btnModeFire.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                hapticClick();
+                if (fireRadarView != null) {
+                    fireRadarView.setRadarMode(FireRadarSweepView.MODE_FIRE_WEATHER);
+                }
+                btnModeFire.setBackground(rounded(colCyan, dp(6)));
+                btnModeFire.setTextColor(0xFF0A0F1D);
+                btnModeAir.setBackground(rounded(colPanel2, dp(6)));
+                btnModeAir.setTextColor(colQuiet);
+            }
+        });
+
+        btnModeAir.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                hapticClick();
+                if (fireRadarView != null) {
+                    fireRadarView.setRadarMode(FireRadarSweepView.MODE_AIRSPACE);
+                }
+                btnModeAir.setBackground(rounded(0xFF00E5FF, dp(6)));
+                btnModeAir.setTextColor(0xFF0A0F1D);
+                btnModeFire.setBackground(rounded(colPanel2, dp(6)));
+                btnModeFire.setTextColor(colQuiet);
+            }
+        });
+
+        card.addView(modeRow);
+
+        // 10km Concentric Radar Sweep HUD (Fire, Lightning, POLAIR & Drone Airspace)
         fireRadarView = new FireRadarSweepView(this);
         LinearLayout.LayoutParams frlp = new LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT, dp(230));
         frlp.bottomMargin = dp(12);
         fireRadarView.setLayoutParams(frlp);
         if (currentFireSnapshot != null) fireRadarView.setSnapshot(currentFireSnapshot);
+        if (currentAirspaceSnapshot != null) fireRadarView.setAirspaceSnapshot(currentAirspaceSnapshot);
         card.addView(fireRadarView);
+
+        // Lightning Proximity & Stand-Down Bar
+        final LinearLayout ltgBar = new LinearLayout(this);
+        ltgBar.setOrientation(LinearLayout.HORIZONTAL);
+        ltgBar.setGravity(Gravity.CENTER_VERTICAL);
+        ltgBar.setBackground(rounded(0x330F172A, dp(8)));
+        ltgBar.setPadding(dp(10), dp(6), dp(10), dp(6));
+        LinearLayout.LayoutParams ltgLp = new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+        ltgLp.bottomMargin = dp(10);
+        ltgBar.setLayoutParams(ltgLp);
+
+        final TextView ltgIcon = new TextView(this);
+        ltgIcon.setText("⚡");
+        ltgIcon.setTextSize(14);
+        ltgIcon.setPadding(0, 0, dp(6), 0);
+        ltgBar.addView(ltgIcon);
+
+        final TextView ltgStatus = new TextView(this);
+        double proxKm = FireRadarManager.getLightningProximityThresholdKm(this);
+        int qtyThresh = FireRadarManager.getLightningQuantityThreshold(this);
+        ltgStatus.setText(String.format(Locale.US, "LIGHTNING RADAR ACTIVE · Alert <%.0fkm or ≥%d strikes", proxKm, qtyThresh));
+        ltgStatus.setTextColor(colPale);
+        ltgStatus.setTextSize(10);
+        ltgStatus.setTypeface(Typeface.MONOSPACE);
+        LinearLayout.LayoutParams stLp = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
+        ltgStatus.setLayoutParams(stLp);
+        ltgBar.addView(ltgStatus);
+
+        TextView btnLtgConfig = actionButton("⚙️ Thresholds", colPanel2, 0xFF00E5FF);
+        btnLtgConfig.setTextSize(9);
+        btnLtgConfig.setPadding(dp(8), dp(4), dp(8), dp(4));
+        btnLtgConfig.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                hapticClick();
+                showLightningThresholdDialog();
+            }
+        });
+        ltgBar.addView(btnLtgConfig);
+
+        card.addView(ltgBar);
 
         LinearLayout grid1 = new LinearLayout(this);
         grid1.setOrientation(LinearLayout.HORIZONTAL);
@@ -4873,7 +5050,7 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
 
         LinearLayout rowThermal = new LinearLayout(this);
         rowThermal.setOrientation(LinearLayout.HORIZONTAL);
-        rowThermal.setPadding(0, 0, 0, dp(12));
+        rowThermal.setPadding(0, 0, 0, dp(8));
 
         double windChill = curTempC - (curWindSpeedKmh * 0.12);
         rowThermal.addView(weatherMetricBox("🥶 COLD STRESS", String.format(Locale.US, "%.1f°C Chill", windChill),
@@ -4913,29 +5090,45 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
 
         card.addView(rowThermal);
 
+        // Severe Hail & Thunderstorm Warning Metric Row
+        LinearLayout rowStorm = new LinearLayout(this);
+        rowStorm.setOrientation(LinearLayout.HORIZONTAL);
+        rowStorm.setPadding(0, 0, 0, dp(12));
+
+        String hailStatus = (currentFireSnapshot != null && currentFireSnapshot.hasHailWarning)
+                ? currentFireSnapshot.hailRiskLevel
+                : "NONE (0%)";
+        String hailSub = (currentFireSnapshot != null && currentFireSnapshot.hasHailWarning)
+                ? "Est. " + String.format(Locale.US, "%.0fmm", currentFireSnapshot.estimatedHailSizeMm) + " · Move Vehicle Under Shed"
+                : "No Convective Hail Cells Detected in Sector";
+        int hailCol = (currentFireSnapshot != null && currentFireSnapshot.hasHailWarning) ? 0xFF38BDF8 : colPale;
+
+        rowStorm.addView(weatherMetricBox("🧊 HAIL & SEVERE STORM RADAR", hailStatus, hailSub, hailCol));
+        card.addView(rowStorm);
+
         LinearLayout btnRow = new LinearLayout(this);
         btnRow.setOrientation(LinearLayout.HORIZONTAL);
 
-        TextView btnEmbed = actionButton("📍 Embed Weather", colAccent, colAccentInk);
+        TextView btnEmbed = actionButton("📍 Weather", colAccent, colAccentInk);
         btnEmbed.setOnClickListener(new View.OnClickListener() {
             public void onClick(View v) {
                 hapticHeavyClick();
                 String weatherStr = String.format(Locale.US, "[WEATHER] %.1f°C (Feels %.1f°C, Chill %.1f°C) · Hum: %d%% · Baro: %.1fhPa · Wind: %.1fkm/h %s · UV: %.1f · Hydration: %dml",
                         curTempC, curFeelsLikeC, curTempC - (curWindSpeedKmh * 0.12), curHumidity, curPressureHpa, curWindSpeedKmh, curWindDir, curUvIndex, waterIntakeMl);
                 note(Core.TOPIC_ROUTINE, weatherStr);
-                banner.setText("✓ Kingston weather & thermal telemetry logged to Ada record");
+                banner.setText("✓ Guard Hut weather & thermal telemetry logged to shift record");
                 banner.setVisibility(View.VISIBLE);
             }
         });
         btnRow.addView(btnEmbed);
 
-        TextView btnFireLog = actionButton("🔥 Embed Fire Telemetry", colPanel2, 0xFFEF4444);
+        TextView btnFireLog = actionButton("🔥 Fire & Storm", colPanel2, 0xFFEF4444);
         btnFireLog.setOnClickListener(new View.OnClickListener() {
             public void onClick(View v) {
                 hapticHeavyClick();
                 String fireTele = FireRadarManager.formatShiftReportTelemetry(currentFireSnapshot);
                 note(Core.TOPIC_ROUTINE, fireTele);
-                banner.setText("✓ 10km Fire Radar & AFDRS Telemetry logged to Ada record");
+                banner.setText("✓ 10km Fire, Lightning & Hail Telemetry logged to shift record");
                 banner.setVisibility(View.VISIBLE);
             }
         });
@@ -4943,6 +5136,18 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
         flp.leftMargin = dp(6);
         btnFireLog.setLayoutParams(flp);
         btnRow.addView(btnFireLog);
+
+        TextView btnDroneLog = actionButton("🛸 Drone Sighting", colPanel2, 0xFFA855F7);
+        btnDroneLog.setOnClickListener(new View.OnClickListener() {
+            public void onClick(View v) {
+                hapticClick();
+                showLogDroneSightingDialog();
+            }
+        });
+        LinearLayout.LayoutParams dlp = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1.1f);
+        dlp.leftMargin = dp(6);
+        btnDroneLog.setLayoutParams(dlp);
+        btnRow.addView(btnDroneLog);
 
         TextView btnWater = actionButton("💧 +250ml", colPanel2, colCyan);
         btnWater.setOnClickListener(new View.OnClickListener() {
@@ -4961,6 +5166,392 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
 
         card.addView(btnRow);
         return card;
+    }
+
+    private void showLightningThresholdDialog() {
+        final Dialog dlg = new Dialog(this);
+        dlg.requestWindowFeature(Window.FEATURE_NO_TITLE);
+        if (dlg.getWindow() != null) {
+            dlg.getWindow().setBackgroundDrawable(new ColorDrawable(Color.TRANSPARENT));
+        }
+
+        ScrollView sv = new ScrollView(this);
+        LinearLayout root = new LinearLayout(this);
+        root.setOrientation(LinearLayout.VERTICAL);
+        root.setBackground(rounded(0xFF0F172A, dp(16)));
+        root.setPadding(dp(20), dp(18), dp(20), dp(18));
+
+        // Header
+        TextView title = new TextView(this);
+        title.setText("⚡ REAL-TIME LIGHTNING & HAIL THRESHOLDS");
+        title.setTextColor(0xFF00E5FF);
+        title.setTextSize(14);
+        title.setTypeface(Typeface.DEFAULT_BOLD);
+        root.addView(title);
+
+        TextView sub = new TextView(this);
+        sub.setText("Hume Doors & Timber Guard Hut (Kingston, QLD) · Automated Guard Stand-Down & Vehicle Safety Rules");
+        sub.setTextColor(colQuiet);
+        sub.setTextSize(10);
+        sub.setPadding(0, dp(2), 0, dp(14));
+        root.addView(sub);
+
+        // Distance Threshold Section
+        TextView dLbl = new TextView(this);
+        dLbl.setText("1. PROXIMITY DISTANCE TRIGGER (< KM)");
+        dLbl.setTextColor(0xFFF1F5F9);
+        dLbl.setTextSize(11);
+        dLbl.setTypeface(Typeface.DEFAULT_BOLD);
+        dLbl.setPadding(0, dp(4), 0, dp(6));
+        root.addView(dLbl);
+
+        final double[] distOptions = {3.0, 5.0, 8.0, 10.0};
+        final String[] distLabels = {"3km (Urgent)", "5km (Default)", "8km (Elevated)", "10km (Wide)"};
+        final LinearLayout distRow = new LinearLayout(this);
+        distRow.setOrientation(LinearLayout.HORIZONTAL);
+
+        final double currentDist = FireRadarManager.getLightningProximityThresholdKm(this);
+        final double[] selectedDist = {currentDist};
+
+        final List<TextView> distButtons = new ArrayList<>();
+        for (int i = 0; i < distOptions.length; i++) {
+            final double dVal = distOptions[i];
+            final TextView b = new TextView(this);
+            b.setText(distLabels[i]);
+            b.setTextSize(9.5f);
+            b.setTypeface(Typeface.DEFAULT_BOLD);
+            b.setGravity(Gravity.CENTER);
+            b.setPadding(dp(6), dp(8), dp(6), dp(8));
+            LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
+            if (i > 0) lp.leftMargin = dp(4);
+            b.setLayoutParams(lp);
+
+            boolean isSelected = Math.abs(selectedDist[0] - dVal) < 0.1;
+            b.setBackground(rounded(isSelected ? 0xFF00E5FF : 0xFF1E293B, dp(8)));
+            b.setTextColor(isSelected ? 0xFF0A0F1D : 0xFF94A3B8);
+
+            b.setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View v) {
+                    hapticClick();
+                    selectedDist[0] = dVal;
+                    for (int j = 0; j < distButtons.size(); j++) {
+                        boolean sel = Math.abs(distOptions[j] - selectedDist[0]) < 0.1;
+                        distButtons.get(j).setBackground(rounded(sel ? 0xFF00E5FF : 0xFF1E293B, dp(8)));
+                        distButtons.get(j).setTextColor(sel ? 0xFF0A0F1D : 0xFF94A3B8);
+                    }
+                }
+            });
+            distButtons.add(b);
+            distRow.addView(b);
+        }
+        root.addView(distRow);
+
+        // Quantity Threshold Section
+        TextView qLbl = new TextView(this);
+        qLbl.setText("2. STRIKE CLUSTER QUANTITY TRIGGER (STRIKES / 15 MIN)");
+        qLbl.setTextColor(0xFFF1F5F9);
+        qLbl.setTextSize(11);
+        qLbl.setTypeface(Typeface.DEFAULT_BOLD);
+        qLbl.setPadding(0, dp(14), 0, dp(6));
+        root.addView(qLbl);
+
+        final int[] qtyOptions = {1, 2, 3, 5};
+        final String[] qtyLabels = {"1 Strike (Any)", "2 Strikes (Default)", "3 Strikes (Cluster)", "5 Strikes (Storm)"};
+        final LinearLayout qtyRow = new LinearLayout(this);
+        qtyRow.setOrientation(LinearLayout.HORIZONTAL);
+
+        final int currentQty = FireRadarManager.getLightningQuantityThreshold(this);
+        final int[] selectedQty = {currentQty};
+
+        final List<TextView> qtyButtons = new ArrayList<>();
+        for (int i = 0; i < qtyOptions.length; i++) {
+            final int qVal = qtyOptions[i];
+            final TextView b = new TextView(this);
+            b.setText(qtyLabels[i]);
+            b.setTextSize(9.5f);
+            b.setTypeface(Typeface.DEFAULT_BOLD);
+            b.setGravity(Gravity.CENTER);
+            b.setPadding(dp(6), dp(8), dp(6), dp(8));
+            LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
+            if (i > 0) lp.leftMargin = dp(4);
+            b.setLayoutParams(lp);
+
+            boolean isSelected = selectedQty[0] == qVal;
+            b.setBackground(rounded(isSelected ? 0xFFF59E0B : 0xFF1E293B, dp(8)));
+            b.setTextColor(isSelected ? 0xFF0A0F1D : 0xFF94A3B8);
+
+            b.setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View v) {
+                    hapticClick();
+                    selectedQty[0] = qVal;
+                    for (int j = 0; j < qtyButtons.size(); j++) {
+                        boolean sel = qtyOptions[j] == selectedQty[0];
+                        qtyButtons.get(j).setBackground(rounded(sel ? 0xFFF59E0B : 0xFF1E293B, dp(8)));
+                        qtyButtons.get(j).setTextColor(sel ? 0xFF0A0F1D : 0xFF94A3B8);
+                    }
+                }
+            });
+            qtyButtons.add(b);
+            qtyRow.addView(b);
+        }
+        root.addView(qtyRow);
+
+        // Action Buttons Row (Test Alert, Test Hail, & Save)
+        LinearLayout actions = new LinearLayout(this);
+        actions.setOrientation(LinearLayout.HORIZONTAL);
+        actions.setPadding(0, dp(18), 0, 0);
+
+        TextView btnTest = actionButton("🔔 Test Lightning", 0xFF1E293B, 0xFFF59E0B);
+        btnTest.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                hapticHeavyClick();
+                FireRadarManager.FireRadarSnapshot testSnap = new FireRadarManager.FireRadarSnapshot();
+                testSnap.proximityThresholdKm = selectedDist[0];
+                testSnap.quantityThreshold = selectedQty[0];
+                testSnap.totalLightningStrikes = 3;
+                testSnap.closestLightningKm = 2.4;
+                testSnap.closestLightningDir = "SW";
+                testSnap.isLightningStandDownActive = true;
+                testSnap.lightningStandDownReason = "🚨 RED STAND-DOWN: Strike 2.4 km SW (Immediate Guard Hut Shelter Required)";
+                FireRadarManager.dispatchLightningNotification(MainActivity.this, testSnap);
+                banner.setText("⚡ Test Lightning Stand-Down Alert dispatched to notification shade");
+                banner.setVisibility(View.VISIBLE);
+            }
+        });
+        LinearLayout.LayoutParams tlp = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
+        btnTest.setLayoutParams(tlp);
+        actions.addView(btnTest);
+
+        TextView btnTestHail = actionButton("🧊 Test Hail", 0xFF1E293B, 0xFF38BDF8);
+        btnTestHail.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                hapticHeavyClick();
+                FireRadarManager.FireRadarSnapshot testSnap = new FireRadarManager.FireRadarSnapshot();
+                testSnap.hasHailWarning = true;
+                testSnap.hailRiskLevel = "SEVERE (2-3cm)";
+                testSnap.estimatedHailSizeMm = 25.0;
+                testSnap.hailProbabilityPercent = 75;
+                testSnap.hailAdvisoryText = "Move patrol vehicle under canopy/timber shed. Secure loose yard assets & shelter in Guard Hut.";
+                FireRadarManager.dispatchHailNotification(MainActivity.this, testSnap);
+                banner.setText("🧊 Test Severe Hail Warning dispatched to notification shade");
+                banner.setVisibility(View.VISIBLE);
+            }
+        });
+        LinearLayout.LayoutParams thlp = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
+        thlp.leftMargin = dp(6);
+        btnTestHail.setLayoutParams(thlp);
+        actions.addView(btnTestHail);
+
+        TextView btnSave = actionButton("✓ Save & Apply", 0xFF00E5FF, 0xFF0A0F1D);
+        btnSave.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                hapticHeavyClick();
+                FireRadarManager.setLightningProximityThresholdKm(MainActivity.this, selectedDist[0]);
+                FireRadarManager.setLightningQuantityThreshold(MainActivity.this, selectedQty[0]);
+                refreshFireRadar();
+                banner.setText(String.format(Locale.US, "✓ Saved Lightning Thresholds: <%.0fkm or ≥%d strikes", selectedDist[0], selectedQty[0]));
+                banner.setVisibility(View.VISIBLE);
+                dlg.dismiss();
+            }
+        });
+        LinearLayout.LayoutParams slp = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
+        slp.leftMargin = dp(6);
+        btnSave.setLayoutParams(slp);
+        actions.addView(btnSave);
+
+        root.addView(actions);
+        sv.addView(root);
+        dlg.setContentView(sv);
+        dlg.show();
+    }
+
+    private void showLogDroneSightingDialog() {
+        final Dialog dlg = new Dialog(this);
+        dlg.requestWindowFeature(Window.FEATURE_NO_TITLE);
+        if (dlg.getWindow() != null) {
+            dlg.getWindow().setBackgroundDrawable(new ColorDrawable(Color.TRANSPARENT));
+        }
+
+        ScrollView sv = new ScrollView(this);
+        LinearLayout root = new LinearLayout(this);
+        root.setOrientation(LinearLayout.VERTICAL);
+        root.setBackground(rounded(0xFF0F172A, dp(16)));
+        root.setPadding(dp(20), dp(18), dp(20), dp(18));
+
+        // Header
+        TextView title = new TextView(this);
+        title.setText("🛸 LOG LOW-ALTITUDE DRONE / UAS SIGHTING");
+        title.setTextColor(0xFFA855F7);
+        title.setTextSize(14);
+        title.setTypeface(Typeface.DEFAULT_BOLD);
+        root.addView(title);
+
+        TextView sub = new TextView(this);
+        sub.setText("Hume Doors & Timber (Kingston, QLD) · Unmanned Aerial Vehicle Report");
+        sub.setTextColor(colQuiet);
+        sub.setTextSize(10);
+        sub.setPadding(0, dp(2), 0, dp(14));
+        root.addView(sub);
+
+        // Sector Selection
+        TextView sLbl = new TextView(this);
+        sLbl.setText("1. SIGHTING SECTOR / LOCATION");
+        sLbl.setTextColor(0xFFF1F5F9);
+        sLbl.setTextSize(11);
+        sLbl.setTypeface(Typeface.DEFAULT_BOLD);
+        sLbl.setPadding(0, dp(4), 0, dp(6));
+        root.addView(sLbl);
+
+        final String[] sectors = {"Overhead Lot 14-18 Yard", "North (Woodridge Boundary)", "South (Loganlea Rd)", "East (Slacks Creek)", "West (Berrinba Reserve)"};
+        final String[] selectedSector = {sectors[0]};
+
+        final LinearLayout sectorRow = new LinearLayout(this);
+        sectorRow.setOrientation(LinearLayout.VERTICAL);
+
+        final List<TextView> sectorButtons = new ArrayList<>();
+        for (int i = 0; i < sectors.length; i++) {
+            final String sec = sectors[i];
+            final TextView b = new TextView(this);
+            b.setText("📍 " + sec);
+            b.setTextSize(10f);
+            b.setTypeface(Typeface.DEFAULT_BOLD);
+            b.setPadding(dp(10), dp(8), dp(10), dp(8));
+            LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+            if (i > 0) lp.topMargin = dp(4);
+            b.setLayoutParams(lp);
+
+            boolean isSelected = sec.equals(selectedSector[0]);
+            b.setBackground(rounded(isSelected ? 0xFFA855F7 : 0xFF1E293B, dp(8)));
+            b.setTextColor(isSelected ? 0xFFFFFFFF : 0xFF94A3B8);
+
+            b.setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View v) {
+                    hapticClick();
+                    selectedSector[0] = sec;
+                    for (int j = 0; j < sectorButtons.size(); j++) {
+                        boolean sel = sectors[j].equals(selectedSector[0]);
+                        sectorButtons.get(j).setBackground(rounded(sel ? 0xFFA855F7 : 0xFF1E293B, dp(8)));
+                        sectorButtons.get(j).setTextColor(sel ? 0xFFFFFFFF : 0xFF94A3B8);
+                    }
+                }
+            });
+            sectorButtons.add(b);
+            sectorRow.addView(b);
+        }
+        root.addView(sectorRow);
+
+        // Altitude Selection
+        TextView aLbl = new TextView(this);
+        aLbl.setText("2. ESTIMATED ALTITUDE (AGL)");
+        aLbl.setTextColor(0xFFF1F5F9);
+        aLbl.setTextSize(11);
+        aLbl.setTypeface(Typeface.DEFAULT_BOLD);
+        aLbl.setPadding(0, dp(14), 0, dp(6));
+        root.addView(aLbl);
+
+        final int[] altValues = {100, 250, 400, 800};
+        final String[] altLabels = {"100ft (Roof)", "250ft (Low)", "400ft (CASA Limit)", "800ft (High)"};
+        final LinearLayout altRow = new LinearLayout(this);
+        altRow.setOrientation(LinearLayout.HORIZONTAL);
+
+        final int[] selectedAlt = {250};
+        final List<TextView> altButtons = new ArrayList<>();
+        for (int i = 0; i < altValues.length; i++) {
+            final int aVal = altValues[i];
+            final TextView b = new TextView(this);
+            b.setText(altLabels[i]);
+            b.setTextSize(9.5f);
+            b.setTypeface(Typeface.DEFAULT_BOLD);
+            b.setGravity(Gravity.CENTER);
+            b.setPadding(dp(6), dp(8), dp(6), dp(8));
+            LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
+            if (i > 0) lp.leftMargin = dp(4);
+            b.setLayoutParams(lp);
+
+            boolean isSelected = selectedAlt[0] == aVal;
+            b.setBackground(rounded(isSelected ? 0xFFF59E0B : 0xFF1E293B, dp(8)));
+            b.setTextColor(isSelected ? 0xFF0A0F1D : 0xFF94A3B8);
+
+            b.setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View v) {
+                    hapticClick();
+                    selectedAlt[0] = aVal;
+                    for (int j = 0; j < altButtons.size(); j++) {
+                        boolean sel = altValues[j] == selectedAlt[0];
+                        altButtons.get(j).setBackground(rounded(sel ? 0xFFF59E0B : 0xFF1E293B, dp(8)));
+                        altButtons.get(j).setTextColor(sel ? 0xFF0A0F1D : 0xFF94A3B8);
+                    }
+                }
+            });
+            altButtons.add(b);
+            altRow.addView(b);
+        }
+        root.addView(altRow);
+
+        // Action Buttons Row
+        LinearLayout actions = new LinearLayout(this);
+        actions.setOrientation(LinearLayout.HORIZONTAL);
+        actions.setPadding(0, dp(18), 0, 0);
+
+        TextView btnCancel = actionButton("Cancel", 0xFF1E293B, colQuiet);
+        btnCancel.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                dlg.dismiss();
+            }
+        });
+        LinearLayout.LayoutParams clp = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 0.8f);
+        btnCancel.setLayoutParams(clp);
+        actions.addView(btnCancel);
+
+        TextView btnCommit = actionButton("🛸 Commit to Shift Ledger", 0xFFA855F7, 0xFFFFFFFF);
+        btnCommit.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                hapticHeavyClick();
+                String entry = String.format(Locale.US,
+                        "[DRONE SIGHTING] Unmanned aerial vehicle (UAS) observed at %s · Est Altitude: %d ft AGL. Lights: Flashing Nav. Operator Unknown.",
+                        selectedSector[0], selectedAlt[0]);
+                note(Core.TOPIC_INCIDENT, entry);
+
+                // Inject live track to radar snapshot
+                AirspaceRadarManager.AirTrack droneTrack = new AirspaceRadarManager.AirTrack(
+                        "DRONE-" + System.currentTimeMillis() % 10000, "UAS", "DRONE-01",
+                        AirspaceRadarManager.AircraftCategory.DRONE_UAS, "Commercial UAS Quadcopter",
+                        -27.6330, 153.1180, selectedAlt[0], 25, 180.0, false);
+                currentAirspaceSnapshot.tracks.add(0, droneTrack);
+                currentAirspaceSnapshot.tracksWithin10Km.add(0, droneTrack);
+                currentAirspaceSnapshot.hasDroneNearby = true;
+                currentAirspaceSnapshot.nearestDrone = droneTrack;
+                currentAirspaceSnapshot.totalTracks = currentAirspaceSnapshot.tracksWithin10Km.size();
+
+                if (fireRadarView != null) {
+                    fireRadarView.setAirspaceSnapshot(currentAirspaceSnapshot);
+                    fireRadarView.setRadarMode(FireRadarSweepView.MODE_AIRSPACE);
+                }
+
+                banner.setText("✓ Logged Drone Sighting to Ada record & Airspace Radar");
+                banner.setVisibility(View.VISIBLE);
+                dlg.dismiss();
+            }
+        });
+        LinearLayout.LayoutParams comlp = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1.4f);
+        comlp.leftMargin = dp(8);
+        btnCommit.setLayoutParams(comlp);
+        actions.addView(btnCommit);
+
+        root.addView(actions);
+        sv.addView(root);
+        dlg.setContentView(sv);
+        dlg.show();
     }
 
     private LinearLayout weatherMetricBox(String label, String value, String sub, int valCol) {
