@@ -176,6 +176,8 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
     private int colCrimsonSoft = 0x24EF4444;
     private int colCyan = 0xFF06B6D4;
     private int colCyanSoft = 0x2406B6D4;
+    private int colAmber = 0xFFF59E0B;
+    private int colAmberSoft = 0x22F59E0B;
 
     private static final String[] EXTERNAL_CHOICES = {
         "External (Full)", "04A1B2C3D4E501",
@@ -313,7 +315,11 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
         String lastSeen;
         TrustedPeer(String n, String l, String s) { name = n; licence = l; lastSeen = s; }
     }
-    private final ArrayList<TrustedPeer> trustedPeers = new ArrayList<TrustedPeer>();
+    // 📡 DSS Security & Key Engines
+    private DssKeyManager dssKeyManager;
+    private NfcPeerExchange nfcPeerExchange;
+    private BlePresenceManager blePresenceManager;
+    private ShiftAutomationEngine shiftAutomationEngine;
 
     private LocationManager locationManager;
     private Location lastKnownLocation;
@@ -334,6 +340,10 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
     private double curWindGustKmh = 18.2;
     private int waterIntakeMl = 750;
     private static final int WATER_TARGET_ML = 2000;
+
+    // 🔥 Local 10km Fire Radar & Danger Level State
+    private FireRadarManager.FireRadarSnapshot currentFireSnapshot = new FireRadarManager.FireRadarSnapshot();
+    private FireRadarSweepView fireRadarView;
 
     private static class Pending {
         boolean checkpoint;
@@ -377,7 +387,10 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
         lastActivityTimeMs = SystemClock.elapsedRealtime();
         vibrator = (Vibrator) getSystemService(Context.VIBRATOR_SERVICE);
 
-        trustedPeers.add(new TrustedPeer("Officer M. Taylor", "LIC #55891", "Today 05:58 AM (Gate A)"));
+        dssKeyManager = new DssKeyManager(this);
+        nfcPeerExchange = new NfcPeerExchange(this);
+        blePresenceManager = new BlePresenceManager(this, dssKeyManager, nfcPeerExchange);
+        shiftAutomationEngine = new ShiftAutomationEngine(this, dssKeyManager, blePresenceManager);
 
         initSensorsAndGps();
         initCameraManager();
@@ -411,7 +424,29 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
         startShift();
         commitAll();
         updateDiagnostics();
+        FireRadarManager.initChannels(this);
+        refreshFireRadar();
         ticker.postDelayed(tick, 1000);
+    }
+
+    private void refreshFireRadar() {
+        FireRadarManager.fetchFireRadar(this, curWindSpeedKmh, curWindDir, 165.0, new FireRadarManager.FireRadarCallback() {
+            @Override
+            public void onDataLoaded(final FireRadarManager.FireRadarSnapshot snapshot) {
+                runOnUiThread(new Runnable() {
+                    @Override
+                    public void run() {
+                        currentFireSnapshot = snapshot;
+                        if (fireRadarView != null) {
+                            fireRadarView.setSnapshot(snapshot);
+                        }
+                    }
+                });
+            }
+
+            @Override
+            public void onError(String error) {}
+        });
     }
 
     private void hapticClick() {
@@ -3029,8 +3064,10 @@ private void updateTabSelection(int tabIndex) {
         sTitle.setLayoutParams(stl);
         sTop.addView(sTitle);
 
+        java.util.List<NfcPeerExchange.TrustedPeerRecord> peerList = (nfcPeerExchange != null) ? nfcPeerExchange.getTrustedPeers() : new java.util.ArrayList<NfcPeerExchange.TrustedPeerRecord>();
+
         TextView pCount = new TextView(this);
-        pCount.setText(trustedPeers.size() + " TRUSTED PEERS");
+        pCount.setText((peerList != null ? peerList.size() : 0) + " TRUSTED PEERS");
         pCount.setTextColor(colAccent);
         pCount.setTextSize(9);
         pCount.setTypeface(Typeface.MONOSPACE);
@@ -3048,7 +3085,7 @@ private void updateTabSelection(int tabIndex) {
         box.addView(statusCard);
 
         box.addView(formSectionLabel("TRUSTED ON-SITE OFFICERS"));
-        for (TrustedPeer tp : trustedPeers) {
+        for (NfcPeerExchange.TrustedPeerRecord tp : peerList) {
             LinearLayout pRow = new LinearLayout(this);
             pRow.setOrientation(LinearLayout.HORIZONTAL);
             pRow.setGravity(Gravity.CENTER_VERTICAL);
@@ -3060,7 +3097,8 @@ private void updateTabSelection(int tabIndex) {
             pRow.setLayoutParams(prp);
 
             TextView pInfo = new TextView(this);
-            pInfo.setText("🛡️ " + tp.name + " (" + tp.licence + ")\n" + tp.lastSeen);
+            String pairDate = new SimpleDateFormat("dd MMM, HH:mm", Locale.US).format(new Date(tp.pairedTimestampMs));
+            pInfo.setText("🛡️ " + tp.name + " (" + tp.licence + ")\nPaired: " + pairDate);
             pInfo.setTextColor(colPale);
             pInfo.setTextSize(12);
             LinearLayout.LayoutParams pil = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
@@ -3068,7 +3106,7 @@ private void updateTabSelection(int tabIndex) {
             pRow.addView(pInfo);
 
             TextView syncTag = new TextView(this);
-            syncTag.setText("✓ 100% SYNCED");
+            syncTag.setText("✓ TRUSTED PEER");
             syncTag.setTextColor(colEmerald);
             syncTag.setTextSize(9);
             syncTag.setTypeface(Typeface.MONOSPACE);
@@ -3085,14 +3123,12 @@ private void updateTabSelection(int tabIndex) {
         btnRow.setOrientation(LinearLayout.HORIZONTAL);
         btnRow.setPadding(0, dp(14), 0, 0);
 
-        TextView btnSimBump = actionButton("🤝 NFC Bump Tap (Simulate)", colCyan, colAccentInk);
+        TextView btnSimBump = actionButton("🤝 NFC Guard Bump", colCyan, colAccentInk);
         btnSimBump.setOnClickListener(new View.OnClickListener() {
             public void onClick(View v) {
-                hapticSealThud();
-                trustedPeers.add(new TrustedPeer("Patrol Supv #4", "LIC #38910", "Just Now (Gatehouse Proximity)"));
-                banner.setText("🤝 NFC Handshake Verified: Supervisor LIC #38910 paired to trusted mesh!");
-                banner.setVisibility(View.VISIBLE);
+                hapticClick();
                 dlg.dismiss();
+                showNfcGuardBumpDialog();
             }
         });
         btnRow.addView(btnSimBump);
@@ -3113,6 +3149,52 @@ private void updateTabSelection(int tabIndex) {
         dlg.show();
     }
 
+    private void showNfcGuardBumpDialog() {
+        final LinearLayout box = dialogContainer("🤝 NFC Guard Bump", "TAP-TO-TRUST", colCyan);
+
+        TextView info = new TextView(this);
+        info.setText("Hold two Gatehouse officer phones back-to-back.\nNFC instantly establishes bilateral trust and exchanges BLE mesh tokens.");
+        info.setTextColor(colMuted);
+        info.setTextSize(12);
+        info.setPadding(0, 0, 0, dp(12));
+        box.addView(info);
+
+        final Dialog dlg = createDialogSheet(box);
+
+        LinearLayout btnRow = new LinearLayout(this);
+        btnRow.setOrientation(LinearLayout.HORIZONTAL);
+        btnRow.setPadding(0, dp(10), 0, 0);
+
+        TextView btnSim = actionButton("🤝 Simulate Bump (Brian Rush)", colCyan, colAccentInk);
+        btnSim.setOnClickListener(new View.OnClickListener() {
+            public void onClick(View v) {
+                hapticSealThud();
+                if (nfcPeerExchange != null) {
+                    nfcPeerExchange.processPayloadText("g-brush:Brian Mark Rush:LIC-3186510:DSS-BLE-BRIAN-3186");
+                }
+                banner.setText("🤝 NFC Handshake Verified: Brian Mark Rush (LIC-3186510) added to trusted mesh!");
+                banner.setVisibility(View.VISIBLE);
+                dlg.dismiss();
+            }
+        });
+        btnRow.addView(btnSim);
+
+        TextView btnClose = actionButton("Close", colLine, colPale);
+        btnClose.setOnClickListener(new View.OnClickListener() {
+            public void onClick(View v) {
+                hapticClick();
+                dlg.dismiss();
+            }
+        });
+        LinearLayout.LayoutParams clp = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 0.8f);
+        clp.leftMargin = dp(8);
+        btnClose.setLayoutParams(clp);
+        btnRow.addView(btnClose);
+
+        box.addView(btnRow);
+        dlg.show();
+    }
+
     private LinearLayout buildCredentialPreviewCard() {
         LinearLayout card = new LinearLayout(this);
         card.setOrientation(LinearLayout.VERTICAL);
@@ -3127,8 +3209,9 @@ private void updateTabSelection(int tabIndex) {
         top.setOrientation(LinearLayout.HORIZONTAL);
         top.setGravity(Gravity.CENTER_VERTICAL);
 
+        DssKeyManager.GuardProfile activeGuard = (dssKeyManager != null) ? dssKeyManager.getActiveGuard() : new DssKeyManager.GuardProfile("g-lochran", "Lochran Mackenzie Doherty", "LIC-3943517", "3943", "DSS-BLE-LOCHRAN-3943");
         TextView title = new TextView(this);
-        title.setText("🛡️ Officer Lochran Doherty · LIC #41207");
+        title.setText("🛡️ Officer " + (activeGuard != null ? activeGuard.name : "Lochran Mackenzie Doherty") + " · " + (activeGuard != null ? activeGuard.licence : "LIC-3943517"));
         title.setTextColor(colPale);
         title.setTextSize(14);
         title.setTypeface(Typeface.DEFAULT_BOLD);
@@ -3507,6 +3590,15 @@ private void updateTabSelection(int tabIndex) {
         top.addView(badge);
         card.addView(top);
 
+        // 10km Concentric Fire Radar Sweep HUD (2.5km, 5km, 7.5km, 10km, Wind Vector & AFDRS Badge)
+        fireRadarView = new FireRadarSweepView(this);
+        LinearLayout.LayoutParams frlp = new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT, dp(230));
+        frlp.bottomMargin = dp(12);
+        fireRadarView.setLayoutParams(frlp);
+        if (currentFireSnapshot != null) fireRadarView.setSnapshot(currentFireSnapshot);
+        card.addView(fireRadarView);
+
         LinearLayout grid1 = new LinearLayout(this);
         grid1.setOrientation(LinearLayout.HORIZONTAL);
         grid1.setPadding(0, 0, 0, dp(8));
@@ -3572,7 +3664,7 @@ private void updateTabSelection(int tabIndex) {
         LinearLayout btnRow = new LinearLayout(this);
         btnRow.setOrientation(LinearLayout.HORIZONTAL);
 
-        TextView btnEmbed = actionButton("📍 Embed Weather to Log", colAccent, colAccentInk);
+        TextView btnEmbed = actionButton("📍 Embed Weather", colAccent, colAccentInk);
         btnEmbed.setOnClickListener(new View.OnClickListener() {
             public void onClick(View v) {
                 hapticHeavyClick();
@@ -3585,7 +3677,22 @@ private void updateTabSelection(int tabIndex) {
         });
         btnRow.addView(btnEmbed);
 
-        TextView btnWater = actionButton("💧 +250ml Water", colPanel2, colCyan);
+        TextView btnFireLog = actionButton("🔥 Embed Fire Telemetry", colPanel2, 0xFFEF4444);
+        btnFireLog.setOnClickListener(new View.OnClickListener() {
+            public void onClick(View v) {
+                hapticHeavyClick();
+                String fireTele = FireRadarManager.formatShiftReportTelemetry(currentFireSnapshot);
+                note(Core.TOPIC_ROUTINE, fireTele);
+                banner.setText("✓ 10km Fire Radar & AFDRS Telemetry logged to Ada record");
+                banner.setVisibility(View.VISIBLE);
+            }
+        });
+        LinearLayout.LayoutParams flp = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1.1f);
+        flp.leftMargin = dp(6);
+        btnFireLog.setLayoutParams(flp);
+        btnRow.addView(btnFireLog);
+
+        TextView btnWater = actionButton("💧 +250ml", colPanel2, colCyan);
         btnWater.setOnClickListener(new View.OnClickListener() {
             public void onClick(View v) {
                 hapticClick();
@@ -3595,7 +3702,7 @@ private void updateTabSelection(int tabIndex) {
                 banner.setVisibility(View.VISIBLE);
             }
         });
-        LinearLayout.LayoutParams wlp = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 0.8f);
+        LinearLayout.LayoutParams wlp = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 0.75f);
         wlp.leftMargin = dp(6);
         btnWater.setLayoutParams(wlp);
         btnRow.addView(btnWater);
@@ -3735,6 +3842,8 @@ private void updateTabSelection(int tabIndex) {
 
             if (!isFlipped) {
                 if (cardMode == 0) {
+                    DssKeyManager.GuardProfile activeGuard = (dssKeyManager != null) ? dssKeyManager.getActiveGuard() : new DssKeyManager.GuardProfile("g-lochran", "Lochran Mackenzie Doherty", "LIC-3943517", "3943", "DSS-BLE-LOCHRAN-3943");
+
                     textPaint.setColor(colAccent);
                     textPaint.setTextSize(dp(9));
                     textPaint.setTextAlign(Paint.Align.LEFT);
@@ -3750,8 +3859,8 @@ private void updateTabSelection(int tabIndex) {
                     canvas.drawText("LICENCE HOLDER:", dp(18), dp(66), textPaint);
 
                     subTextPaint.setColor(colPale);
-                    subTextPaint.setTextSize(dp(16));
-                    canvas.drawText("DOHERTY, L.", dp(18), dp(84), subTextPaint);
+                    subTextPaint.setTextSize(dp(15));
+                    canvas.drawText(activeGuard.name.toUpperCase(), dp(18), dp(84), subTextPaint);
 
                     textPaint.setColor(colMuted);
                     textPaint.setTextSize(dp(9));
@@ -3759,12 +3868,12 @@ private void updateTabSelection(int tabIndex) {
 
                     textPaint.setColor(colAccent);
                     textPaint.setTextSize(dp(14));
-                    canvas.drawText("41207 / SEC-1-QLD", dp(18), dp(120), textPaint);
+                    canvas.drawText(activeGuard.licence.replace("LIC-", "") + " / SEC-1-QLD", dp(18), dp(120), textPaint);
 
                     textPaint.setColor(colMuted);
                     textPaint.setTextSize(dp(9));
-                    canvas.drawText("FUNCTIONS: 1A UNARMED GUARD · 1C CROWD · STATIC", dp(18), dp(138), textPaint);
-                    canvas.drawText("EMPLOYER: DOHERTY SECURITY SERVICES (#389102)", dp(18), dp(152), textPaint);
+                    canvas.drawText("FUNCTIONS: UNARMED GUARD · MONITORING · STATIC", dp(18), dp(138), textPaint);
+                    canvas.drawText("EMPLOYER: DOHERTY SECURITY SERVICES", dp(18), dp(152), textPaint);
 
                     Paint pillBg = new Paint(Paint.ANTI_ALIAS_FLAG);
                     pillBg.setColor(colEmeraldSoft);
@@ -3779,7 +3888,7 @@ private void updateTabSelection(int tabIndex) {
                     textPaint.setColor(colQuiet);
                     textPaint.setTextSize(dp(8));
                     textPaint.setTextAlign(Paint.Align.RIGHT);
-                    canvas.drawText("EXP: 14 OCT 2027", w - dp(18), h - dp(14), textPaint);
+                    canvas.drawText("EXP: 15 MAY 2027", w - dp(18), h - dp(14), textPaint);
                 } else {
                     textPaint.setColor(colEmerald);
                     textPaint.setTextSize(dp(9));
@@ -5366,31 +5475,150 @@ private void updateTabSelection(int tabIndex) {
     }
 
     private void showPhotoReviewSheet(final Bitmap bmp) {
-        final byte[] bytes = bitmapToJpegBytes(bmp);
-        final String hash = sha256Hex(bytes);
-        final String hashSnippet = hash.length() >= 8 ? hash.substring(0, 8) : hash;
+        // Run adaptive ISP hardware probe & Night-Optic processing
+        final CameraProcessingEngine.ProcessedPhotoResult procResult =
+                CameraProcessingEngine.processPhoto(this, bmp, false);
+        final Bitmap[] activeBmp = new Bitmap[]{ (procResult != null && procResult.enhancedBitmap != null) ? procResult.enhancedBitmap : bmp };
+        final boolean[] isNightOpticOn = new boolean[]{ procResult != null && procResult.enhancementApplied };
 
         final LinearLayout box = dialogContainer("📷 Photo Evidence", "SHA-256 VERIFIED", colEmerald);
 
-        ImageView preview = new ImageView(this);
-        preview.setImageBitmap(bmp);
+        final ImageView preview = new ImageView(this);
+        preview.setImageBitmap(activeBmp[0]);
         preview.setScaleType(ImageView.ScaleType.CENTER_CROP);
         preview.setBackground(rounded(colPanel2, dp(14)));
         preview.setClipToOutline(true);
         LinearLayout.LayoutParams pl = new LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT, dp(180));
-        pl.bottomMargin = dp(12);
+                LinearLayout.LayoutParams.MATCH_PARENT, dp(170));
+        pl.bottomMargin = dp(8);
         preview.setLayoutParams(pl);
         box.addView(preview);
+
+        // Adaptive Processing Engine Strip with Before/After Toggle
+        LinearLayout optStrip = new LinearLayout(this);
+        optStrip.setOrientation(LinearLayout.HORIZONTAL);
+        optStrip.setGravity(Gravity.CENTER_VERTICAL);
+        optStrip.setBackground(rounded(colPanel2, dp(10)));
+        optStrip.setPadding(dp(10), dp(6), dp(10), dp(6));
+        LinearLayout.LayoutParams oslp = new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+        oslp.bottomMargin = dp(10);
+        optStrip.setLayoutParams(oslp);
+
+        TextView optInfo = new TextView(this);
+        String infoStr = (procResult != null && procResult.enhancementApplied)
+                ? (procResult.processingSummary != null ? procResult.processingSummary : "✨ Night-Optic: Shadow Lift + Edge Sharpen")
+                : "🛡️ " + (procResult != null ? procResult.hardwareTier.description : "OEM Native ISP Active");
+        optInfo.setText(infoStr);
+        optInfo.setTextColor((procResult != null && procResult.enhancementApplied) ? colEmerald : colMuted);
+        optInfo.setTextSize(10.5f);
+        optInfo.setTypeface(Typeface.DEFAULT_BOLD);
+        LinearLayout.LayoutParams oilp = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
+        optInfo.setLayoutParams(oilp);
+        optStrip.addView(optInfo);
+
+        if (procResult != null && procResult.enhancementApplied) {
+            final TextView btnToggleOptic = new TextView(this);
+            btnToggleOptic.setText(isNightOpticOn[0] ? "✨ OPTIC: ON" : "RAW SENSOR");
+            btnToggleOptic.setTextColor(isNightOpticOn[0] ? colAccentInk : colMuted);
+            btnToggleOptic.setTextSize(9.5f);
+            btnToggleOptic.setTypeface(Typeface.MONOSPACE);
+            btnToggleOptic.setPadding(dp(8), dp(4), dp(8), dp(4));
+            btnToggleOptic.setBackground(rounded(isNightOpticOn[0] ? colEmerald : colPanel3, dp(6)));
+            btnToggleOptic.setOnClickListener(new View.OnClickListener() {
+                public void onClick(View v) {
+                    hapticTick();
+                    isNightOpticOn[0] = !isNightOpticOn[0];
+                    activeBmp[0] = isNightOpticOn[0] ? procResult.enhancedBitmap : procResult.originalBitmap;
+                    preview.setImageBitmap(activeBmp[0]);
+                    btnToggleOptic.setText(isNightOpticOn[0] ? "✨ OPTIC: ON" : "RAW SENSOR");
+                    btnToggleOptic.setTextColor(isNightOpticOn[0] ? colAccentInk : colMuted);
+                    btnToggleOptic.setBackground(rounded(isNightOpticOn[0] ? colEmerald : colPanel3, dp(6)));
+                }
+            });
+            optStrip.addView(btnToggleOptic);
+        }
+        box.addView(optStrip);
+
+        // Live ANPR scanning banner
+        final LinearLayout anprBanner = new LinearLayout(this);
+        anprBanner.setOrientation(LinearLayout.HORIZONTAL);
+        anprBanner.setGravity(Gravity.CENTER_VERTICAL);
+        anprBanner.setPadding(dp(12), dp(8), dp(12), dp(8));
+        anprBanner.setBackground(rounded(0x22F59E0B, dp(10)));
+        anprBanner.setVisibility(View.GONE);
+        LinearLayout.LayoutParams abl = new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+        abl.bottomMargin = dp(10);
+        anprBanner.setLayoutParams(abl);
+
+        TextView anprIcon = new TextView(this);
+        anprIcon.setText("🚗");
+        anprIcon.setTextSize(16);
+        anprIcon.setPadding(0, 0, dp(8), 0);
+        anprBanner.addView(anprIcon);
+
+        final TextView anprText = new TextView(this);
+        anprText.setText("Scanning for vehicle registration...");
+        anprText.setTextColor(0xFFFBBF24);
+        anprText.setTextSize(11.5f);
+        anprText.setTypeface(Typeface.DEFAULT_BOLD);
+        LinearLayout.LayoutParams atl = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
+        anprText.setLayoutParams(atl);
+        anprBanner.addView(anprText);
+
+        box.addView(anprBanner);
 
         final EditText descField = modernInputField("Photo Subject (e.g. Main gate padlock, Lot 16 mesh)");
         box.addView(descField);
 
         final Dialog dlg = createDialogSheet(box);
 
+        // Vehicle Plate Tagging Button
+        final TextView btnRegoTag = actionButton("🚗 Record as Vehicle Rego", colPanel2, colAccent);
+        btnRegoTag.setPadding(dp(12), dp(10), dp(12), dp(10));
+        btnRegoTag.setTextSize(11.5f);
+        LinearLayout.LayoutParams rlp = new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+        rlp.topMargin = dp(8);
+        btnRegoTag.setLayoutParams(rlp);
+        btnRegoTag.setOnClickListener(new View.OnClickListener() {
+            public void onClick(View v) {
+                hapticClick();
+                dlg.dismiss();
+                promptVehicleRegoRecording(activeBmp[0], "834-XYZ", "");
+            }
+        });
+        box.addView(btnRegoTag);
+
+        // Trigger plate detection on active bitmap
+        PlateRecognizerApi.detectPlate(activeBmp[0], new PlateRecognizerApi.PlateCallback() {
+            @Override
+            public void onResult(final PlateRecognizerApi.PlateResult result) {
+                if (result != null && result.isRecognized) {
+                    runOnUiThread(new Runnable() {
+                        @Override
+                        public void run() {
+                            anprBanner.setVisibility(View.VISIBLE);
+                            anprText.setText("Plate Detected: " + result.formattedPlate + " (" + result.state + ")");
+                            btnRegoTag.setText("🚗 Record Plate [" + result.formattedPlate + "] in Logbook");
+                            btnRegoTag.setBackground(rounded(0x33F59E0B, dp(10)));
+                            btnRegoTag.setOnClickListener(new View.OnClickListener() {
+                                public void onClick(View v) {
+                                    hapticClick();
+                                    dlg.dismiss();
+                                    promptVehicleRegoRecording(activeBmp[0], result.formattedPlate, "");
+                                }
+                            });
+                        }
+                    });
+                }
+            }
+        });
+
         LinearLayout btnRow = new LinearLayout(this);
         btnRow.setOrientation(LinearLayout.HORIZONTAL);
-        btnRow.setPadding(0, dp(16), 0, 0);
+        btnRow.setPadding(0, dp(12), 0, 0);
 
         TextView btnCancel = actionButton("Cancel", colLine, colMuted);
         btnCancel.setOnClickListener(new View.OnClickListener() {
@@ -5401,13 +5629,17 @@ private void updateTabSelection(int tabIndex) {
         });
         btnRow.addView(btnCancel);
 
-        TextView btnCommit = actionButton("Save Photo", colAccent, colAccentInk);
+        TextView btnCommit = actionButton("Save General Photo", colAccent, colAccentInk);
         btnCommit.setOnClickListener(new View.OnClickListener() {
             public void onClick(View v) {
                 hapticHeavyClick();
                 registerActivity();
+                byte[] bytes = bitmapToJpegBytes(activeBmp[0]);
+                String hash = sha256Hex(bytes);
+                String hashSnippet = hash.length() >= 8 ? hash.substring(0, 8) : hash;
                 String d = descField.getText().toString().trim();
-                String noteText = "[PHOTO " + hashSnippet + "] " + (d.isEmpty() ? "evidence captured" : d);
+                String opticTag = (isNightOpticOn[0]) ? " [NIGHT-OPTIC] " : " ";
+                String noteText = "[PHOTO " + hashSnippet + "]" + opticTag + (d.isEmpty() ? "evidence captured" : d);
                 if (!oneLine(noteText)) {
                     banner.setText("notes must be one line");
                     banner.setVisibility(View.VISIBLE);
@@ -5418,6 +5650,192 @@ private void updateTabSelection(int tabIndex) {
             }
         });
         LinearLayout.LayoutParams cml = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1.4f);
+        cml.leftMargin = dp(8);
+        btnCommit.setLayoutParams(cml);
+        btnRow.addView(btnCommit);
+
+        box.addView(btnRow);
+        dlg.show();
+    }
+
+    private void promptVehicleRegoRecording(final Bitmap bmp, final String initialPlate, final String initialReason) {
+        final byte[] bytes = bitmapToJpegBytes(bmp);
+        final String hash = sha256Hex(bytes);
+        final String hashSnippet = hash.length() >= 8 ? hash.substring(0, 8) : hash;
+
+        final LinearLayout box = dialogContainer("🚗 Vehicle Registration", "ANPR DETECTED", colAccent);
+
+        // Vehicle Plate Graphic Card (Australian QLD styling)
+        LinearLayout plateFrame = new LinearLayout(this);
+        plateFrame.setOrientation(LinearLayout.VERTICAL);
+        plateFrame.setGravity(Gravity.CENTER);
+        plateFrame.setBackground(rounded(0xFF1E293B, dp(12)));
+        plateFrame.setPadding(dp(16), dp(10), dp(16), dp(10));
+        LinearLayout.LayoutParams pfl = new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+        pfl.bottomMargin = dp(12);
+        plateFrame.setLayoutParams(pfl);
+
+        TextView stateLabel = new TextView(this);
+        stateLabel.setText("QUEENSLAND · SUNSHINE STATE");
+        stateLabel.setTextColor(0xFF94A3B8);
+        stateLabel.setTextSize(9f);
+        stateLabel.setTypeface(Typeface.DEFAULT_BOLD);
+        stateLabel.setLetterSpacing(0.08f);
+        plateFrame.addView(stateLabel);
+
+        final EditText plateEdit = new EditText(this);
+        plateEdit.setText(initialPlate != null && !initialPlate.isEmpty() ? initialPlate : "834-XYZ");
+        plateEdit.setTextColor(0xFFF59E0B);
+        plateEdit.setTextSize(22f);
+        plateEdit.setTypeface(Typeface.MONOSPACE, Typeface.BOLD);
+        plateEdit.setGravity(Gravity.CENTER);
+        plateEdit.setBackground(null);
+        plateEdit.setSingleLine(true);
+        plateEdit.setAllCaps(true);
+        plateFrame.addView(plateEdit);
+
+        box.addView(plateFrame);
+
+        TextView promptText = new TextView(this);
+        promptText.setText("Would you like to record this number plate in the official shift logbook?");
+        promptText.setTextColor(colPale);
+        promptText.setTextSize(12.5f);
+        promptText.setGravity(Gravity.CENTER);
+        promptText.setPadding(0, 0, 0, dp(14));
+        box.addView(promptText);
+
+        final Dialog dlg = createDialogSheet(box);
+
+        LinearLayout btnRow = new LinearLayout(this);
+        btnRow.setOrientation(LinearLayout.HORIZONTAL);
+
+        TextView btnNo = actionButton("✕ No, Skip", colLine, colMuted);
+        btnNo.setOnClickListener(new View.OnClickListener() {
+            public void onClick(View v) {
+                hapticClick();
+                dlg.dismiss();
+                showPhotoReviewSheet(bmp);
+            }
+        });
+        btnRow.addView(btnNo);
+
+        TextView btnYes = actionButton("✓ Yes, Record in Logbook", colAccent, 0xFF1E1B4B);
+        btnYes.setOnClickListener(new View.OnClickListener() {
+            public void onClick(View v) {
+                hapticDoublePulse();
+                dlg.dismiss();
+                String enteredPlate = PlateRecognizerApi.formatAustralianPlate(plateEdit.getText().toString());
+                promptVehicleRegoReason(bmp, enteredPlate);
+            }
+        });
+        LinearLayout.LayoutParams ylp = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1.6f);
+        ylp.leftMargin = dp(8);
+        btnYes.setLayoutParams(ylp);
+        btnRow.addView(btnYes);
+
+        box.addView(btnRow);
+        dlg.show();
+    }
+
+    private void promptVehicleRegoReason(final Bitmap bmp, final String plate) {
+        final byte[] bytes = bitmapToJpegBytes(bmp);
+        final String hash = sha256Hex(bytes);
+        final String hashSnippet = hash.length() >= 8 ? hash.substring(0, 8) : hash;
+
+        final LinearLayout box = dialogContainer("📝 Entry Reason", "REGO: " + plate, colEmerald);
+
+        TextView sub = new TextView(this);
+        sub.setText("Select operational reason or type comments for recording plate " + plate + ":");
+        sub.setTextColor(colMuted);
+        sub.setTextSize(11f);
+        sub.setPadding(0, 0, 0, dp(10));
+        box.addView(sub);
+
+        final EditText reasonInput = modernInputField("Reason / Comment (e.g. Heavy Freight timber drop)");
+        reasonInput.setText("Heavy freight / timber delivery");
+
+        // Preset Chips
+        String[] presets = new String[]{
+                "🚚 Heavy Freight / Timber Delivery",
+                "🛠️ Contractor / Trades Maintenance",
+                "👤 Visitor / Client Entry",
+                "🚨 Suspicious Vehicle / Perimeter Idling",
+                "🔄 Staff / Shift Guard Vehicle",
+                "🚪 Gate A Inbound Inspection",
+                "🚪 Gate B Loading Dock Outbound"
+        };
+
+        ScrollView chipScroll = new ScrollView(this);
+        chipScroll.setLayoutParams(new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT, dp(120)));
+        LinearLayout chipContainer = new LinearLayout(this);
+        chipContainer.setOrientation(LinearLayout.VERTICAL);
+
+        for (final String p : presets) {
+            TextView chip = new TextView(this);
+            chip.setText(p);
+            chip.setTextColor(colPale);
+            chip.setTextSize(11f);
+            chip.setTypeface(Typeface.DEFAULT_BOLD);
+            chip.setPadding(dp(10), dp(7), dp(10), dp(7));
+            chip.setBackground(pressable(colPanel2, dp(8)));
+            LinearLayout.LayoutParams clp = new LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+            clp.bottomMargin = dp(4);
+            chip.setLayoutParams(clp);
+            chip.setOnClickListener(new View.OnClickListener() {
+                public void onClick(View v) {
+                    hapticClick();
+                    reasonInput.setText(p);
+                }
+            });
+            chipContainer.addView(chip);
+        }
+        chipScroll.addView(chipContainer);
+        box.addView(chipScroll);
+
+        LinearLayout.LayoutParams ipl = new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+        ipl.topMargin = dp(10);
+        reasonInput.setLayoutParams(ipl);
+        box.addView(reasonInput);
+
+        final Dialog dlg = createDialogSheet(box);
+
+        LinearLayout btnRow = new LinearLayout(this);
+        btnRow.setOrientation(LinearLayout.HORIZONTAL);
+        btnRow.setPadding(0, dp(12), 0, 0);
+
+        TextView btnCancel = actionButton("Cancel", colLine, colMuted);
+        btnCancel.setOnClickListener(new View.OnClickListener() {
+            public void onClick(View v) {
+                hapticClick();
+                dlg.dismiss();
+            }
+        });
+        btnRow.addView(btnCancel);
+
+        TextView btnCommit = actionButton("🛡️ Commit to Logbook", colEmerald, colAccentInk);
+        btnCommit.setOnClickListener(new View.OnClickListener() {
+            public void onClick(View v) {
+                hapticHeavyClick();
+                registerActivity();
+                String r = reasonInput.getText().toString().trim();
+                if (r.isEmpty()) r = "Vehicle on site";
+
+                String logEntry = "[REGO: " + plate + "] " + r + " · Photo: #" + hashSnippet;
+                if (!oneLine(logEntry)) {
+                    banner.setText("notes must be one line");
+                    banner.setVisibility(View.VISIBLE);
+                    return;
+                }
+                note(Core.TOPIC_ROUTINE, logEntry);
+                Toast.makeText(MainActivity.this, "✓ Vehicle " + plate + " recorded in shift ledger", Toast.LENGTH_SHORT).show();
+                dlg.dismiss();
+            }
+        });
+        LinearLayout.LayoutParams cml = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1.5f);
         cml.leftMargin = dp(8);
         btnCommit.setLayoutParams(cml);
         btnRow.addView(btnCommit);
@@ -7528,6 +7946,12 @@ private void updateTabSelection(int tabIndex) {
 
     private void shareHandoverReport() {
         String text = page.getText().toString();
+        if (text.isEmpty()) {
+            text = Core.report(openedAt, nowMinutes());
+        }
+        if (currentFireSnapshot != null) {
+            text = text + "\n\n" + FireRadarManager.formatShiftReportTelemetry(currentFireSnapshot);
+        }
         if (text.isEmpty()) return;
         try {
             Intent sendIntent = new Intent(Intent.ACTION_SEND);
