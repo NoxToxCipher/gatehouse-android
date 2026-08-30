@@ -798,6 +798,8 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
                 maxContentWidth, FrameLayout.LayoutParams.MATCH_PARENT);
         sllp.gravity = Gravity.CENTER_HORIZONTAL;
         screenLayout.setLayoutParams(sllp);
+        screenLayout.setClipChildren(true);
+        screenLayout.setClipToPadding(true);
 
         final ScrollView fDeputyScroll = deputyScroll;
         rootFrame.setOnApplyWindowInsetsListener(new View.OnApplyWindowInsetsListener() {
@@ -909,6 +911,8 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
         LinearLayout.LayoutParams pflp = new LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT, 0, 1f);
         tabPagerFrame.setLayoutParams(pflp);
+        tabPagerFrame.setClipChildren(true);
+        tabPagerFrame.setClipToPadding(true);
 
         // --- PAGE 0: 🛡️ PATROL VIEW (Contains Header, Chronograph & All Patrol Actions) ---
         scrollPatrol = new ScrollView(this);
@@ -2836,12 +2840,13 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
             p.setTranslationX(offset);
 
             float dist = Math.abs(currentTabFloat - i);
-            if (dist > 1.0f) {
-                p.setVisibility(View.INVISIBLE);
+            if (dist >= 0.999f) {
+                p.setVisibility(View.GONE);
+                p.setAlpha(0f);
             } else {
                 p.setVisibility(View.VISIBLE);
-                p.setAlpha(Math.max(0f, 1f - dist * 0.75f));
-                float scale = Math.max(0.95f, 1f - dist * 0.05f);
+                p.setAlpha(Math.max(0f, 1f - dist));
+                float scale = Math.max(0.96f, 1f - dist * 0.04f);
                 p.setScaleX(scale);
                 p.setScaleY(scale);
             }
