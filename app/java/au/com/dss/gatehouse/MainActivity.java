@@ -10821,36 +10821,37 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
     private View buildDeputyView() {
         LinearLayout depLayout = new LinearLayout(this);
         depLayout.setOrientation(LinearLayout.VERTICAL);
-        depLayout.setPadding(dp(16), dp(16), dp(16), dp(36));
+        depLayout.setPadding(dp(16), dp(18), dp(16), dp(44));
         depLayout.setFitsSystemWindows(true);
 
-        // 1. Deputy Branding & Controls Bar
+        // 1. Sleek Glass Navigation & Cloud Status Bar
         LinearLayout topBar = new LinearLayout(this);
         topBar.setOrientation(LinearLayout.HORIZONTAL);
         topBar.setGravity(Gravity.CENTER_VERTICAL);
-        topBar.setPadding(0, dp(6), 0, dp(14));
+        topBar.setPadding(0, dp(4), 0, dp(16));
 
         TextView btnReturn = new TextView(this);
-        btnReturn.setText("← GATEHOUSE");
-        btnReturn.setTextColor(0xFF13C5BE);
-        btnReturn.setTextSize(11);
+        btnReturn.setText("‹ GATEHOUSE");
+        btnReturn.setTextColor(0xFF00E5FF);
+        btnReturn.setTextSize(11.5f);
         btnReturn.setTypeface(Typeface.create(Typeface.MONOSPACE, Typeface.BOLD));
-        btnReturn.setPadding(dp(10), dp(6), dp(10), dp(6));
-        btnReturn.setBackground(rounded(0x2213C5BE, dp(8)));
+        btnReturn.setPadding(dp(14), dp(8), dp(14), dp(8));
+        btnReturn.setBackground(rounded(0x2200E5FF, dp(20)));
         btnReturn.setOnClickListener(new View.OnClickListener() {
             public void onClick(View v) {
+                hapticClick();
                 closeDeputy(true);
             }
         });
         topBar.addView(btnReturn);
 
         deputyStatusBadge = new TextView(this);
-        deputyStatusBadge.setText("● DEPUTY API");
-        deputyStatusBadge.setTextColor(0xFF38BDF8);
-        deputyStatusBadge.setTextSize(9);
+        deputyStatusBadge.setText("🟢 DEPUTY CLOUD ACTIVE");
+        deputyStatusBadge.setTextColor(0xFF10B981);
+        deputyStatusBadge.setTextSize(9.5f);
         deputyStatusBadge.setTypeface(Typeface.MONOSPACE);
-        deputyStatusBadge.setPadding(dp(8), dp(4), dp(8), dp(4));
-        deputyStatusBadge.setBackground(rounded(0x2238BDF8, dp(4)));
+        deputyStatusBadge.setPadding(dp(10), dp(6), dp(10), dp(6));
+        deputyStatusBadge.setBackground(rounded(0x2210B981, dp(20)));
         LinearLayout.LayoutParams sblp = new LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT);
         sblp.leftMargin = dp(8);
@@ -10869,12 +10870,12 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
 
         TextView btnSync = new TextView(this);
         btnSync.setText("🔄");
-        btnSync.setTextSize(13);
-        btnSync.setPadding(dp(8), dp(4), dp(8), dp(4));
-        btnSync.setBackground(rounded(0x2238BDF8, dp(6)));
+        btnSync.setTextSize(14);
+        btnSync.setPadding(dp(10), dp(6), dp(10), dp(6));
+        btnSync.setBackground(rounded(0x2200E5FF, dp(12)));
         btnSync.setOnClickListener(new View.OnClickListener() {
             public void onClick(View v) {
-                hapticClick();
+                hapticDoublePulse();
                 syncDeputyData(true);
             }
         });
@@ -10886,11 +10887,12 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
 
         TextView btnConfig = new TextView(this);
         btnConfig.setText("⚙️");
-        btnConfig.setTextSize(13);
-        btnConfig.setPadding(dp(8), dp(4), dp(8), dp(4));
-        btnConfig.setBackground(rounded(0x2213C5BE, dp(6)));
+        btnConfig.setTextSize(14);
+        btnConfig.setPadding(dp(10), dp(6), dp(10), dp(6));
+        btnConfig.setBackground(rounded(0x2213C5BE, dp(12)));
         btnConfig.setOnClickListener(new View.OnClickListener() {
             public void onClick(View v) {
+                hapticClick();
                 showDeputyApiConfigDialog();
             }
         });
@@ -10898,47 +10900,51 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
 
         depLayout.addView(topBar);
 
-        // 2. Deputy Workplace Facility Header
+        // 2. Workplace Facility & Officer Credentials Hero Card
         LinearLayout orgCard = new LinearLayout(this);
         orgCard.setOrientation(LinearLayout.VERTICAL);
-        orgCard.setBackground(rounded(0xFF0F172A, dp(16)));
-        orgCard.setPadding(dp(16), dp(14), dp(16), dp(14));
+        orgCard.setBackground(rounded(0xFF0C1422, dp(18)));
+        orgCard.setPadding(dp(18), dp(16), dp(18), dp(16));
+        orgCard.setElevation(dp(8));
         LinearLayout.LayoutParams oclp = new LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
-        oclp.bottomMargin = dp(12);
+        oclp.bottomMargin = dp(14);
         orgCard.setLayoutParams(oclp);
 
         deputyOrgSub = new TextView(this);
-        deputyOrgSub.setText("DOHERTY SECURITY SERVICES · WORKPLACE ROSTER");
+        deputyOrgSub.setText("🏢 DOHERTY SECURITY SERVICES · MASTER ROSTER");
         deputyOrgSub.setTextColor(0xFFE5A93C);
         deputyOrgSub.setTextSize(9.5f);
-        deputyOrgSub.setTypeface(Typeface.MONOSPACE);
+        deputyOrgSub.setTypeface(Typeface.create(Typeface.MONOSPACE, Typeface.BOLD));
+        deputyOrgSub.setLetterSpacing(0.08f);
         orgCard.addView(deputyOrgSub);
 
         deputyOrgName = new TextView(this);
         deputyOrgName.setText("Hume Doors & Timber (Kingston)");
         deputyOrgName.setTextColor(0xFFFFFFFF);
-        deputyOrgName.setTextSize(16);
+        deputyOrgName.setTextSize(17);
         deputyOrgName.setTypeface(Typeface.DEFAULT_BOLD);
-        deputyOrgName.setPadding(0, dp(3), 0, dp(4));
+        deputyOrgName.setPadding(0, dp(4), 0, dp(6));
         orgCard.addView(deputyOrgName);
 
         deputyOrgRole = new TextView(this);
         deputyOrgRole.setText("🛡️ Officer Lochran Doherty · LIC #41207 · Post 01 Gatehouse");
-        deputyOrgRole.setTextColor(0xFF94A3B8);
+        deputyOrgRole.setTextColor(0xFF38BDF8);
         deputyOrgRole.setTextSize(11.5f);
+        deputyOrgRole.setTypeface(Typeface.MONOSPACE);
         orgCard.addView(deputyOrgRole);
 
         depLayout.addView(orgCard);
 
-        // 3. Live Shift Time Clock & Timesheet Status
+        // 3. Live Shift Time Clock & Chronograph HUD
         LinearLayout clockCard = new LinearLayout(this);
         clockCard.setOrientation(LinearLayout.VERTICAL);
-        clockCard.setBackground(rounded(0xFF0F1C24, dp(16)));
-        clockCard.setPadding(dp(16), dp(16), dp(16), dp(16));
+        clockCard.setBackground(rounded(0xFF0F1C2E, dp(18)));
+        clockCard.setPadding(dp(18), dp(18), dp(18), dp(18));
+        clockCard.setElevation(dp(8));
         LinearLayout.LayoutParams cclp = new LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
-        cclp.bottomMargin = dp(12);
+        cclp.bottomMargin = dp(14);
         clockCard.setLayoutParams(cclp);
 
         LinearLayout clockTop = new LinearLayout(this);
@@ -10946,10 +10952,11 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
         clockTop.setGravity(Gravity.CENTER_VERTICAL);
 
         TextView clockTitle = new TextView(this);
-        clockTitle.setText("LIVE SHIFT TIME CLOCK");
+        clockTitle.setText("⏱️ LIVE SHIFT TIME CLOCK");
         clockTitle.setTextColor(0xFFE2E8F0);
         clockTitle.setTextSize(12);
         clockTitle.setTypeface(Typeface.DEFAULT_BOLD);
+        clockTitle.setLetterSpacing(0.08f);
         LinearLayout.LayoutParams ctlp = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
         clockTitle.setLayoutParams(ctlp);
         clockTop.addView(clockTitle);
@@ -10959,33 +10966,60 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
         deputyClockStatus.setTextColor(0xFF10B981);
         deputyClockStatus.setTextSize(9.5f);
         deputyClockStatus.setTypeface(Typeface.MONOSPACE);
-        deputyClockStatus.setPadding(dp(8), dp(3), dp(8), dp(3));
-        deputyClockStatus.setBackground(rounded(0x2210B981, dp(6)));
+        deputyClockStatus.setPadding(dp(10), dp(4), dp(10), dp(4));
+        deputyClockStatus.setBackground(rounded(0x2210B981, dp(8)));
         clockTop.addView(deputyClockStatus);
         clockCard.addView(clockTop);
 
         deputyClockTime = new TextView(this);
-        deputyClockTime.setText("18:00 – 06:00 (12.0h)");
-        deputyClockTime.setTextColor(0xFF38BDF8);
-        deputyClockTime.setTextSize(20);
-        deputyClockTime.setTypeface(Typeface.MONOSPACE);
-        deputyClockTime.setPadding(0, dp(8), 0, dp(2));
+        deputyClockTime.setText("18:00 — 06:00 (12.0h)");
+        deputyClockTime.setTextColor(0xFF00E5FF);
+        deputyClockTime.setTextSize(22);
+        deputyClockTime.setTypeface(Typeface.create(Typeface.MONOSPACE, Typeface.BOLD));
+        deputyClockTime.setPadding(0, dp(10), 0, dp(4));
         clockCard.addView(deputyClockTime);
 
+        // Shift Elapsed Progress Bar
+        FrameLayout progressTrack = new FrameLayout(this);
+        progressTrack.setBackground(rounded(0x3300E5FF, dp(4)));
+        LinearLayout.LayoutParams ptlp = new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT, dp(6));
+        ptlp.topMargin = dp(4);
+        ptlp.bottomMargin = dp(8);
+        progressTrack.setLayoutParams(ptlp);
+
+        View progressFill = new View(this);
+        progressFill.setBackground(rounded(0xFF00E5FF, dp(4)));
+        FrameLayout.LayoutParams pflp = new FrameLayout.LayoutParams(
+                0, FrameLayout.LayoutParams.MATCH_PARENT);
+        progressFill.setLayoutParams(pflp);
+        progressTrack.addView(progressFill);
+        progressTrack.post(new Runnable() {
+            public void run() {
+                int pw = progressTrack.getWidth();
+                if (pw > 0) {
+                    FrameLayout.LayoutParams flp = (FrameLayout.LayoutParams) progressFill.getLayoutParams();
+                    flp.width = (int) (pw * 0.65f); // 65% through current shift
+                    progressFill.setLayoutParams(flp);
+                }
+            }
+        });
+        clockCard.addView(progressTrack);
+
         deputyClockSub = new TextView(this);
-        deputyClockSub.setText("Clocked on at 17:55 · Security Award MA000115 (Night Rate)");
+        deputyClockSub.setText("Clocked on at 17:55 · Security Award MA000115 (15% Night Loading)");
         deputyClockSub.setTextColor(0xFF94A3B8);
         deputyClockSub.setTextSize(11);
-        deputyClockSub.setPadding(0, 0, 0, dp(12));
+        deputyClockSub.setPadding(0, 0, 0, dp(14));
         clockCard.addView(deputyClockSub);
 
         LinearLayout clockBtns = new LinearLayout(this);
         clockBtns.setOrientation(LinearLayout.HORIZONTAL);
 
-        TextView btnBreak = actionButton("☕ Meal Break", 0xFF1E293B, 0xFFE2E8F0);
-        btnBreak.setTextSize(11);
-        btnBreak.setPadding(dp(8), dp(10), dp(8), dp(10));
-        ((LinearLayout.LayoutParams) btnBreak.getLayoutParams()).rightMargin = dp(4);
+        TextView btnBreak = actionButton("☕ Meal Break", 0xFF1E293B, 0xFF00E5FF);
+        btnBreak.setTextSize(11.5f);
+        btnBreak.setPadding(dp(12), dp(10), dp(12), dp(10));
+        ((LinearLayout.LayoutParams) btnBreak.getLayoutParams()).rightMargin = dp(6);
         btnBreak.setOnClickListener(new View.OnClickListener() {
             public void onClick(View v) {
                 hapticClick();
@@ -10994,10 +11028,10 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
         });
         clockBtns.addView(btnBreak);
 
-        TextView btnClockOut = actionButton("⏱️ Clock Out", 0xFF334155, 0xFFF87171);
-        btnClockOut.setTextSize(11);
-        btnClockOut.setPadding(dp(8), dp(10), dp(8), dp(10));
-        ((LinearLayout.LayoutParams) btnClockOut.getLayoutParams()).leftMargin = dp(4);
+        TextView btnClockOut = actionButton("⏱️ Clock Out", 0xFF2A151C, 0xFFF87171);
+        btnClockOut.setTextSize(11.5f);
+        btnClockOut.setPadding(dp(12), dp(10), dp(12), dp(10));
+        ((LinearLayout.LayoutParams) btnClockOut.getLayoutParams()).leftMargin = dp(6);
         btnClockOut.setOnClickListener(new View.OnClickListener() {
             public void onClick(View v) {
                 hapticHeavyClick();
@@ -11010,7 +11044,7 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
         depLayout.addView(clockCard);
 
         // 4. Deputy Weekly Roster Schedule
-        depLayout.addView(contactsSectionHeader("📅 DEPUTY CONFIRMED ROSTER (CURRENT CYCLE)", 0xFF38BDF8));
+        depLayout.addView(contactsSectionHeader("📅 DEPUTY CONFIRMED ROSTER (CURRENT CYCLE)", 0xFF00E5FF));
 
         deputyScheduleContainer = new LinearLayout(this);
         deputyScheduleContainer.setOrientation(LinearLayout.VERTICAL);
@@ -11021,11 +11055,12 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
 
         LinearLayout taskBox = new LinearLayout(this);
         taskBox.setOrientation(LinearLayout.VERTICAL);
-        taskBox.setBackground(rounded(0xFF0F172A, dp(16)));
+        taskBox.setBackground(rounded(0xFF0C1422, dp(18)));
         taskBox.setPadding(dp(16), dp(14), dp(16), dp(14));
+        taskBox.setElevation(dp(6));
         LinearLayout.LayoutParams tblp = new LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
-        tblp.bottomMargin = dp(12);
+        tblp.bottomMargin = dp(14);
         taskBox.setLayoutParams(tblp);
 
         taskBox.addView(deputyTaskItem("✓ Gate A & Kingston Rd entry logbooks verified", true));
@@ -11038,26 +11073,26 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
         // 6. Deputy Shift Swap & Request Bar
         LinearLayout depActions = new LinearLayout(this);
         depActions.setOrientation(LinearLayout.HORIZONTAL);
-        depActions.setPadding(0, dp(4), 0, dp(10));
+        depActions.setPadding(0, dp(4), 0, dp(12));
 
-        TextView btnSwap = actionButton("🔄 Shift Swap", 0xFF1E293B, 0xFF38BDF8);
-        btnSwap.setTextSize(11);
-        ((LinearLayout.LayoutParams) btnSwap.getLayoutParams()).rightMargin = dp(4);
+        TextView btnSwap = actionButton("🔄 Request Shift Swap", 0xFF14243B, 0xFF00E5FF);
+        btnSwap.setTextSize(11.5f);
+        ((LinearLayout.LayoutParams) btnSwap.getLayoutParams()).rightMargin = dp(6);
         btnSwap.setOnClickListener(new View.OnClickListener() {
             public void onClick(View v) {
                 hapticClick();
-                Toast.makeText(MainActivity.this, "Deputy: Shift swap request open", Toast.LENGTH_SHORT).show();
+                showShiftSwapDialog();
             }
         });
         depActions.addView(btnSwap);
 
-        TextView btnLeave = actionButton("🌴 Request Leave", 0xFF1E293B, 0xFFE5A93C);
-        btnLeave.setTextSize(11);
-        ((LinearLayout.LayoutParams) btnLeave.getLayoutParams()).leftMargin = dp(4);
+        TextView btnLeave = actionButton("🌴 Leave & Availability", 0xFF241C10, 0xFFE5A93C);
+        btnLeave.setTextSize(11.5f);
+        ((LinearLayout.LayoutParams) btnLeave.getLayoutParams()).leftMargin = dp(6);
         btnLeave.setOnClickListener(new View.OnClickListener() {
             public void onClick(View v) {
                 hapticClick();
-                Toast.makeText(MainActivity.this, "Deputy: Leave request portal open", Toast.LENGTH_SHORT).show();
+                Toast.makeText(MainActivity.this, "Deputy: Leave & availability portal open", Toast.LENGTH_SHORT).show();
             }
         });
         depActions.addView(btnLeave);
@@ -11073,11 +11108,12 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
     private LinearLayout buildDeputyShiftCard(String day, String hours, String details, boolean isCurrent) {
         LinearLayout card = new LinearLayout(this);
         card.setOrientation(LinearLayout.VERTICAL);
-        card.setBackground(rounded(isCurrent ? 0xFF162536 : 0xFF0F172A, dp(14)));
-        card.setPadding(dp(14), dp(12), dp(14), dp(12));
+        card.setBackground(rounded(isCurrent ? 0xFF14243B : 0xFF0B1220, dp(16)));
+        card.setPadding(dp(16), dp(14), dp(16), dp(14));
+        card.setElevation(isCurrent ? dp(6) : dp(2));
         LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
-        lp.bottomMargin = dp(8);
+        lp.bottomMargin = dp(10);
         card.setLayoutParams(lp);
 
         LinearLayout top = new LinearLayout(this);
@@ -11086,41 +11122,84 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
 
         TextView tvDay = new TextView(this);
         tvDay.setText(day);
-        tvDay.setTextColor(isCurrent ? 0xFF38BDF8 : 0xFFE2E8F0);
-        tvDay.setTextSize(12.5f);
+        tvDay.setTextColor(isCurrent ? 0xFF00E5FF : 0xFFFFFFFF);
+        tvDay.setTextSize(13.5f);
         tvDay.setTypeface(Typeface.DEFAULT_BOLD);
         LinearLayout.LayoutParams dlp = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
         tvDay.setLayoutParams(dlp);
         top.addView(tvDay);
 
         TextView tvStatus = new TextView(this);
-        tvStatus.setText(isCurrent ? "ACTIVE SHIFT" : (hours.contains("OFF") ? "REST DAY" : "CONFIRMED"));
-        tvStatus.setTextColor(isCurrent ? 0xFF10B981 : (hours.contains("OFF") ? 0xFF64748B : 0xFF38BDF8));
-        tvStatus.setTextSize(8.5f);
-        tvStatus.setTypeface(Typeface.MONOSPACE);
-        tvStatus.setPadding(dp(6), dp(2), dp(6), dp(2));
-        tvStatus.setBackground(rounded(isCurrent ? 0x2210B981 : 0x2238BDF8, dp(4)));
+        tvStatus.setText(isCurrent ? "✓ ON DUTY" : (hours.contains("OFF") ? "REST DAY" : "CONFIRMED"));
+        tvStatus.setTextColor(isCurrent ? 0xFF10B981 : (hours.contains("OFF") ? 0xFF64748B : 0xFF00E5FF));
+        tvStatus.setTextSize(9f);
+        tvStatus.setTypeface(Typeface.create(Typeface.MONOSPACE, Typeface.BOLD));
+        tvStatus.setPadding(dp(8), dp(3), dp(8), dp(3));
+        tvStatus.setBackground(rounded(isCurrent ? 0x2210B981 : 0x2200E5FF, dp(6)));
         top.addView(tvStatus);
         card.addView(top);
 
-        TextView tvHours = new TextView(this);
-        tvHours.setText(hours + " · " + details);
-        tvHours.setTextColor(0xFF94A3B8);
-        tvHours.setTextSize(11);
-        tvHours.setPadding(0, dp(4), 0, 0);
-        card.addView(tvHours);
+        LinearLayout btm = new LinearLayout(this);
+        btm.setOrientation(LinearLayout.HORIZONTAL);
+        btm.setGravity(Gravity.CENTER_VERTICAL);
+        btm.setPadding(0, dp(6), 0, 0);
 
+        TextView tvHours = new TextView(this);
+        tvHours.setText(hours);
+        tvHours.setTextColor(isCurrent ? 0xFFE2E8F0 : 0xFFCBD5E1);
+        tvHours.setTextSize(12f);
+        tvHours.setTypeface(Typeface.create(Typeface.MONOSPACE, Typeface.BOLD));
+        LinearLayout.LayoutParams hlp = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
+        tvHours.setLayoutParams(hlp);
+        btm.addView(tvHours);
+
+        TextView tvDetails = new TextView(this);
+        tvDetails.setText("🛡️ " + details);
+        tvDetails.setTextColor(0xFF94A3B8);
+        tvDetails.setTextSize(11f);
+        btm.addView(tvDetails);
+
+        card.addView(btm);
         return card;
     }
 
-    private TextView deputyTaskItem(String text, boolean done) {
-        TextView tv = new TextView(this);
-        tv.setText(text);
+    private View deputyTaskItem(String text, final boolean done) {
+        final LinearLayout row = new LinearLayout(this);
+        row.setOrientation(LinearLayout.HORIZONTAL);
+        row.setGravity(Gravity.CENTER_VERTICAL);
+        row.setPadding(dp(6), dp(8), dp(6), dp(8));
+        row.setBackground(rounded(0x10FFFFFF, dp(8)));
+        LinearLayout.LayoutParams rlp = new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+        rlp.bottomMargin = dp(6);
+        row.setLayoutParams(rlp);
+
+        final TextView icon = new TextView(this);
+        icon.setText(done ? "✓" : "○");
+        icon.setTextColor(done ? 0xFF10B981 : 0xFF00E5FF);
+        icon.setTextSize(14);
+        icon.setTypeface(Typeface.DEFAULT_BOLD);
+        icon.setPadding(0, 0, dp(10), 0);
+        row.addView(icon);
+
+        final TextView tv = new TextView(this);
+        tv.setText(text.replace("✓ ", "").replace("○ ", ""));
         tv.setTextColor(done ? 0xFF10B981 : 0xFFE2E8F0);
         tv.setTextSize(11.5f);
         tv.setTypeface(Typeface.DEFAULT);
-        tv.setPadding(0, dp(4), 0, dp(4));
-        return tv;
+        row.addView(tv);
+
+        row.setOnClickListener(new View.OnClickListener() {
+            private boolean isDone = done;
+            public void onClick(View v) {
+                hapticClick();
+                isDone = !isDone;
+                icon.setText(isDone ? "✓" : "○");
+                icon.setTextColor(isDone ? 0xFF10B981 : 0xFF00E5FF);
+                tv.setTextColor(isDone ? 0xFF10B981 : 0xFFE2E8F0);
+            }
+        });
+        return row;
     }
 
     private View buildRosterView() {
