@@ -136,9 +136,14 @@ public class FireRadarSweepView extends View {
         final float h = getHeight();
         if (w <= 0 || h <= 0) return;
 
+        // Dedicated Top Header (h <= dp(38)) & Bottom Telemetry (h >= h - dp(44))
+        final float topHeaderH = dp(38);
+        final float bottomFooterH = dp(44);
+        final float usableH = Math.max(dp(100), h - topHeaderH - bottomFooterH);
+
         final float cx = w * 0.5f;
-        final float cy = h * 0.5f;
-        final float maxRadius = Math.min(w, h) * 0.44f;
+        final float cy = topHeaderH + usableH * 0.5f;
+        final float maxRadius = Math.min(w * 0.45f, usableH * 0.48f);
 
         // 1. Radar Screen Dark Gradient Backdrop
         Paint bgPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
@@ -147,7 +152,7 @@ public class FireRadarSweepView extends View {
 
         // 2. Concentric Range Rings: 2.5km, 5.0km, 7.5km, 10.0km
         float[] ringFractions = {0.25f, 0.50f, 0.75f, 1.00f};
-        String[] ringLabels = {"2.5 km", "5.0 km", "7.5 km", "10.0 km"};
+        String[] ringLabels = {"2.5k", "5.0k", "7.5k", "10k"};
 
         for (int i = 0; i < ringFractions.length; i++) {
             float r = maxRadius * ringFractions[i];
@@ -155,9 +160,18 @@ public class FireRadarSweepView extends View {
             ringPaint.setStrokeWidth(i == 3 ? dp(1.8f) : dp(1f));
             canvas.drawCircle(cx, cy, r, ringPaint);
 
-            // Ring distance label
-            textPaint.setColor(0x8894A3B8);
-            canvas.drawText(ringLabels[i], cx + dp(4), cy - r + dp(10), textPaint);
+            // Ring distance label along 45° NE diagonal with subtle dark pill background
+            float diagX = (float) (cx + r * Math.cos(Math.toRadians(45)));
+            float diagY = (float) (cy - r * Math.sin(Math.toRadians(45)));
+            
+            Paint labelBg = new Paint(Paint.ANTI_ALIAS_FLAG);
+            labelBg.setColor(0xD9050B14);
+            canvas.drawRoundRect(new RectF(diagX - dp(10), diagY - dp(6), diagX + dp(10), diagY + dp(6)), dp(3), dp(3), labelBg);
+
+            textPaint.setColor(0xFF64748B);
+            textPaint.setTextSize(dp(8f));
+            textPaint.setTextAlign(Paint.Align.CENTER);
+            canvas.drawText(ringLabels[i], diagX, diagY + dp(2.8f), textPaint);
         }
 
         // 3. Crosshairs & Radial Cardinal Ticks
@@ -165,11 +179,15 @@ public class FireRadarSweepView extends View {
         canvas.drawLine(cx, cy - maxRadius, cx, cy + maxRadius, axisPaint);
 
         textPaint.setColor(0xFF38BDF8);
-        textPaint.setTextSize(dp(10f));
-        canvas.drawText("N", cx - dp(4), cy - maxRadius - dp(4), textPaint);
-        canvas.drawText("S", cx - dp(4), cy + maxRadius + dp(12), textPaint);
-        canvas.drawText("E", cx + maxRadius + dp(4), cy + dp(4), textPaint);
-        canvas.drawText("W", cx - maxRadius - dp(14), cy + dp(4), textPaint);
+        textPaint.setTextSize(dp(9.5f));
+        textPaint.setTextAlign(Paint.Align.CENTER);
+        canvas.drawText("N", cx, cy - maxRadius - dp(4), textPaint);
+        canvas.drawText("S", cx, cy + maxRadius + dp(11), textPaint);
+        textPaint.setTextAlign(Paint.Align.LEFT);
+        canvas.drawText("E", cx + maxRadius + dp(4), cy + dp(3.5f), textPaint);
+        textPaint.setTextAlign(Paint.Align.RIGHT);
+        canvas.drawText("W", cx - maxRadius - dp(4), cy + dp(3.5f), textPaint);
+        textPaint.setTextAlign(Paint.Align.LEFT);
 
         // 4. Rotating Phosphor Sweep Cone
         canvas.save();
@@ -181,16 +199,16 @@ public class FireRadarSweepView extends View {
         canvas.drawCircle(cx, cy, maxRadius, sweepPaint);
         canvas.restore();
 
-        // 5. Ambient Wind Direction Vector Overlay (Top-Left Arrow)
-        drawWindVector(canvas, dp(16), dp(22), snapshot.windDirDeg, snapshot.windSpeedKmh, snapshot.windDir);
+        // 5. Ambient Wind Direction Vector Overlay (Top-Left Bar — Fully Outside Radar Circle)
+        drawWindVector(canvas, dp(14), dp(18), snapshot.windDirDeg, snapshot.windSpeedKmh, snapshot.windDir);
 
-        // 6. AFDRS Fire Danger Rating Badge (Top-Right)
-        drawDangerRatingBadge(canvas, w - dp(16), dp(16), snapshot.dangerRating);
+        // 6. AFDRS Fire Danger Rating Badge (Top-Right Bar — Fully Outside Radar Circle)
+        drawDangerRatingBadge(canvas, w - dp(14), dp(10), snapshot.dangerRating);
 
         // 7. Center Gatehouse Beacon (Kingston Post 01)
         glowPaint.setColor(0x3338BDF8);
-        canvas.drawCircle(cx, cy, dp(9), glowPaint);
-        canvas.drawCircle(cx, cy, dp(4), centerPaint);
+        canvas.drawCircle(cx, cy, dp(8), glowPaint);
+        canvas.drawCircle(cx, cy, dp(3.5f), centerPaint);
 
         // 8. Fire Incident Blips on Radar
         for (FireRadarManager.FireIncident inc : snapshot.incidentsWithin10Km) {
@@ -205,24 +223,29 @@ public class FireRadarSweepView extends View {
             int blipColor = inc.statusColor;
 
             // Thermal pulsing ripple ring
-            float pr = dp(6) + pulsePhase * dp(16);
+            float pr = dp(5) + pulsePhase * dp(14);
             int pulseAlpha = (int) ((1f - pulsePhase) * 180);
             pulsePaint.setColor((pulseAlpha << 24) | (blipColor & 0x00FFFFFF));
-            pulsePaint.setStrokeWidth(dp(1.6f));
+            pulsePaint.setStrokeWidth(dp(1.5f));
             canvas.drawCircle(bx, by, pr, pulsePaint);
 
             // Core Fire Blip
             blipPaint.setColor(blipColor);
             canvas.drawCircle(bx, by, dp(4.5f), blipPaint);
 
-            // Blip Label
-            textPaint.setColor(0xFFF1F5F9);
-            textPaint.setTextSize(dp(9f));
+            // Blip Label Pill with Translucent Backdrop
             String lbl = String.format(Locale.US, "🔥 %.1fkm %s", inc.distanceKm, inc.compassDir);
-            canvas.drawText(lbl, bx + dp(7), by - dp(3), textPaint);
+            Paint blipPill = new Paint(Paint.ANTI_ALIAS_FLAG);
+            blipPill.setColor(0xD90F172A);
+            float lblW = textPaint.measureText(lbl);
+            canvas.drawRoundRect(new RectF(bx + dp(6), by - dp(10), bx + dp(10) + lblW, by + dp(4)), dp(4), dp(4), blipPill);
+
+            textPaint.setColor(0xFFF1F5F9);
+            textPaint.setTextSize(dp(8.5f));
+            canvas.drawText(lbl, bx + dp(8), by - dp(1), textPaint);
         }
 
-        // 9. Bottom Selected Incident Telemetry Bar
+        // 9. Bottom Selected Incident Telemetry Bar (Dedicated Footer Strip)
         drawSelectedTelemetry(canvas, w, h, cx, cy);
     }
 

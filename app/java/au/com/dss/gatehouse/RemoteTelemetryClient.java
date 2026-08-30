@@ -188,6 +188,12 @@ public class RemoteTelemetryClient {
     public static int evaluateResolvedMilestone(String title, String description, String category) {
         String combined = (title + " " + description).toLowerCase(Locale.US);
 
+        // Milestone 112 (v1.0.12: Interactive pull-down dismiss gesture on pump house sheets, unobstructed radar HUD)
+        if (combined.contains("pull back down") || combined.contains("pull it down") || combined.contains("pump house")
+                || combined.contains("words cover the radar") || combined.contains("cover the radar") || combined.contains("overhaul this")) {
+            return 12; // v1.0.12
+        }
+
         // Milestone 111 (v1.0.11: Pressure manual logging, Safe Area system UI padding in tester hub, exact version tags)
         if (combined.contains("gauge") || combined.contains("pressure") || combined.contains("feature update")
                 || combined.contains("state that on this list") || combined.contains("too close") || combined.contains("in this view")) {
@@ -205,7 +211,7 @@ public class RemoteTelemetryClient {
         }
 
         // Milestone 107 (v1.0.7)
-        if (combined.contains("flipboard") || combined.contains("paper") || combined.contains("radar") || combined.contains("vector icon")) {
+        if (combined.contains("flipboard") || combined.contains("paper") || combined.contains("vector icon")) {
             return 7; // v1.0.7
         }
 

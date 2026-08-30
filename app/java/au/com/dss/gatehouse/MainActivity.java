@@ -5932,16 +5932,97 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
     // DIALOG CONTAINER & SATELLITE RADAR
     // =========================================================================
 
+    public static class PullDownDismissLayout extends FrameLayout {
+        private final Dialog dialog;
+        private float startY = 0f;
+        private boolean isDragging = false;
+        private final int touchSlop;
+        private final View targetContentView;
+
+        public PullDownDismissLayout(Context context, Dialog dialog, View contentView) {
+            super(context);
+            this.dialog = dialog;
+            this.targetContentView = contentView;
+            this.touchSlop = android.view.ViewConfiguration.get(context).getScaledTouchSlop();
+            addView(contentView);
+        }
+
+        @Override
+        public boolean onInterceptTouchEvent(MotionEvent ev) {
+            switch (ev.getActionMasked()) {
+                case MotionEvent.ACTION_DOWN:
+                    startY = ev.getRawY();
+                    isDragging = false;
+                    break;
+                case MotionEvent.ACTION_MOVE:
+                    float dy = ev.getRawY() - startY;
+                    if (dy > touchSlop) {
+                        isDragging = true;
+                        return true;
+                    }
+                    break;
+                case MotionEvent.ACTION_UP:
+                case MotionEvent.ACTION_CANCEL:
+                    isDragging = false;
+                    break;
+            }
+            return isDragging;
+        }
+
+        @Override
+        public boolean onTouchEvent(MotionEvent ev) {
+            switch (ev.getActionMasked()) {
+                case MotionEvent.ACTION_MOVE:
+                    float dy = ev.getRawY() - startY;
+                    if (dy > 0) {
+                        targetContentView.setTranslationY(dy);
+                    } else {
+                        targetContentView.setTranslationY(0);
+                    }
+                    return true;
+                case MotionEvent.ACTION_UP:
+                case MotionEvent.ACTION_CANCEL:
+                    float totalDy = ev.getRawY() - startY;
+                    float dismissThreshold = 90 * getResources().getDisplayMetrics().density;
+                    if (totalDy > dismissThreshold) {
+                        targetContentView.animate()
+                                .translationY(targetContentView.getHeight() + 300)
+                                .setDuration(180)
+                                .withEndAction(new Runnable() {
+                                    public void run() {
+                                        try {
+                                            dialog.dismiss();
+                                        } catch (Exception ignored) {}
+                                    }
+                                }).start();
+                    } else {
+                        targetContentView.animate()
+                                .translationY(0)
+                                .setDuration(220)
+                                .setInterpolator(new android.view.animation.OvershootInterpolator(1.15f))
+                                .start();
+                    }
+                    isDragging = false;
+                    return true;
+            }
+            return super.onTouchEvent(ev);
+        }
+    }
+
     private Dialog createDialogSheet(View content) {
         final Dialog dlg = new Dialog(this);
         dlg.requestWindowFeature(Window.FEATURE_NO_TITLE);
-        dlg.setContentView(content);
+
+        PullDownDismissLayout pullContainer = new PullDownDismissLayout(this, dlg, content);
+        dlg.setContentView(pullContainer);
+
         if (dlg.getWindow() != null) {
             dlg.getWindow().setBackgroundDrawable(new ColorDrawable(Color.TRANSPARENT));
             dlg.getWindow().setLayout(
                     ViewGroup.LayoutParams.MATCH_PARENT,
                     ViewGroup.LayoutParams.WRAP_CONTENT);
             dlg.getWindow().setGravity(Gravity.BOTTOM);
+            dlg.getWindow().setWindowAnimations(android.R.style.Animation_Dialog);
         }
         return dlg;
     }
@@ -5950,14 +6031,14 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
         LinearLayout box = new LinearLayout(this);
         box.setOrientation(LinearLayout.VERTICAL);
         box.setBackground(rounded(colPanel, dp(24)));
-        box.setPadding(dp(20), dp(20), dp(20), dp(24));
+        box.setPadding(dp(20), dp(16), dp(20), dp(24));
         box.setElevation(dp(16));
 
         View handle = new View(this);
-        handle.setBackground(rounded(colLine, dp(3)));
-        LinearLayout.LayoutParams hl = new LinearLayout.LayoutParams(dp(44), dp(4));
+        handle.setBackground(rounded(0xFF64748B, dp(3)));
+        LinearLayout.LayoutParams hl = new LinearLayout.LayoutParams(dp(48), dp(5));
         hl.gravity = Gravity.CENTER_HORIZONTAL;
-        hl.bottomMargin = dp(16);
+        hl.bottomMargin = dp(14);
         handle.setLayoutParams(hl);
         box.addView(handle);
 
@@ -6012,7 +6093,7 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
 
             float cx = w / 2f;
             float cy = h / 2f;
-            float maxR = Math.min(w, h) / 2f - dp(14);
+            float maxR = Math.min(w, h) / 2f - dp(16);
 
             gridPaint.setColor(colLineSubtle);
             canvas.drawCircle(cx, cy, maxR, gridPaint);
@@ -6025,10 +6106,13 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
 
             textPaint.setColor(colQuiet);
             textPaint.setTextSize(dp(9));
-            canvas.drawText("N", cx, cy - maxR + dp(9), textPaint);
-            canvas.drawText("S", cx, cy + maxR - dp(2), textPaint);
-            canvas.drawText("E", cx + maxR - dp(7), cy + dp(3), textPaint);
-            canvas.drawText("W", cx - maxR + dp(7), cy + dp(3), textPaint);
+            canvas.drawText("N", cx, cy - maxR - dp(3), textPaint);
+            canvas.drawText("S", cx, cy + maxR + dp(10), textPaint);
+            textPaint.setTextAlign(Paint.Align.LEFT);
+            canvas.drawText("E", cx + maxR + dp(6), cy + dp(3), textPaint);
+            textPaint.setTextAlign(Paint.Align.RIGHT);
+            canvas.drawText("W", cx - maxR - dp(6), cy + dp(3), textPaint);
+            textPaint.setTextAlign(Paint.Align.CENTER);
 
             int[][] sats = {
                 {45, 65, 1}, {110, 45, 1}, {165, 80, 1}, {210, 30, 2},
