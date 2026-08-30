@@ -2888,26 +2888,8 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
         tabSlideAnimator.start();
     }
 
-private void updateTabSelection(int tabIndex) {
-        currentTab = tabIndex;
-
-        tabPatrol.setTextColor(tabIndex == 0 ? colAccentInk : colMuted);
-        tabPatrol.setBackground(tabIndex == 0 ? rounded(colAccent, dp(12)) : null);
-
-        tabContacts.setTextColor(tabIndex == 1 ? colAccentInk : colMuted);
-        tabContacts.setBackground(tabIndex == 1 ? rounded(colAccent, dp(12)) : null);
-
-        tabTools.setTextColor(tabIndex == 2 ? colAccentInk : colMuted);
-        tabTools.setBackground(tabIndex == 2 ? rounded(colAccent, dp(12)) : null);
-
-        patrolContent.setVisibility(tabIndex == 0 ? View.VISIBLE : View.GONE);
-        contactsContent.setVisibility(tabIndex == 1 ? View.VISIBLE : View.GONE);
-        toolsContent.setVisibility(tabIndex == 2 ? View.VISIBLE : View.GONE);
-
-        if (tabIndex == 2) {
-            registerSensors();
-            requestGpsUpdates();
-        }
+    private void updateTabSelection(int tabIndex) {
+        animateTabToPosition(tabIndex);
     }
 
     private LinearLayout buildToolsTab() {
