@@ -920,32 +920,6 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
         scrollPatrol.setVerticalScrollBarEnabled(false);
         scrollPatrol.setLayoutParams(new FrameLayout.LayoutParams(
                 FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT));
-        scrollPatrol.setOnTouchListener(new View.OnTouchListener() {
-            private float downY = 0f, downX = 0f;
-            @Override
-            public boolean onTouch(View v, MotionEvent ev) {
-                switch (ev.getActionMasked()) {
-                    case MotionEvent.ACTION_DOWN:
-                        downX = ev.getX();
-                        downY = ev.getY();
-                        break;
-                    case MotionEvent.ACTION_MOVE:
-                        float dy = ev.getY() - downY;
-                        float dx = ev.getX() - downX;
-                        // If near bottom of scrollview and pulling up, or dragging bottom-right corner up
-                        if (!scrollPatrol.canScrollVertically(1) && dy < -dp(30) && Math.abs(dy) > Math.abs(dx)) {
-                            openFullPageFolio(true);
-                            return true;
-                        }
-                        if (downY > scrollPatrol.getHeight() - dp(200) && downX > scrollPatrol.getWidth() - dp(160) && dy < -dp(26)) {
-                            openFullPageFolio(true);
-                            return true;
-                        }
-                        break;
-                }
-                return false;
-            }
-        });
 
         root = new LinearLayout(this);
         root.setOrientation(LinearLayout.VERTICAL);
@@ -6215,7 +6189,7 @@ private void updateTabSelection(int tabIndex) {
 
         // Curled Peel Prompt Button
         TextView btnPeel = new TextView(this);
-        btnPeel.setText("🟡 SWIPE UP OR TAP TO OPEN FULL-PAGE LOGBOOK ▴");
+        btnPeel.setText("🟡 TAP TO OPEN FULL-PAGE LOGBOOK ▴");
         btnPeel.setTextColor(colAccentInk);
         btnPeel.setTextSize(11f);
         btnPeel.setTypeface(Typeface.create(Typeface.MONOSPACE, Typeface.BOLD));
@@ -6323,7 +6297,8 @@ private void updateTabSelection(int tabIndex) {
     }
 
     // =========================================================================
-    // 📖 AUTHENTIC INTERACTIVE PAGE CURL FOLIO LAYOUT
+    // =========================================================================
+    // 📖 AUTHENTIC INTERACTIVE RIGHT-TO-LEFT PAGE TURN FOLIO LAYOUT
     // =========================================================================
 
     class AuthenticPageCurlFolioLayout extends FrameLayout {
@@ -6356,7 +6331,6 @@ private void updateTabSelection(int tabIndex) {
             shadowPaint.setStyle(Paint.Style.FILL);
             ridgeHighlightPaint.setStyle(Paint.Style.FILL);
             dogEarPaint.setStyle(Paint.Style.FILL);
-            dogEarHintPaint.setTextAlign(Paint.Align.RIGHT);
             dogEarHintPaint.setTypeface(Typeface.create(Typeface.MONOSPACE, Typeface.BOLD));
         }
 
@@ -6378,19 +6352,17 @@ private void updateTabSelection(int tabIndex) {
             final float h = getHeight() > 0 ? getHeight() : getResources().getDisplayMetrics().heightPixels;
 
             isCurling = true;
+            final float startX = toCarbon ? w : 0f;
+            final float targetX = toCarbon ? -w * 0.35f : w * 1.35f;
+
             curlAnimator = ValueAnimator.ofFloat(0f, 1f);
             curlAnimator.setDuration(360);
-            curlAnimator.setInterpolator(new android.view.animation.AccelerateDecelerateInterpolator());
+            curlAnimator.setInterpolator(new DecelerateInterpolator(1.2f));
             curlAnimator.addUpdateListener(new ValueAnimator.AnimatorUpdateListener() {
                 public void onAnimationUpdate(ValueAnimator va) {
                     float p = (Float) va.getAnimatedValue();
-                    float startX = w - dpf(20);
-                    float startY = h - dpf(20);
-                    float targetX = -w * 0.45f;
-                    float targetY = -h * 0.25f;
-
                     curlX = startX + (targetX - startX) * p;
-                    curlY = startY + (targetY - startY) * p;
+                    curlY = h * 0.5f;
                     calculateCurlGeometry(curlX, curlY, w, h);
                     invalidate();
                 }
@@ -6411,74 +6383,85 @@ private void updateTabSelection(int tabIndex) {
             curlFlapPath.reset();
             shadowPath.reset();
 
-            float clampedX = Math.max(-w * 0.6f, Math.min(w - 2f, pX));
-            float clampedY = Math.max(-h * 0.4f, Math.min(h - 2f, pY));
+            if (!isCarbonCopyMode) {
+                // Curling Right-to-Left (Turning Original White Sheet to reveal Yellow Duplicate)
+                float clampedX = Math.max(-w * 0.4f, Math.min(w, pX));
+                float foldX = (w + clampedX) * 0.5f;
+                float cylinderW = Math.min(dpf(70), Math.max(dpf(16), (w - foldX) * 0.55f));
 
-            float cX = w;
-            float cY = h;
-
-            float vx = clampedX - cX;
-            float vy = clampedY - cY;
-            float len = (float) Math.hypot(vx, vy);
-            if (len < 1f) {
-                topVisiblePath.addRect(0, 0, w, h, Path.Direction.CW);
-                return;
-            }
-
-            float ux = vx / len;
-            float uy = vy / len;
-
-            float mx = (cX + clampedX) * 0.5f;
-            float my = (cY + clampedY) * 0.5f;
-
-            float botX = (Math.abs(ux) > 0.001f) ? mx - (h - my) * uy / ux : mx;
-            float rightY = (Math.abs(uy) > 0.001f) ? my - (w - mx) * ux / uy : my;
-
-            botX = Math.max(-w * 0.5f, Math.min(w, botX));
-            rightY = Math.max(-h * 0.5f, Math.min(h, rightY));
-
-            topVisiblePath.moveTo(0, 0);
-            topVisiblePath.lineTo(w, 0);
-            if (rightY > 0) {
-                topVisiblePath.lineTo(w, rightY);
-            }
-            if (botX > 0) {
-                topVisiblePath.lineTo(botX, h);
+                topVisiblePath.moveTo(0, 0);
+                topVisiblePath.lineTo(foldX, 0);
+                topVisiblePath.lineTo(foldX, h);
                 topVisiblePath.lineTo(0, h);
+                topVisiblePath.close();
+
+                curlFlapPath.moveTo(foldX, 0);
+                curlFlapPath.lineTo(foldX + cylinderW, 0);
+                curlFlapPath.lineTo(foldX + cylinderW, h);
+                curlFlapPath.lineTo(foldX, h);
+                curlFlapPath.close();
+
+                shadowPath.moveTo(foldX + cylinderW, 0);
+                shadowPath.lineTo(foldX + cylinderW + dpf(24), 0);
+                shadowPath.lineTo(foldX + cylinderW + dpf(24), h);
+                shadowPath.lineTo(foldX + cylinderW, h);
+                shadowPath.close();
+
+                flapPaint.setColor(0xFF1E293B);
+
+                Shader ridgeShader = new LinearGradient(
+                        foldX, 0, foldX + cylinderW, 0,
+                        new int[]{0x22000000, 0x88FFFFFF, 0x44000000, 0x11000000},
+                        new float[]{0f, 0.45f, 0.75f, 1f},
+                        Shader.TileMode.CLAMP);
+                ridgeHighlightPaint.setShader(ridgeShader);
+
+                Shader shadowShader = new LinearGradient(
+                        foldX + cylinderW, 0, foldX + cylinderW + dpf(24), 0,
+                        new int[]{0x66000000, 0x22000000, 0x00000000},
+                        new float[]{0f, 0.5f, 1f},
+                        Shader.TileMode.CLAMP);
+                shadowPaint.setShader(shadowShader);
             } else {
-                topVisiblePath.lineTo(0, Math.max(0, rightY));
+                // Curling Left-to-Right (Returning to Original Sheet)
+                float clampedX = Math.max(0f, Math.min(w * 1.4f, pX));
+                float foldX = clampedX * 0.5f;
+                float cylinderW = Math.min(dpf(70), Math.max(dpf(16), foldX * 0.55f));
+
+                topVisiblePath.moveTo(foldX, 0);
+                topVisiblePath.lineTo(w, 0);
+                topVisiblePath.lineTo(w, h);
+                topVisiblePath.lineTo(foldX, h);
+                topVisiblePath.close();
+
+                curlFlapPath.moveTo(foldX - cylinderW, 0);
+                curlFlapPath.lineTo(foldX, 0);
+                curlFlapPath.lineTo(foldX, h);
+                curlFlapPath.lineTo(foldX - cylinderW, h);
+                curlFlapPath.close();
+
+                shadowPath.moveTo(foldX - cylinderW - dpf(24), 0);
+                shadowPath.lineTo(foldX - cylinderW, 0);
+                shadowPath.lineTo(foldX - cylinderW, h);
+                shadowPath.lineTo(foldX - cylinderW - dpf(24), h);
+                shadowPath.close();
+
+                flapPaint.setColor(0xFF3D3310);
+
+                Shader ridgeShader = new LinearGradient(
+                        foldX - cylinderW, 0, foldX, 0,
+                        new int[]{0x11000000, 0x44000000, 0x88FFFFFF, 0x22000000},
+                        new float[]{0f, 0.25f, 0.55f, 1f},
+                        Shader.TileMode.CLAMP);
+                ridgeHighlightPaint.setShader(ridgeShader);
+
+                Shader shadowShader = new LinearGradient(
+                        foldX - cylinderW, 0, foldX - cylinderW - dpf(24), 0,
+                        new int[]{0x66000000, 0x22000000, 0x00000000},
+                        new float[]{0f, 0.5f, 1f},
+                        Shader.TileMode.CLAMP);
+                shadowPaint.setShader(shadowShader);
             }
-            topVisiblePath.close();
-
-            curlFlapPath.moveTo(botX, h);
-            curlFlapPath.lineTo(clampedX, clampedY);
-            curlFlapPath.lineTo(w, rightY);
-            curlFlapPath.close();
-
-            shadowPath.moveTo(botX - dpf(16), h);
-            shadowPath.lineTo(botX, h);
-            shadowPath.lineTo(w, rightY);
-            shadowPath.lineTo(w, rightY - dpf(16));
-            shadowPath.close();
-
-            int flapBase = isCarbonCopyMode ? 0xFF3D3310 : 0xFF1E293B;
-            flapPaint.setColor(flapBase);
-
-            Shader ridgeShader = new LinearGradient(
-                    mx - ux * dpf(18), my - uy * dpf(18),
-                    mx + ux * dpf(22), my + uy * dpf(22),
-                    new int[]{0x33000000, 0x99FFFFFF, 0x55000000, 0x00000000},
-                    new float[]{0f, 0.45f, 0.72f, 1f},
-                    Shader.TileMode.CLAMP);
-            ridgeHighlightPaint.setShader(ridgeShader);
-
-            Shader shadowShader = new LinearGradient(
-                    mx, my,
-                    mx - ux * dpf(26), my - uy * dpf(26),
-                    new int[]{0x77000000, 0x33000000, 0x00000000},
-                    new float[]{0f, 0.5f, 1f},
-                    Shader.TileMode.CLAMP);
-            shadowPaint.setShader(shadowShader);
         }
 
         @Override
@@ -6491,19 +6474,34 @@ private void updateTabSelection(int tabIndex) {
                 case MotionEvent.ACTION_DOWN:
                     startTouchX = ev.getX();
                     startTouchY = ev.getY();
-                    // Intercept touches near the bottom or bottom corner
-                    if (startTouchY > h - dpf(170) || (startTouchX > w - dpf(140) && startTouchY > h - dpf(220))) {
-                        isCurling = true;
-                        curlX = startTouchX;
-                        curlY = startTouchY;
-                        calculateCurlGeometry(curlX, curlY, w, h);
-                        return true;
+                    if (!isCarbonCopyMode) {
+                        // In Original mode, intercept touches originating on right half or right edge
+                        if (startTouchX > w * 0.4f) {
+                            isCurling = true;
+                            curlX = startTouchX;
+                            curlY = startTouchY;
+                            calculateCurlGeometry(curlX, curlY, w, h);
+                            return true;
+                        }
+                    } else {
+                        // In Duplicate mode, intercept touches originating on left half or left edge
+                        if (startTouchX < w * 0.6f) {
+                            isCurling = true;
+                            curlX = startTouchX;
+                            curlY = startTouchY;
+                            calculateCurlGeometry(curlX, curlY, w, h);
+                            return true;
+                        }
                     }
                     break;
                 case MotionEvent.ACTION_MOVE:
-                    float dy = ev.getY() - startTouchY;
                     float dx = ev.getX() - startTouchX;
-                    if ((dy < -dpf(14) || dx < -dpf(14)) && startTouchY > h - dpf(220)) {
+                    if (!isCarbonCopyMode && dx < -dpf(12)) {
+                        isCurling = true;
+                        if (getParent() != null) getParent().requestDisallowInterceptTouchEvent(true);
+                        return true;
+                    }
+                    if (isCarbonCopyMode && dx > dpf(12)) {
                         isCurling = true;
                         if (getParent() != null) getParent().requestDisallowInterceptTouchEvent(true);
                         return true;
@@ -6543,65 +6541,112 @@ private void updateTabSelection(int tabIndex) {
                 case MotionEvent.ACTION_UP:
                 case MotionEvent.ACTION_CANCEL:
                     if (isCurling) {
-                        float pullDist = (float) Math.hypot(w - curlX, h - curlY);
-                        boolean shouldFlip = pullDist > Math.min(w, h) * 0.32f || curlY < h * 0.68f || curlX < w * 0.65f;
+                        if (!isCarbonCopyMode) {
+                            // Turn right-to-left
+                            boolean shouldTurn = curlX < w * 0.72f || (startTouchX - curlX) > w * 0.25f;
+                            if (shouldTurn) {
+                                if (curlAnimator != null && curlAnimator.isRunning()) curlAnimator.cancel();
+                                final float fromX = curlX;
+                                final float targetX = -w * 0.35f;
 
-                        if (shouldFlip) {
-                            // Animate curl off screen to complete the page turn
-                            if (curlAnimator != null && curlAnimator.isRunning()) curlAnimator.cancel();
-                            final float fromX = curlX;
-                            final float fromY = curlY;
-                            final float targetX = -w * 0.5f;
-                            final float targetY = -h * 0.3f;
-
-                            curlAnimator = ValueAnimator.ofFloat(0f, 1f);
-                            curlAnimator.setDuration(220);
-                            curlAnimator.setInterpolator(new DecelerateInterpolator(1.3f));
-                            curlAnimator.addUpdateListener(new ValueAnimator.AnimatorUpdateListener() {
-                                public void onAnimationUpdate(ValueAnimator va) {
-                                    float p = (Float) va.getAnimatedValue();
-                                    curlX = fromX + (targetX - fromX) * p;
-                                    curlY = fromY + (targetY - fromY) * p;
-                                    calculateCurlGeometry(curlX, curlY, w, h);
-                                    invalidate();
-                                }
-                            });
-                            curlAnimator.addListener(new AnimatorListenerAdapter() {
-                                @Override
-                                public void onAnimationEnd(Animator animation) {
-                                    isCarbonCopyMode = !isCarbonCopyMode;
-                                    MainActivity.this.hapticHeavyClick();
-                                    MainActivity.this.renderFullPageFolio();
-                                }
-                            });
-                            curlAnimator.start();
+                                curlAnimator = ValueAnimator.ofFloat(0f, 1f);
+                                curlAnimator.setDuration(220);
+                                curlAnimator.setInterpolator(new DecelerateInterpolator(1.3f));
+                                curlAnimator.addUpdateListener(new ValueAnimator.AnimatorUpdateListener() {
+                                    public void onAnimationUpdate(ValueAnimator va) {
+                                        float p = (Float) va.getAnimatedValue();
+                                        curlX = fromX + (targetX - fromX) * p;
+                                        calculateCurlGeometry(curlX, h * 0.5f, w, h);
+                                        invalidate();
+                                    }
+                                });
+                                curlAnimator.addListener(new AnimatorListenerAdapter() {
+                                    @Override
+                                    public void onAnimationEnd(Animator animation) {
+                                        isCarbonCopyMode = true;
+                                        MainActivity.this.hapticHeavyClick();
+                                        MainActivity.this.renderFullPageFolio();
+                                    }
+                                });
+                                curlAnimator.start();
+                            } else {
+                                // Snap back flat to right
+                                if (curlAnimator != null && curlAnimator.isRunning()) curlAnimator.cancel();
+                                final float fromX = curlX;
+                                curlAnimator = ValueAnimator.ofFloat(0f, 1f);
+                                curlAnimator.setDuration(180);
+                                curlAnimator.setInterpolator(new OvershootInterpolator(1.1f));
+                                curlAnimator.addUpdateListener(new ValueAnimator.AnimatorUpdateListener() {
+                                    public void onAnimationUpdate(ValueAnimator va) {
+                                        float p = (Float) va.getAnimatedValue();
+                                        curlX = fromX + (w - fromX) * p;
+                                        calculateCurlGeometry(curlX, h * 0.5f, w, h);
+                                        invalidate();
+                                    }
+                                });
+                                curlAnimator.addListener(new AnimatorListenerAdapter() {
+                                    @Override
+                                    public void onAnimationEnd(Animator animation) {
+                                        isCurling = false;
+                                        curlX = -1f;
+                                        invalidate();
+                                    }
+                                });
+                                curlAnimator.start();
+                            }
                         } else {
-                            // Snap back flat
-                            if (curlAnimator != null && curlAnimator.isRunning()) curlAnimator.cancel();
-                            final float fromX = curlX;
-                            final float fromY = curlY;
-                            curlAnimator = ValueAnimator.ofFloat(0f, 1f);
-                            curlAnimator.setDuration(200);
-                            curlAnimator.setInterpolator(new OvershootInterpolator(1.15f));
-                            curlAnimator.addUpdateListener(new ValueAnimator.AnimatorUpdateListener() {
-                                public void onAnimationUpdate(ValueAnimator va) {
-                                    float p = (Float) va.getAnimatedValue();
-                                    curlX = fromX + (w - fromX) * p;
-                                    curlY = fromY + (h - fromY) * p;
-                                    calculateCurlGeometry(curlX, curlY, w, h);
-                                    invalidate();
-                                }
-                            });
-                            curlAnimator.addListener(new AnimatorListenerAdapter() {
-                                @Override
-                                public void onAnimationEnd(Animator animation) {
-                                    isCurling = false;
-                                    curlX = -1f;
-                                    curlY = -1f;
-                                    invalidate();
-                                }
-                            });
-                            curlAnimator.start();
+                            // Turn left-to-right to return
+                            boolean shouldReturn = curlX > w * 0.28f || (curlX - startTouchX) > w * 0.25f;
+                            if (shouldReturn) {
+                                if (curlAnimator != null && curlAnimator.isRunning()) curlAnimator.cancel();
+                                final float fromX = curlX;
+                                final float targetX = w * 1.35f;
+
+                                curlAnimator = ValueAnimator.ofFloat(0f, 1f);
+                                curlAnimator.setDuration(220);
+                                curlAnimator.setInterpolator(new DecelerateInterpolator(1.3f));
+                                curlAnimator.addUpdateListener(new ValueAnimator.AnimatorUpdateListener() {
+                                    public void onAnimationUpdate(ValueAnimator va) {
+                                        float p = (Float) va.getAnimatedValue();
+                                        curlX = fromX + (targetX - fromX) * p;
+                                        calculateCurlGeometry(curlX, h * 0.5f, w, h);
+                                        invalidate();
+                                    }
+                                });
+                                curlAnimator.addListener(new AnimatorListenerAdapter() {
+                                    @Override
+                                    public void onAnimationEnd(Animator animation) {
+                                        isCarbonCopyMode = false;
+                                        MainActivity.this.hapticHeavyClick();
+                                        MainActivity.this.renderFullPageFolio();
+                                    }
+                                });
+                                curlAnimator.start();
+                            } else {
+                                // Snap back flat to left
+                                if (curlAnimator != null && curlAnimator.isRunning()) curlAnimator.cancel();
+                                final float fromX = curlX;
+                                curlAnimator = ValueAnimator.ofFloat(0f, 1f);
+                                curlAnimator.setDuration(180);
+                                curlAnimator.setInterpolator(new OvershootInterpolator(1.1f));
+                                curlAnimator.addUpdateListener(new ValueAnimator.AnimatorUpdateListener() {
+                                    public void onAnimationUpdate(ValueAnimator va) {
+                                        float p = (Float) va.getAnimatedValue();
+                                        curlX = fromX - fromX * p;
+                                        calculateCurlGeometry(curlX, h * 0.5f, w, h);
+                                        invalidate();
+                                    }
+                                });
+                                curlAnimator.addListener(new AnimatorListenerAdapter() {
+                                    @Override
+                                    public void onAnimationEnd(Animator animation) {
+                                        isCurling = false;
+                                        curlX = -1f;
+                                        invalidate();
+                                    }
+                                });
+                                curlAnimator.start();
+                            }
                         }
                         return true;
                     }
@@ -6630,30 +6675,51 @@ private void updateTabSelection(int tabIndex) {
             if (w <= 0 || h <= 0) return;
 
             if (isCurling) {
-                // 1. Draw soft drop shadow along fold edge onto revealed underneath page
+                // 1. Draw soft drop shadow onto underneath revealed sheet
                 canvas.drawPath(shadowPath, shadowPaint);
 
-                // 2. Draw curled paper flap (underside of top sheet)
+                // 2. Draw curled flap
                 canvas.drawPath(curlFlapPath, flapPaint);
 
-                // 3. Draw 3D cylindrical lighting ridge on curled flap
+                // 3. Draw 3D cylindrical specular highlight
                 canvas.drawPath(curlFlapPath, ridgeHighlightPaint);
             } else {
-                // Draw realistic curled dog-ear hint tab at bottom-right corner
-                float earSize = dpf(42f);
-                Path earPath = new Path();
-                earPath.moveTo(w - earSize, h);
-                earPath.lineTo(w - dpf(10), h - dpf(10));
-                earPath.lineTo(w, h - earSize);
-                earPath.close();
+                // Right-to-Left or Left-to-Right Edge Turning Cue
+                if (!isCarbonCopyMode) {
+                    // Right Edge Tab: "🟡 TURN PAGE ◂"
+                    float earW = dpf(48f);
+                    float earH = dpf(48f);
+                    Path earPath = new Path();
+                    earPath.moveTo(w - earW, h);
+                    earPath.lineTo(w - dpf(12), h - dpf(12));
+                    earPath.lineTo(w, h - earH);
+                    earPath.close();
 
-                dogEarPaint.setColor(isCarbonCopyMode ? 0xCCFDE047 : 0xCC38BDF8);
-                canvas.drawPath(earPath, dogEarPaint);
+                    dogEarPaint.setColor(0xCC38BDF8);
+                    canvas.drawPath(earPath, dogEarPaint);
 
-                dogEarHintPaint.setTextSize(dpf(9.5f));
-                dogEarHintPaint.setColor(isCarbonCopyMode ? 0xFFFEF08A : colCyan);
-                String hint = isCarbonCopyMode ? "📄 PULL TO PEEL ORIGINAL ◹" : "🟡 PULL TO PEEL CARBON COPY ◹";
-                canvas.drawText(hint, w - dpf(14), h - dpf(12), dogEarHintPaint);
+                    dogEarHintPaint.setTextAlign(Paint.Align.RIGHT);
+                    dogEarHintPaint.setTextSize(dpf(9.5f));
+                    dogEarHintPaint.setColor(colCyan);
+                    canvas.drawText("🟡 TURN PAGE (R→L) ◂", w - dpf(14), h - dpf(12), dogEarHintPaint);
+                } else {
+                    // Left Edge Tab: "📄 RETURN ▸"
+                    float earW = dpf(48f);
+                    float earH = dpf(48f);
+                    Path earPath = new Path();
+                    earPath.moveTo(0, h - earH);
+                    earPath.lineTo(dpf(12), h - dpf(12));
+                    earPath.lineTo(earW, h);
+                    earPath.close();
+
+                    dogEarPaint.setColor(0xCCFDE047);
+                    canvas.drawPath(earPath, dogEarPaint);
+
+                    dogEarHintPaint.setTextAlign(Paint.Align.LEFT);
+                    dogEarHintPaint.setTextSize(dpf(9.5f));
+                    dogEarHintPaint.setColor(0xFFFEF08A);
+                    canvas.drawText("▸ (L→R) ORIGINAL SHEET", dpf(14), h - dpf(12), dogEarHintPaint);
+                }
             }
         }
     }
