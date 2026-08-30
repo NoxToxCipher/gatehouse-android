@@ -5391,6 +5391,11 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
         dlg.show();
     }
 
+    private File pendingPhotoFile;
+    private OnPhotoCapturedCallback pendingPhotoCallback;
+    private static final HashMap<String, Bitmap> photoMemoryCache = new HashMap<String, Bitmap>();
+    private static final HashMap<String, String> photoPathCache = new HashMap<String, String>();
+
     private void launchSystemCamera(final OnPhotoCapturedCallback cb) {
         pendingPhotoCallback = cb;
         try {
@@ -5444,6 +5449,13 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
             if (bmp != null) {
                 byte[] bytes = bitmapToJpegBytes(bmp);
                 String hash = sha256Hex(bytes);
+                String hashSnippet = hash.length() >= 8 ? hash.substring(0, 8) : hash;
+                photoMemoryCache.put(hashSnippet.toLowerCase(Locale.US), bmp);
+                photoMemoryCache.put(hash.toLowerCase(Locale.US), bmp);
+                if (pendingPhotoFile != null && pendingPhotoFile.exists()) {
+                    photoPathCache.put(hashSnippet.toLowerCase(Locale.US), pendingPhotoFile.getAbsolutePath());
+                    photoPathCache.put(hash.toLowerCase(Locale.US), pendingPhotoFile.getAbsolutePath());
+                }
                 if (pendingPhotoCallback != null) {
                     pendingPhotoCallback.onCaptured(bmp, hash);
                     pendingPhotoCallback = null;
@@ -10677,6 +10689,9 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
             indAnimator.start();
         }
 
+        private float startX = 0f;
+        private boolean isDragging = false;
+
         @Override
         public boolean onTouchEvent(MotionEvent event) {
             float w = getWidth();
@@ -10684,34 +10699,40 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
 
             switch (event.getActionMasked()) {
                 case MotionEvent.ACTION_DOWN:
+                    startX = event.getX();
+                    isDragging = false;
                     if (getParent() != null) getParent().requestDisallowInterceptTouchEvent(true);
                     if (indAnimator != null && indAnimator.isRunning()) indAnimator.cancel();
                     if (tabSlideAnimator != null && tabSlideAnimator.isRunning()) tabSlideAnimator.cancel();
-                    isTabScrubbing = true;
-                    float targetDown = Math.max(0f, Math.min(3f, (event.getX() / w) * 4f - 0.5f));
-                    indicatorFloat = targetDown;
-                    lastHapticTab = Math.round(targetDown);
-                    MainActivity.this.applyTabScrollPosition(indicatorFloat);
-                    invalidate();
                     return true;
 
                 case MotionEvent.ACTION_MOVE:
-                    float targetMove = Math.max(0f, Math.min(3f, (event.getX() / w) * 4f - 0.5f));
-                    indicatorFloat = targetMove;
-                    int nearestTab = Math.round(targetMove);
-                    if (nearestTab != lastHapticTab) {
-                        lastHapticTab = nearestTab;
-                        MainActivity.this.hapticTick();
+                    float dx = Math.abs(event.getX() - startX);
+                    if (dx > dpf(8)) {
+                        isDragging = true;
                     }
-                    MainActivity.this.applyTabScrollPosition(indicatorFloat);
-                    invalidate();
+                    if (isDragging) {
+                        float frac = Math.max(0f, Math.min(3f, (event.getX() / w) * 4f - 0.5f));
+                        indicatorFloat = frac;
+                        int nearestTab = (int) Math.min(3, Math.max(0, Math.floor(event.getX() / (w / 4f))));
+                        if (nearestTab != lastHapticTab) {
+                            lastHapticTab = nearestTab;
+                            MainActivity.this.hapticTick();
+                        }
+                        MainActivity.this.applyTabScrollPosition(indicatorFloat);
+                        invalidate();
+                    }
                     return true;
 
                 case MotionEvent.ACTION_UP:
                 case MotionEvent.ACTION_CANCEL:
                     if (getParent() != null) getParent().requestDisallowInterceptTouchEvent(false);
-                    isTabScrubbing = false;
-                    final int finalTab = Math.max(0, Math.min(3, Math.round(indicatorFloat)));
+                    int finalTab;
+                    if (!isDragging) {
+                        finalTab = (int) Math.min(3, Math.max(0, Math.floor(event.getX() / (w / 4f))));
+                    } else {
+                        finalTab = (int) Math.min(3, Math.max(0, Math.round(indicatorFloat)));
+                    }
                     MainActivity.this.animateTabToPosition(finalTab);
                     invalidate();
                     return true;
