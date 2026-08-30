@@ -2871,6 +2871,9 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
         }
         final int target = Math.max(0, Math.min(3, targetTab));
         currentTab = target;
+        if (animatedTabBar != null) {
+            animatedTabBar.animateToTab(target);
+        }
         hapticClick();
 
         tabSlideAnimator = ValueAnimator.ofFloat(currentTabFloat, (float) target);
