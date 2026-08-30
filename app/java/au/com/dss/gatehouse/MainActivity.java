@@ -2923,6 +2923,9 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
             leftCol.addView(contactsSectionHeader("⚡ HOURLY AUTO-UPDATE (OTA)", colEmerald));
             leftCol.addView(buildAutoUpdateCard());
 
+            leftCol.addView(contactsSectionHeader("🧪 TESTER SUGGESTIONS & FEEDBACK", colCyan));
+            leftCol.addView(buildTesterFeedbackCard());
+
             leftCol.addView(contactsSectionHeader("🪪 OFFICER VAULT & CREDENTIALS", colPale));
             leftCol.addView(buildCredentialPreviewCard());
 
@@ -2952,6 +2955,9 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
 
         container.addView(contactsSectionHeader("⚡ HOURLY AUTO-UPDATE (OTA)", colEmerald));
         container.addView(buildAutoUpdateCard());
+
+        container.addView(contactsSectionHeader("🧪 TESTER SUGGESTIONS & FEEDBACK", colCyan));
+        container.addView(buildTesterFeedbackCard());
 
         container.addView(contactsSectionHeader("📡 OFFLINE PEER MESH & NFC", colCyan));
         container.addView(buildMeshPreviewCard());
@@ -3060,6 +3066,253 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
         });
         card.addView(btnCheck);
         return card;
+    }
+
+    private LinearLayout buildTesterFeedbackCard() {
+        LinearLayout card = new LinearLayout(this);
+        card.setOrientation(LinearLayout.VERTICAL);
+        card.setBackground(rounded(colPanel, dp(16)));
+        card.setPadding(dp(16), dp(14), dp(16), dp(14));
+        LinearLayout.LayoutParams clp = new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+        clp.bottomMargin = dp(12);
+        card.setLayoutParams(clp);
+
+        LinearLayout top = new LinearLayout(this);
+        top.setOrientation(LinearLayout.HORIZONTAL);
+        top.setGravity(Gravity.CENTER_VERTICAL);
+
+        TextView title = new TextView(this);
+        title.setText("🧪 FIELD TESTER SUGGESTIONS");
+        title.setTextColor(colPale);
+        title.setTextSize(13);
+        title.setTypeface(Typeface.DEFAULT_BOLD);
+        LinearLayout.LayoutParams tl = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
+        title.setLayoutParams(tl);
+        top.addView(title);
+
+        TextView badge = new TextView(this);
+        badge.setText("BETA HUB");
+        badge.setTextColor(colCyan);
+        badge.setTextSize(9);
+        badge.setTypeface(Typeface.MONOSPACE);
+        badge.setPadding(dp(6), dp(2), dp(6), dp(2));
+        badge.setBackground(rounded(colPanel2, dp(4)));
+        top.addView(badge);
+        card.addView(top);
+
+        TextView desc = new TextView(this);
+        desc.setText("You are testing early GateHouse field builds. Help shape guard usability, fire radar accuracy, and patrol workflows by submitting suggestions directly.");
+        desc.setTextColor(colMuted);
+        desc.setTextSize(11);
+        desc.setPadding(0, dp(6), 0, dp(10));
+        card.addView(desc);
+
+        LinearLayout btnRow = new LinearLayout(this);
+        btnRow.setOrientation(LinearLayout.HORIZONTAL);
+
+        TextView btnSubmit = actionButton("💡 Submit Suggestion / Bug", colCyan, colAccentInk);
+        btnSubmit.setOnClickListener(new View.OnClickListener() {
+            public void onClick(View v) {
+                hapticHeavyClick();
+                showTesterFeedbackDialog();
+            }
+        });
+        btnRow.addView(btnSubmit);
+
+        TextView btnDiscussions = actionButton("💬 GitHub Issues", colPanel2, colPale);
+        LinearLayout.LayoutParams dlp = new LinearLayout.LayoutParams(
+                0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
+        dlp.leftMargin = dp(8);
+        btnDiscussions.setLayoutParams(dlp);
+        btnDiscussions.setOnClickListener(new View.OnClickListener() {
+            public void onClick(View v) {
+                hapticClick();
+                try {
+                    Intent intent = new Intent(Intent.ACTION_VIEW, Uri.parse("https://github.com/NoxToxCipher/gatehouse-android/issues"));
+                    intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                    startActivity(intent);
+                } catch (Exception e) {
+                    Toast.makeText(MainActivity.this, "Opening browser...", Toast.LENGTH_SHORT).show();
+                }
+            }
+        });
+        btnRow.addView(btnDiscussions);
+
+        card.addView(btnRow);
+        return card;
+    }
+
+    private void showTesterFeedbackDialog() {
+        hapticHeavyClick();
+        final LinearLayout box = dialogContainer("🧪 Tester Feedback & Ideas", "FIELD TEST PROGRAM", colCyan);
+
+        TextView prompt = new TextView(this);
+        prompt.setText("Describe your suggestion, usability feedback, or bug report. Device telemetry and system diagnostics will be automatically attached.");
+        prompt.setTextColor(colMuted);
+        prompt.setTextSize(12);
+        prompt.setPadding(0, 0, 0, dp(10));
+        box.addView(prompt);
+
+        box.addView(formSectionLabel("CATEGORY"));
+        final String[] categories = {"💡 Feature Idea", "🐛 Bug Report", "🎨 UI / Layout", "📡 Sensors / Radar", "🏢 Hume Site"};
+        final String[] selectedCat = {categories[0]};
+        HorizontalScrollView chipScroll = buildChipGroup(categories, selectedCat, true, colCyan);
+        box.addView(chipScroll);
+
+        box.addView(formSectionLabel("SUGGESTION DETAILS"));
+        final EditText etFeedback = modernInputField("e.g. Add quick filter for fire radar distance, or increase button touch target...");
+        etFeedback.setMinLines(4);
+        etFeedback.setGravity(Gravity.TOP | Gravity.START);
+        box.addView(etFeedback);
+
+        // System Diagnostics Summary Card
+        LinearLayout diagBox = new LinearLayout(this);
+        diagBox.setOrientation(LinearLayout.VERTICAL);
+        diagBox.setBackground(rounded(colPanel3, dp(10)));
+        diagBox.setPadding(dp(12), dp(10), dp(12), dp(10));
+        LinearLayout.LayoutParams dlp = new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+        dlp.topMargin = dp(10);
+        dlp.bottomMargin = dp(14);
+        diagBox.setLayoutParams(dlp);
+
+        TextView diagHeader = new TextView(this);
+        diagHeader.setText("📋 AUTOMATIC DIAGNOSTICS PAYLOAD");
+        diagHeader.setTextColor(colCyan);
+        diagHeader.setTextSize(10);
+        diagHeader.setTypeface(Typeface.MONOSPACE);
+        diagBox.addView(diagHeader);
+
+        Intent bIntent = registerReceiver(null, new IntentFilter(Intent.ACTION_BATTERY_CHANGED));
+        int bPct = 100;
+        if (bIntent != null) {
+            int lvl = bIntent.getIntExtra(BatteryManager.EXTRA_LEVEL, -1);
+            int scl = bIntent.getIntExtra(BatteryManager.EXTRA_SCALE, -1);
+            if (lvl >= 0 && scl > 0) bPct = (int) ((lvl / (float) scl) * 100);
+        }
+
+        DssKeyManager.GuardProfile activeGuard = (dssKeyManager != null) ? dssKeyManager.getActiveGuard() : null;
+        String guardName = activeGuard != null ? activeGuard.name : "Officer Lochran Doherty";
+        String guardLic = activeGuard != null ? activeGuard.licence : "LIC #41207";
+        String fireDanger = (currentFireSnapshot != null && currentFireSnapshot.dangerRating != null) ? currentFireSnapshot.dangerRating.label : "MODERATE";
+
+        final String deviceSummary = Build.MANUFACTURER + " " + Build.MODEL + " (Android " + Build.VERSION.RELEASE + ", SDK " + Build.VERSION.SDK_INT + ")";
+        final String buildSha = AutoUpdateManager.computeFileSha256(new File(getPackageCodePath()));
+        final String shortSha = buildSha.length() > 8 ? buildSha.substring(0, 8) : "dev-build";
+        final String diagInfo = "Device: " + deviceSummary + "\n"
+                + "App Version: v" + AutoUpdateManager.getAppVersion(this) + " (SHA " + shortSha + ")\n"
+                + "Officer: " + guardName + " (" + guardLic + ")\n"
+                + "Battery: " + bPct + "%\n"
+                + "Weather / Fire: " + String.format(Locale.US, "%.1f°C", curTempC) + " · AFDRS " + fireDanger;
+
+        TextView diagText = new TextView(this);
+        diagText.setText(diagInfo);
+        diagText.setTextColor(colQuiet);
+        diagText.setTextSize(10.5f);
+        diagText.setTypeface(Typeface.MONOSPACE);
+        diagText.setPadding(0, dp(4), 0, 0);
+        diagBox.addView(diagText);
+        box.addView(diagBox);
+
+        final Dialog dlg = createDialogSheet(box);
+
+        // Action Buttons Row (1. Email / Share, 2. Save Note)
+        LinearLayout actRow1 = new LinearLayout(this);
+        actRow1.setOrientation(LinearLayout.HORIZONTAL);
+        actRow1.setPadding(0, 0, 0, dp(8));
+
+        TextView btnShareEmail = actionButton("✉️ Send Email / Share", colCyan, colAccentInk);
+        actRow1.addView(btnShareEmail);
+
+        TextView btnSaveNote = actionButton("💾 Save to Log", colEmerald, colAccentInk);
+        LinearLayout.LayoutParams slp = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
+        slp.leftMargin = dp(8);
+        btnSaveNote.setLayoutParams(slp);
+        actRow1.addView(btnSaveNote);
+        box.addView(actRow1);
+
+        LinearLayout actRow2 = new LinearLayout(this);
+        actRow2.setOrientation(LinearLayout.HORIZONTAL);
+
+        TextView btnCopy = actionButton("📋 Copy Diagnostics", colPanel2, colPale);
+        actRow2.addView(btnCopy);
+
+        TextView btnCancel = actionButton("✕ Cancel", colPanel3, colMuted);
+        LinearLayout.LayoutParams clp2 = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
+        clp2.leftMargin = dp(8);
+        btnCancel.setLayoutParams(clp2);
+        actRow2.addView(btnCancel);
+        box.addView(actRow2);
+
+        final Runnable sendAction = new Runnable() {
+            public void run() {
+                String text = etFeedback.getText().toString().trim();
+                if (text.length() == 0) {
+                    Toast.makeText(MainActivity.this, "Please enter your suggestion or feedback", Toast.LENGTH_SHORT).show();
+                    return;
+                }
+                String payload = "=== GATEHOUSE FIELD TESTER SUGGESTION ===\n"
+                        + "Category: " + selectedCat[0] + "\n"
+                        + "Date/Time: " + new SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.US).format(new Date()) + "\n\n"
+                        + "Feedback / Suggestion:\n" + text + "\n\n"
+                        + "--- System Diagnostics ---\n" + diagInfo;
+
+                Intent sendIntent = new Intent(Intent.ACTION_SEND);
+                sendIntent.setType("text/plain");
+                sendIntent.putExtra(Intent.EXTRA_SUBJECT, "[GateHouse Feedback] " + selectedCat[0] + " - " + Build.MODEL);
+                sendIntent.putExtra(Intent.EXTRA_TEXT, payload);
+                startActivity(Intent.createChooser(sendIntent, "Send Tester Feedback"));
+                dlg.dismiss();
+            }
+        };
+
+        btnShareEmail.setOnClickListener(new View.OnClickListener() {
+            public void onClick(View v) {
+                hapticHeavyClick();
+                sendAction.run();
+            }
+        });
+
+        btnSaveNote.setOnClickListener(new View.OnClickListener() {
+            public void onClick(View v) {
+                String text = etFeedback.getText().toString().trim();
+                if (text.length() == 0) {
+                    Toast.makeText(MainActivity.this, "Please enter your suggestion", Toast.LENGTH_SHORT).show();
+                    return;
+                }
+                hapticHeavyClick();
+                registerActivity();
+                note(Core.TOPIC_ROUTINE, "[TESTER FEEDBACK] [" + selectedCat[0] + "] " + text);
+                Toast.makeText(MainActivity.this, "✓ Recorded into Shift Logbook", Toast.LENGTH_SHORT).show();
+                dlg.dismiss();
+            }
+        });
+
+        btnCopy.setOnClickListener(new View.OnClickListener() {
+            public void onClick(View v) {
+                hapticClick();
+                String text = etFeedback.getText().toString().trim();
+                String payload = "=== GATEHOUSE FIELD TESTER SUGGESTION ===\n"
+                        + "Category: " + selectedCat[0] + "\n"
+                        + (text.length() > 0 ? "Feedback: " + text + "\n" : "")
+                        + "Diagnostics:\n" + diagInfo;
+                ClipboardManager cm = (ClipboardManager) getSystemService(Context.CLIPBOARD_SERVICE);
+                if (cm != null) {
+                    cm.setPrimaryClip(ClipData.newPlainText("GateHouse Diagnostics", payload));
+                    Toast.makeText(MainActivity.this, "✓ Diagnostics copied to clipboard", Toast.LENGTH_SHORT).show();
+                }
+            }
+        });
+
+        btnCancel.setOnClickListener(new View.OnClickListener() {
+            public void onClick(View v) {
+                hapticClick();
+                dlg.dismiss();
+            }
+        });
+
+        dlg.show();
     }
 
     private LinearLayout buildMeshPreviewCard() {
