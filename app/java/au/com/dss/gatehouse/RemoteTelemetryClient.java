@@ -113,7 +113,7 @@ public class RemoteTelemetryClient {
                 item.diagnostics = diagnostics;
                 item.screenshotBase64 = screenshotBase64;
                 item.timestamp = System.currentTimeMillis();
-                item.implementedMilestone = evaluateResolvedMilestone(title, details, category);
+                item.implementedMilestone = evaluateResolvedMilestone(item.id, title, details, category);
 
                 // 1. Save to local persistent cache
                 saveFeedbackToCache(context, item);
@@ -185,37 +185,37 @@ public class RemoteTelemetryClient {
         return "speech_balloon,bulb";
     }
 
-    public static int evaluateResolvedMilestone(String title, String description, String category) {
-        String combined = (title + " " + description).toLowerCase(Locale.US);
+    // Audited Manifest of Resolved Reports and Shipped Milestones
+    private static final java.util.Map<String, Integer> RESOLVED_REPORT_IDS = new java.util.HashMap<String, Integer>();
+    static {
+        // v1.0.10 (Milestone 110)
+        RESOLVED_REPORT_IDS.put("fb_1788079507586", 10); // Compass Jitter
+        RESOLVED_REPORT_IDS.put("fb_1788079661244", 10); // System UI overlap
 
-        // Milestone 112 (v1.0.12: Interactive pull-down dismiss gesture on pump house sheets, unobstructed radar HUD)
-        if (combined.contains("pull back down") || combined.contains("pull it down") || combined.contains("pump house")
-                || combined.contains("words cover the radar") || combined.contains("cover the radar") || combined.contains("overhaul this")) {
-            return 12; // v1.0.12
+        // v1.0.11 (Milestone 111)
+        RESOLVED_REPORT_IDS.put("fb_1788083657935", 11); // Version tagging in feedback list
+        RESOLVED_REPORT_IDS.put("fb_1788083731245", 11); // Tester Hub Safe Area Insets
+        RESOLVED_REPORT_IDS.put("fb_1788083821882", 11); // Gauges manual pressure logging
+
+        // v1.0.12 (Milestone 112)
+        RESOLVED_REPORT_IDS.put("fb_1788085188724", 12); // Radar words cover radar
+
+        // v1.0.13 (Milestone 113)
+        RESOLVED_REPORT_IDS.put("fb_1788085148558", 13); // Pump House overhaul & pull down
+        RESOLVED_REPORT_IDS.put("fb_1788085249104", 13); // Tools grid vs scroll-fest
+        RESOLVED_REPORT_IDS.put("fb_1788085309180", 13); // Real-time theme scrubbing
+        RESOLVED_REPORT_IDS.put("fb_1788085354606", 13); // Deputy overhaul
+        RESOLVED_REPORT_IDS.put("fb_1788085415513", 13); // Records audit
+        RESOLVED_REPORT_IDS.put("fb_1788085622693", 13); // Pump House gesture & pressure
+    }
+
+    public static int evaluateResolvedMilestone(String reportId, String title, String description, String category) {
+        if (reportId != null && RESOLVED_REPORT_IDS.containsKey(reportId)) {
+            Integer m = RESOLVED_REPORT_IDS.get(reportId);
+            return m != null ? m : 0;
         }
-
-        // Milestone 111 (v1.0.11: Pressure manual logging, Safe Area system UI padding in tester hub, exact version tags)
-        if (combined.contains("gauge") || combined.contains("pressure") || combined.contains("feature update")
-                || combined.contains("state that on this list") || combined.contains("too close") || combined.contains("in this view")) {
-            return 11; // v1.0.11
-        }
-
-        // Milestone 110 (v1.0.10: Jitter-free shortest path angular compass filter, Android 15/16 WindowInsets overlap)
-        if (combined.contains("compass") || combined.contains("jitter") || combined.contains("system ui") || combined.contains("interferes")) {
-            return 10; // v1.0.10
-        }
-
-        // Milestone 108/109 (v1.0.8 / v1.0.9)
-        if (combined.contains("sliding") || combined.contains("theme") || combined.contains("a20") || combined.contains("tablet") || combined.contains("home page") || combined.contains("icon")) {
-            return 8; // v1.0.8
-        }
-
-        // Milestone 107 (v1.0.7)
-        if (combined.contains("flipboard") || combined.contains("paper") || combined.contains("vector icon")) {
-            return 7; // v1.0.7
-        }
-
-        return 0; // In queue
+        // ALL newly submitted or unverified reports are strictly 0 (IN QUEUE)
+        return 0;
     }
 
     public static void fetchRemoteFeedbackAsync(final Context context, final Runnable onLoaded) {
@@ -255,7 +255,7 @@ public class RemoteTelemetryClient {
                                     }
                                     if (!alreadyExists) {
                                         FeedbackItem newItem = FeedbackItem.fromJson(payload);
-                                        newItem.implementedMilestone = evaluateResolvedMilestone(newItem.title, newItem.description, newItem.category);
+                                        newItem.implementedMilestone = evaluateResolvedMilestone(newItem.id, newItem.title, newItem.description, newItem.category);
                                         cached.add(0, newItem);
                                         modified = true;
                                     }
@@ -311,8 +311,8 @@ public class RemoteTelemetryClient {
             for (int i = 0; i < arr.length(); i++) {
                 JSONObject obj = arr.getJSONObject(i);
                 FeedbackItem item = FeedbackItem.fromJson(obj);
-                // Re-evaluate milestone status dynamically
-                item.implementedMilestone = evaluateResolvedMilestone(item.title, item.description, item.category);
+                // Re-evaluate milestone status dynamically using exact audited report ID
+                item.implementedMilestone = evaluateResolvedMilestone(item.id, item.title, item.description, item.category);
                 list.add(item);
             }
         } catch (Exception e) {

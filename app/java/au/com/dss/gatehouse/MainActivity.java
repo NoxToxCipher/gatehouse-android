@@ -2986,88 +2986,193 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
     }
 
     private LinearLayout buildToolsTab() {
-        boolean isTablet = getResources().getConfiguration().smallestScreenWidthDp >= 600;
-        boolean isLandscape = getResources().getConfiguration().orientation == android.content.res.Configuration.ORIENTATION_LANDSCAPE;
-
-        if (isTablet && isLandscape) {
-            LinearLayout container = new LinearLayout(this);
-            container.setOrientation(LinearLayout.HORIZONTAL);
-            container.setBaselineAligned(false);
-            container.setPadding(0, dp(6), 0, dp(56));
-
-            LinearLayout leftCol = new LinearLayout(this);
-            leftCol.setOrientation(LinearLayout.VERTICAL);
-            LinearLayout.LayoutParams lclp = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
-            lclp.rightMargin = dp(10);
-            leftCol.setLayoutParams(lclp);
-
-            leftCol.addView(contactsSectionHeader("📡 OFFLINE PEER MESH & NFC", colCyan));
-            leftCol.addView(buildMeshPreviewCard());
-
-            leftCol.addView(contactsSectionHeader("🌤️ SITE WEATHER & HYDRATION", colCyan));
-            leftCol.addView(buildDetailedWeatherCard());
-
-            leftCol.addView(contactsSectionHeader("⚡ HOURLY AUTO-UPDATE (OTA)", colEmerald));
-            leftCol.addView(buildAutoUpdateCard());
-
-            leftCol.addView(contactsSectionHeader("🧪 TESTER SUGGESTIONS & FEEDBACK", colCyan));
-            leftCol.addView(buildTesterFeedbackCard());
-
-            leftCol.addView(contactsSectionHeader("🪪 OFFICER VAULT & CREDENTIALS", colPale));
-            leftCol.addView(buildCredentialPreviewCard());
-
-            LinearLayout rightCol = new LinearLayout(this);
-            rightCol.setOrientation(LinearLayout.VERTICAL);
-            LinearLayout.LayoutParams rclp = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
-            rclp.leftMargin = dp(10);
-            rightCol.setLayoutParams(rclp);
-
-            rightCol.addView(contactsSectionHeader("🔦 SITE LIGHTING (SHAKE / CHOP)", colAccent));
-            rightCol.addView(buildLightingGrid());
-
-            rightCol.addView(contactsSectionHeader("🧭 SITE COMPASS & AZIMUTH", colCyan));
-            rightCol.addView(buildCompassCard());
-
-            rightCol.addView(contactsSectionHeader("🛰️ GNSS & SATELLITE RADAR", colEmerald));
-            rightCol.addView(buildGpsCard());
-
-            container.addView(leftCol);
-            container.addView(rightCol);
-            return container;
-        }
-
         LinearLayout container = new LinearLayout(this);
         container.setOrientation(LinearLayout.VERTICAL);
-        container.setPadding(0, dp(6), 0, dp(56));
+        container.setPadding(0, dp(4), 0, dp(56));
 
-        container.addView(contactsSectionHeader("⚡ HOURLY AUTO-UPDATE (OTA)", colEmerald));
-        container.addView(buildAutoUpdateCard());
-
-        container.addView(contactsSectionHeader("🧪 TESTER SUGGESTIONS & FEEDBACK", colCyan));
+        // 1. Hero Card: Crake-style Tester Feedback Hub (Overlord & Testers)
         container.addView(buildTesterFeedbackCard());
 
-        container.addView(contactsSectionHeader("📡 OFFLINE PEER MESH & NFC", colCyan));
-        container.addView(buildMeshPreviewCard());
+        // 2. Interactive Operational Grid (2 Columns, High Density, Zero Wasted Space)
+        LinearLayout grid = new LinearLayout(this);
+        grid.setOrientation(LinearLayout.VERTICAL);
 
-        container.addView(contactsSectionHeader("🌤️ SITE WEATHER & HYDRATION", colCyan));
-        container.addView(buildDetailedWeatherCard());
+        // Row 1: Hourly OTA & Hydraulic Line Gauges
+        LinearLayout r1 = new LinearLayout(this);
+        r1.setOrientation(LinearLayout.HORIZONTAL);
+        r1.addView(buildCompactToolTile("⚡", "OTA Updates", "v" + AutoUpdateManager.getAppVersion(this), colEmerald, "Check & install live build", new View.OnClickListener() {
+            public void onClick(View v) {
+                hapticHeavyClick();
+                AutoUpdateManager.checkForUpdateAsync(MainActivity.this, true, new AutoUpdateManager.UpdateCheckCallback() {
+                    @Override
+                    public void onUpdateFound(final String newSha, final long bytes) {
+                        runOnUiThread(new Runnable() {
+                            public void run() {
+                                banner.setText("✓ New OTA update ready (SHA " + (newSha.length() > 8 ? newSha.substring(0, 8) : newSha) + ") · Installing");
+                                banner.setVisibility(View.VISIBLE);
+                            }
+                        });
+                    }
+                    @Override
+                    public void onNoUpdateAvailable() {
+                        runOnUiThread(new Runnable() {
+                            public void run() {
+                                Toast.makeText(MainActivity.this, "✓ Gatehouse is up to date", Toast.LENGTH_SHORT).show();
+                            }
+                        });
+                    }
+                    @Override
+                    public void onError(final String message) {
+                        runOnUiThread(new Runnable() {
+                            public void run() {
+                                Toast.makeText(MainActivity.this, "Update check: " + message, Toast.LENGTH_SHORT).show();
+                            }
+                        });
+                    }
+                });
+            }
+        }));
+        r1.addView(buildCompactToolTile("🎛️", "Line Gauges", "1,200 PSI", colAccent, "Analog dial & Ada log", new View.OnClickListener() {
+            public void onClick(View v) {
+                hapticHeavyClick();
+                promptPumpHouseCheck("Manual Line Gauge (Lot 16 Booster)", "GAUGE-MANUAL-01");
+            }
+        }));
+        grid.addView(r1);
 
-        container.addView(contactsSectionHeader("🪪 OFFICER VAULT & CREDENTIALS", colPale));
-        container.addView(buildCredentialPreviewCard());
+        // Row 2: Site Compass & Site Lighting (Torch)
+        LinearLayout r2 = new LinearLayout(this);
+        r2.setOrientation(LinearLayout.HORIZONTAL);
+        r2.addView(buildCompactToolTile("🧭", "Site Compass", "360° LIVE", colCyan, "Shortest-path azimuth", new View.OnClickListener() {
+            public void onClick(View v) {
+                hapticClick();
+                showCompassDialog();
+            }
+        }));
+        r2.addView(buildCompactToolTile("🔦", "Site Torch", isHardwareTorchOn ? "ON" : "CHOP READY", isHardwareTorchOn ? colEmerald : colAccent, "Shake / chop gesture", new View.OnClickListener() {
+            public void onClick(View v) {
+                hapticHeavyClick();
+                toggleHardwareTorch();
+            }
+        }));
+        grid.addView(r2);
 
-        container.addView(contactsSectionHeader("🔦 SITE LIGHTING (SHAKE / CHOP)", colAccent));
-        container.addView(buildLightingGrid());
+        // Row 3: Kingston Weather & GNSS Radar
+        LinearLayout r3 = new LinearLayout(this);
+        r3.setOrientation(LinearLayout.HORIZONTAL);
+        r3.addView(buildCompactToolTile("🌤️", "Site Weather", String.format(Locale.US, "%.1f°C", curTempC), colCyan, "Thermal & hydration", new View.OnClickListener() {
+            public void onClick(View v) {
+                hapticClick();
+                showWeatherDialog();
+            }
+        }));
+        r3.addView(buildCompactToolTile("🛰️", "GNSS Radar", "12 SATS", colEmerald, "Polar satellite fix", new View.OnClickListener() {
+            public void onClick(View v) {
+                hapticClick();
+                showGpsDialog();
+            }
+        }));
+        grid.addView(r3);
 
-        container.addView(contactsSectionHeader("🧭 SITE COMPASS & AZIMUTH", colCyan));
-        container.addView(buildCompassCard());
+        // Row 4: Peer Mesh & Officer Vault
+        LinearLayout r4 = new LinearLayout(this);
+        r4.setOrientation(LinearLayout.HORIZONTAL);
+        r4.addView(buildCompactToolTile("📡", "Offline Mesh", "P2P SYNC", colCyan, "Encrypted local sync", new View.OnClickListener() {
+            public void onClick(View v) {
+                hapticClick();
+                showNfcBleMeshDialog();
+            }
+        }));
+        r4.addView(buildCompactToolTile("🪪", "Officer Vault", "VERIFIED", colPale, "Digital ID & Certs", new View.OnClickListener() {
+            public void onClick(View v) {
+                hapticClick();
+                showOfficerCredentialVaultDialog();
+            }
+        }));
+        grid.addView(r4);
 
-        container.addView(contactsSectionHeader("🎛️ HYDRAULIC & FIRE LINE GAUGES", colAccent));
-        container.addView(buildPressureGaugeToolCard());
-
-        container.addView(contactsSectionHeader("🛰️ GNSS & SATELLITE RADAR", colEmerald));
-        container.addView(buildGpsCard());
-
+        container.addView(grid);
         return container;
+    }
+
+    private LinearLayout buildCompactToolTile(String iconGlyph, String titleStr, String badgeStr, int badgeCol, String descStr, final View.OnClickListener onClick) {
+        LinearLayout tile = new LinearLayout(this);
+        tile.setOrientation(LinearLayout.VERTICAL);
+        tile.setBackground(rounded(colPanel, dp(14)));
+        tile.setPadding(dp(12), dp(12), dp(12), dp(12));
+        LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
+        lp.setMargins(dp(4), dp(4), dp(4), dp(4));
+        tile.setLayoutParams(lp);
+
+        LinearLayout top = new LinearLayout(this);
+        top.setOrientation(LinearLayout.HORIZONTAL);
+        top.setGravity(Gravity.CENTER_VERTICAL);
+
+        FrameLayout iconBox = new FrameLayout(this);
+        iconBox.setBackground(rounded(0x22000000 | (badgeCol & 0x00FFFFFF), dp(8)));
+        iconBox.setPadding(dp(6), dp(6), dp(6), dp(6));
+        TextView tvIco = new TextView(this);
+        tvIco.setText(iconGlyph);
+        tvIco.setTextSize(14);
+        iconBox.addView(tvIco);
+        top.addView(iconBox);
+
+        View sp = new View(this);
+        LinearLayout.LayoutParams spl = new LinearLayout.LayoutParams(0, 1, 1f);
+        sp.setLayoutParams(spl);
+        top.addView(sp);
+
+        if (badgeStr != null) {
+            TextView bg = new TextView(this);
+            bg.setText(badgeStr);
+            bg.setTextColor(badgeCol);
+            bg.setTextSize(8.5f);
+            bg.setTypeface(Typeface.MONOSPACE);
+            bg.setPadding(dp(5), dp(2), dp(5), dp(2));
+            bg.setBackground(rounded(0x22000000 | (badgeCol & 0x00FFFFFF), dp(4)));
+            top.addView(bg);
+        }
+        tile.addView(top);
+
+        TextView title = new TextView(this);
+        title.setText(titleStr);
+        title.setTextColor(colPale);
+        title.setTextSize(13);
+        title.setTypeface(Typeface.DEFAULT_BOLD);
+        title.setPadding(0, dp(8), 0, dp(2));
+        tile.addView(title);
+
+        TextView desc = new TextView(this);
+        desc.setText(descStr);
+        desc.setTextColor(colMuted);
+        desc.setTextSize(10.5f);
+        tile.addView(desc);
+
+        tile.setOnClickListener(new View.OnClickListener() {
+            public void onClick(View v) {
+                hapticClick();
+                if (onClick != null) onClick.onClick(v);
+            }
+        });
+        return tile;
+    }
+
+    private void showWeatherDialog() {
+        LinearLayout box = dialogContainer("🌤️ Kingston Weather Radar", "BOM LIVE", colCyan);
+        box.addView(buildDetailedWeatherCard());
+        createDialogSheet(box).show();
+    }
+
+    private void showCompassDialog() {
+        LinearLayout box = dialogContainer("🧭 Site Compass & Leveler", "360° DAMPED", colCyan);
+        box.addView(buildCompassCard());
+        createDialogSheet(box).show();
+    }
+
+    private void showGpsDialog() {
+        LinearLayout box = dialogContainer("🛰️ GNSS Polar Radar", "12 SATS", colEmerald);
+        box.addView(buildGpsCard());
+        createDialogSheet(box).show();
     }
 
     private LinearLayout buildPressureGaugeToolCard() {
@@ -11783,6 +11888,7 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
             indAnimator.addUpdateListener(new ValueAnimator.AnimatorUpdateListener() {
                 public void onAnimationUpdate(ValueAnimator va) {
                     indicatorFloat = (Float) va.getAnimatedValue();
+                    MainActivity.this.applyDynamicColorMorph(indicatorFloat);
                     invalidate();
                 }
             });
@@ -11790,6 +11896,7 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
                 @Override
                 public void onAnimationEnd(Animator animation) {
                     indicatorFloat = (float) targetTheme;
+                    MainActivity.this.applyDynamicColorMorph((float) targetTheme);
                     invalidate();
                 }
             });
@@ -11809,6 +11916,7 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
                     float targetDown = Math.max(0f, Math.min(3f, (event.getX() / w) * 4f - 0.5f));
                     indicatorFloat = targetDown;
                     lastHapticIndex = Math.round(targetDown);
+                    MainActivity.this.applyDynamicColorMorph(targetDown);
                     invalidate();
                     return true;
 
@@ -11820,6 +11928,7 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
                         lastHapticIndex = nearestTheme;
                         MainActivity.this.hapticTick();
                     }
+                    MainActivity.this.applyDynamicColorMorph(targetMove);
                     invalidate();
                     return true;
 
@@ -11830,7 +11939,8 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
                     final int finalTheme = Math.max(0, Math.min(3, Math.round(indicatorFloat)));
                     animateToTheme(finalTheme);
                     if (finalTheme != activeTheme) {
-                        MainActivity.this.switchTheme(finalTheme);
+                        activeTheme = finalTheme;
+                        MainActivity.this.applyThemeTokens();
                     }
                     return true;
             }
