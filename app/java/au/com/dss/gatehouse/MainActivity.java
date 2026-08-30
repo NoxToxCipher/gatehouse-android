@@ -6777,6 +6777,7 @@ private void updateTabSelection(int tabIndex) {
     private void renderFullPageFolio() {
         if (fullPageFolioOverlay == null) return;
         fullPageFolioOverlay.removeAllViews();
+        fullPageFolioOverlay.setBackgroundColor(0xFF060913);
 
         boolean isTablet = getResources().getConfiguration().smallestScreenWidthDp >= 600;
         boolean isLandscape = getResources().getConfiguration().orientation == android.content.res.Configuration.ORIENTATION_LANDSCAPE;
@@ -6786,6 +6787,8 @@ private void updateTabSelection(int tabIndex) {
         LinearLayout rootContainer = new LinearLayout(this);
         rootContainer.setOrientation(LinearLayout.VERTICAL);
         rootContainer.setBackgroundColor(folioBg);
+        rootContainer.setLayoutParams(new FrameLayout.LayoutParams(
+                FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT));
         final int padSide = isTablet && isLandscape ? dp(24) : dp(14);
         final int padTop = isTablet && isLandscape ? dp(16) : dp(28);
         rootContainer.setPadding(padSide, padTop, padSide, dp(14));
