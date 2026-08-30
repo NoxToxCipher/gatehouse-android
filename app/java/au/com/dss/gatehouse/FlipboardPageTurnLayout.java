@@ -11,11 +11,9 @@ import android.graphics.LinearGradient;
 import android.graphics.Matrix;
 import android.graphics.Paint;
 import android.graphics.Path;
-import android.graphics.Rect;
 import android.graphics.RectF;
 import android.graphics.Shader;
 import android.graphics.Typeface;
-import android.os.Build;
 import android.view.MotionEvent;
 import android.view.VelocityTracker;
 import android.view.View;
@@ -32,9 +30,10 @@ public class FlipboardPageTurnLayout extends FrameLayout {
     private View underneathView;
     private View topView;
     private OnPageTurnListener pageTurnListener;
+    private boolean isCarbonCopyMode = false;
 
     private boolean isTurning = false;
-    private float flipProgress = 0f; // 0.0 (Original) to 1.0 (Carbon Duplicate)
+    private float flipProgress = 0f; // 0.0 (Closed/Flat) to 1.0 (Fully Flipped)
     private float startTouchX = 0f;
     private float startTouchY = 0f;
     private VelocityTracker velocityTracker;
@@ -83,9 +82,10 @@ public class FlipboardPageTurnLayout extends FrameLayout {
         this.pageTurnListener = listener;
     }
 
-    public void setPages(View under, View top) {
+    public void setPages(View under, View top, boolean isCarbon) {
         this.underneathView = under;
         this.topView = top;
+        this.isCarbonCopyMode = isCarbon;
         removeAllViews();
         if (underneathView != null) addView(underneathView);
         if (topView != null) addView(topView);
@@ -131,11 +131,10 @@ public class FlipboardPageTurnLayout extends FrameLayout {
 
     public void triggerFlipAnimation(final boolean toCarbon) {
         if (flipAnimator != null && flipAnimator.isRunning()) flipAnimator.cancel();
-        final float target = toCarbon ? 1f : 0f;
         capturePageBitmaps();
         isTurning = true;
 
-        flipAnimator = ValueAnimator.ofFloat(flipProgress, target);
+        flipAnimator = ValueAnimator.ofFloat(0f, 1f);
         flipAnimator.setDuration(380);
         flipAnimator.setInterpolator(new DecelerateInterpolator(1.4f));
         flipAnimator.addUpdateListener(new ValueAnimator.AnimatorUpdateListener() {
@@ -148,7 +147,7 @@ public class FlipboardPageTurnLayout extends FrameLayout {
             @Override
             public void onAnimationEnd(Animator animation) {
                 isTurning = false;
-                flipProgress = target;
+                flipProgress = 0f;
                 if (pageTurnListener != null) {
                     pageTurnListener.onPageFlipped(toCarbon);
                 }
@@ -177,15 +176,13 @@ public class FlipboardPageTurnLayout extends FrameLayout {
                 float dx = ev.getX() - startTouchX;
                 float dy = Math.abs(ev.getY() - startTouchY);
 
-                // Right to left drag on Original
-                if (flipProgress <= 0.05f && dx < -dpf(10) && Math.abs(dx) > dy * 0.65f) {
+                if (!isCarbonCopyMode && dx < -dpf(10) && Math.abs(dx) > dy * 0.65f) {
                     isTurning = true;
                     capturePageBitmaps();
                     if (getParent() != null) getParent().requestDisallowInterceptTouchEvent(true);
                     return true;
                 }
-                // Left to right drag on Carbon
-                if (flipProgress >= 0.95f && dx > dpf(10) && Math.abs(dx) > dy * 0.65f) {
+                if (isCarbonCopyMode && dx > dpf(10) && Math.abs(dx) > dy * 0.65f) {
                     isTurning = true;
                     capturePageBitmaps();
                     if (getParent() != null) getParent().requestDisallowInterceptTouchEvent(true);
@@ -216,11 +213,11 @@ public class FlipboardPageTurnLayout extends FrameLayout {
                 float dy = Math.abs(ev.getY() - startTouchY);
 
                 if (!isTurning) {
-                    if (flipProgress <= 0.05f && dx < -dpf(8) && Math.abs(dx) > dy * 0.65f) {
+                    if (!isCarbonCopyMode && dx < -dpf(8) && Math.abs(dx) > dy * 0.65f) {
                         isTurning = true;
                         capturePageBitmaps();
                         if (getParent() != null) getParent().requestDisallowInterceptTouchEvent(true);
-                    } else if (flipProgress >= 0.95f && dx > dpf(8) && Math.abs(dx) > dy * 0.65f) {
+                    } else if (isCarbonCopyMode && dx > dpf(8) && Math.abs(dx) > dy * 0.65f) {
                         isTurning = true;
                         capturePageBitmaps();
                         if (getParent() != null) getParent().requestDisallowInterceptTouchEvent(true);
@@ -228,11 +225,11 @@ public class FlipboardPageTurnLayout extends FrameLayout {
                 }
 
                 if (isTurning) {
-                    float rawDelta = -dx / w;
-                    if (flipProgress >= 0.95f) {
-                        rawDelta = 1f - (dx / w);
+                    if (!isCarbonCopyMode) {
+                        flipProgress = Math.max(0f, Math.min(1f, -dx / w));
+                    } else {
+                        flipProgress = Math.max(0f, Math.min(1f, dx / w));
                     }
-                    flipProgress = Math.max(0f, Math.min(1f, rawDelta));
                     invalidate();
                     return true;
                 }
@@ -243,19 +240,23 @@ public class FlipboardPageTurnLayout extends FrameLayout {
                 if (isTurning) {
                     velocityTracker.computeCurrentVelocity(1000);
                     float vx = velocityTracker.getXVelocity();
-                    final boolean toCarbon;
+                    final boolean shouldComplete;
 
-                    if (Math.abs(vx) > dpf(400)) {
-                        toCarbon = vx < 0; // Fling left -> Carbon, Fling right -> Original
+                    if (!isCarbonCopyMode) {
+                        // Original sheet: swipe left turns to Carbon
+                        shouldComplete = vx < -dpf(400) || flipProgress > 0.42f;
                     } else {
-                        toCarbon = flipProgress > 0.42f;
+                        // Carbon sheet: swipe right turns to Original
+                        shouldComplete = vx > dpf(400) || flipProgress > 0.42f;
                     }
 
                     if (flipAnimator != null && flipAnimator.isRunning()) flipAnimator.cancel();
-                    final float target = toCarbon ? 1f : 0f;
-                    flipAnimator = ValueAnimator.ofFloat(flipProgress, target);
-                    flipAnimator.setDuration(Math.max(160, (int) (320 * Math.abs(target - flipProgress))));
-                    flipAnimator.setInterpolator(new OvershootInterpolator(1.06f));
+                    final float fromP = flipProgress;
+                    final float targetP = shouldComplete ? 1f : 0f;
+
+                    flipAnimator = ValueAnimator.ofFloat(fromP, targetP);
+                    flipAnimator.setDuration(Math.max(160, (int) (320 * Math.abs(targetP - fromP))));
+                    flipAnimator.setInterpolator(shouldComplete ? new DecelerateInterpolator(1.3f) : new OvershootInterpolator(1.08f));
                     flipAnimator.addUpdateListener(new ValueAnimator.AnimatorUpdateListener() {
                         public void onAnimationUpdate(ValueAnimator va) {
                             flipProgress = (Float) va.getAnimatedValue();
@@ -266,9 +267,9 @@ public class FlipboardPageTurnLayout extends FrameLayout {
                         @Override
                         public void onAnimationEnd(Animator animation) {
                             isTurning = false;
-                            flipProgress = target;
-                            if (pageTurnListener != null) {
-                                pageTurnListener.onPageFlipped(toCarbon);
+                            flipProgress = 0f;
+                            if (shouldComplete && pageTurnListener != null) {
+                                pageTurnListener.onPageFlipped(!isCarbonCopyMode);
                             }
                         }
                     });
@@ -301,21 +302,31 @@ public class FlipboardPageTurnLayout extends FrameLayout {
         // 1. Draw Revealed Base Page Underneath
         canvas.drawBitmap(underneathViewBitmap, 0, 0, null);
 
-        // 2. Compute 3D Flipboard Rotation Angle (0 deg = flat on right, 90 deg = upright, 180 deg = flat on left)
-        float rotationAngle = -flipProgress * 180f; // 0 to -180 deg
+        // 2. Compute 3D Flipboard Rotation Angle (0 deg = flat, 90 deg = upright, 180 deg = flipped)
+        float rotationAngle = (!isCarbonCopyMode ? -1f : 1f) * (flipProgress * 180f);
         float sinAngle = (float) Math.sin(flipProgress * Math.PI);
 
         // 3. Dynamic Drop Shadow Cast onto Underneath Page
         if (sinAngle > 0.01f) {
             int shadowAlpha = (int) (sinAngle * 160);
             float shadowW = w * (0.15f + sinAngle * 0.45f);
-            Shader shadowShader = new LinearGradient(
-                    0, 0, shadowW, 0,
-                    new int[]{(shadowAlpha << 24) | 0x000000, 0x00000000},
-                    new float[]{0f, 1f},
-                    Shader.TileMode.CLAMP);
-            shadowPaint.setShader(shadowShader);
-            canvas.drawRect(0, 0, shadowW, h, shadowPaint);
+            if (!isCarbonCopyMode) {
+                Shader shadowShader = new LinearGradient(
+                        0, 0, shadowW, 0,
+                        new int[]{(shadowAlpha << 24) | 0x000000, 0x00000000},
+                        new float[]{0f, 1f},
+                        Shader.TileMode.CLAMP);
+                shadowPaint.setShader(shadowShader);
+                canvas.drawRect(0, 0, shadowW, h, shadowPaint);
+            } else {
+                Shader shadowShader = new LinearGradient(
+                        w - shadowW, 0, w, 0,
+                        new int[]{0x00000000, (shadowAlpha << 24) | 0x000000},
+                        new float[]{0f, 1f},
+                        Shader.TileMode.CLAMP);
+                shadowPaint.setShader(shadowShader);
+                canvas.drawRect(w - shadowW, 0, w, h, shadowPaint);
+            }
         }
 
         // 4. 3D Turning Sheet Transformation
@@ -330,8 +341,9 @@ public class FlipboardPageTurnLayout extends FrameLayout {
             camera3D.rotateY(rotationAngle);
             camera3D.getMatrix(matrix3D);
 
-            matrix3D.preTranslate(0, -h * 0.5f);
-            matrix3D.postTranslate(0, h * 0.5f);
+            float pivotX = !isCarbonCopyMode ? 0 : w;
+            matrix3D.preTranslate(-pivotX, -h * 0.5f);
+            matrix3D.postTranslate(pivotX, h * 0.5f);
 
             canvas.concat(matrix3D);
 
@@ -345,7 +357,7 @@ public class FlipboardPageTurnLayout extends FrameLayout {
                 canvas.drawRect(0, 0, w, h, highlightPaint);
 
                 // Moving Specular Ridge Highlight along the curved lift
-                float specX = w * (1f - flipProgress * 1.5f);
+                float specX = !isCarbonCopyMode ? (w * (1f - flipProgress * 1.5f)) : (w * flipProgress * 1.5f);
                 Shader specShader = new LinearGradient(
                         specX - dpf(40), 0, specX + dpf(40), 0,
                         new int[]{0x00FFFFFF, (int) (sinAngle * 70) << 24 | 0xFFFFFF, 0x00FFFFFF},
@@ -356,20 +368,21 @@ public class FlipboardPageTurnLayout extends FrameLayout {
             }
         } else {
             // BACK OF SHEET VISIBLE (90 deg to 180 deg)
-            camera3D.rotateY(rotationAngle + 180f);
+            camera3D.rotateY(rotationAngle + (!isCarbonCopyMode ? 180f : -180f));
             camera3D.getMatrix(matrix3D);
 
-            matrix3D.preTranslate(0, -h * 0.5f);
-            matrix3D.postTranslate(0, h * 0.5f);
+            float pivotX = !isCarbonCopyMode ? 0 : w;
+            matrix3D.preTranslate(-pivotX, -h * 0.5f);
+            matrix3D.postTranslate(pivotX, h * 0.5f);
 
             canvas.concat(matrix3D);
 
             // Draw authentic reverse carbon/security backing
-            backSheetPaint.setColor(0xFF1E293B);
+            backSheetPaint.setColor(!isCarbonCopyMode ? 0xFF1E293B : 0xFF2A220A);
             canvas.drawRoundRect(new RectF(0, 0, w, h), dpf(16), dpf(16), backSheetPaint);
 
             // Feint reverse ruled lines on back
-            shadowPaint.setColor(0x2238BDF8);
+            shadowPaint.setColor(!isCarbonCopyMode ? 0x2238BDF8 : 0x33FDE047);
             shadowPaint.setShader(null);
             shadowPaint.setStrokeWidth(dpf(1.2f));
             for (float y = dpf(40); y < h - dpf(30); y += dpf(26)) {
@@ -377,12 +390,13 @@ public class FlipboardPageTurnLayout extends FrameLayout {
             }
 
             // Authentic DSS Watermark Stamp on reverse
-            dogEarHintPaint.setColor(0x4494A3B8);
+            dogEarHintPaint.setColor(!isCarbonCopyMode ? 0x4494A3B8 : 0x55FEF08A);
             dogEarHintPaint.setTextSize(dpf(14));
             dogEarHintPaint.setTextAlign(Paint.Align.CENTER);
-            canvas.drawText("DSS SECURITY LOGBOOK · OFFICIAL CARBON COPY", w * 0.5f, h * 0.5f, dogEarHintPaint);
+            String watermark = !isCarbonCopyMode ? "DSS SECURITY LOGBOOK · OFFICIAL ORIGINAL" : "DSS SECURITY LOGBOOK · CANARY CARBON DUPLICATE";
+            canvas.drawText(watermark, w * 0.5f, h * 0.5f, dogEarHintPaint);
 
-            // Shading as it lands on left
+            // Shading as it lands on opposite side
             int landingShade = (int) (sinAngle * 120);
             highlightPaint.setColor((landingShade << 24) | 0x000000);
             canvas.drawRect(0, 0, w, h, highlightPaint);
@@ -426,8 +440,8 @@ public class FlipboardPageTurnLayout extends FrameLayout {
         float h = getHeight();
         if (w <= 0 || h <= 0) return;
 
-        if (flipProgress <= 0.05f) {
-            // Dog ear on bottom right: "🟡 TURN PAGE (R→L)"
+        if (!isCarbonCopyMode) {
+            // Dog ear on bottom right: "🟡 FLIP PAGE (R→L)"
             float earSize = dpf(38f);
             Path ear = new Path();
             ear.moveTo(w - earSize, h);
@@ -441,7 +455,7 @@ public class FlipboardPageTurnLayout extends FrameLayout {
             dogEarHintPaint.setTextSize(dpf(9.5f));
             dogEarHintPaint.setColor(0xFF38BDF8);
             canvas.drawText("🟡 FLIP PAGE (R→L) ◂", w - dpf(14), h - dpf(10), dogEarHintPaint);
-        } else if (flipProgress >= 0.95f) {
+        } else {
             // Dog ear on bottom left: "▸ (L→R) ORIGINAL SHEET"
             float earSize = dpf(38f);
             Path ear = new Path();

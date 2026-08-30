@@ -7460,7 +7460,7 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
 
         View underneathSheet = buildNotebookSheetView(!isCarbonCopyMode);
         View topSheet = buildNotebookSheetView(isCarbonCopyMode);
-        flipLayout.setPages(underneathSheet, topSheet);
+        flipLayout.setPages(underneathSheet, topSheet, isCarbonCopyMode);
         flipLayout.setPageTurnListener(new FlipboardPageTurnLayout.OnPageTurnListener() {
             @Override
             public void onPageFlipped(boolean toCarbon) {
