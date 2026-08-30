@@ -1808,16 +1808,15 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
             arcPaint.setStrokeWidth(dp(6));
             canvas.drawArc(arcRect, surgeStart, surgeSweep, false, arcPaint);
 
-            // Scale Ticks (every 100 PSI)
-            for (int psi = 0; psi <= MAX_PSI; psi += 100) {
+            // Scale Ticks (Clean Major Marks Only: 0, 400, 800, 1200, 1600)
+            int[] majorPsis = {0, 400, 800, 1200, 1600};
+            for (int psi : majorPsis) {
                 float a = psiToAngle(psi);
                 double rad = Math.toRadians(a);
                 boolean isTarget = (psi == 1200);
-                boolean isJack = (psi == 1000);
                 boolean isBad = (psi == 800);
-                boolean isMajor = (psi % 200 == 0 || isJack || isTarget);
 
-                float len = isMajor ? dp(10) : dp(5);
+                float len = dp(8);
                 float rOuter = radius - dp(8);
                 float rInner = rOuter - len;
 
@@ -1826,29 +1825,18 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
                 float x2 = (float) (cx + Math.cos(rad) * rInner);
                 float y2 = (float) (cy + Math.sin(rad) * rInner);
 
-                tickPaint.setColor(isTarget ? colEmerald : (isBad ? colCrimson : (isJack ? 0xFFFFB703 : (isMajor ? colPale : colQuiet))));
-                tickPaint.setStrokeWidth(isMajor ? dpf(2.2f) : dp(1));
+                tickPaint.setColor(isTarget ? colEmerald : (isBad ? colCrimson : colPale));
+                tickPaint.setStrokeWidth(dpf(2.0f));
                 canvas.drawLine(x1, y1, x2, y2, tickPaint);
 
-                if (isMajor) {
-                    float rText = rInner - dp(10);
-                    float tx = (float) (cx + Math.cos(rad) * rText);
-                    float ty = (float) (cy + Math.sin(rad) * rText) + dp(3);
+                float rText = rInner - dp(11);
+                float tx = (float) (cx + Math.cos(rad) * rText);
+                float ty = (float) (cy + Math.sin(rad) * rText) + dpf(3.5f);
 
-                    if (isTarget) {
-                        labelPaint.setColor(colEmerald);
-                    } else if (isBad) {
-                        labelPaint.setColor(colCrimson);
-                    } else if (isJack) {
-                        labelPaint.setColor(0xFFFFB703);
-                    } else {
-                        labelPaint.setColor(colMuted);
-                    }
-
-                    labelPaint.setTextSize(dpf(8f));
-                    String valStr = isTarget ? "1200★" : (isJack ? "1000▲" : String.valueOf(psi));
-                    canvas.drawText(valStr, tx, ty, labelPaint);
-                }
+                labelPaint.setColor(isTarget ? colEmerald : (isBad ? colCrimson : colMuted));
+                labelPaint.setTextSize(dpf(9f));
+                String valStr = isTarget ? "1,200★" : String.valueOf(psi);
+                canvas.drawText(valStr, tx, ty, labelPaint);
             }
 
             // Needle
@@ -1882,22 +1870,23 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
 
             // Digital Readout in PSI
             digitalValPaint.setColor(colPale);
-            digitalValPaint.setTextSize(dp(18));
-            canvas.drawText(currentPressure + " PSI", cx, cy + dp(28), digitalValPaint);
+            digitalValPaint.setTextSize(dp(20));
+            digitalValPaint.setTypeface(Typeface.create(Typeface.MONOSPACE, Typeface.BOLD));
+            canvas.drawText(currentPressure + " PSI", cx, cy + dp(30), digitalValPaint);
 
-            digitalSubPaint.setTextSize(dpf(8.5f));
+            digitalSubPaint.setTextSize(dpf(9f));
             if (currentPressure >= 1100 && currentPressure <= 1350) {
                 digitalSubPaint.setColor(colEmerald);
-                canvas.drawText("✓ NOMINAL (1,200 PSI OPTIMAL)", cx, cy + dp(42), digitalSubPaint);
+                canvas.drawText("✓ NOMINAL (1,200 PSI OPTIMAL)", cx, cy + dp(46), digitalSubPaint);
             } else if (currentPressure < 800) {
                 digitalSubPaint.setColor(colCrimson);
-                canvas.drawText("🚨 CRITICAL BAD (< 800 PSI)", cx, cy + dp(42), digitalSubPaint);
+                canvas.drawText("🚨 CRITICAL DROP (< 800 PSI)", cx, cy + dp(46), digitalSubPaint);
             } else if (currentPressure < 1100) {
                 digitalSubPaint.setColor(0xFFFFB703);
-                canvas.drawText("⚠️ LOW — JACK UP AT 1,000 PSI", cx, cy + dp(42), digitalSubPaint);
+                canvas.drawText("⚠️ LOW — JACK UP AT 1,000 PSI", cx, cy + dp(46), digitalSubPaint);
             } else {
                 digitalSubPaint.setColor(colAccent);
-                canvas.drawText("⚠️ HIGH SURGE (> 1,350 PSI)", cx, cy + dp(42), digitalSubPaint);
+                canvas.drawText("⚠️ HIGH SURGE (> 1,350 PSI)", cx, cy + dp(46), digitalSubPaint);
             }
         }
     }
@@ -6052,6 +6041,36 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
             addView(contentView);
         }
 
+        public void directDrag(float dy) {
+            if (dy > 0) {
+                targetContentView.setTranslationY(dy);
+            } else {
+                targetContentView.setTranslationY(0);
+            }
+        }
+
+        public void directRelease(float dy) {
+            float dismissThreshold = 75 * getResources().getDisplayMetrics().density;
+            if (dy > dismissThreshold) {
+                targetContentView.animate()
+                        .translationY(targetContentView.getHeight() + 300)
+                        .setDuration(180)
+                        .withEndAction(new Runnable() {
+                            public void run() {
+                                try {
+                                    dialog.dismiss();
+                                } catch (Exception ignored) {}
+                            }
+                        }).start();
+            } else {
+                targetContentView.animate()
+                        .translationY(0)
+                        .setDuration(220)
+                        .setInterpolator(new android.view.animation.OvershootInterpolator(1.15f))
+                        .start();
+            }
+        }
+
         @Override
         public boolean onInterceptTouchEvent(MotionEvent ev) {
             switch (ev.getActionMasked()) {
@@ -6063,6 +6082,7 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
                     float dy = ev.getRawY() - startY;
                     if (dy > touchSlop) {
                         isDragging = true;
+                        if (getParent() != null) getParent().requestDisallowInterceptTouchEvent(true);
                         return true;
                     }
                     break;
@@ -6079,34 +6099,12 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
             switch (ev.getActionMasked()) {
                 case MotionEvent.ACTION_MOVE:
                     float dy = ev.getRawY() - startY;
-                    if (dy > 0) {
-                        targetContentView.setTranslationY(dy);
-                    } else {
-                        targetContentView.setTranslationY(0);
-                    }
+                    directDrag(dy);
                     return true;
                 case MotionEvent.ACTION_UP:
                 case MotionEvent.ACTION_CANCEL:
                     float totalDy = ev.getRawY() - startY;
-                    float dismissThreshold = 90 * getResources().getDisplayMetrics().density;
-                    if (totalDy > dismissThreshold) {
-                        targetContentView.animate()
-                                .translationY(targetContentView.getHeight() + 300)
-                                .setDuration(180)
-                                .withEndAction(new Runnable() {
-                                    public void run() {
-                                        try {
-                                            dialog.dismiss();
-                                        } catch (Exception ignored) {}
-                                    }
-                                }).start();
-                    } else {
-                        targetContentView.animate()
-                                .translationY(0)
-                                .setDuration(220)
-                                .setInterpolator(new android.view.animation.OvershootInterpolator(1.15f))
-                                .start();
-                    }
+                    directRelease(totalDy);
                     isDragging = false;
                     return true;
             }
@@ -6133,7 +6131,7 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
     }
 
     private LinearLayout dialogContainer(String titleText, String badgeText, int badgeColor) {
-        LinearLayout box = new LinearLayout(this);
+        final LinearLayout box = new LinearLayout(this);
         box.setOrientation(LinearLayout.VERTICAL);
         box.setBackground(rounded(colPanel, dp(24)));
         box.setPadding(dp(20), dp(16), dp(20), dp(24));
@@ -6172,6 +6170,34 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
             top.addView(badge);
         }
         box.addView(top);
+
+        final View.OnTouchListener pullTouchListener = new View.OnTouchListener() {
+            private float initY = 0f;
+            @Override
+            public boolean onTouch(View v, MotionEvent event) {
+                View parent = (View) box.getParent();
+                if (!(parent instanceof PullDownDismissLayout)) return false;
+                PullDownDismissLayout pddl = (PullDownDismissLayout) parent;
+                switch (event.getActionMasked()) {
+                    case MotionEvent.ACTION_DOWN:
+                        initY = event.getRawY();
+                        return true;
+                    case MotionEvent.ACTION_MOVE:
+                        float deltaY = event.getRawY() - initY;
+                        pddl.directDrag(deltaY);
+                        return true;
+                    case MotionEvent.ACTION_UP:
+                    case MotionEvent.ACTION_CANCEL:
+                        float finDy = event.getRawY() - initY;
+                        pddl.directRelease(finDy);
+                        return true;
+                }
+                return false;
+            }
+        };
+        handle.setOnTouchListener(pullTouchListener);
+        top.setOnTouchListener(pullTouchListener);
+
         return box;
     }
 
@@ -8459,8 +8485,20 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
         rootContainer.setLayoutParams(new FrameLayout.LayoutParams(
                 FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT));
         final int padSide = isTablet && isLandscape ? dp(24) : dp(14);
-        final int padTop = isTablet && isLandscape ? dp(16) : dp(28);
-        rootContainer.setPadding(padSide, padTop, padSide, dp(14));
+        final int basePadTop = isTablet && isLandscape ? dp(16) : dp(36);
+        rootContainer.setPadding(padSide, basePadTop, padSide, dp(14));
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            rootContainer.setOnApplyWindowInsetsListener(new View.OnApplyWindowInsetsListener() {
+                @Override
+                public WindowInsets onApplyWindowInsets(View v, WindowInsets insets) {
+                    android.graphics.Insets sb = insets.getInsets(
+                            WindowInsets.Type.systemBars() | WindowInsets.Type.displayCutout());
+                    v.setPadding(padSide + sb.left, sb.top + dp(8), padSide + sb.right, sb.bottom + dp(12));
+                    return insets;
+                }
+            });
+            rootContainer.requestApplyInsets();
+        }
 
         // 1. Top Control Bar (Back to Patrol, Mode Toggle, Share Report)
         LinearLayout topBar = new LinearLayout(this);

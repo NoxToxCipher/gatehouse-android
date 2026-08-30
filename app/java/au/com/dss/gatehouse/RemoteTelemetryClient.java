@@ -207,6 +207,11 @@ public class RemoteTelemetryClient {
         RESOLVED_REPORT_IDS.put("fb_1788085354606", 13); // Deputy overhaul
         RESOLVED_REPORT_IDS.put("fb_1788085415513", 13); // Records audit
         RESOLVED_REPORT_IDS.put("fb_1788085622693", 13); // Pump House gesture & pressure
+
+        // v1.0.14 (Milestone 114)
+        RESOLVED_REPORT_IDS.put("fb_1788087323075", 14); // Gauges - Better (Pull down & clean dial)
+        RESOLVED_REPORT_IDS.put("fb_1788087421526", 14); // Deputy Cached Roster & Key
+        RESOLVED_REPORT_IDS.put("fb_1788087492186", 14); // The Logbook UI Safe Area insets
     }
 
     public static int evaluateResolvedMilestone(String reportId, String title, String description, String category) {
