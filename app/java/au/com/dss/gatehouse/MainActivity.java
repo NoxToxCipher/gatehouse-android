@@ -7442,7 +7442,7 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
                 dlg.dismiss();
             }
         });
-        LinearLayout.LayoutParams cml = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1.4f);
+        LinearLayout.LayoutParams cml = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
         cml.leftMargin = dp(8);
         btnCommit.setLayoutParams(cml);
         btnRow.addView(btnCommit);
@@ -7759,7 +7759,7 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
                 dlg.dismiss();
             }
         });
-        LinearLayout.LayoutParams cml = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1.4f);
+        LinearLayout.LayoutParams cml = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
         cml.leftMargin = dp(8);
         btnSave.setLayoutParams(cml);
         btnRow.addView(btnSave);
@@ -7901,7 +7901,7 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
                 dlg.dismiss();
             }
         });
-        LinearLayout.LayoutParams cml = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1.4f);
+        LinearLayout.LayoutParams cml = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
         cml.leftMargin = dp(8);
         btnCommit.setLayoutParams(cml);
         btnRow.addView(btnCommit);
@@ -8003,7 +8003,7 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
                 dlg.dismiss();
             }
         });
-        LinearLayout.LayoutParams cml = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1.4f);
+        LinearLayout.LayoutParams cml = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
         cml.leftMargin = dp(8);
         btnCommit.setLayoutParams(cml);
         btnRow.addView(btnCommit);
@@ -8059,7 +8059,7 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
                 dlg.dismiss();
             }
         });
-        LinearLayout.LayoutParams cml = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1.4f);
+        LinearLayout.LayoutParams cml = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
         cml.leftMargin = dp(8);
         btnCommit.setLayoutParams(cml);
         btnRow.addView(btnCommit);
@@ -8172,7 +8172,7 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
                 dlg.dismiss();
             }
         });
-        LinearLayout.LayoutParams cml = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1.4f);
+        LinearLayout.LayoutParams cml = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
         cml.leftMargin = dp(8);
         btnSave.setLayoutParams(cml);
         btnRow.addView(btnSave);
@@ -11967,8 +11967,52 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
     private HorizontalScrollView fullWeekScrollView;
 
     private View buildFullWeekTeamGrid() {
-        fullWeekScrollView = new HorizontalScrollView(this);
-        fullWeekScrollView.setHorizontalScrollBarEnabled(false);
+        fullWeekScrollView = new HorizontalScrollView(this) {
+            private float downX, downY;
+
+            @Override
+            public boolean onInterceptTouchEvent(MotionEvent ev) {
+                switch (ev.getActionMasked()) {
+                    case MotionEvent.ACTION_DOWN:
+                        downX = ev.getX();
+                        downY = ev.getY();
+                        if (getParent() != null) getParent().requestDisallowInterceptTouchEvent(true);
+                        break;
+                    case MotionEvent.ACTION_MOVE:
+                        float dx = Math.abs(ev.getX() - downX);
+                        float dy = Math.abs(ev.getY() - downY);
+                        if (dx > dp(6) && dx > dy) {
+                            if (getParent() != null) getParent().requestDisallowInterceptTouchEvent(true);
+                            return true;
+                        } else if (dy > dp(10) && dy > dx * 1.5f) {
+                            if (getParent() != null) getParent().requestDisallowInterceptTouchEvent(false);
+                            return false;
+                        }
+                        break;
+                    case MotionEvent.ACTION_UP:
+                    case MotionEvent.ACTION_CANCEL:
+                        if (getParent() != null) getParent().requestDisallowInterceptTouchEvent(false);
+                        break;
+                }
+                return super.onInterceptTouchEvent(ev);
+            }
+
+            @Override
+            public boolean onTouchEvent(MotionEvent ev) {
+                switch (ev.getActionMasked()) {
+                    case MotionEvent.ACTION_DOWN:
+                    case MotionEvent.ACTION_MOVE:
+                        if (getParent() != null) getParent().requestDisallowInterceptTouchEvent(true);
+                        break;
+                    case MotionEvent.ACTION_UP:
+                    case MotionEvent.ACTION_CANCEL:
+                        if (getParent() != null) getParent().requestDisallowInterceptTouchEvent(false);
+                        break;
+                }
+                return super.onTouchEvent(ev);
+            }
+        };
+        fullWeekScrollView.setHorizontalScrollBarEnabled(true);
         LinearLayout.LayoutParams svlp = new LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
         svlp.bottomMargin = dp(14);
@@ -12449,7 +12493,7 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
                 dlg.dismiss();
             }
         });
-        LinearLayout.LayoutParams sllp = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1.4f);
+        LinearLayout.LayoutParams sllp = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
         sllp.leftMargin = dp(8);
         btnSend.setLayoutParams(sllp);
         btnRow.addView(btnSend);

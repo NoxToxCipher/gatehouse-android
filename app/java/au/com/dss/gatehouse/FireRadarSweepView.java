@@ -251,15 +251,20 @@ public class FireRadarSweepView extends View {
 
     private void drawWindVector(Canvas canvas, float x, float y, double windDeg, double windSpeed, String windDir) {
         Paint wp = new Paint(Paint.ANTI_ALIAS_FLAG);
-        wp.setColor(0xFF38BDF8);
-        wp.setTextSize(dp(10f));
+        wp.setColor(0xFF00E5FF);
+        wp.setTextSize(dp(8.5f));
         wp.setTypeface(Typeface.create(Typeface.MONOSPACE, Typeface.BOLD));
-        canvas.drawText("💨 WIND " + windDir + " · " + String.format(Locale.US, "%.1f km/h", windSpeed), x, y, wp);
+        String timeStr = new java.text.SimpleDateFormat("HH:mm:ss", Locale.US).format(new java.util.Date(snapshot.lastUpdatedTs));
+        canvas.drawText("🛰️ LIVE SCAN · " + timeStr + " AEST", x, y - dp(2), wp);
+
+        wp.setColor(0xFF38BDF8);
+        wp.setTextSize(dp(9.5f));
+        canvas.drawText("💨 WIND " + windDir + " · " + String.format(Locale.US, "%.1f km/h", windSpeed), x, y + dp(12), wp);
 
         // Mini wind arrow pointing in direction wind travels
         float arrowLen = dp(14);
         float ax = x + dp(6);
-        float ay = y + dp(14);
+        float ay = y + dp(22);
         double travelRad = Math.toRadians(windDeg + 180.0 - 90.0);
         float ex = (float) (ax + arrowLen * Math.cos(travelRad));
         float ey = (float) (ay + arrowLen * Math.sin(travelRad));
