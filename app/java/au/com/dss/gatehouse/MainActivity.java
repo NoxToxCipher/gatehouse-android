@@ -4171,6 +4171,13 @@ private void updateTabSelection(int tabIndex) {
 
             rightCol.addView(buildLogbookEntranceCard());
 
+            primary = new TextView(this);
+            primary.setTextSize(15);
+            primary.setTypeface(Typeface.DEFAULT_BOLD);
+            primary.setGravity(Gravity.CENTER);
+            primary.setPadding(dp(16), dp(18), dp(16), dp(18));
+            rightCol.addView(primary);
+
             container.addView(leftCol);
             container.addView(rightCol);
             return container;
