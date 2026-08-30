@@ -453,6 +453,16 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
         refreshFireRadar();
         LicenceVerificationManager.initChannels(this);
         LicenceVerificationManager.checkAndNotifyLicenceExpiry(this);
+        try {
+            Intent pttIntent = new Intent(this, PttRadioService.class);
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                startForegroundService(pttIntent);
+            } else {
+                startService(pttIntent);
+            }
+        } catch (Throwable t) {
+            PttRadioEngine.getInstance(this).start();
+        }
         AutoUpdateManager.init(this);
         ticker.postDelayed(tick, 1000);
     }
@@ -784,7 +794,7 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
 
         ScrollView deputyScroll = new ScrollView(this);
         deputyScroll.setVerticalScrollBarEnabled(false);
-        deputyScroll.setPadding(0, isTablet && isLandscape ? dp(24) : dp(34), 0, 0);
+        deputyScroll.setPadding(0, isLandscape ? dp(16) : dp(34), 0, 0);
         FrameLayout.LayoutParams dslp = new FrameLayout.LayoutParams(
                 maxContentWidth, FrameLayout.LayoutParams.MATCH_PARENT);
         dslp.gravity = Gravity.CENTER_HORIZONTAL;
@@ -854,8 +864,8 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
         final LinearLayout screenLayout = new LinearLayout(this);
         screenLayout.setOrientation(LinearLayout.VERTICAL);
         screenLayout.setBackgroundColor(colBg);
-        final int defaultPadTop = isTablet && isLandscape ? dp(22) : dp(36);
-        final int defaultPadSide = isTablet && isLandscape ? dp(18) : dp(14);
+        final int defaultPadTop = isLandscape ? dp(16) : dp(36);
+        final int defaultPadSide = isLandscape ? dp(18) : dp(14);
         screenLayout.setPadding(defaultPadSide, defaultPadTop, defaultPadSide, dp(10));
         FrameLayout.LayoutParams sllp = new FrameLayout.LayoutParams(
                 maxContentWidth, FrameLayout.LayoutParams.MATCH_PARENT);
@@ -1135,6 +1145,32 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
         if (voiceRecorder != null) {
             try { voiceRecorder.release(); } catch (Exception e) {}
         }
+        try {
+            PttRadioEngine.getInstance(this).stop();
+        } catch (Throwable ignored) {}
+    }
+
+    @Override
+    public boolean onKeyDown(int keyCode, KeyEvent event) {
+        if (keyCode == KeyEvent.KEYCODE_VOLUME_DOWN) {
+            if (event.getRepeatCount() == 0) {
+                hapticDoublePulse();
+                PttRadioEngine.getInstance(this).startTransmit();
+                return true;
+            }
+        }
+        return super.onKeyDown(keyCode, event);
+    }
+
+    @Override
+    public boolean onKeyUp(int keyCode, KeyEvent event) {
+        if (keyCode == KeyEvent.KEYCODE_VOLUME_DOWN) {
+            if (PttRadioEngine.getInstance(this).isTransmitting()) {
+                PttRadioEngine.getInstance(this).stopTransmit();
+                return true;
+            }
+        }
+        return super.onKeyUp(keyCode, event);
     }
 
     // =========================================================================
@@ -3235,6 +3271,22 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
             }
         }));
         grid.addView(r4);
+
+        // Row 5: DSS Digital Radio (PTT) & Emergency SOS
+        LinearLayout r5 = new LinearLayout(this);
+        r5.setOrientation(LinearLayout.HORIZONTAL);
+        r5.addView(buildCompactToolTile("📻", "PTT Radio", "CH 01 TALK", colAccent, "Encrypted local PTT", new View.OnClickListener() {
+            public void onClick(View v) {
+                hapticHeavyClick();
+                showPttRadioDialog();
+            }
+        }));
+        r5.addView(buildCompactToolTile("🚨", "Hot-Mic SOS", "10s BURST", 0xFFEF4444, "Priority distress audio", new View.OnClickListener() {
+            public void onClick(View v) {
+                triggerPttHotMicSos();
+            }
+        }));
+        grid.addView(r5);
 
         container.addView(grid);
         return container;
@@ -5427,10 +5479,9 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
     // =========================================================================
 
     private LinearLayout buildPatrolTab() {
-        boolean isTablet = getResources().getConfiguration().smallestScreenWidthDp >= 600;
         boolean isLandscape = getResources().getConfiguration().orientation == android.content.res.Configuration.ORIENTATION_LANDSCAPE;
 
-        if (isTablet && isLandscape) {
+        if (isLandscape) {
             LinearLayout container = new LinearLayout(this);
             container.setOrientation(LinearLayout.HORIZONTAL);
             container.setBaselineAligned(false);
@@ -5580,6 +5631,7 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
             rightCol.addView(sectionHeader("Rapid Evidence Dock", null));
             dock = buildCaptureDock();
             rightCol.addView(dock);
+            rightCol.addView(buildPttRadioBar());
 
             rightCol.addView(buildLogbookEntranceCard());
 
@@ -5692,6 +5744,7 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
             container.addView(sectionHeader("Rapid Evidence Dock", null));
             dock = buildCaptureDock();
             container.addView(dock);
+            container.addView(buildPttRadioBar());
 
             container.addView(buildLogbookEntranceCard());
 
@@ -5746,10 +5799,9 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
     // =========================================================================
 
     private LinearLayout buildContactsTab() {
-        boolean isTablet = getResources().getConfiguration().smallestScreenWidthDp >= 600;
         boolean isLandscape = getResources().getConfiguration().orientation == android.content.res.Configuration.ORIENTATION_LANDSCAPE;
 
-        if (isTablet && isLandscape) {
+        if (isLandscape) {
             LinearLayout container = new LinearLayout(this);
             container.setOrientation(LinearLayout.HORIZONTAL);
             container.setBaselineAligned(false);
@@ -6299,6 +6351,271 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
         lp.rightMargin = (pos < 3) ? dp(4) : 0;
         btn.setLayoutParams(lp);
         return btn;
+    }
+
+    // =========================================================================
+    // 📻 PUSH-TO-TALK (PTT) DIGITAL RADIO BAR & CONTROLS
+    // =========================================================================
+
+    private TextView pttBtn;
+    private TextView pttStatusText;
+    private TextView pttReplayBtn;
+
+    private LinearLayout buildPttRadioBar() {
+        LinearLayout bar = new LinearLayout(this);
+        bar.setOrientation(LinearLayout.HORIZONTAL);
+        bar.setGravity(Gravity.CENTER_VERTICAL);
+        bar.setBackground(rounded(colPanel, dp(14)));
+        bar.setPadding(dp(8), dp(6), dp(8), dp(6));
+        LinearLayout.LayoutParams blp = new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+        blp.topMargin = dp(4);
+        blp.bottomMargin = dp(6);
+        bar.setLayoutParams(blp);
+
+        // PTT Transmit Button (Hold to Talk)
+        pttBtn = new TextView(this);
+        pttBtn.setText("🎙️ PTT · HOLD");
+        pttBtn.setTextColor(colAccentInk);
+        pttBtn.setTextSize(11.5f);
+        pttBtn.setTypeface(Typeface.DEFAULT_BOLD);
+        pttBtn.setGravity(Gravity.CENTER);
+        pttBtn.setPadding(dp(12), dp(10), dp(12), dp(10));
+        pttBtn.setBackground(rounded(colAccent, dp(10)));
+        LinearLayout.LayoutParams plp = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1.4f);
+        pttBtn.setLayoutParams(plp);
+
+        pttBtn.setOnTouchListener(new View.OnTouchListener() {
+            @Override
+            public boolean onTouch(View v, MotionEvent event) {
+                switch (event.getActionMasked()) {
+                    case MotionEvent.ACTION_DOWN:
+                        hapticDoublePulse();
+                        pttBtn.setText("🔴 TALKING...");
+                        pttBtn.setTextColor(0xFFFFFFFF);
+                        pttBtn.setBackground(rounded(0xFFEF4444, dp(10)));
+                        PttRadioEngine.getInstance(MainActivity.this).startTransmit();
+                        break;
+                    case MotionEvent.ACTION_UP:
+                    case MotionEvent.ACTION_CANCEL:
+                        hapticClick();
+                        pttBtn.setText("🎙️ PTT · HOLD");
+                        pttBtn.setTextColor(colAccentInk);
+                        pttBtn.setBackground(rounded(colAccent, dp(10)));
+                        PttRadioEngine.getInstance(MainActivity.this).stopTransmit();
+                        break;
+                }
+                return true;
+            }
+        });
+        bar.addView(pttBtn);
+
+        // Center Status / Channel Readout
+        pttStatusText = new TextView(this);
+        pttStatusText.setText("📻 CH 01 · STANDBY");
+        pttStatusText.setTextColor(colPale);
+        pttStatusText.setTextSize(10f);
+        pttStatusText.setTypeface(Typeface.create(Typeface.MONOSPACE, Typeface.BOLD));
+        pttStatusText.setGravity(Gravity.CENTER);
+        pttStatusText.setPadding(dp(4), 0, dp(4), 0);
+        LinearLayout.LayoutParams slp = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1.8f);
+        pttStatusText.setLayoutParams(slp);
+        pttStatusText.setOnClickListener(new View.OnClickListener() {
+            public void onClick(View v) {
+                showPttRadioDialog();
+            }
+        });
+        bar.addView(pttStatusText);
+
+        // Replay Button
+        pttReplayBtn = new TextView(this);
+        pttReplayBtn.setText("🔄 REPLAY");
+        pttReplayBtn.setTextColor(colCyan);
+        pttReplayBtn.setTextSize(10f);
+        pttReplayBtn.setTypeface(Typeface.DEFAULT_BOLD);
+        pttReplayBtn.setGravity(Gravity.CENTER);
+        pttReplayBtn.setPadding(dp(8), dp(10), dp(8), dp(10));
+        pttReplayBtn.setBackground(rounded(colPanel2, dp(10)));
+        LinearLayout.LayoutParams rlp = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1.0f);
+        pttReplayBtn.setLayoutParams(rlp);
+        pttReplayBtn.setOnClickListener(new View.OnClickListener() {
+            public void onClick(View v) {
+                hapticClick();
+                if (PttRadioEngine.getInstance(MainActivity.this).hasReplayAudio()) {
+                    PttRadioEngine.getInstance(MainActivity.this).replayLastCall();
+                    Toast.makeText(MainActivity.this, "🔊 Replaying last radio transmission...", Toast.LENGTH_SHORT).show();
+                } else {
+                    Toast.makeText(MainActivity.this, "No previous radio audio in buffer", Toast.LENGTH_SHORT).show();
+                }
+            }
+        });
+        bar.addView(pttReplayBtn);
+
+        // Settings / Info Button
+        TextView pttInfoBtn = new TextView(this);
+        pttInfoBtn.setText("⚙️");
+        pttInfoBtn.setTextSize(14f);
+        pttInfoBtn.setGravity(Gravity.CENTER);
+        pttInfoBtn.setPadding(dp(8), dp(6), dp(8), dp(6));
+        pttInfoBtn.setOnClickListener(new View.OnClickListener() {
+            public void onClick(View v) {
+                hapticClick();
+                showPttRadioDialog();
+            }
+        });
+        bar.addView(pttInfoBtn);
+
+        // Wire listener to update UI live
+        PttRadioEngine.getInstance(this).setListener(new PttRadioEngine.PttListener() {
+            @Override
+            public void onTxStateChanged(final boolean isTransmitting) {
+                runOnUiThread(new Runnable() {
+                    public void run() {
+                        if (pttStatusText != null) {
+                            pttStatusText.setText(isTransmitting ? "🔴 TRANSMITTING" : "📻 CH 01 · STANDBY");
+                            pttStatusText.setTextColor(isTransmitting ? 0xFFEF4444 : colPale);
+                        }
+                    }
+                });
+            }
+
+            @Override
+            public void onRxStateChanged(final boolean isReceiving, final String senderName) {
+                runOnUiThread(new Runnable() {
+                    public void run() {
+                        if (pttStatusText != null) {
+                            pttStatusText.setText(isReceiving ? ("🔊 " + (senderName.isEmpty() ? "DESK" : senderName).toUpperCase()) : "📻 CH 01 · STANDBY");
+                            pttStatusText.setTextColor(isReceiving ? colEmerald : colPale);
+                        }
+                    }
+                });
+            }
+
+            @Override
+            public void onPeerDetected(String peerId, String name, long lastSeenMs) {
+                runOnUiThread(new Runnable() {
+                    public void run() {
+                        if (pttStatusText != null && !PttRadioEngine.getInstance(MainActivity.this).isTransmitting() && !PttRadioEngine.getInstance(MainActivity.this).isReceiving()) {
+                            int peers = PttRadioEngine.getInstance(MainActivity.this).getActivePeerCount();
+                            pttStatusText.setText(peers > 0 ? ("● " + peers + " PEER" + (peers > 1 ? "S" : "") + " LINKED") : "📻 CH 01 · STANDBY");
+                            pttStatusText.setTextColor(peers > 0 ? colEmerald : colPale);
+                        }
+                    }
+                });
+            }
+
+            @Override
+            public void onAudioLevelChanged(int decibels) {}
+
+            @Override
+            public void onError(String message) {}
+        });
+
+        return bar;
+    }
+
+    private void showPttRadioDialog() {
+        hapticHeavyClick();
+        final LinearLayout box = dialogContainer("📻 Push-to-Talk Digital Radio", "FLEET TALKGROUP", colAccent);
+
+        TextView info = new TextView(this);
+        info.setText("Instant zero-cloud encrypted digital radio stream across local site network (Sub-100ms latency, Roger Beeps & Screen-Off background audio):");
+        info.setTextColor(colMuted);
+        info.setTextSize(12);
+        info.setPadding(0, 0, 0, dp(10));
+        box.addView(info);
+
+        // Talkgroup Card
+        LinearLayout tgCard = new LinearLayout(this);
+        tgCard.setOrientation(LinearLayout.VERTICAL);
+        tgCard.setBackground(rounded(colPanel2, dp(12)));
+        tgCard.setPadding(dp(14), dp(12), dp(14), dp(12));
+        LinearLayout.LayoutParams tglp = new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+        tglp.bottomMargin = dp(12);
+        tgCard.setLayoutParams(tglp);
+
+        TextView tgTitle = new TextView(this);
+        tgTitle.setText("CHANNEL 01 · HUME DOORS GATEHOUSE & PATROLS");
+        tgTitle.setTextColor(colAccent);
+        tgTitle.setTextSize(11f);
+        tgTitle.setTypeface(Typeface.DEFAULT_BOLD);
+        tgCard.addView(tgTitle);
+
+        TextView tgSub = new TextView(this);
+        tgSub.setText("Multicast Mesh: 239.255.41.207:41207 · 16kHz HD Audio · Zero Cloud Lag");
+        tgSub.setTextColor(colPale);
+        tgSub.setTextSize(10.5f);
+        tgSub.setPadding(0, dp(2), 0, dp(8));
+        tgCard.addView(tgSub);
+
+        int peers = PttRadioEngine.getInstance(this).getActivePeerCount();
+        TextView peerStatus = new TextView(this);
+        peerStatus.setText(peers > 0 ? ("● " + peers + " Active Guard Device" + (peers > 1 ? "s" : "") + " in Range") : "● Standing by for dual-guard shift connection");
+        peerStatus.setTextColor(peers > 0 ? colEmerald : colMuted);
+        peerStatus.setTextSize(11f);
+        peerStatus.setTypeface(Typeface.MONOSPACE);
+        tgCard.addView(peerStatus);
+
+        box.addView(tgCard);
+
+        final Dialog dlg = createDialogSheet(box);
+
+        LinearLayout btnRow = new LinearLayout(this);
+        btnRow.setOrientation(LinearLayout.HORIZONTAL);
+
+        TextView btnReplay = actionButton("🔄 Replay Last Audio", colPanel2, colCyan);
+        btnReplay.setOnClickListener(new View.OnClickListener() {
+            public void onClick(View v) {
+                hapticClick();
+                if (PttRadioEngine.getInstance(MainActivity.this).hasReplayAudio()) {
+                    PttRadioEngine.getInstance(MainActivity.this).replayLastCall();
+                    Toast.makeText(MainActivity.this, "🔊 Replaying audio...", Toast.LENGTH_SHORT).show();
+                } else {
+                    Toast.makeText(MainActivity.this, "No audio in replay buffer", Toast.LENGTH_SHORT).show();
+                }
+            }
+        });
+        btnRow.addView(btnReplay);
+
+        TextView btnSos = actionButton("🚨 10s Hot-Mic SOS", 0x33EF4444, 0xFFEF4444);
+        btnSos.setOnClickListener(new View.OnClickListener() {
+            public void onClick(View v) {
+                triggerPttHotMicSos();
+                dlg.dismiss();
+            }
+        });
+        LinearLayout.LayoutParams slp = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1.1f);
+        slp.leftMargin = dp(6);
+        btnSos.setLayoutParams(slp);
+        btnRow.addView(btnSos);
+
+        TextView btnClose = actionButton("Close", colAccent, colAccentInk);
+        btnClose.setOnClickListener(new View.OnClickListener() {
+            public void onClick(View v) {
+                hapticClick();
+                dlg.dismiss();
+            }
+        });
+        LinearLayout.LayoutParams clp = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 0.9f);
+        clp.leftMargin = dp(6);
+        btnClose.setLayoutParams(clp);
+        btnRow.addView(btnClose);
+
+        box.addView(btnRow);
+        dlg.show();
+    }
+
+    private void triggerPttHotMicSos() {
+        hapticHeavyClick();
+        Toast.makeText(this, "🚨 PRIORITY SOS HOT-MIC BROADCAST ACTIVE (10 SECONDS)", Toast.LENGTH_LONG).show();
+        PttRadioEngine.getInstance(this).startTransmit();
+        new Handler(Looper.getMainLooper()).postDelayed(new Runnable() {
+            public void run() {
+                PttRadioEngine.getInstance(MainActivity.this).stopTransmit();
+                Toast.makeText(MainActivity.this, "✓ SOS Hot-mic broadcast completed", Toast.LENGTH_SHORT).show();
+            }
+        }, 10000);
     }
 
     // =========================================================================
@@ -10375,10 +10692,12 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
         hapticHeavyClick();
 
         boolean isTablet = getResources().getConfiguration().smallestScreenWidthDp >= 600;
+        boolean isLandscape = getResources().getConfiguration().orientation == android.content.res.Configuration.ORIENTATION_LANDSCAPE;
+        boolean usePerspective = isTablet || isLandscape;
         float cameraDist = getResources().getDisplayMetrics().density * 10000;
 
         if (animate) {
-            if (isTablet) {
+            if (usePerspective) {
                 mainSurfaceContainer.setCameraDistance(cameraDist);
                 mainSurfaceContainer.setPivotX(0f);
                 mainSurfaceContainer.setPivotY(rootFrame.getHeight() * 0.5f);
@@ -10420,7 +10739,7 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
                 peekShadow.animate().alpha(0.85f).translationX(w - dp(30)).setDuration(220).start();
             }
         } else {
-            if (isTablet) {
+            if (usePerspective) {
                 mainSurfaceContainer.setCameraDistance(cameraDist);
                 mainSurfaceContainer.setPivotX(0f);
                 mainSurfaceContainer.setPivotY(rootFrame.getHeight() * 0.5f);
@@ -10461,10 +10780,12 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
         hapticClick();
 
         boolean isTablet = getResources().getConfiguration().smallestScreenWidthDp >= 600;
+        boolean isLandscape = getResources().getConfiguration().orientation == android.content.res.Configuration.ORIENTATION_LANDSCAPE;
+        boolean usePerspective = isTablet || isLandscape;
         float cameraDist = getResources().getDisplayMetrics().density * 10000;
 
         if (animate) {
-            if (isTablet) {
+            if (usePerspective) {
                 mainSurfaceContainer.setCameraDistance(cameraDist);
                 mainSurfaceContainer.setPivotX(0f);
                 mainSurfaceContainer.setPivotY(rootFrame.getHeight() * 0.5f);
@@ -10515,8 +10836,8 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
             if (deputyContainer != null) {
                 deputyContainer.setScaleX(0.94f);
                 deputyContainer.setScaleY(0.94f);
-                deputyContainer.setRotationY(isTablet ? 18f : 0f);
-                deputyContainer.setTranslationX(isTablet ? -dp(35) : -dp(30));
+                deputyContainer.setRotationY(usePerspective ? 18f : 0f);
+                deputyContainer.setTranslationX(usePerspective ? -dp(35) : -dp(30));
             }
             if (deputyScrim != null) deputyScrim.setAlpha(0.65f);
             if (peekShadow != null) {
@@ -10548,8 +10869,10 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
         float p = Math.min(1f, x / (w * 0.85f));
 
         boolean isTablet = getResources().getConfiguration().smallestScreenWidthDp >= 600;
+        boolean isLandscape = getResources().getConfiguration().orientation == android.content.res.Configuration.ORIENTATION_LANDSCAPE;
+        boolean usePerspective = isTablet || isLandscape;
 
-        if (isTablet) {
+        if (usePerspective) {
             float cameraDist = getResources().getDisplayMetrics().density * 10000;
             mainSurfaceContainer.setCameraDistance(cameraDist);
             mainSurfaceContainer.setPivotX(0f);
@@ -10952,8 +11275,6 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
         deputyOrgRole.setTypeface(Typeface.MONOSPACE);
         orgCard.addView(deputyOrgRole);
 
-        depLayout.addView(orgCard);
-
         // 3. Live Shift Time Clock & Chronograph HUD
         LinearLayout clockCard = new LinearLayout(this);
         clockCard.setOrientation(LinearLayout.VERTICAL);
@@ -10998,7 +11319,7 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
         clockCard.addView(deputyClockTime);
 
         // Shift Elapsed Progress Bar
-        FrameLayout progressTrack = new FrameLayout(this);
+        final FrameLayout progressTrack = new FrameLayout(this);
         progressTrack.setBackground(rounded(0x3300E5FF, dp(4)));
         LinearLayout.LayoutParams ptlp = new LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT, dp(6));
@@ -11006,7 +11327,7 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
         ptlp.bottomMargin = dp(8);
         progressTrack.setLayoutParams(ptlp);
 
-        View progressFill = new View(this);
+        final View progressFill = new View(this);
         progressFill.setBackground(rounded(0xFF00E5FF, dp(4)));
         FrameLayout.LayoutParams pflp = new FrameLayout.LayoutParams(
                 0, FrameLayout.LayoutParams.MATCH_PARENT);
@@ -11057,20 +11378,13 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
             }
         });
         clockBtns.addView(btnClockOut);
-
         clockCard.addView(clockBtns);
-        depLayout.addView(clockCard);
 
-        // 4. Deputy Weekly Roster Schedule
-        depLayout.addView(contactsSectionHeader("📅 DEPUTY CONFIRMED ROSTER (CURRENT CYCLE)", 0xFF00E5FF));
-
+        // 4. Deputy Weekly Roster Schedule Container
         deputyScheduleContainer = new LinearLayout(this);
         deputyScheduleContainer.setOrientation(LinearLayout.VERTICAL);
-        depLayout.addView(deputyScheduleContainer);
 
         // 5. Deputy Shift Tasks
-        depLayout.addView(contactsSectionHeader("📋 DEPUTY SHIFT TASKS (3 OF 4 COMPLETE)", 0xFF10B981));
-
         LinearLayout taskBox = new LinearLayout(this);
         taskBox.setOrientation(LinearLayout.VERTICAL);
         taskBox.setBackground(rounded(0xFF0C1422, dp(18)));
@@ -11085,8 +11399,6 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
         taskBox.addView(deputyTaskItem("✓ Factory internal lockups (Lots 14-18)", true));
         taskBox.addView(deputyTaskItem("✓ Fire booster & pump pressure check (175 PSI)", true));
         taskBox.addView(deputyTaskItem("○ 05:30 AM Pre-dawn perimeter lighting & gate unlock", false));
-
-        depLayout.addView(taskBox);
 
         // 6. Deputy Shift Swap & Request Bar
         LinearLayout depActions = new LinearLayout(this);
@@ -11115,7 +11427,45 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
         });
         depActions.addView(btnLeave);
 
-        depLayout.addView(depActions);
+        boolean isLandscape = getResources().getConfiguration().orientation == android.content.res.Configuration.ORIENTATION_LANDSCAPE;
+        if (isLandscape) {
+            LinearLayout split = new LinearLayout(this);
+            split.setOrientation(LinearLayout.HORIZONTAL);
+            split.setBaselineAligned(false);
+
+            LinearLayout leftCol = new LinearLayout(this);
+            leftCol.setOrientation(LinearLayout.VERTICAL);
+            LinearLayout.LayoutParams lclp = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1.05f);
+            lclp.rightMargin = dp(10);
+            leftCol.setLayoutParams(lclp);
+
+            leftCol.addView(orgCard);
+            leftCol.addView(clockCard);
+
+            LinearLayout rightCol = new LinearLayout(this);
+            rightCol.setOrientation(LinearLayout.VERTICAL);
+            LinearLayout.LayoutParams rclp = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 0.95f);
+            rclp.leftMargin = dp(10);
+            rightCol.setLayoutParams(rclp);
+
+            rightCol.addView(contactsSectionHeader("📅 DEPUTY CONFIRMED ROSTER (CURRENT CYCLE)", 0xFF00E5FF));
+            rightCol.addView(deputyScheduleContainer);
+            rightCol.addView(contactsSectionHeader("📋 DEPUTY SHIFT TASKS (3 OF 4 COMPLETE)", 0xFF10B981));
+            rightCol.addView(taskBox);
+            rightCol.addView(depActions);
+
+            split.addView(leftCol);
+            split.addView(rightCol);
+            depLayout.addView(split);
+        } else {
+            depLayout.addView(orgCard);
+            depLayout.addView(clockCard);
+            depLayout.addView(contactsSectionHeader("📅 DEPUTY CONFIRMED ROSTER (CURRENT CYCLE)", 0xFF00E5FF));
+            depLayout.addView(deputyScheduleContainer);
+            depLayout.addView(contactsSectionHeader("📋 DEPUTY SHIFT TASKS (3 OF 4 COMPLETE)", 0xFF10B981));
+            depLayout.addView(taskBox);
+            depLayout.addView(depActions);
+        }
 
         // Initial population from cached/sample data
         updateDeputyUi(latestDeputyResult);
@@ -11262,7 +11612,7 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
 
         rLayout.addView(topBar);
 
-        if (isTablet && isLandscape) {
+        if (isLandscape) {
             LinearLayout split = new LinearLayout(this);
             split.setOrientation(LinearLayout.HORIZONTAL);
             split.setBaselineAligned(false);
