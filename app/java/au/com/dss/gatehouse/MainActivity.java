@@ -4390,6 +4390,76 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
             }
         });
 
+        // 6. SHIPPED MILESTONES & IMPLEMENTATION CHANGELOG
+        LinearLayout msSection = new LinearLayout(this);
+        msSection.setOrientation(LinearLayout.VERTICAL);
+        msSection.setPadding(0, dp(14), 0, 0);
+
+        LinearLayout msHeader = new LinearLayout(this);
+        msHeader.setOrientation(LinearLayout.HORIZONTAL);
+        msHeader.setGravity(Gravity.CENTER_VERTICAL);
+        msHeader.setPadding(0, dp(6), 0, dp(10));
+
+        TextView msTitle = new TextView(this);
+        msTitle.setText("🚀 SHIPPED IMPLEMENTATION MILESTONES");
+        msTitle.setTextColor(0xFF00E676);
+        msTitle.setTextSize(11);
+        msTitle.setTypeface(Typeface.MONOSPACE);
+        msTitle.setLetterSpacing(0.08f);
+        LinearLayout.LayoutParams mslp = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
+        msTitle.setLayoutParams(mslp);
+        msHeader.addView(msTitle);
+
+        TextView msCount = new TextView(this);
+        msCount.setText("LIVE V1.0." + AutoUpdateManager.getAppVersion(this));
+        msCount.setTextColor(0xFF00E676);
+        msCount.setTextSize(9);
+        msCount.setTypeface(Typeface.MONOSPACE);
+        msCount.setPadding(dp(6), dp(2), dp(6), dp(2));
+        msCount.setBackground(rounded(0x2200E676, dp(4)));
+        msHeader.addView(msCount);
+        msSection.addView(msHeader);
+
+        String[][] milestones = {
+            {"v1.0.25 (Milestone 125)", "BLE Decentralised Mesh Portal Redesign, Symmetrical 1:1 Action Docks across all dialogs, and In-App Live Milestone Changelog."},
+            {"v1.0.24 (Milestone 124)", "Symmetrical 1:1 Action Decks with live quick-actions (BOM Live Refresh, True North Azimuth Reset, GNSS Fix Stamping) on Weather, Compass, and GNSS dialogs."},
+            {"v1.0.23 (Milestone 123)", "Interactive DSS 100% Passive Mesh Explainer, purged unbonded mock peers, balanced 1:1 action buttons across dialogs, and compacted header layout to eliminate micro-scrolls."},
+            {"v1.0.22 (Milestone 122)", "Tools Tab Dual-Column Widescreen Split in Landscape mode and tactile spring physics on all tool tiles."},
+            {"v1.0.21 (Milestone 121)", "Android 16 / Xiaomi Foreground Service Startup Hotfix (reclassified PttRadioService to connectedDevice|dataSync with defensive exception catching)."},
+            {"v1.0.20 (Milestone 120)", "Symmetrical action decks, unblocked 7-day roster table horizontal swiping, and live meteorological satellite scan feed."},
+            {"v1.0.15 (Milestone 115)", "CyberGlow scrollbar elevation, ID qualification cards layout overhaul, and roster days/date dynamic sync."},
+            {"v1.0.14 (Milestone 114)", "Pressure gauge pull-down dial, Deputy cached roster & key, and Logbook safe area insets."},
+            {"v1.0.13 (Milestone 113)", "Pump house gesture overhaul, tools high-density grid, and real-time theme scrubbing."}
+        };
+
+        for (String[] ms : milestones) {
+            LinearLayout mCard = new LinearLayout(this);
+            mCard.setOrientation(LinearLayout.VERTICAL);
+            mCard.setBackground(rounded(0xFF132328, dp(12)));
+            mCard.setPadding(dp(14), dp(12), dp(14), dp(12));
+            LinearLayout.LayoutParams mlp = new LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+            mlp.bottomMargin = dp(8);
+            mCard.setLayoutParams(mlp);
+
+            TextView vTv = new TextView(this);
+            vTv.setText("✓ " + ms[0]);
+            vTv.setTextColor(0xFF00E676);
+            vTv.setTextSize(12);
+            vTv.setTypeface(Typeface.DEFAULT_BOLD);
+            mCard.addView(vTv);
+
+            TextView dTv = new TextView(this);
+            dTv.setText(ms[1]);
+            dTv.setTextColor(0xFF94A3B8);
+            dTv.setTextSize(11);
+            dTv.setPadding(0, dp(4), 0, 0);
+            mCard.addView(dTv);
+
+            msSection.addView(mCard);
+        }
+        root.addView(msSection);
+
         dlg.setContentView(mainScroll);
         dlg.show();
     }
@@ -4597,10 +4667,6 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
 
         final Dialog dlg = createDialogSheet(box);
 
-        LinearLayout btnRow = new LinearLayout(this);
-        btnRow.setOrientation(LinearLayout.HORIZONTAL);
-        btnRow.setPadding(0, dp(12), 0, 0);
-
         TextView btnSimBump = actionButton("🤝 Physical NFC Bump", colCyan, colAccentInk);
         btnSimBump.setOnClickListener(new View.OnClickListener() {
             public void onClick(View v) {
@@ -4609,7 +4675,6 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
                 showNfcGuardBumpDialog();
             }
         });
-        btnRow.addView(btnSimBump);
 
         TextView btnClose = actionButton("Close", colLine, colPale);
         btnClose.setOnClickListener(new View.OnClickListener() {
@@ -4618,12 +4683,8 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
                 dlg.dismiss();
             }
         });
-        LinearLayout.LayoutParams cml = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
-        cml.leftMargin = dp(8);
-        btnClose.setLayoutParams(cml);
-        btnRow.addView(btnClose);
 
-        box.addView(btnRow);
+        box.addView(actionButtonRow(btnSimBump, btnClose));
         dlg.show();
     }
 
@@ -4639,10 +4700,6 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
 
         final Dialog dlg = createDialogSheet(box);
 
-        LinearLayout btnRow = new LinearLayout(this);
-        btnRow.setOrientation(LinearLayout.HORIZONTAL);
-        btnRow.setPadding(0, dp(10), 0, 0);
-
         TextView btnSim = actionButton("🤝 Pair Relief Guard", colCyan, colAccentInk);
         btnSim.setOnClickListener(new View.OnClickListener() {
             public void onClick(View v) {
@@ -4655,7 +4712,6 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
                 dlg.dismiss();
             }
         });
-        btnRow.addView(btnSim);
 
         TextView btnClose = actionButton("Close", colLine, colPale);
         btnClose.setOnClickListener(new View.OnClickListener() {
@@ -4664,12 +4720,8 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
                 dlg.dismiss();
             }
         });
-        LinearLayout.LayoutParams clp = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
-        clp.leftMargin = dp(8);
-        btnClose.setLayoutParams(clp);
-        btnRow.addView(btnClose);
 
-        box.addView(btnRow);
+        box.addView(actionButtonRow(btnSim, btnClose));
         dlg.show();
     }
 
@@ -8250,9 +8302,6 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
 
         final Dialog dlg = createDialogSheet(box);
 
-        LinearLayout btnRow = new LinearLayout(this);
-        btnRow.setOrientation(LinearLayout.HORIZONTAL);
-
         TextView btnNo = actionButton("✕ No, Skip", colLine, colMuted);
         btnNo.setOnClickListener(new View.OnClickListener() {
             public void onClick(View v) {
@@ -8261,9 +8310,8 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
                 showPhotoReviewSheet(bmp);
             }
         });
-        btnRow.addView(btnNo);
 
-        TextView btnYes = actionButton("✓ Yes, Record in Logbook", colAccent, 0xFF1E1B4B);
+        TextView btnYes = actionButton("✓ Record in Logbook", colAccent, 0xFF1E1B4B);
         btnYes.setOnClickListener(new View.OnClickListener() {
             public void onClick(View v) {
                 hapticDoublePulse();
@@ -8272,12 +8320,8 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
                 promptVehicleRegoReason(bmp, enteredPlate);
             }
         });
-        LinearLayout.LayoutParams ylp = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1.6f);
-        ylp.leftMargin = dp(8);
-        btnYes.setLayoutParams(ylp);
-        btnRow.addView(btnYes);
 
-        box.addView(btnRow);
+        box.addView(actionButtonRow(btnNo, btnYes));
         dlg.show();
     }
 
@@ -8352,10 +8396,6 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
 
         final Dialog dlg = createDialogSheet(box);
 
-        LinearLayout btnRow = new LinearLayout(this);
-        btnRow.setOrientation(LinearLayout.HORIZONTAL);
-        btnRow.setPadding(0, dp(12), 0, 0);
-
         TextView btnCancel = actionButton("Cancel", colLine, colMuted);
         btnCancel.setOnClickListener(new View.OnClickListener() {
             public void onClick(View v) {
@@ -8363,7 +8403,6 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
                 dlg.dismiss();
             }
         });
-        btnRow.addView(btnCancel);
 
         TextView btnCommit = actionButton("🛡️ Commit to Logbook", colEmerald, colAccentInk);
         btnCommit.setOnClickListener(new View.OnClickListener() {
@@ -8384,12 +8423,8 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
                 dlg.dismiss();
             }
         });
-        LinearLayout.LayoutParams cml = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1.5f);
-        cml.leftMargin = dp(8);
-        btnCommit.setLayoutParams(cml);
-        btnRow.addView(btnCommit);
 
-        box.addView(btnRow);
+        box.addView(actionButtonRow(btnCancel, btnCommit));
         dlg.show();
     }
 
@@ -8964,6 +8999,20 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
         fl.bottomMargin = dp(8);
         field.setLayoutParams(fl);
         return field;
+    }
+
+    private LinearLayout actionButtonRow(TextView... buttons) {
+        LinearLayout row = new LinearLayout(this);
+        row.setOrientation(LinearLayout.HORIZONTAL);
+        row.setPadding(0, dp(12), 0, 0);
+        for (int i = 0; i < buttons.length; i++) {
+            TextView b = buttons[i];
+            LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
+            if (i > 0) lp.leftMargin = dp(8);
+            b.setLayoutParams(lp);
+            row.addView(b);
+        }
+        return row;
     }
 
     private TextView actionButton(String text, int fill, int textCol) {
@@ -12160,7 +12209,7 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
         });
         depActions.addView(btnSwap);
 
-        TextView btnLeave = actionButton("🌴 Leave & Availability", 0xFF241C10, 0xFFE5A93C);
+        TextView btnLeave = actionButton("🌴 Leave", 0xFF241C10, 0xFFE5A93C);
         btnLeave.setTextSize(11.5f);
         ((LinearLayout.LayoutParams) btnLeave.getLayoutParams()).leftMargin = dp(6);
         btnLeave.setOnClickListener(new View.OnClickListener() {
@@ -12170,6 +12219,17 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
             }
         });
         depActions.addView(btnLeave);
+
+        TextView btnDocs = actionButton("📚 Docs & SOPs", 0xFF1E293B, 0xFF00E5FF);
+        btnDocs.setTextSize(11.5f);
+        ((LinearLayout.LayoutParams) btnDocs.getLayoutParams()).leftMargin = dp(6);
+        btnDocs.setOnClickListener(new View.OnClickListener() {
+            public void onClick(View v) {
+                hapticClick();
+                showDocumentLibraryDialog();
+            }
+        });
+        depActions.addView(btnDocs);
 
         boolean isLandscape = getResources().getConfiguration().orientation == android.content.res.Configuration.ORIENTATION_LANDSCAPE;
         if (isLandscape) {
@@ -12342,6 +12402,25 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
             }
         });
         topBar.addView(btnReturn);
+
+        TextView btnDocs = new TextView(this);
+        btnDocs.setText("📚 DOCS & SOPS");
+        btnDocs.setTextColor(0xFF00E5FF);
+        btnDocs.setTextSize(10.5f);
+        btnDocs.setTypeface(Typeface.create(Typeface.MONOSPACE, Typeface.BOLD));
+        btnDocs.setPadding(dp(10), dp(6), dp(10), dp(6));
+        btnDocs.setBackground(rounded(0x2200E5FF, dp(8)));
+        LinearLayout.LayoutParams doclp = new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+        doclp.leftMargin = dp(8);
+        btnDocs.setLayoutParams(doclp);
+        btnDocs.setOnClickListener(new View.OnClickListener() {
+            public void onClick(View v) {
+                hapticClick();
+                showDocumentLibraryDialog();
+            }
+        });
+        topBar.addView(btnDocs);
 
         TextView title = new TextView(this);
         title.setText("MASTER SHIFT ROSTER");
@@ -12901,7 +12980,7 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
     }
 
     // =========================================================================
-    // 🗂️ 3D HYBRID DECK SHIFT FOCUS & HANDOVER CARD
+    // 🗂️ NEXT-GEN PEEK & FLOW ROSTER DECK (DEPUTY PARITY & ENHANCEMENTS)
     // =========================================================================
 
     private void updateRosterDayDetail(final int dayIndex) {
@@ -12914,35 +12993,29 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
 
         Calendar shiftCal = Calendar.getInstance();
         shiftCal.add(Calendar.DAY_OF_YEAR, dayIndex - 2);
-        SimpleDateFormat sdf = new SimpleDateFormat("EEE d MMM", Locale.US);
-        String dayHeader = sdf.format(shiftCal.getTime());
+        SimpleDateFormat sdf = new SimpleDateFormat("EEEE d MMMM", Locale.US);
+        String fullDayTitle = sdf.format(shiftCal.getTime());
         boolean isToday = (dayIndex == 2);
         boolean isTomorrow = (dayIndex == 3);
-        String label = isToday ? (dayHeader + " (Today)") : (isTomorrow ? (dayHeader + " (Tomorrow)") : dayHeader);
+        String label = isToday ? (fullDayTitle + " · Tonight") : (isTomorrow ? (fullDayTitle + " · Tomorrow") : fullDayTitle);
 
-        String[] guards = {"Bill", "Brian Rush", "Jon Naylor", "Claren", "Chris Ireton", "Ken", "Lochran Doherty"};
-        String guardOn = (dayIndex == 2 || dayIndex == 6) ? "Lochran Doherty" : guards[dayIndex % guards.length];
-        String reliefOn = (dayIndex == 2) ? "Brian Rush (00:00 Handover)" : (guards[(dayIndex + 1) % guards.length] + " (06:00 Relief)");
-        String status = (dayIndex < 2) ? "COMPLETED" : (isToday ? "ACTIVE SHIFT" : "CONFIRMED");
-        String hours = isToday ? "18:00 – 06:00 (12.0h)" : (dayIndex % 2 == 0 ? "16:00 – 00:00 (8.0h)" : "22:00 – 06:00 (8.0h)");
-        String rate = (shiftCal.get(Calendar.DAY_OF_WEEK) == Calendar.SATURDAY || shiftCal.get(Calendar.DAY_OF_WEEK) == Calendar.SUNDAY) 
-                ? "15% Night Loading + Weekend Rate" : "15% Night Loading Standard";
+        // Day profiles for Kingston Site
+        // 0: Mon (Solo), 1: Tue (Solo), 2: Wed/Today (Dual Guard Overlap), 3: Thu (Solo), 4: Fri (RDO), 5: Sat (Open Shift), 6: Sun (Dual Guard)
+        final boolean isDualGuard = (dayIndex == 2 || dayIndex == 6);
+        final boolean isOpenShift = (dayIndex == 5);
+        final boolean isRestDay = (dayIndex == 4);
 
-        final String[] dayInfo = {
-            label,
-            hours,
-            status,
-            "Gatehouse Post 01 · Static Guarding",
-            reliefOn,
-            rate,
-            guardOn
-        };
-        boolean isTonight = isToday;
+        String shiftHours = isRestDay ? "ROSTERED DAY OFF (RDO)" : (isToday ? "18:00 – 06:00 (12.0h)" : (isOpenShift ? "16:00 – 00:00 (8.0h)" : "18:00 – 06:00 (12.0h)"));
+        String statusText = isRestDay ? "⚪ REST DAY" : (isToday ? "🟢 ACTIVE SHIFT" : (isDualGuard ? "🟣 2-GUARD OVERLAP" : (isOpenShift ? "🟡 OPEN · CLAIMABLE" : "🟢 CONFIRMED")));
+        int statusColor = isRestDay ? 0xFF94A3B8 : (isToday ? 0xFF10B981 : (isDualGuard ? 0xFFA855F7 : (isOpenShift ? 0xFFF59E0B : 0xFF38BDF8)));
+
+        String primaryGuard = isRestDay ? "No Shift Assigned" : (isOpenShift ? "Unassigned (Open for Claim)" : "Officer Lochran Doherty (LIC #41207)");
+        String coworkerName = isDualGuard ? "Officer Chris Ireton (Yard Patrol)" : "Solo Shift (Relief: Brian Rush)";
 
         final LinearLayout card = new LinearLayout(this);
         card.setOrientation(LinearLayout.VERTICAL);
-        card.setBackground(rounded(isTonight ? 0xFF131D2E : colPanel, dp(16)));
-        card.setPadding(dp(16), dp(16), dp(16), dp(16));
+        card.setBackground(rounded(isToday ? 0xFF131D2E : (isOpenShift ? 0xFF1E1710 : (isDualGuard ? 0xFF1A1328 : colPanel)), dp(18)));
+        card.setPadding(dp(18), dp(16), dp(18), dp(16));
         LinearLayout.LayoutParams clp = new LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
         clp.bottomMargin = dp(12);
@@ -12951,7 +13024,7 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
         // Enable 3D perspective
         card.setCameraDistance(dp(8000));
 
-        // Horizontal Swipe detector directly on the card to cycle days
+        // Horizontal Swipe detector to scrub days
         card.setOnTouchListener(new View.OnTouchListener() {
             private float downX, downY;
             private boolean isSwiping = false;
@@ -12998,84 +13071,283 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
             }
         });
 
-        // Header Row: Day name + Status Chip
+        // 1. Header Row: Day Title + Status Chip
         LinearLayout hRow = new LinearLayout(this);
         hRow.setOrientation(LinearLayout.HORIZONTAL);
         hRow.setGravity(Gravity.CENTER_VERTICAL);
 
         TextView tvDay = new TextView(this);
-        tvDay.setText(dayInfo[0]);
-        tvDay.setTextColor(isTonight ? colAccent : 0xFFFFFFFF);
-        tvDay.setTextSize(14);
+        tvDay.setText(label);
+        tvDay.setTextColor(isToday ? colAccent : (isOpenShift ? 0xFFFDE047 : 0xFFFFFFFF));
+        tvDay.setTextSize(13.5f);
         tvDay.setTypeface(Typeface.DEFAULT_BOLD);
         LinearLayout.LayoutParams dlp = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
         tvDay.setLayoutParams(dlp);
         hRow.addView(tvDay);
 
         TextView tvStatus = new TextView(this);
-        tvStatus.setText(dayInfo[2]);
-        tvStatus.setTextColor(isTonight ? colEmerald : colCyan);
+        tvStatus.setText(statusText);
+        tvStatus.setTextColor(statusColor);
         tvStatus.setTextSize(9);
         tvStatus.setTypeface(Typeface.MONOSPACE);
-        tvStatus.setPadding(dp(7), dp(3), dp(7), dp(3));
-        tvStatus.setBackground(rounded(isTonight ? 0x2210B981 : 0x2206B6D4, dp(6)));
+        tvStatus.setPadding(dp(8), dp(3), dp(8), dp(3));
+        tvStatus.setBackground(rounded((statusColor & 0x00FFFFFF) | 0x22000000, dp(6)));
         hRow.addView(tvStatus);
         card.addView(hRow);
 
-        // Timing & Scope
+        // 2. Timing & Guard Location
         TextView tvHours = new TextView(this);
-        tvHours.setText(dayInfo[1]);
-        tvHours.setTextColor(isTonight ? 0xFF38BDF8 : 0xFFE2E8F0);
+        tvHours.setText(shiftHours);
+        tvHours.setTextColor(isRestDay ? 0xFF94A3B8 : (isOpenShift ? 0xFFF59E0B : 0xFF38BDF8));
         tvHours.setTextSize(18);
         tvHours.setTypeface(Typeface.create(Typeface.MONOSPACE, Typeface.BOLD));
-        tvHours.setPadding(0, dp(8), 0, dp(2));
+        tvHours.setPadding(0, dp(6), 0, dp(2));
         card.addView(tvHours);
 
         TextView tvPost = new TextView(this);
-        tvPost.setText("📍 " + dayInfo[3] + " · Guard: " + dayInfo[6]);
-        tvPost.setTextColor(0xFF94A3B8);
-        tvPost.setTextSize(12);
+        tvPost.setText("📍 Guard Hut · " + primaryGuard);
+        tvPost.setTextColor(0xFFCBD5E1);
+        tvPost.setTextSize(11.5f);
         tvPost.setPadding(0, 0, 0, dp(10));
         card.addView(tvPost);
 
-        // Relief & Team on Shift
-        LinearLayout teamBox = new LinearLayout(this);
-        teamBox.setOrientation(LinearLayout.VERTICAL);
-        teamBox.setBackground(rounded(0x18000000, dp(10)));
-        teamBox.setPadding(dp(12), dp(10), dp(12), dp(10));
-        LinearLayout.LayoutParams tblp = new LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
-        tblp.bottomMargin = dp(10);
-        teamBox.setLayoutParams(tblp);
+        if (!isRestDay) {
+            // 3. 👥 COWORKER OVERLAP & JOINT PATROL TIMELINE
+            LinearLayout overlapBox = new LinearLayout(this);
+            overlapBox.setOrientation(LinearLayout.VERTICAL);
+            overlapBox.setBackground(rounded(0x22000000, dp(10)));
+            overlapBox.setPadding(dp(12), dp(10), dp(12), dp(10));
+            LinearLayout.LayoutParams oblp = new LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+            oblp.bottomMargin = dp(10);
+            overlapBox.setLayoutParams(oblp);
 
-        TextView teamLbl = new TextView(this);
-        teamLbl.setText("ON-SHIFT TEAM & HANDOVER RELIEF");
-        teamLbl.setTextColor(colQuiet);
-        teamLbl.setTextSize(8.5f);
-        teamLbl.setTypeface(Typeface.MONOSPACE);
-        teamBox.addView(teamLbl);
+            LinearLayout ovTop = new LinearLayout(this);
+            ovTop.setOrientation(LinearLayout.HORIZONTAL);
+            ovTop.setGravity(Gravity.CENTER_VERTICAL);
 
-        TextView teamRelief = new TextView(this);
-        teamRelief.setText("🤝 Relief: " + dayInfo[4]);
-        teamRelief.setTextColor(colPale);
-        teamRelief.setTextSize(11.5f);
-        teamRelief.setPadding(0, dp(2), 0, 0);
-        teamBox.addView(teamRelief);
+            TextView ovLbl = new TextView(this);
+            ovLbl.setText(isDualGuard ? "👥 2-GUARD ON-SITE OVERLAP (PTT ACTIVE)" : "👤 SHIFT RELIEF & CO-ORDINATION");
+            ovLbl.setTextColor(isDualGuard ? 0xFFA855F7 : colQuiet);
+            ovLbl.setTextSize(8.5f);
+            ovLbl.setTypeface(Typeface.MONOSPACE);
+            LinearLayout.LayoutParams ovlp = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
+            ovLbl.setLayoutParams(ovlp);
+            ovTop.addView(ovLbl);
 
-        TextView rateLbl = new TextView(this);
-        rateLbl.setText("⭐ Rate: " + dayInfo[5]);
-        rateLbl.setTextColor(colAccent);
-        rateLbl.setTextSize(10.5f);
-        rateLbl.setPadding(0, dp(2), 0, 0);
-        teamBox.addView(rateLbl);
+            if (isDualGuard) {
+                TextView pttBadge = new TextView(this);
+                pttBadge.setText("📻 RADIO SYNCED");
+                pttBadge.setTextColor(0xFF00E5FF);
+                pttBadge.setTextSize(8);
+                pttBadge.setTypeface(Typeface.MONOSPACE);
+                pttBadge.setPadding(dp(5), dp(1), dp(5), dp(1));
+                pttBadge.setBackground(rounded(0x3300E5FF, dp(4)));
+                ovTop.addView(pttBadge);
+            }
+            overlapBox.addView(ovTop);
 
-        card.addView(teamBox);
+            // Visual Timeline Graphic Bar
+            LinearLayout tlBar = new LinearLayout(this);
+            tlBar.setOrientation(LinearLayout.VERTICAL);
+            tlBar.setPadding(0, dp(6), 0, dp(4));
 
-        // Pre-Shift Checklist
-        card.addView(rosterCheckItem("✓ Master key ring & electronic gate fobs verified", true));
-        card.addView(rosterCheckItem("✓ Bodycam charged & memory cleared", true));
-        card.addView(rosterCheckItem("✓ LED security torches inspected", true));
-        card.addView(rosterCheckItem("○ 05:18 AM Civil Dawn perimeter round scheduled", false));
+            // Track 1: You (Guard Hut)
+            LinearLayout t1 = new LinearLayout(this);
+            t1.setOrientation(LinearLayout.HORIZONTAL);
+            t1.setGravity(Gravity.CENTER_VERTICAL);
+            t1.setPadding(0, dp(2), 0, dp(2));
+
+            TextView t1Lbl = new TextView(this);
+            t1Lbl.setText("Lochran (Guard Hut)");
+            t1Lbl.setTextColor(colPale);
+            t1Lbl.setTextSize(9.5f);
+            t1Lbl.setWidth(dp(110));
+            t1.addView(t1Lbl);
+
+            View b1 = new View(this);
+            b1.setBackground(rounded(colEmerald, dp(4)));
+            LinearLayout.LayoutParams b1lp = new LinearLayout.LayoutParams(0, dp(8), 1f);
+            b1.setLayoutParams(b1lp);
+            t1.addView(b1);
+            tlBar.addView(t1);
+
+            // Track 2: Coworker
+            if (isDualGuard) {
+                LinearLayout t2 = new LinearLayout(this);
+                t2.setOrientation(LinearLayout.HORIZONTAL);
+                t2.setGravity(Gravity.CENTER_VERTICAL);
+                t2.setPadding(0, dp(2), 0, dp(2));
+
+                TextView t2Lbl = new TextView(this);
+                t2Lbl.setText("Chris (Yard Patrol)");
+                t2Lbl.setTextColor(0xFFA855F7);
+                t2Lbl.setTextSize(9.5f);
+                t2Lbl.setWidth(dp(110));
+                t2.addView(t2Lbl);
+
+                LinearLayout b2Container = new LinearLayout(this);
+                b2Container.setOrientation(LinearLayout.HORIZONTAL);
+                LinearLayout.LayoutParams b2Clp = new LinearLayout.LayoutParams(0, dp(8), 1f);
+                b2Container.setLayoutParams(b2Clp);
+
+                View b2 = new View(this);
+                b2.setBackground(rounded(0xFFA855F7, dp(4)));
+                LinearLayout.LayoutParams b2lp = new LinearLayout.LayoutParams(0, dp(8), 0.5f);
+                b2.setLayoutParams(b2lp);
+                b2Container.addView(b2);
+
+                View b2Empty = new View(this);
+                LinearLayout.LayoutParams b2Elp = new LinearLayout.LayoutParams(0, dp(8), 0.5f);
+                b2Empty.setLayoutParams(b2Elp);
+                b2Container.addView(b2Empty);
+
+                t2.addView(b2Container);
+                tlBar.addView(t2);
+
+                TextView overlapNote = new TextView(this);
+                overlapNote.setText("🤝 18:00 – 00:00 (6.0h Dual Patrol) · 00:00 – 06:00 (Solo Guard Hut)");
+                overlapNote.setTextColor(0xFFCBD5E1);
+                overlapNote.setTextSize(9.5f);
+                overlapNote.setPadding(0, dp(4), 0, 0);
+                tlBar.addView(overlapNote);
+            } else {
+                TextView soloNote = new TextView(this);
+                soloNote.setText("🤝 Solo Shift · Next Handover: Brian Rush @ 06:00 (Gatehouse Relief)");
+                soloNote.setTextColor(colPale);
+                soloNote.setTextSize(9.5f);
+                soloNote.setPadding(0, dp(2), 0, 0);
+                tlBar.addView(soloNote);
+            }
+
+            overlapBox.addView(tlBar);
+            card.addView(overlapBox);
+
+            // 4. 💰 SECURITY SERVICES AWARD (MA000115) RATE & GROSS ESTIMATE
+            LinearLayout rateGrid = new LinearLayout(this);
+            rateGrid.setOrientation(LinearLayout.HORIZONTAL);
+            rateGrid.setPadding(0, 0, 0, dp(10));
+
+            double baseRate = 31.85; // Level 3 Security Officer
+            double loadRate = (shiftCal.get(Calendar.DAY_OF_WEEK) == Calendar.SUNDAY) ? (baseRate * 2.0) :
+                              ((shiftCal.get(Calendar.DAY_OF_WEEK) == Calendar.SATURDAY) ? (baseRate * 1.5) : (baseRate * 1.15));
+            double shiftHoursVal = isOpenShift ? 8.0 : 12.0;
+            double estGross = shiftHoursVal * loadRate;
+            String loadTag = (shiftCal.get(Calendar.DAY_OF_WEEK) == Calendar.SUNDAY) ? "2.0x Sunday Rate" :
+                             ((shiftCal.get(Calendar.DAY_OF_WEEK) == Calendar.SATURDAY) ? "1.5x Saturday Rate" : "+15% Night Shift");
+
+            rateGrid.addView(weatherMetricBox("BASE AWARD", String.format(Locale.US, "$%.2f/h", baseRate), "Level 3 Guard", colPale));
+            rateGrid.addView(weatherMetricBox("PENALTY RATE", String.format(Locale.US, "$%.2f/h", loadRate), loadTag, colAccent));
+            rateGrid.addView(weatherMetricBox("EST. GROSS", String.format(Locale.US, "$%.2f", estGross), String.format(Locale.US, "%.1fh Shift", shiftHoursVal), colEmerald));
+            card.addView(rateGrid);
+
+            // 5. 😴 FATIGUE & REST PACER & WHS SHIFT WEATHER BRIEF
+            LinearLayout pacerBox = new LinearLayout(this);
+            pacerBox.setOrientation(LinearLayout.VERTICAL);
+            pacerBox.setBackground(rounded(0x18000000, dp(10)));
+            pacerBox.setPadding(dp(12), dp(8), dp(12), dp(8));
+            LinearLayout.LayoutParams pclp = new LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+            pclp.bottomMargin = dp(10);
+            pacerBox.setLayoutParams(pclp);
+
+            TextView fLbl = new TextView(this);
+            fLbl.setText("😴 FATIGUE PACER: 14.5h Rest Gap prior · ✓ Compliant with 10h Break Rule");
+            fLbl.setTextColor(0xFF10B981);
+            fLbl.setTextSize(9.5f);
+            fLbl.setTypeface(Typeface.DEFAULT_BOLD);
+            pacerBox.addView(fLbl);
+
+            TextView wLbl = new TextView(this);
+            wLbl.setText("🌤️ WHS WEATHER BRIEF: 21.4°C · SSE 14 km/h · ⚡ Clear Radar · 🧊 No Hail Risk");
+            wLbl.setTextColor(0xFF38BDF8);
+            wLbl.setTextSize(9.5f);
+            wLbl.setPadding(0, dp(2), 0, 0);
+            pacerBox.addView(wLbl);
+            card.addView(pacerBox);
+
+            // 6. 1-Tap Action Row (Swap, Handover, Claim, Radio)
+            LinearLayout actRow = new LinearLayout(this);
+            actRow.setOrientation(LinearLayout.HORIZONTAL);
+            actRow.setPadding(0, 0, 0, dp(10));
+
+            if (isOpenShift) {
+                TextView btnClaim = actionButton("🤝 Claim Open Shift", 0xFFF59E0B, 0xFF0A0F1D);
+                btnClaim.setOnClickListener(new View.OnClickListener() {
+                    @Override
+                    public void onClick(View v) {
+                        hapticHeavyClick();
+                        deputyApi.claimOpenShift(1000 + dayIndex, new DeputyApi.ApiCallback<String>() {
+                            @Override
+                            public void onSuccess(String result) {
+                                banner.setText("✓ " + result);
+                                banner.setVisibility(View.VISIBLE);
+                            }
+                            @Override
+                            public void onError(String errorMessage) {
+                                banner.setText("❌ " + errorMessage);
+                                banner.setVisibility(View.VISIBLE);
+                            }
+                        });
+                    }
+                });
+                actRow.addView(btnClaim);
+            } else {
+                TextView btnSwap = actionButton("🔄 Request Swap", colPanel, colCyan);
+                btnSwap.setTextSize(10);
+                btnSwap.setOnClickListener(new View.OnClickListener() {
+                    public void onClick(View v) {
+                        hapticClick();
+                        showShiftSwapDialog();
+                    }
+                });
+                actRow.addView(btnSwap);
+
+                TextView btnNotes = actionButton("📝 Handover Notes", colPanel, colAccent);
+                btnNotes.setTextSize(10);
+                LinearLayout.LayoutParams nlp = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
+                nlp.leftMargin = dp(6);
+                btnNotes.setLayoutParams(nlp);
+                btnNotes.setOnClickListener(new View.OnClickListener() {
+                    public void onClick(View v) {
+                        hapticClick();
+                        showModernNotesSheet();
+                    }
+                });
+                actRow.addView(btnNotes);
+
+                if (isDualGuard) {
+                    TextView btnRadio = actionButton("📻 PTT Radio", colPanel, 0xFFA855F7);
+                    btnRadio.setTextSize(10);
+                    LinearLayout.LayoutParams rlp = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
+                    rlp.leftMargin = dp(6);
+                    btnRadio.setLayoutParams(rlp);
+                    btnRadio.setOnClickListener(new View.OnClickListener() {
+                        public void onClick(View v) {
+                            hapticClick();
+                            banner.setText("📻 Switched PTT Radio to Hume Yard Dual-Patrol Channel (239.255.41.207)");
+                            banner.setVisibility(View.VISIBLE);
+                        }
+                    });
+                    actRow.addView(btnRadio);
+                }
+            }
+            card.addView(actRow);
+
+            // 7. Interactive Shift Task Checklist
+            card.addView(rosterCheckItem("✓ Master key ring & electronic gate fobs verified", true));
+            card.addView(rosterCheckItem("✓ Bodycam charged & memory cleared", true));
+            card.addView(rosterCheckItem("✓ Move patrol vehicle under cover if Hail Warning active", true));
+            card.addView(rosterCheckItem("○ 05:18 AM Civil Dawn perimeter round scheduled", false));
+        } else {
+            // Rest Day Relax Card
+            TextView rdoMsg = new TextView(this);
+            rdoMsg.setText("🌴 Enjoy your Rostered Day Off! Next shift begins Saturday 18:00.");
+            rdoMsg.setTextColor(colPale);
+            rdoMsg.setTextSize(11.5f);
+            rdoMsg.setPadding(0, dp(6), 0, dp(10));
+            card.addView(rdoMsg);
+        }
 
         // 3D Hybrid Deck Cascade Animation Entrance
         float startX = isForward ? dp(28) : -dp(28);
@@ -13247,7 +13519,7 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
     }
 
     // =========================================================================
-    // 🌊 FLUID 7-DAY ROSTER SCRUBBER VIEW
+    // 🌊 FLUID 7-DAY ROSTER SCRUBBER VIEW (COLOR-CODED STATUS DOTS)
     // =========================================================================
 
     private class FluidRosterDayScrubberView extends View {
@@ -13264,7 +13536,8 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
 
         private final String[] days = new String[7];
         private final String[] dates = new String[7];
-        private final boolean[] isShift = {true, true, true, true, true, true, true};
+        // Dot types: 0: Solo (Emerald), 1: Solo, 2: Dual Guard Overlap (Purple), 3: Solo, 4: Rest (Muted), 5: Open (Amber), 6: Dual Guard (Purple)
+        private final int[] dotColors = {0xFF10B981, 0xFF10B981, 0xFFA855F7, 0xFF10B981, 0xFF64748B, 0xFFF59E0B, 0xFFA855F7};
 
         private float indicatorPos = 2f; // Default to Today
         private ValueAnimator snapAnimator;
@@ -13402,24 +13675,488 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
                 boolean isSelected = dist < 0.5f;
 
                 dayPaint.setTextSize(dpf(9f));
-                dayPaint.setColor(isSelected ? colAccentInk : (isShift[i] ? colPale : colQuiet));
+                dayPaint.setColor(isSelected ? colAccentInk : colPale);
                 canvas.drawText(days[i], segCenterX, h / 2f - dpf(4f), dayPaint);
 
                 datePaint.setTextSize(dpf(12.5f));
-                datePaint.setColor(isSelected ? colAccentInk : (isShift[i] ? 0xFFFFFFFF : colQuiet));
+                datePaint.setColor(isSelected ? colAccentInk : 0xFFFFFFFF);
                 canvas.drawText(dates[i], segCenterX, h / 2f + dpf(12f), datePaint);
 
-                // Small shift dot under date
-                if (isShift[i]) {
-                    dotPaint.setColor(isSelected ? colAccentInk : colEmerald);
-                    canvas.drawCircle(segCenterX, h - pad - dpf(5f), dpf(2f), dotPaint);
-                }
+                // Small color-coded shift indicator dot
+                dotPaint.setColor(isSelected ? colAccentInk : dotColors[i]);
+                canvas.drawCircle(segCenterX, h - pad - dpf(5f), dpf(2.2f), dotPaint);
             }
         }
     }
 
 
 
+
+    // =========================================================================
+    // 📚 READABLE SITE POST ORDERS & DEPUTY DOCUMENT LIBRARY READER
+    // =========================================================================
+
+    private List<DeputyApi.DeputyDocument> cachedDocuments = null;
+    private String selectedDocCategory = "ALL";
+    private float docReaderTextSizeSp = 14f;
+
+    private void showDocumentLibraryDialog() {
+        if (cachedDocuments == null) {
+            cachedDocuments = new ArrayList<>(DeputyApi.getPreloadedDocuments());
+        }
+
+        final Dialog dlg = new Dialog(this, android.R.style.Theme_Translucent_NoTitleBar);
+        final FrameLayout root = new FrameLayout(this);
+        root.setBackgroundColor(0xEE080D1A);
+        root.setPadding(dp(16), dp(32), dp(16), dp(24));
+        root.setFitsSystemWindows(true);
+
+        LinearLayout card = new LinearLayout(this);
+        card.setOrientation(LinearLayout.VERTICAL);
+        card.setBackground(rounded(0xFF0F172A, dp(20)));
+        card.setPadding(dp(20), dp(18), dp(20), dp(18));
+        FrameLayout.LayoutParams clp = new FrameLayout.LayoutParams(
+                FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT);
+        card.setLayoutParams(clp);
+
+        // 1. Header Bar
+        LinearLayout head = new LinearLayout(this);
+        head.setOrientation(LinearLayout.HORIZONTAL);
+        head.setGravity(Gravity.CENTER_VERTICAL);
+        head.setPadding(0, 0, 0, dp(12));
+
+        TextView tvTitle = new TextView(this);
+        tvTitle.setText("📚 SITE POST ORDERS & COMPLIANCE");
+        tvTitle.setTextColor(0xFF00E5FF);
+        tvTitle.setTextSize(14);
+        tvTitle.setTypeface(Typeface.DEFAULT_BOLD);
+        tvTitle.setLetterSpacing(0.08f);
+        LinearLayout.LayoutParams tlp = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
+        tvTitle.setLayoutParams(tlp);
+        head.addView(tvTitle);
+
+        TextView btnSync = actionButton("🔄 Sync Deputy", 0xFF1E293B, 0xFF38BDF8);
+        btnSync.setTextSize(10);
+        btnSync.setPadding(dp(8), dp(4), dp(8), dp(4));
+        btnSync.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                hapticHeavyClick();
+                deputyApi.fetchDocuments(new DeputyApi.ApiCallback<List<DeputyApi.DeputyDocument>>() {
+                    @Override
+                    public void onSuccess(List<DeputyApi.DeputyDocument> result) {
+                        cachedDocuments = result;
+                        dlg.dismiss();
+                        showDocumentLibraryDialog();
+                        banner.setText("✓ Synced " + result.size() + " documents & notices from Deputy API");
+                        banner.setVisibility(View.VISIBLE);
+                    }
+                    @Override
+                    public void onError(String errorMessage) {
+                        banner.setText("❌ " + errorMessage);
+                        banner.setVisibility(View.VISIBLE);
+                    }
+                });
+            }
+        });
+        head.addView(btnSync);
+
+        TextView btnClose = actionButton("✕ Close", 0xFF334155, 0xFF94A3B8);
+        btnClose.setTextSize(10);
+        btnClose.setPadding(dp(8), dp(4), dp(8), dp(4));
+        LinearLayout.LayoutParams cblp = new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+        cblp.leftMargin = dp(6);
+        btnClose.setLayoutParams(cblp);
+        btnClose.setOnClickListener(new View.OnClickListener() {
+            public void onClick(View v) {
+                hapticClick();
+                dlg.dismiss();
+            }
+        });
+        head.addView(btnClose);
+        card.addView(head);
+
+        TextView tvSub = new TextView(this);
+        tvSub.setText("Doherty Security Services · Official Deputy & Fair Work Document Suite · Full-Text Offline Reader");
+        tvSub.setTextColor(colQuiet);
+        tvSub.setTextSize(10.5f);
+        tvSub.setPadding(0, 0, 0, dp(12));
+        card.addView(tvSub);
+
+        // 2. Search Box
+        final EditText etSearch = modernInputField("🔍 Search Award MA000016, Pay Rates, NES, Disconnect, WHS...");
+        etSearch.setPadding(dp(12), dp(8), dp(12), dp(8));
+        LinearLayout.LayoutParams slp = new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+        slp.bottomMargin = dp(10);
+        etSearch.setLayoutParams(slp);
+        card.addView(etSearch);
+
+        // 3. Category Filter Pills
+        HorizontalScrollView hsv = new HorizontalScrollView(this);
+        hsv.setHorizontalScrollBarEnabled(false);
+        LinearLayout catRow = new LinearLayout(this);
+        catRow.setOrientation(LinearLayout.HORIZONTAL);
+        catRow.setPadding(0, 0, 0, dp(12));
+
+        final String[] categories = {"ALL", "AWARD", "FAIR_WORK", "RIGHTS", "WHS"};
+        final String[] catLabels = {"ALL (8)", "⚖️ Award & Pay", "📜 Fair Work & NES", "🔕 Rights & Respect", "🦺 WHS Duties"};
+        final List<TextView> catButtons = new ArrayList<>();
+
+        final LinearLayout listContainer = new LinearLayout(this);
+        listContainer.setOrientation(LinearLayout.VERTICAL);
+
+        final Runnable populateDocs = new Runnable() {
+            @Override
+            public void run() {
+                listContainer.removeAllViews();
+                String query = etSearch.getText().toString().trim().toLowerCase(Locale.US);
+
+                int count = 0;
+                for (final DeputyApi.DeputyDocument doc : cachedDocuments) {
+                    if (!"ALL".equals(selectedDocCategory) && !doc.category.equalsIgnoreCase(selectedDocCategory)) {
+                        continue;
+                    }
+                    if (!query.isEmpty()) {
+                        boolean match = doc.title.toLowerCase(Locale.US).contains(query) ||
+                                        doc.summary.toLowerCase(Locale.US).contains(query) ||
+                                        doc.contentMarkdown.toLowerCase(Locale.US).contains(query);
+                        if (!match) continue;
+                    }
+                    count++;
+
+                    LinearLayout docCard = new LinearLayout(MainActivity.this);
+                    docCard.setOrientation(LinearLayout.VERTICAL);
+                    docCard.setBackground(rounded(0xFF1E293B, dp(14)));
+                    docCard.setPadding(dp(14), dp(12), dp(14), dp(12));
+                    LinearLayout.LayoutParams dclp = new LinearLayout.LayoutParams(
+                            LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+                    dclp.bottomMargin = dp(10);
+                    docCard.setLayoutParams(dclp);
+
+                    // Top Row: Icon + Title + Category Chip
+                    LinearLayout r1 = new LinearLayout(MainActivity.this);
+                    r1.setOrientation(LinearLayout.HORIZONTAL);
+                    r1.setGravity(Gravity.CENTER_VERTICAL);
+
+                    TextView tvIcon = new TextView(MainActivity.this);
+                    tvIcon.setText(doc.icon);
+                    tvIcon.setTextSize(16);
+                    tvIcon.setPadding(0, 0, dp(8), 0);
+                    r1.addView(tvIcon);
+
+                    TextView tvDocTitle = new TextView(MainActivity.this);
+                    tvDocTitle.setText(doc.title);
+                    tvDocTitle.setTextColor(0xFFF1F5F9);
+                    tvDocTitle.setTextSize(12.5f);
+                    tvDocTitle.setTypeface(Typeface.DEFAULT_BOLD);
+                    LinearLayout.LayoutParams dtlp = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
+                    tvDocTitle.setLayoutParams(dtlp);
+                    r1.addView(tvDocTitle);
+
+                    TextView tvCat = new TextView(MainActivity.this);
+                    tvCat.setText(doc.categoryLabel);
+                    tvCat.setTextColor(0xFF00E5FF);
+                    tvCat.setTextSize(8.5f);
+                    tvCat.setTypeface(Typeface.MONOSPACE);
+                    tvCat.setPadding(dp(6), dp(2), dp(6), dp(2));
+                    tvCat.setBackground(rounded(0x2200E5FF, dp(4)));
+                    r1.addView(tvCat);
+                    docCard.addView(r1);
+
+                    // Summary
+                    TextView tvSummary = new TextView(MainActivity.this);
+                    tvSummary.setText(doc.summary);
+                    tvSummary.setTextColor(0xFF94A3B8);
+                    tvSummary.setTextSize(11);
+                    tvSummary.setPadding(0, dp(6), 0, dp(6));
+                    docCard.addView(tvSummary);
+
+                    // Footer Row: Author / Date + Read Action
+                    LinearLayout r2 = new LinearLayout(MainActivity.this);
+                    r2.setOrientation(LinearLayout.HORIZONTAL);
+                    r2.setGravity(Gravity.CENTER_VERTICAL);
+
+                    TextView tvMeta = new TextView(MainActivity.this);
+                    tvMeta.setText("Updated: " + doc.updatedDate + " · " + doc.author);
+                    tvMeta.setTextColor(colQuiet);
+                    tvMeta.setTextSize(9.5f);
+                    LinearLayout.LayoutParams mtlp = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
+                    tvMeta.setLayoutParams(mtlp);
+                    r2.addView(tvMeta);
+
+                    TextView btnRead = new TextView(MainActivity.this);
+                    btnRead.setText(doc.isAttested ? "✓ ATTESTED" : "READ FULL TEXT →");
+                    btnRead.setTextColor(doc.isAttested ? 0xFF10B981 : 0xFF38BDF8);
+                    btnRead.setTextSize(10f);
+                    btnRead.setTypeface(Typeface.create(Typeface.MONOSPACE, Typeface.BOLD));
+                    r2.addView(btnRead);
+
+                    docCard.addView(r2);
+
+                    docCard.setOnClickListener(new View.OnClickListener() {
+                        @Override
+                        public void onClick(View v) {
+                            hapticClick();
+                            dlg.dismiss();
+                            showDocumentReader(doc);
+                        }
+                    });
+
+                    listContainer.addView(docCard);
+                }
+
+                if (count == 0) {
+                    TextView empty = new TextView(MainActivity.this);
+                    empty.setText("No documents matching \"" + query + "\" in this category.");
+                    empty.setTextColor(colQuiet);
+                    empty.setTextSize(12);
+                    empty.setGravity(Gravity.CENTER);
+                    empty.setPadding(0, dp(30), 0, dp(30));
+                    listContainer.addView(empty);
+                }
+            }
+        };
+
+        for (int i = 0; i < categories.length; i++) {
+            final String cat = categories[i];
+            final TextView b = new TextView(this);
+            b.setText(catLabels[i]);
+            b.setTextSize(10f);
+            b.setTypeface(Typeface.DEFAULT_BOLD);
+            b.setPadding(dp(10), dp(6), dp(10), dp(6));
+            LinearLayout.LayoutParams blp = new LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+            if (i > 0) blp.leftMargin = dp(6);
+            b.setLayoutParams(blp);
+
+            boolean isSel = selectedDocCategory.equals(cat);
+            b.setBackground(rounded(isSel ? 0xFF00E5FF : 0xFF1E293B, dp(8)));
+            b.setTextColor(isSel ? 0xFF0A0F1D : 0xFF94A3B8);
+
+            b.setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View v) {
+                    hapticClick();
+                    selectedDocCategory = cat;
+                    for (int j = 0; j < catButtons.size(); j++) {
+                        boolean s = categories[j].equals(selectedDocCategory);
+                        catButtons.get(j).setBackground(rounded(s ? 0xFF00E5FF : 0xFF1E293B, dp(8)));
+                        catButtons.get(j).setTextColor(s ? 0xFF0A0F1D : 0xFF94A3B8);
+                    }
+                    populateDocs.run();
+                }
+            });
+            catButtons.add(b);
+            catRow.addView(b);
+        }
+        hsv.addView(catRow);
+        card.addView(hsv);
+
+        etSearch.addTextChangedListener(new TextWatcher() {
+            @Override public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
+            @Override public void onTextChanged(CharSequence s, int start, int before, int count) { populateDocs.run(); }
+            @Override public void afterTextChanged(Editable s) {}
+        });
+
+        // 4. Scrollable Document Cards
+        ScrollView sv = new ScrollView(this);
+        sv.addView(listContainer);
+        LinearLayout.LayoutParams svlp = new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT, 0, 1f);
+        sv.setLayoutParams(svlp);
+        card.addView(sv);
+
+        populateDocs.run();
+
+        root.addView(card);
+        dlg.setContentView(root);
+        dlg.show();
+    }
+
+    private void showDocumentReader(final DeputyApi.DeputyDocument doc) {
+        final Dialog dlg = new Dialog(this, android.R.style.Theme_Translucent_NoTitleBar);
+        final FrameLayout root = new FrameLayout(this);
+        root.setBackgroundColor(0xF0080D1A);
+        root.setPadding(dp(16), dp(28), dp(16), dp(20));
+        root.setFitsSystemWindows(true);
+
+        LinearLayout card = new LinearLayout(this);
+        card.setOrientation(LinearLayout.VERTICAL);
+        card.setBackground(rounded(0xFF0F172A, dp(20)));
+        card.setPadding(dp(20), dp(18), dp(20), dp(18));
+        FrameLayout.LayoutParams clp = new FrameLayout.LayoutParams(
+                FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT);
+        card.setLayoutParams(clp);
+
+        // Top Navigation Bar
+        LinearLayout topBar = new LinearLayout(this);
+        topBar.setOrientation(LinearLayout.HORIZONTAL);
+        topBar.setGravity(Gravity.CENTER_VERTICAL);
+        topBar.setPadding(0, 0, 0, dp(12));
+
+        TextView btnBack = new TextView(this);
+        btnBack.setText("← LIBRARY");
+        btnBack.setTextColor(0xFF00E5FF);
+        btnBack.setTextSize(11);
+        btnBack.setTypeface(Typeface.create(Typeface.MONOSPACE, Typeface.BOLD));
+        btnBack.setPadding(dp(8), dp(4), dp(8), dp(4));
+        btnBack.setBackground(rounded(0x2200E5FF, dp(6)));
+        btnBack.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                hapticClick();
+                dlg.dismiss();
+                showDocumentLibraryDialog();
+            }
+        });
+        topBar.addView(btnBack);
+
+        TextView tvTitleHead = new TextView(this);
+        tvTitleHead.setText(doc.id + " · " + doc.categoryLabel);
+        tvTitleHead.setTextColor(colQuiet);
+        tvTitleHead.setTextSize(10.5f);
+        tvTitleHead.setTypeface(Typeface.MONOSPACE);
+        tvTitleHead.setGravity(Gravity.CENTER);
+        LinearLayout.LayoutParams tlp = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
+        tvTitleHead.setLayoutParams(tlp);
+        topBar.addView(tvTitleHead);
+
+        // Font Sizing Controls
+        TextView btnFontMinus = new TextView(this);
+        btnFontMinus.setText("A-");
+        btnFontMinus.setTextColor(0xFFCBD5E1);
+        btnFontMinus.setTextSize(11);
+        btnFontMinus.setTypeface(Typeface.DEFAULT_BOLD);
+        btnFontMinus.setPadding(dp(6), dp(4), dp(6), dp(4));
+        btnFontMinus.setBackground(rounded(0xFF1E293B, dp(6)));
+        topBar.addView(btnFontMinus);
+
+        TextView btnFontPlus = new TextView(this);
+        btnFontPlus.setText("A+");
+        btnFontPlus.setTextColor(0xFFCBD5E1);
+        btnFontPlus.setTextSize(11);
+        btnFontPlus.setTypeface(Typeface.DEFAULT_BOLD);
+        btnFontPlus.setPadding(dp(6), dp(4), dp(6), dp(4));
+        btnFontPlus.setBackground(rounded(0xFF1E293B, dp(6)));
+        LinearLayout.LayoutParams fplp = new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+        fplp.leftMargin = dp(4);
+        btnFontPlus.setLayoutParams(fplp);
+        topBar.addView(btnFontPlus);
+
+        card.addView(topBar);
+
+        // Document Content Scroll View
+        ScrollView sv = new ScrollView(this);
+        final LinearLayout body = new LinearLayout(this);
+        body.setOrientation(LinearLayout.VERTICAL);
+        body.setPadding(dp(4), dp(8), dp(4), dp(16));
+
+        // Title & Header
+        TextView docTitle = new TextView(this);
+        docTitle.setText(doc.icon + " " + doc.title);
+        docTitle.setTextColor(0xFFF8FAFC);
+        docTitle.setTextSize(16f);
+        docTitle.setTypeface(Typeface.DEFAULT_BOLD);
+        body.addView(docTitle);
+
+        TextView docMeta = new TextView(this);
+        docMeta.setText("Author: " + doc.author + " · Last Revised: " + doc.updatedDate + " · Document ID: " + doc.id);
+        docMeta.setTextColor(0xFF38BDF8);
+        docMeta.setTextSize(10f);
+        docMeta.setTypeface(Typeface.MONOSPACE);
+        docMeta.setPadding(0, dp(4), 0, dp(12));
+        body.addView(docMeta);
+
+        View div = new View(this);
+        div.setBackgroundColor(0xFF334155);
+        LinearLayout.LayoutParams dlp = new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT, dp(1));
+        dlp.bottomMargin = dp(12);
+        div.setLayoutParams(dlp);
+        body.addView(div);
+
+        // Formatted Document Text
+        final TextView tvContent = new TextView(this);
+        tvContent.setText(doc.contentMarkdown.replaceAll("^#+\\s*", ""));
+        tvContent.setTextColor(0xFFE2E8F0);
+        tvContent.setTextSize(docReaderTextSizeSp);
+        tvContent.setLineSpacing(dp(4), 1.2f);
+        body.addView(tvContent);
+
+        btnFontMinus.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                hapticClick();
+                docReaderTextSizeSp = Math.max(11f, docReaderTextSizeSp - 1.5f);
+                tvContent.setTextSize(docReaderTextSizeSp);
+            }
+        });
+
+        btnFontPlus.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                hapticClick();
+                docReaderTextSizeSp = Math.min(22f, docReaderTextSizeSp + 1.5f);
+                tvContent.setTextSize(docReaderTextSizeSp);
+            }
+        });
+
+        sv.addView(body);
+        LinearLayout.LayoutParams svlp = new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT, 0, 1f);
+        sv.setLayoutParams(svlp);
+        card.addView(sv);
+
+        // Bottom Action Bar: Attest & Log
+        LinearLayout actRow = new LinearLayout(this);
+        actRow.setOrientation(LinearLayout.HORIZONTAL);
+        actRow.setPadding(0, dp(12), 0, 0);
+
+        final TextView btnAttest = actionButton(
+                doc.isAttested ? "✓ ATTESTED BY OFFICER" : "✍️ Attest & Commit to Shift Ledger",
+                doc.isAttested ? 0xFF064E3B : 0xFF10B981,
+                doc.isAttested ? 0xFF34D399 : 0xFF0A0F1D
+        );
+        btnAttest.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                hapticHeavyClick();
+                doc.isAttested = true;
+                doc.attestedTs = System.currentTimeMillis();
+                note(Core.TOPIC_ROUTINE, "[DOC ATTESTATION] Officer Lochran Doherty reviewed and acknowledged: " + doc.id + " (" + doc.title + ")");
+                btnAttest.setText("✓ ATTESTED BY OFFICER");
+                btnAttest.setBackground(rounded(0xFF064E3B, dp(8)));
+                btnAttest.setTextColor(0xFF34D399);
+                banner.setText("✓ Attestation logged to Ada shift record: " + doc.id);
+                banner.setVisibility(View.VISIBLE);
+            }
+        });
+        LinearLayout.LayoutParams atlp = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1.4f);
+        btnAttest.setLayoutParams(atlp);
+        actRow.addView(btnAttest);
+
+        TextView btnDone = actionButton("Close", 0xFF1E293B, 0xFF94A3B8);
+        btnDone.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                hapticClick();
+                dlg.dismiss();
+            }
+        });
+        LinearLayout.LayoutParams dnlp = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 0.6f);
+        dnlp.leftMargin = dp(8);
+        btnDone.setLayoutParams(dnlp);
+        actRow.addView(btnDone);
+
+        card.addView(actRow);
+
+        root.addView(card);
+        dlg.setContentView(root);
+        dlg.show();
+    }
 
     // =========================================================================
     // 🌌 THEME SHOCKWAVE & QUANTUM PARTICLE BURST OVERLAY

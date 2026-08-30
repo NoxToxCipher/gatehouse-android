@@ -217,6 +217,21 @@ public class RemoteTelemetryClient {
         RESOLVED_REPORT_IDS.put("fb_1788087693673", 15); // The scroll bar visual elevation
         RESOLVED_REPORT_IDS.put("fb_1788087750924", 15); // Crowded ID Cards overhaul
         RESOLVED_REPORT_IDS.put("fb_1788087875837", 15); // Roster days and date dynamic sync
+
+        // v1.0.20 (Milestone 120)
+        RESOLVED_REPORT_IDS.put("fb_1788093101187", 20); // Two Tabs, Uneven
+        RESOLVED_REPORT_IDS.put("fb_1788093365433", 20); // Full Week Team Roster Board (Swipe Across)
+        RESOLVED_REPORT_IDS.put("fb_1788093433982", 20); // Accuracy? Live satellite scan feed
+
+        // v1.0.23 (Milestone 123)
+        RESOLVED_REPORT_IDS.put("fb_1788094883973", 23); // Words Messy
+        RESOLVED_REPORT_IDS.put("fb_1788095223476", 23); // Page Layout (micro-scroll elimination)
+        RESOLVED_REPORT_IDS.put("fb_1788095247167", 23); // Bottom tabs wonky (button size equalization)
+        RESOLVED_REPORT_IDS.put("fb_1788095393608", 23); // Explanation of Mesh (passive relay & purged unbonded peers)
+
+        // v1.0.25 (Milestone 125)
+        RESOLVED_REPORT_IDS.put("fb_1788096621596", 25); // BLE Design & Lopsided Bottom Tabs
+        RESOLVED_REPORT_IDS.put("fb_1788096668577", 25); // Updated Implementation Updates & Real-Time Milestone Changelog
     }
 
     public static int evaluateResolvedMilestone(String reportId, String title, String description, String category) {
@@ -224,7 +239,6 @@ public class RemoteTelemetryClient {
             Integer m = RESOLVED_REPORT_IDS.get(reportId);
             return m != null ? m : 0;
         }
-        // ALL newly submitted or unverified reports are strictly 0 (IN QUEUE)
         return 0;
     }
 
