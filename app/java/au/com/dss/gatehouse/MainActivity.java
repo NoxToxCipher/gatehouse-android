@@ -6735,6 +6735,12 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
                 LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
         blp.topMargin = dp(12);
         btnPeel.setLayoutParams(blp);
+        btnPeel.setOnClickListener(new View.OnClickListener() {
+            public void onClick(View v) {
+                hapticHeavyClick();
+                openFullPageFolio(true);
+            }
+        });
         card.addView(btnPeel);
 
         card.setOnClickListener(new View.OnClickListener() {
