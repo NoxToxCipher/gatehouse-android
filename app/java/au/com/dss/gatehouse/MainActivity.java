@@ -916,6 +916,32 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
         scrollPatrol.setVerticalScrollBarEnabled(false);
         scrollPatrol.setLayoutParams(new FrameLayout.LayoutParams(
                 FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT));
+        scrollPatrol.setOnTouchListener(new View.OnTouchListener() {
+            private float downY = 0f, downX = 0f;
+            @Override
+            public boolean onTouch(View v, MotionEvent ev) {
+                switch (ev.getActionMasked()) {
+                    case MotionEvent.ACTION_DOWN:
+                        downX = ev.getX();
+                        downY = ev.getY();
+                        break;
+                    case MotionEvent.ACTION_MOVE:
+                        float dy = ev.getY() - downY;
+                        float dx = ev.getX() - downX;
+                        // If near bottom of scrollview and pulling up, or dragging bottom-right corner up
+                        if (!scrollPatrol.canScrollVertically(1) && dy < -dp(30) && Math.abs(dy) > Math.abs(dx)) {
+                            openFullPageFolio(true);
+                            return true;
+                        }
+                        if (downY > scrollPatrol.getHeight() - dp(200) && downX > scrollPatrol.getWidth() - dp(160) && dy < -dp(26)) {
+                            openFullPageFolio(true);
+                            return true;
+                        }
+                        break;
+                }
+                return false;
+            }
+        });
 
         root = new LinearLayout(this);
         root.setOrientation(LinearLayout.VERTICAL);
@@ -4164,11 +4190,7 @@ private void updateTabSelection(int tabIndex) {
             dock = buildCaptureDock();
             rightCol.addView(dock);
 
-            rightCol.addView(tonightLabel());
-            tonight = new LinearLayout(this);
-            tonight.setOrientation(LinearLayout.VERTICAL);
-            tonight.setPadding(0, dp(4), 0, dp(20));
-            rightCol.addView(tonight);
+            rightCol.addView(buildLogbookEntranceCard());
 
             container.addView(leftCol);
             container.addView(rightCol);
@@ -4273,11 +4295,7 @@ private void updateTabSelection(int tabIndex) {
             dock = buildCaptureDock();
             container.addView(dock);
 
-            container.addView(tonightLabel());
-            tonight = new LinearLayout(this);
-            tonight.setOrientation(LinearLayout.VERTICAL);
-            tonight.setPadding(0, dp(4), 0, dp(20));
-            container.addView(tonight);
+            container.addView(buildLogbookEntranceCard());
 
             primary = new TextView(this);
             primary.setTextSize(15);
@@ -6140,50 +6158,79 @@ private void updateTabSelection(int tabIndex) {
                 .replace("31TH", "31ST");
     }
 
-    private LinearLayout tonightLabel() {
-        LinearLayout row = new LinearLayout(this);
-        row.setOrientation(LinearLayout.HORIZONTAL);
-        row.setGravity(Gravity.CENTER_VERTICAL);
-        row.setPadding(0, dp(14), 0, dp(6));
+    private LinearLayout buildLogbookEntranceCard() {
+        LinearLayout card = new LinearLayout(this);
+        card.setOrientation(LinearLayout.VERTICAL);
+        card.setBackground(rounded(colPanel, dp(16)));
+        card.setPadding(dp(16), dp(16), dp(16), dp(16));
+        LinearLayout.LayoutParams clp = new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+        clp.topMargin = dp(14);
+        clp.bottomMargin = dp(22);
+        card.setLayoutParams(clp);
 
-        tonightTitle = label("TONIGHT'S SECURITY RECORD");
-        LinearLayout.LayoutParams tlp = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
-        tonightTitle.setLayoutParams(tlp);
-        row.addView(tonightTitle);
+        LinearLayout top = new LinearLayout(this);
+        top.setOrientation(LinearLayout.HORIZONTAL);
+        top.setGravity(Gravity.CENTER_VERTICAL);
 
-        final TextView btnOpenFull = new TextView(this);
-        btnOpenFull.setText("📖 FULL-PAGE LOGBOOK ▴");
-        btnOpenFull.setTextColor(colAccentInk);
-        btnOpenFull.setTextSize(9.5f);
-        btnOpenFull.setTypeface(Typeface.create(Typeface.MONOSPACE, Typeface.BOLD));
-        btnOpenFull.setPadding(dp(8), dp(4), dp(8), dp(4));
-        btnOpenFull.setBackground(pressable(colAccent, dp(6)));
-        btnOpenFull.setOnClickListener(new View.OnClickListener() {
+        TextView icon = new TextView(this);
+        icon.setText("📖");
+        icon.setTextSize(18);
+        icon.setPadding(0, 0, dp(8), 0);
+        top.addView(icon);
+
+        LinearLayout textCol = new LinearLayout(this);
+        textCol.setOrientation(LinearLayout.VERTICAL);
+        LinearLayout.LayoutParams tclp = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
+        textCol.setLayoutParams(tclp);
+
+        TextView title = new TextView(this);
+        title.setText("TONIGHT'S SECURITY RECORD");
+        title.setTextColor(colPale);
+        title.setTextSize(13.5f);
+        title.setTypeface(Typeface.DEFAULT_BOLD);
+        textCol.addView(title);
+
+        TextView sub = new TextView(this);
+        sub.setText("Official full-page ledger · Canary carbon paper duplicate");
+        sub.setTextColor(colMuted);
+        sub.setTextSize(10.5f);
+        textCol.addView(sub);
+        top.addView(textCol);
+
+        TextView badge = new TextView(this);
+        badge.setText("PAGE 28 ◹");
+        badge.setTextColor(colAccent);
+        badge.setTextSize(10.5f);
+        badge.setTypeface(Typeface.create(Typeface.MONOSPACE, Typeface.BOLD));
+        badge.setPadding(dp(8), dp(4), dp(8), dp(4));
+        badge.setBackground(rounded(colPanel2, dp(6)));
+        top.addView(badge);
+        card.addView(top);
+
+        // Curled Peel Prompt Button
+        TextView btnPeel = new TextView(this);
+        btnPeel.setText("🟡 SWIPE UP OR TAP TO OPEN FULL-PAGE LOGBOOK ▴");
+        btnPeel.setTextColor(colAccentInk);
+        btnPeel.setTextSize(11f);
+        btnPeel.setTypeface(Typeface.create(Typeface.MONOSPACE, Typeface.BOLD));
+        btnPeel.setGravity(Gravity.CENTER);
+        btnPeel.setPadding(dp(14), dp(10), dp(14), dp(10));
+        btnPeel.setBackground(pressable(colAccent, dp(10)));
+        LinearLayout.LayoutParams blp = new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+        blp.topMargin = dp(12);
+        btnPeel.setLayoutParams(blp);
+        card.addView(btnPeel);
+
+        card.setOnClickListener(new View.OnClickListener() {
             public void onClick(View v) {
+                hapticHeavyClick();
                 openFullPageFolio(true);
             }
         });
-        row.addView(btnOpenFull);
 
-        final TextView btnToggleCarbon = new TextView(this);
-        btnToggleCarbon.setText(isCarbonCopyMode ? "🟡 CARBON" : "📄 ORIGINAL");
-        btnToggleCarbon.setTextColor(isCarbonCopyMode ? 0xFFFDE047 : colCyan);
-        btnToggleCarbon.setTextSize(9.5f);
-        btnToggleCarbon.setTypeface(Typeface.create(Typeface.MONOSPACE, Typeface.BOLD));
-        btnToggleCarbon.setPadding(dp(8), dp(4), dp(8), dp(4));
-        btnToggleCarbon.setBackground(rounded(isCarbonCopyMode ? 0x33FDE047 : 0x2206B6D4, dp(6)));
-        LinearLayout.LayoutParams cblp = new LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT);
-        cblp.leftMargin = dp(6);
-        btnToggleCarbon.setLayoutParams(cblp);
-        btnToggleCarbon.setOnClickListener(new View.OnClickListener() {
-            public void onClick(View v) {
-                hapticHeavyClick();
-                flipLedgerPage();
-            }
-        });
-        row.addView(btnToggleCarbon);
-        return row;
+        return card;
     }
 
     public void openFullPageFolio(boolean animate) {
@@ -6844,6 +6891,7 @@ private void updateTabSelection(int tabIndex) {
     }
 
     private void fillTonight() {
+        if (tonight == null) return;
         tonight.removeAllViews();
         tonight.setCameraDistance(dp(12000));
 
@@ -7560,7 +7608,8 @@ private void updateTabSelection(int tabIndex) {
         fireStatusChip.setTextColor(fireComplete ? colEmerald : colMuted);
         fireStatusChip.setBackground(rounded(fireComplete ? colEmeraldSoft : colPanel2, dp(6)));
 
-        fillTonight();
+        if (tonight != null) fillTonight();
+        if (isFullPageFolioOpen) renderFullPageFolio();
 
         setLive(externalRow, !isSealed);
         setLive(internalBadgesRow, !isSealed);
