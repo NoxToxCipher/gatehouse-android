@@ -428,6 +428,7 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
         updateDiagnostics();
         FireRadarManager.initChannels(this);
         refreshFireRadar();
+        AutoUpdateManager.init(this);
         ticker.postDelayed(tick, 1000);
     }
 
@@ -2916,6 +2917,9 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
             leftCol.addView(contactsSectionHeader("🌤️ SITE WEATHER & HYDRATION", colCyan));
             leftCol.addView(buildDetailedWeatherCard());
 
+            leftCol.addView(contactsSectionHeader("⚡ HOURLY AUTO-UPDATE (OTA)", colEmerald));
+            leftCol.addView(buildAutoUpdateCard());
+
             leftCol.addView(contactsSectionHeader("🪪 OFFICER VAULT & CREDENTIALS", colPale));
             leftCol.addView(buildCredentialPreviewCard());
 
@@ -2943,6 +2947,9 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
         container.setOrientation(LinearLayout.VERTICAL);
         container.setPadding(0, dp(6), 0, dp(56));
 
+        container.addView(contactsSectionHeader("⚡ HOURLY AUTO-UPDATE (OTA)", colEmerald));
+        container.addView(buildAutoUpdateCard());
+
         container.addView(contactsSectionHeader("📡 OFFLINE PEER MESH & NFC", colCyan));
         container.addView(buildMeshPreviewCard());
 
@@ -2962,6 +2969,90 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
         container.addView(buildGpsCard());
 
         return container;
+    }
+
+    private LinearLayout buildAutoUpdateCard() {
+        LinearLayout card = new LinearLayout(this);
+        card.setOrientation(LinearLayout.VERTICAL);
+        card.setBackground(rounded(colPanel, dp(16)));
+        card.setPadding(dp(16), dp(14), dp(16), dp(14));
+        LinearLayout.LayoutParams clp = new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+        clp.bottomMargin = dp(12);
+        card.setLayoutParams(clp);
+
+        LinearLayout top = new LinearLayout(this);
+        top.setOrientation(LinearLayout.HORIZONTAL);
+        top.setGravity(Gravity.CENTER_VERTICAL);
+
+        TextView title = new TextView(this);
+        title.setText("⚡ HOURLY OTA AUTO-UPDATE");
+        title.setTextColor(colPale);
+        title.setTextSize(13);
+        title.setTypeface(Typeface.DEFAULT_BOLD);
+        LinearLayout.LayoutParams tl = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
+        title.setLayoutParams(tl);
+        top.addView(title);
+
+        TextView badge = new TextView(this);
+        badge.setText("ACTIVE (1h)");
+        badge.setTextColor(colEmerald);
+        badge.setTextSize(9);
+        badge.setTypeface(Typeface.MONOSPACE);
+        badge.setPadding(dp(6), dp(2), dp(6), dp(2));
+        badge.setBackground(rounded(colEmeraldSoft, dp(4)));
+        top.addView(badge);
+        card.addView(top);
+
+        TextView desc = new TextView(this);
+        desc.setText("Checks for new builds every hour and updates automatically. Retains all officer identity, logs, credentials, and shift history.");
+        desc.setTextColor(colMuted);
+        desc.setTextSize(11);
+        desc.setPadding(0, dp(6), 0, dp(10));
+        card.addView(desc);
+
+        final TextView btnCheck = actionButton("⚡ Check for Updates Now", colAccent, colAccentInk);
+        btnCheck.setOnClickListener(new View.OnClickListener() {
+            public void onClick(View v) {
+                hapticHeavyClick();
+                btnCheck.setText("⏳ Checking GitHub Master...");
+                AutoUpdateManager.checkForUpdateAsync(MainActivity.this, true, new AutoUpdateManager.UpdateCheckCallback() {
+                    @Override
+                    public void onUpdateFound(final String newSha, final long bytes) {
+                        runOnUiThread(new Runnable() {
+                            @Override
+                            public void run() {
+                                btnCheck.setText("✓ New Build Found · Installing...");
+                                banner.setText("✓ New OTA update ready (SHA " + (newSha.length() > 8 ? newSha.substring(0, 8) : newSha) + ") · Installing");
+                                banner.setVisibility(View.VISIBLE);
+                            }
+                        });
+                    }
+
+                    @Override
+                    public void onNoUpdateAvailable() {
+                        runOnUiThread(new Runnable() {
+                            @Override
+                            public void run() {
+                                btnCheck.setText("✓ App Up to Date");
+                            }
+                        });
+                    }
+
+                    @Override
+                    public void onError(final String message) {
+                        runOnUiThread(new Runnable() {
+                            @Override
+                            public void run() {
+                                btnCheck.setText("⚡ Check for Updates Now");
+                            }
+                        });
+                    }
+                });
+            }
+        });
+        card.addView(btnCheck);
+        return card;
     }
 
     private LinearLayout buildMeshPreviewCard() {
@@ -7355,24 +7446,32 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
         topBar.addView(btnShare);
         rootContainer.addView(topBar);
 
-        // 2. Authentic Page Curl Folio Container (Peels from bottom to reveal carbon sheet underneath)
-        final AuthenticPageCurlFolioLayout curlLayout = new AuthenticPageCurlFolioLayout(this);
+        // 2. Flipboard-Style 3D Page Turn Folio Container (3D perspective fold, specular lighting & cast drop shadows)
+        final FlipboardPageTurnLayout flipLayout = new FlipboardPageTurnLayout(this);
         LinearLayout.LayoutParams clp = new LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT, 0, 1f);
-        curlLayout.setLayoutParams(clp);
+        flipLayout.setLayoutParams(clp);
 
         View underneathSheet = buildNotebookSheetView(!isCarbonCopyMode);
         View topSheet = buildNotebookSheetView(isCarbonCopyMode);
-        curlLayout.setPages(underneathSheet, topSheet);
+        flipLayout.setPages(underneathSheet, topSheet);
+        flipLayout.setPageTurnListener(new FlipboardPageTurnLayout.OnPageTurnListener() {
+            @Override
+            public void onPageFlipped(boolean toCarbon) {
+                isCarbonCopyMode = toCarbon;
+                MainActivity.this.hapticHeavyClick();
+                MainActivity.this.renderFullPageFolio();
+            }
+        });
 
         btnToggle.setOnClickListener(new View.OnClickListener() {
             public void onClick(View v) {
                 hapticHeavyClick();
-                curlLayout.triggerPageCurlAnimation(!isCarbonCopyMode);
+                flipLayout.triggerFlipAnimation(!isCarbonCopyMode);
             }
         });
 
-        rootContainer.addView(curlLayout);
+        rootContainer.addView(flipLayout);
         fullPageFolioOverlay.addView(rootContainer);
     }
 
@@ -7767,8 +7866,8 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
     private String extractHashSnippet(String content) {
         if (content == null) return "";
         try {
-            Pattern p = Pattern.compile("(?:\\[PHOTO\\s*#?|Photo:\\s*#?)([a-fA-F0-9]{6,64})");
-            Matcher m = p.matcher(content);
+            java.util.regex.Pattern p = java.util.regex.Pattern.compile("(?:\\[PHOTO\\s*#?|Photo:\\s*#?)([a-fA-F0-9]{6,64})");
+            java.util.regex.Matcher m = p.matcher(content);
             if (m.find()) {
                 return m.group(1);
             }

@@ -16,6 +16,9 @@
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />
+    <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+    <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
     <uses-feature android:name="android.hardware.camera" android:required="false" />
     <uses-feature android:name="android.hardware.camera.flash" android:required="false" />
     <uses-feature android:name="android.hardware.location.gps" android:required="false" />
@@ -46,5 +49,20 @@
                 android:name="android.appwidget.provider"
                 android:resource="@xml/gatehouse_widget_info" />
         </receiver>
+
+        <!-- Hourly Auto-Update Broadcast Receiver -->
+        <receiver android:name=".AutoUpdateManager$AutoUpdateReceiver"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="au.com.dss.gatehouse.ACTION_CHECK_UPDATE" />
+            </intent-filter>
+        </receiver>
+
+        <!-- Secure Content Provider for OTA APK installation -->
+        <provider
+            android:name=".GatehouseFileProvider"
+            android:authorities="au.com.dss.gatehouse.fileprovider"
+            android:exported="false"
+            android:grantUriPermissions="true" />
     </application>
 </manifest>
