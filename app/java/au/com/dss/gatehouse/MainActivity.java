@@ -3068,6 +3068,91 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
         return card;
     }
 
+    // =========================================================================
+    // 🧪 HIGH-FIDELITY TESTER FEEDBACK & BUG REPORT SYSTEM (CRAKE PARITY)
+    // =========================================================================
+
+    private String getTesterIdentityName() {
+        return getSharedPreferences("gatehouse_prefs", Context.MODE_PRIVATE)
+                .getString("pref_tester_identity_name", "Overlord");
+    }
+
+    private void setTesterIdentityName(String name) {
+        getSharedPreferences("gatehouse_prefs", Context.MODE_PRIVATE)
+                .edit()
+                .putString("pref_tester_identity_name", name.trim().isEmpty() ? "Overlord" : name.trim())
+                .apply();
+    }
+
+    private void showEditTesterIdentityDialog(final Runnable onUpdated) {
+        final Dialog dlg = new Dialog(this, android.R.style.Theme_Translucent_NoTitleBar);
+        final LinearLayout root = new LinearLayout(this);
+        root.setOrientation(LinearLayout.VERTICAL);
+        root.setGravity(Gravity.CENTER);
+        root.setBackgroundColor(0xD9000000);
+        root.setPadding(dp(20), dp(20), dp(20), dp(20));
+
+        final LinearLayout box = new LinearLayout(this);
+        box.setOrientation(LinearLayout.VERTICAL);
+        box.setBackground(rounded(0xFF1E293B, dp(18)));
+        box.setPadding(dp(20), dp(20), dp(20), dp(20));
+        LinearLayout.LayoutParams blp = new LinearLayout.LayoutParams(dp(320), LinearLayout.LayoutParams.WRAP_CONTENT);
+        box.setLayoutParams(blp);
+
+        TextView title = new TextView(this);
+        title.setText("👤 TESTER IDENTITY");
+        title.setTextColor(0xFF00E5FF);
+        title.setTextSize(14);
+        title.setTypeface(Typeface.DEFAULT_BOLD);
+        title.setLetterSpacing(0.08f);
+        box.addView(title);
+
+        TextView desc = new TextView(this);
+        desc.setText("Enter your tester codename. All submitted feedback and suggestions will be attributed to this identity in the AI loop.");
+        desc.setTextColor(0xFF94A3B8);
+        desc.setTextSize(11.5f);
+        desc.setPadding(0, dp(4), 0, dp(12));
+        box.addView(desc);
+
+        final EditText etName = modernInputField("e.g. Overlord, Daya, Brian...");
+        etName.setText(getTesterIdentityName());
+        etName.setSelection(etName.getText().length());
+        box.addView(etName);
+
+        LinearLayout btnRow = new LinearLayout(this);
+        btnRow.setOrientation(LinearLayout.HORIZONTAL);
+        btnRow.setPadding(0, dp(14), 0, 0);
+
+        TextView btnCancel = actionButton("Cancel", 0xFF334155, 0xFF94A3B8);
+        btnCancel.setOnClickListener(new View.OnClickListener() {
+            public void onClick(View v) {
+                hapticClick();
+                dlg.dismiss();
+            }
+        });
+        btnRow.addView(btnCancel);
+
+        TextView btnSave = actionButton("Save Identity", 0xFF00E5FF, 0xFF0F172A);
+        LinearLayout.LayoutParams slp = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1.3f);
+        slp.leftMargin = dp(8);
+        btnSave.setLayoutParams(slp);
+        btnSave.setOnClickListener(new View.OnClickListener() {
+            public void onClick(View v) {
+                hapticHeavyClick();
+                String input = etName.getText().toString().trim();
+                setTesterIdentityName(input);
+                dlg.dismiss();
+                if (onUpdated != null) onUpdated.run();
+            }
+        });
+        btnRow.addView(btnSave);
+
+        box.addView(btnRow);
+        root.addView(box);
+        dlg.setContentView(root);
+        dlg.show();
+    }
+
     private LinearLayout buildTesterFeedbackCard() {
         LinearLayout card = new LinearLayout(this);
         card.setOrientation(LinearLayout.VERTICAL);
@@ -3082,236 +3167,589 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
         top.setOrientation(LinearLayout.HORIZONTAL);
         top.setGravity(Gravity.CENTER_VERTICAL);
 
+        // Icon Avatar Container (Matching Crake Blue Icon)
+        FrameLayout iconFrame = new FrameLayout(this);
+        iconFrame.setBackground(rounded(0x3300E5FF, dp(10)));
+        iconFrame.setPadding(dp(8), dp(8), dp(8), dp(8));
+        LinearLayout.LayoutParams iflp = new LinearLayout.LayoutParams(dp(38), dp(38));
+        iflp.rightMargin = dp(10);
+        iconFrame.setLayoutParams(iflp);
+
+        TextView iconTv = new TextView(this);
+        iconTv.setText("💬");
+        iconTv.setTextSize(16);
+        iconTv.setGravity(Gravity.CENTER);
+        iconFrame.addView(iconTv);
+        top.addView(iconFrame);
+
+        LinearLayout titleCol = new LinearLayout(this);
+        titleCol.setOrientation(LinearLayout.VERTICAL);
+        LinearLayout.LayoutParams tclp = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
+        titleCol.setLayoutParams(tclp);
+
         TextView title = new TextView(this);
-        title.setText("🧪 FIELD TESTER SUGGESTIONS");
-        title.setTextColor(colPale);
-        title.setTextSize(13);
+        title.setText("Tester Hub & Feedback");
+        title.setTextColor(0xFFFFFFFF);
+        title.setTextSize(13.5f);
         title.setTypeface(Typeface.DEFAULT_BOLD);
-        LinearLayout.LayoutParams tl = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
-        title.setLayoutParams(tl);
-        top.addView(title);
+        titleCol.addView(title);
 
-        TextView badge = new TextView(this);
-        badge.setText("BETA HUB");
-        badge.setTextColor(colCyan);
-        badge.setTextSize(9);
-        badge.setTypeface(Typeface.MONOSPACE);
-        badge.setPadding(dp(6), dp(2), dp(6), dp(2));
-        badge.setBackground(rounded(colPanel2, dp(4)));
-        top.addView(badge);
-        card.addView(top);
+        TextView sub = new TextView(this);
+        sub.setText("Report bugs, screenshots & suggestions");
+        sub.setTextColor(0xFF94A3B8);
+        sub.setTextSize(11);
+        titleCol.addView(sub);
+        top.addView(titleCol);
 
-        TextView desc = new TextView(this);
-        desc.setText("You are testing early GateHouse field builds. Help shape guard usability, fire radar accuracy, and patrol workflows by submitting suggestions directly.");
-        desc.setTextColor(colMuted);
-        desc.setTextSize(11);
-        desc.setPadding(0, dp(6), 0, dp(10));
-        card.addView(desc);
-
-        LinearLayout btnRow = new LinearLayout(this);
-        btnRow.setOrientation(LinearLayout.HORIZONTAL);
-
-        TextView btnSubmit = actionButton("💡 Submit Suggestion / Bug", colCyan, colAccentInk);
-        btnSubmit.setOnClickListener(new View.OnClickListener() {
+        // Open Button (Vibrant Cyan)
+        TextView btnOpen = new TextView(this);
+        btnOpen.setText("Open");
+        btnOpen.setTextColor(0xFF0F172A);
+        btnOpen.setTextSize(12);
+        btnOpen.setTypeface(Typeface.DEFAULT_BOLD);
+        btnOpen.setPadding(dp(16), dp(8), dp(16), dp(8));
+        btnOpen.setBackground(rounded(0xFF00E5FF, dp(8)));
+        btnOpen.setOnClickListener(new View.OnClickListener() {
             public void onClick(View v) {
                 hapticHeavyClick();
-                showTesterFeedbackDialog();
+                showTesterFeedbackScreen();
             }
         });
-        btnRow.addView(btnSubmit);
+        top.addView(btnOpen);
 
-        TextView btnDiscussions = actionButton("💬 GitHub Issues", colPanel2, colPale);
-        LinearLayout.LayoutParams dlp = new LinearLayout.LayoutParams(
-                0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
-        dlp.leftMargin = dp(8);
-        btnDiscussions.setLayoutParams(dlp);
-        btnDiscussions.setOnClickListener(new View.OnClickListener() {
-            public void onClick(View v) {
-                hapticClick();
-                try {
-                    Intent intent = new Intent(Intent.ACTION_VIEW, Uri.parse("https://github.com/NoxToxCipher/gatehouse-android/issues"));
-                    intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-                    startActivity(intent);
-                } catch (Exception e) {
-                    Toast.makeText(MainActivity.this, "Opening browser...", Toast.LENGTH_SHORT).show();
-                }
-            }
-        });
-        btnRow.addView(btnDiscussions);
-
-        card.addView(btnRow);
+        card.addView(top);
         return card;
     }
 
-    private void showTesterFeedbackDialog() {
+    private void showTesterFeedbackScreen() {
         hapticHeavyClick();
-        final LinearLayout box = dialogContainer("🧪 Tester Feedback & Ideas", "FIELD TEST PROGRAM", colCyan);
+        final Dialog dlg = new Dialog(this, android.R.style.Theme_Black_NoTitleBar_Fullscreen);
+        
+        final ScrollView mainScroll = new ScrollView(this);
+        mainScroll.setFillViewport(true);
+        mainScroll.setBackgroundColor(0xFF0F172A);
 
-        TextView prompt = new TextView(this);
-        prompt.setText("Describe your suggestion, usability feedback, or bug report. Device telemetry and system diagnostics will be automatically attached.");
-        prompt.setTextColor(colMuted);
-        prompt.setTextSize(12);
-        prompt.setPadding(0, 0, 0, dp(10));
-        box.addView(prompt);
+        final LinearLayout root = new LinearLayout(this);
+        root.setOrientation(LinearLayout.VERTICAL);
+        root.setPadding(dp(16), dp(24), dp(16), dp(48));
+        mainScroll.addView(root);
 
-        box.addView(formSectionLabel("CATEGORY"));
-        final String[] categories = {"💡 Feature Idea", "🐛 Bug Report", "🎨 UI / Layout", "📡 Sensors / Radar", "🏢 Hume Site"};
-        final String[] selectedCat = {categories[0]};
-        HorizontalScrollView chipScroll = buildChipGroup(categories, selectedCat, true, colCyan);
-        box.addView(chipScroll);
+        // 1. Top App Bar with Back Arrow
+        LinearLayout topBar = new LinearLayout(this);
+        topBar.setOrientation(LinearLayout.HORIZONTAL);
+        topBar.setGravity(Gravity.CENTER_VERTICAL);
+        topBar.setPadding(0, dp(4), 0, dp(16));
 
-        box.addView(formSectionLabel("SUGGESTION DETAILS"));
-        final EditText etFeedback = modernInputField("e.g. Add quick filter for fire radar distance, or increase button touch target...");
-        etFeedback.setMinLines(4);
-        etFeedback.setGravity(Gravity.TOP | Gravity.START);
-        box.addView(etFeedback);
+        TextView btnBack = new TextView(this);
+        btnBack.setText("←");
+        btnBack.setTextColor(0xFFFFFFFF);
+        btnBack.setTextSize(22);
+        btnBack.setPadding(0, 0, dp(14), 0);
+        btnBack.setOnClickListener(new View.OnClickListener() {
+            public void onClick(View v) {
+                hapticClick();
+                dlg.dismiss();
+            }
+        });
+        topBar.addView(btnBack);
 
-        // System Diagnostics Summary Card
-        LinearLayout diagBox = new LinearLayout(this);
-        diagBox.setOrientation(LinearLayout.VERTICAL);
-        diagBox.setBackground(rounded(colPanel3, dp(10)));
-        diagBox.setPadding(dp(12), dp(10), dp(12), dp(10));
-        LinearLayout.LayoutParams dlp = new LinearLayout.LayoutParams(
+        TextView barTitle = new TextView(this);
+        barTitle.setText("Tester Feedback & Bug Reports");
+        barTitle.setTextColor(0xFFFFFFFF);
+        barTitle.setTextSize(17);
+        barTitle.setTypeface(Typeface.DEFAULT_BOLD);
+        topBar.addView(barTitle);
+        root.addView(topBar);
+
+        // 2. Tester Identity Card
+        final LinearLayout idCard = new LinearLayout(this);
+        idCard.setOrientation(LinearLayout.HORIZONTAL);
+        idCard.setGravity(Gravity.CENTER_VERTICAL);
+        idCard.setBackground(rounded(0xFF1E293B, dp(14)));
+        idCard.setPadding(dp(14), dp(12), dp(14), dp(12));
+        LinearLayout.LayoutParams idlp = new LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
-        dlp.topMargin = dp(10);
-        dlp.bottomMargin = dp(14);
-        diagBox.setLayoutParams(dlp);
+        idlp.bottomMargin = dp(16);
+        idCard.setLayoutParams(idlp);
 
-        TextView diagHeader = new TextView(this);
-        diagHeader.setText("📋 AUTOMATIC DIAGNOSTICS PAYLOAD");
-        diagHeader.setTextColor(colCyan);
-        diagHeader.setTextSize(10);
-        diagHeader.setTypeface(Typeface.MONOSPACE);
-        diagBox.addView(diagHeader);
+        FrameLayout idIcon = new FrameLayout(this);
+        idIcon.setBackground(rounded(0x2200E5FF, dp(8)));
+        idIcon.setPadding(dp(8), dp(8), dp(8), dp(8));
+        LinearLayout.LayoutParams iilp = new LinearLayout.LayoutParams(dp(36), dp(36));
+        iilp.rightMargin = dp(12);
+        idIcon.setLayoutParams(iilp);
 
-        Intent bIntent = registerReceiver(null, new IntentFilter(Intent.ACTION_BATTERY_CHANGED));
-        int bPct = 100;
-        if (bIntent != null) {
-            int lvl = bIntent.getIntExtra(BatteryManager.EXTRA_LEVEL, -1);
-            int scl = bIntent.getIntExtra(BatteryManager.EXTRA_SCALE, -1);
-            if (lvl >= 0 && scl > 0) bPct = (int) ((lvl / (float) scl) * 100);
+        TextView tvIdGlyph = new TextView(this);
+        tvIdGlyph.setText("👤");
+        tvIdGlyph.setTextSize(15);
+        tvIdGlyph.setGravity(Gravity.CENTER);
+        idIcon.addView(tvIdGlyph);
+        idCard.addView(idIcon);
+
+        final LinearLayout idTextCol = new LinearLayout(this);
+        idTextCol.setOrientation(LinearLayout.VERTICAL);
+        LinearLayout.LayoutParams idtlp = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
+        idTextCol.setLayoutParams(idtlp);
+
+        final TextView tvIdName = new TextView(this);
+        tvIdName.setText("Tester Identity: " + getTesterIdentityName());
+        tvIdName.setTextColor(0xFFFFFFFF);
+        tvIdName.setTextSize(13);
+        tvIdName.setTypeface(Typeface.DEFAULT_BOLD);
+        idTextCol.addView(tvIdName);
+
+        TextView tvIdSub = new TextView(this);
+        tvIdSub.setText("Your suggestions will be attributed to this tester name");
+        tvIdSub.setTextColor(0xFF94A3B8);
+        tvIdSub.setTextSize(10.5f);
+        idTextCol.addView(tvIdSub);
+        idCard.addView(idTextCol);
+
+        idCard.setOnClickListener(new View.OnClickListener() {
+            public void onClick(View v) {
+                hapticClick();
+                showEditTesterIdentityDialog(new Runnable() {
+                    public void run() {
+                        tvIdName.setText("Tester Identity: " + getTesterIdentityName());
+                    }
+                });
+            }
+        });
+        root.addView(idCard);
+
+        // 3. Feedback Type Header & Badge
+        final String[] categories = {"BUG_REPORT", "FEATURE_REQUEST", "PATROL_SECURITY", "RADAR_SENSORS"};
+        final String[] catTitles = {"Bug Report", "Feature Request", "Patrol & Security", "Radar & Sensors"};
+        final String[] catIcons = {"⚠️", "⭐", "🛡️", "📡"};
+        final String[] catBadges = {"BUG", "FEATURE", "PATROL", "RADAR"};
+        final int[] catColors = {0xFFFF4081, 0xFFFFB300, 0xFF00E5FF, 0xFF00E676};
+
+        final int[] selectedIndex = {0}; // Default: Bug Report
+
+        LinearLayout typeTop = new LinearLayout(this);
+        typeTop.setOrientation(LinearLayout.HORIZONTAL);
+        typeTop.setGravity(Gravity.CENTER_VERTICAL);
+        typeTop.setPadding(0, dp(4), 0, dp(8));
+
+        TextView typeLabel = new TextView(this);
+        typeLabel.setText("FEEDBACK TYPE");
+        typeLabel.setTextColor(catColors[selectedIndex[0]]);
+        typeLabel.setTextSize(11);
+        typeLabel.setTypeface(Typeface.MONOSPACE);
+        typeLabel.setLetterSpacing(0.08f);
+        LinearLayout.LayoutParams tllp = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
+        typeLabel.setLayoutParams(tllp);
+        typeTop.addView(typeLabel);
+
+        final TextView catBadge = new TextView(this);
+        catBadge.setText(catBadges[0]);
+        catBadge.setTextColor(catColors[0]);
+        catBadge.setTextSize(9);
+        catBadge.setTypeface(Typeface.MONOSPACE);
+        catBadge.setPadding(dp(6), dp(2), dp(6), dp(2));
+        catBadge.setBackground(rounded(0x22FF4081, dp(4)));
+        typeTop.addView(catBadge);
+        root.addView(typeTop);
+
+        // 2x2 Category Selection Grid
+        final LinearLayout catGrid = new LinearLayout(this);
+        catGrid.setOrientation(LinearLayout.VERTICAL);
+        LinearLayout.LayoutParams cglp = new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+        cglp.bottomMargin = dp(14);
+        catGrid.setLayoutParams(cglp);
+
+        final LinearLayout row1 = new LinearLayout(this);
+        row1.setOrientation(LinearLayout.HORIZONTAL);
+        final LinearLayout row2 = new LinearLayout(this);
+        row2.setOrientation(LinearLayout.HORIZONTAL);
+        row2.setPadding(0, dp(6), 0, 0);
+
+        final FrameLayout[] catCards = new FrameLayout[4];
+
+        for (int i = 0; i < 4; i++) {
+            final int idx = i;
+            FrameLayout cBox = new FrameLayout(this);
+            boolean isSel = (i == selectedIndex[0]);
+            cBox.setBackground(isSel ? outlined(catColors[i], dp(10)) : rounded(0xFF1E293B, dp(10)));
+            cBox.setPadding(dp(12), dp(12), dp(12), dp(12));
+            LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
+            if (i % 2 == 1) lp.leftMargin = dp(8);
+            cBox.setLayoutParams(lp);
+
+            LinearLayout content = new LinearLayout(this);
+            content.setOrientation(LinearLayout.HORIZONTAL);
+            content.setGravity(Gravity.CENTER_VERTICAL);
+
+            TextView ic = new TextView(this);
+            ic.setText(catIcons[i]);
+            ic.setTextSize(14);
+            ic.setPadding(0, 0, dp(8), 0);
+            content.addView(ic);
+
+            TextView txt = new TextView(this);
+            txt.setText(catTitles[i]);
+            txt.setTextColor(isSel ? 0xFFFFFFFF : 0xFF94A3B8);
+            txt.setTextSize(11.5f);
+            txt.setTypeface(Typeface.DEFAULT_BOLD);
+            content.addView(txt);
+
+            cBox.addView(content);
+            catCards[i] = cBox;
+
+            if (i < 2) row1.addView(cBox); else row2.addView(cBox);
         }
 
-        DssKeyManager.GuardProfile activeGuard = (dssKeyManager != null) ? dssKeyManager.getActiveGuard() : null;
-        String guardName = activeGuard != null ? activeGuard.name : "Officer Lochran Doherty";
-        String guardLic = activeGuard != null ? activeGuard.licence : "LIC #41207";
-        String fireDanger = (currentFireSnapshot != null && currentFireSnapshot.dangerRating != null) ? currentFireSnapshot.dangerRating.label : "MODERATE";
+        catGrid.addView(row1);
+        catGrid.addView(row2);
+        root.addView(catGrid);
 
-        final String deviceSummary = Build.MANUFACTURER + " " + Build.MODEL + " (Android " + Build.VERSION.RELEASE + ", SDK " + Build.VERSION.SDK_INT + ")";
-        final String buildSha = AutoUpdateManager.computeFileSha256(new File(getPackageCodePath()));
-        final String shortSha = buildSha.length() > 8 ? buildSha.substring(0, 8) : "dev-build";
-        final String diagInfo = "Device: " + deviceSummary + "\n"
-                + "App Version: v" + AutoUpdateManager.getAppVersion(this) + " (SHA " + shortSha + ")\n"
-                + "Officer: " + guardName + " (" + guardLic + ")\n"
-                + "Battery: " + bPct + "%\n"
-                + "Weather / Fire: " + String.format(Locale.US, "%.1f°C", curTempC) + " · AFDRS " + fireDanger;
+        // 4. Summary / Title Input Section
+        LinearLayout sumBox = new LinearLayout(this);
+        sumBox.setOrientation(LinearLayout.VERTICAL);
+        sumBox.setBackground(rounded(0xFF1E293B, dp(14)));
+        sumBox.setPadding(dp(14), dp(14), dp(14), dp(14));
+        LinearLayout.LayoutParams sblp = new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+        sblp.bottomMargin = dp(14);
+        sumBox.setLayoutParams(sblp);
 
-        TextView diagText = new TextView(this);
-        diagText.setText(diagInfo);
-        diagText.setTextColor(colQuiet);
-        diagText.setTextSize(10.5f);
-        diagText.setTypeface(Typeface.MONOSPACE);
-        diagText.setPadding(0, dp(4), 0, 0);
-        diagBox.addView(diagText);
-        box.addView(diagBox);
+        TextView sumLbl = new TextView(this);
+        sumLbl.setText("Summary / Title");
+        sumLbl.setTextColor(0xFF94A3B8);
+        sumLbl.setTextSize(11);
+        sumBox.addView(sumLbl);
 
-        final Dialog dlg = createDialogSheet(box);
+        final EditText etSummary = new EditText(this);
+        etSummary.setHint("e.g. Floating candidate flicks feel slightly stiff");
+        etSummary.setHintTextColor(0xFF475569);
+        etSummary.setTextColor(0xFFFFFFFF);
+        etSummary.setTextSize(13);
+        etSummary.setBackground(rounded(0xFF0F172A, dp(8)));
+        etSummary.setPadding(dp(12), dp(10), dp(12), dp(10));
+        LinearLayout.LayoutParams etlp1 = new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+        etlp1.topMargin = dp(6);
+        etlp1.bottomMargin = dp(12);
+        etSummary.setLayoutParams(etlp1);
+        sumBox.addView(etSummary);
 
-        // Action Buttons Row (1. Email / Share, 2. Save Note)
-        LinearLayout actRow1 = new LinearLayout(this);
-        actRow1.setOrientation(LinearLayout.HORIZONTAL);
-        actRow1.setPadding(0, 0, 0, dp(8));
+        TextView detLbl = new TextView(this);
+        detLbl.setText("Details / Description");
+        detLbl.setTextColor(0xFF94A3B8);
+        detLbl.setTextSize(11);
+        sumBox.addView(detLbl);
 
-        TextView btnShareEmail = actionButton("✉️ Send Email / Share", colCyan, colAccentInk);
-        actRow1.addView(btnShareEmail);
+        final EditText etDetails = new EditText(this);
+        etDetails.setHint("Describe what happened, what you expected, or words that were missed...");
+        etDetails.setHintTextColor(0xFF475569);
+        etDetails.setTextColor(0xFFFFFFFF);
+        etDetails.setTextSize(12.5f);
+        etDetails.setBackground(rounded(0xFF0F172A, dp(8)));
+        etDetails.setPadding(dp(12), dp(10), dp(12), dp(10));
+        etDetails.setMinLines(4);
+        etDetails.setGravity(Gravity.TOP | Gravity.START);
+        LinearLayout.LayoutParams etlp2 = new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+        etlp2.topMargin = dp(6);
+        etlp2.bottomMargin = dp(14);
+        etDetails.setLayoutParams(etlp2);
+        sumBox.addView(etDetails);
 
-        TextView btnSaveNote = actionButton("💾 Save to Log", colEmerald, colAccentInk);
-        LinearLayout.LayoutParams slp = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
-        slp.leftMargin = dp(8);
-        btnSaveNote.setLayoutParams(slp);
-        actRow1.addView(btnSaveNote);
-        box.addView(actRow1);
+        // Attach Screenshot Row
+        LinearLayout scrRow = new LinearLayout(this);
+        scrRow.setOrientation(LinearLayout.HORIZONTAL);
+        scrRow.setGravity(Gravity.CENTER_VERTICAL);
+        scrRow.setPadding(0, dp(4), 0, dp(12));
 
-        LinearLayout actRow2 = new LinearLayout(this);
-        actRow2.setOrientation(LinearLayout.HORIZONTAL);
+        LinearLayout scrCol = new LinearLayout(this);
+        scrCol.setOrientation(LinearLayout.VERTICAL);
+        LinearLayout.LayoutParams sclp = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
+        scrCol.setLayoutParams(sclp);
 
-        TextView btnCopy = actionButton("📋 Copy Diagnostics", colPanel2, colPale);
-        actRow2.addView(btnCopy);
+        TextView scrTitle = new TextView(this);
+        scrTitle.setText("Attach Screenshot");
+        scrTitle.setTextColor(0xFFFFFFFF);
+        scrTitle.setTextSize(12.5f);
+        scrTitle.setTypeface(Typeface.DEFAULT_BOLD);
+        scrCol.addView(scrTitle);
 
-        TextView btnCancel = actionButton("✕ Cancel", colPanel3, colMuted);
-        LinearLayout.LayoutParams clp2 = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
-        clp2.leftMargin = dp(8);
-        btnCancel.setLayoutParams(clp2);
-        actRow2.addView(btnCancel);
-        box.addView(actRow2);
+        final TextView scrSub = new TextView(this);
+        scrSub.setText("Attach an image to help explain");
+        scrSub.setTextColor(0xFF94A3B8);
+        scrSub.setTextSize(10.5f);
+        scrCol.addView(scrSub);
+        scrRow.addView(scrCol);
 
-        final Runnable sendAction = new Runnable() {
+        final TextView btnAttach = new TextView(this);
+        btnAttach.setText("🖼️ Attach");
+        btnAttach.setTextColor(0xFFE2E8F0);
+        btnAttach.setTextSize(11);
+        btnAttach.setPadding(dp(14), dp(8), dp(14), dp(8));
+        btnAttach.setBackground(rounded(0xFF334155, dp(8)));
+        btnAttach.setOnClickListener(new View.OnClickListener() {
+            public void onClick(View v) {
+                hapticClick();
+                try {
+                    Intent intent = new Intent(Intent.ACTION_PICK);
+                    intent.setType("image/*");
+                    startActivityForResult(intent, 2004);
+                    scrSub.setText("✓ Gallery picker launched");
+                    scrSub.setTextColor(0xFF00E676);
+                } catch (Exception e) {
+                    Toast.makeText(MainActivity.this, "Opening image selector...", Toast.LENGTH_SHORT).show();
+                }
+            }
+        });
+        scrRow.addView(btnAttach);
+        sumBox.addView(scrRow);
+
+        // Attach Flight Recorder Snippet Toggle Row
+        LinearLayout flightRow = new LinearLayout(this);
+        flightRow.setOrientation(LinearLayout.HORIZONTAL);
+        flightRow.setGravity(Gravity.CENTER_VERTICAL);
+        flightRow.setPadding(0, dp(4), 0, dp(14));
+
+        LinearLayout flightCol = new LinearLayout(this);
+        flightCol.setOrientation(LinearLayout.VERTICAL);
+        LinearLayout.LayoutParams fclp = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
+        flightCol.setLayoutParams(fclp);
+
+        TextView flTitle = new TextView(this);
+        flTitle.setText("Attach Flight Recorder Snippet");
+        flTitle.setTextColor(0xFFFFFFFF);
+        flTitle.setTextSize(12.5f);
+        flTitle.setTypeface(Typeface.DEFAULT_BOLD);
+        flightCol.addView(flTitle);
+
+        TextView flSub = new TextView(this);
+        flSub.setText("Attaches last 30 actions & telemetry to help debug");
+        flSub.setTextColor(0xFF94A3B8);
+        flSub.setTextSize(10.5f);
+        flightCol.addView(flSub);
+        flightRow.addView(flightCol);
+
+        final android.widget.Switch switchFlight = new android.widget.Switch(this);
+        switchFlight.setChecked(true);
+        flightRow.addView(switchFlight);
+        sumBox.addView(flightRow);
+
+        // Hero Submit Button (Vibrant Pink/Accent)
+        final TextView btnSubmit = new TextView(this);
+        btnSubmit.setText("➤ Submit to Gatehouse Development");
+        btnSubmit.setTextColor(0xFF0F172A);
+        btnSubmit.setTextSize(13);
+        btnSubmit.setTypeface(Typeface.DEFAULT_BOLD);
+        btnSubmit.setGravity(Gravity.CENTER);
+        btnSubmit.setPadding(dp(16), dp(12), dp(16), dp(12));
+        btnSubmit.setBackground(rounded(catColors[selectedIndex[0]], dp(8)));
+        sumBox.addView(btnSubmit);
+
+        root.addView(sumBox);
+
+        // Category Selection Click Listeners
+        for (int i = 0; i < 4; i++) {
+            final int idx = i;
+            catCards[i].setOnClickListener(new View.OnClickListener() {
+                public void onClick(View v) {
+                    hapticClick();
+                    selectedIndex[0] = idx;
+                    typeLabel.setTextColor(catColors[idx]);
+                    catBadge.setText(catBadges[idx]);
+                    catBadge.setTextColor(catColors[idx]);
+                    catBadge.setBackground(rounded(0x22000000 | (catColors[idx] & 0x00FFFFFF), dp(4)));
+                    btnSubmit.setBackground(rounded(catColors[idx], dp(8)));
+
+                    for (int k = 0; k < 4; k++) {
+                        boolean selected = (k == idx);
+                        catCards[k].setBackground(selected ? outlined(catColors[k], dp(10)) : rounded(0xFF1E293B, dp(10)));
+                        LinearLayout cl = (LinearLayout) catCards[k].getChildAt(0);
+                        TextView tv = (TextView) cl.getChildAt(1);
+                        tv.setTextColor(selected ? 0xFFFFFFFF : 0xFF94A3B8);
+                    }
+                }
+            });
+        }
+
+        // 5. YOUR SUBMITTED FEEDBACK SECTION
+        final LinearLayout recentSection = new LinearLayout(this);
+        recentSection.setOrientation(LinearLayout.VERTICAL);
+        recentSection.setPadding(0, dp(10), 0, 0);
+        root.addView(recentSection);
+
+        final Runnable refreshRecentList = new Runnable() {
             public void run() {
-                String text = etFeedback.getText().toString().trim();
-                if (text.length() == 0) {
-                    Toast.makeText(MainActivity.this, "Please enter your suggestion or feedback", Toast.LENGTH_SHORT).show();
+                recentSection.removeAllViews();
+                List<RemoteTelemetryClient.FeedbackItem> items = RemoteTelemetryClient.loadFeedbacksFromCache(MainActivity.this);
+
+                LinearLayout rHeader = new LinearLayout(MainActivity.this);
+                rHeader.setOrientation(LinearLayout.HORIZONTAL);
+                rHeader.setGravity(Gravity.CENTER_VERTICAL);
+                rHeader.setPadding(0, dp(6), 0, dp(10));
+
+                TextView rTitle = new TextView(MainActivity.this);
+                rTitle.setText("YOUR SUBMITTED FEEDBACK");
+                rTitle.setTextColor(0xFF00E5FF);
+                rTitle.setTextSize(11);
+                rTitle.setTypeface(Typeface.MONOSPACE);
+                rTitle.setLetterSpacing(0.08f);
+                LinearLayout.LayoutParams rhlp = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
+                rTitle.setLayoutParams(rhlp);
+                rHeader.addView(rTitle);
+
+                TextView rCount = new TextView(MainActivity.this);
+                rCount.setText((items.isEmpty() ? "0" : String.valueOf(items.size())) + " REPORTS");
+                rCount.setTextColor(0xFF00E5FF);
+                rCount.setTextSize(9);
+                rCount.setTypeface(Typeface.MONOSPACE);
+                rCount.setPadding(dp(6), dp(2), dp(6), dp(2));
+                rCount.setBackground(rounded(0x2200E5FF, dp(4)));
+                rHeader.addView(rCount);
+                recentSection.addView(rHeader);
+
+                if (items.isEmpty()) {
+                    TextView emptyTv = new TextView(MainActivity.this);
+                    emptyTv.setText("No reports submitted yet. Submit bug reports or ideas above to reach Antigravity in the automatic loops.");
+                    emptyTv.setTextColor(0xFF64748B);
+                    emptyTv.setTextSize(11);
+                    emptyTv.setPadding(0, dp(4), 0, dp(12));
+                    recentSection.addView(emptyTv);
                     return;
                 }
-                String payload = "=== GATEHOUSE FIELD TESTER SUGGESTION ===\n"
-                        + "Category: " + selectedCat[0] + "\n"
-                        + "Date/Time: " + new SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.US).format(new Date()) + "\n\n"
-                        + "Feedback / Suggestion:\n" + text + "\n\n"
-                        + "--- System Diagnostics ---\n" + diagInfo;
 
-                Intent sendIntent = new Intent(Intent.ACTION_SEND);
-                sendIntent.setType("text/plain");
-                sendIntent.putExtra(Intent.EXTRA_SUBJECT, "[GateHouse Feedback] " + selectedCat[0] + " - " + Build.MODEL);
-                sendIntent.putExtra(Intent.EXTRA_TEXT, payload);
-                startActivity(Intent.createChooser(sendIntent, "Send Tester Feedback"));
-                dlg.dismiss();
+                SimpleDateFormat sdf = new SimpleDateFormat("MMM d, HH:mm", Locale.US);
+                for (RemoteTelemetryClient.FeedbackItem item : items) {
+                    LinearLayout fbCard = new LinearLayout(MainActivity.this);
+                    fbCard.setOrientation(LinearLayout.VERTICAL);
+                    boolean isResolved = (item.implementedMilestone > 0);
+                    fbCard.setBackground(isResolved ? rounded(0xFF132328, dp(12)) : rounded(0xFF1E293B, dp(12)));
+                    fbCard.setPadding(dp(14), dp(12), dp(14), dp(12));
+                    LinearLayout.LayoutParams fblp = new LinearLayout.LayoutParams(
+                            LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+                    fblp.bottomMargin = dp(8);
+                    fbCard.setLayoutParams(fblp);
+
+                    LinearLayout cardTop = new LinearLayout(MainActivity.this);
+                    cardTop.setOrientation(LinearLayout.HORIZONTAL);
+                    cardTop.setGravity(Gravity.CENTER_VERTICAL);
+
+                    TextView catTv = new TextView(MainActivity.this);
+                    catTv.setText(item.category.replace("_", " "));
+                    catTv.setTextColor(isResolved ? 0xFF00E676 : 0xFF00E5FF);
+                    catTv.setTextSize(10);
+                    catTv.setTypeface(Typeface.DEFAULT_BOLD);
+                    cardTop.addView(catTv);
+
+                    TextView badgeTv = new TextView(MainActivity.this);
+                    badgeTv.setText(isResolved ? ("IMPLEMENTED IN V1.0." + item.implementedMilestone) : "SUBMITTED • IN QUEUE");
+                    badgeTv.setTextColor(isResolved ? 0xFF00E676 : 0xFF00E5FF);
+                    badgeTv.setTextSize(8.5f);
+                    badgeTv.setTypeface(Typeface.MONOSPACE);
+                    badgeTv.setPadding(dp(6), dp(2), dp(6), dp(2));
+                    badgeTv.setBackground(rounded(isResolved ? 0x2200E676 : 0x2200E5FF, dp(4)));
+                    LinearLayout.LayoutParams btlp = new LinearLayout.LayoutParams(
+                            LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+                    btlp.leftMargin = dp(8);
+                    badgeTv.setLayoutParams(btlp);
+                    cardTop.addView(badgeTv);
+
+                    View sp = new View(MainActivity.this);
+                    LinearLayout.LayoutParams splp = new LinearLayout.LayoutParams(0, 1, 1f);
+                    sp.setLayoutParams(splp);
+                    cardTop.addView(sp);
+
+                    TextView timeTv = new TextView(MainActivity.this);
+                    timeTv.setText(sdf.format(new Date(item.timestamp)));
+                    timeTv.setTextColor(0xFF94A3B8);
+                    timeTv.setTextSize(10.5f);
+                    cardTop.addView(timeTv);
+                    fbCard.addView(cardTop);
+
+                    if (item.title != null && !item.title.isEmpty()) {
+                        TextView tTv = new TextView(MainActivity.this);
+                        tTv.setText(item.title);
+                        tTv.setTextColor(0xFFFFFFFF);
+                        tTv.setTextSize(12.5f);
+                        tTv.setTypeface(Typeface.DEFAULT_BOLD);
+                        tTv.setPadding(0, dp(4), 0, dp(2));
+                        fbCard.addView(tTv);
+                    }
+
+                    if (item.description != null && !item.description.isEmpty()) {
+                        TextView dTv = new TextView(MainActivity.this);
+                        dTv.setText(item.description);
+                        dTv.setTextColor(0xFF94A3B8);
+                        dTv.setTextSize(11);
+                        fbCard.addView(dTv);
+                    }
+
+                    recentSection.addView(fbCard);
+                }
             }
         };
 
-        btnShareEmail.setOnClickListener(new View.OnClickListener() {
-            public void onClick(View v) {
-                hapticHeavyClick();
-                sendAction.run();
-            }
-        });
+        refreshRecentList.run();
 
-        btnSaveNote.setOnClickListener(new View.OnClickListener() {
+        // Submit Action Handler
+        btnSubmit.setOnClickListener(new View.OnClickListener() {
             public void onClick(View v) {
-                String text = etFeedback.getText().toString().trim();
-                if (text.length() == 0) {
-                    Toast.makeText(MainActivity.this, "Please enter your suggestion", Toast.LENGTH_SHORT).show();
+                final String title = etSummary.getText().toString().trim();
+                final String details = etDetails.getText().toString().trim();
+
+                if (title.isEmpty() && details.isEmpty()) {
+                    Toast.makeText(MainActivity.this, "Please enter a summary or details", Toast.LENGTH_SHORT).show();
                     return;
                 }
+
                 hapticHeavyClick();
-                registerActivity();
-                note(Core.TOPIC_ROUTINE, "[TESTER FEEDBACK] [" + selectedCat[0] + "] " + text);
-                Toast.makeText(MainActivity.this, "✓ Recorded into Shift Logbook", Toast.LENGTH_SHORT).show();
-                dlg.dismiss();
-            }
-        });
+                btnSubmit.setText("⏳ Transmitting to Development AI...");
+                btnSubmit.setEnabled(false);
 
-        btnCopy.setOnClickListener(new View.OnClickListener() {
-            public void onClick(View v) {
-                hapticClick();
-                String text = etFeedback.getText().toString().trim();
-                String payload = "=== GATEHOUSE FIELD TESTER SUGGESTION ===\n"
-                        + "Category: " + selectedCat[0] + "\n"
-                        + (text.length() > 0 ? "Feedback: " + text + "\n" : "")
-                        + "Diagnostics:\n" + diagInfo;
-                ClipboardManager cm = (ClipboardManager) getSystemService(Context.CLIPBOARD_SERVICE);
-                if (cm != null) {
-                    cm.setPrimaryClip(ClipData.newPlainText("GateHouse Diagnostics", payload));
-                    Toast.makeText(MainActivity.this, "✓ Diagnostics copied to clipboard", Toast.LENGTH_SHORT).show();
+                // Build diagnostics payload
+                StringBuilder diag = new StringBuilder();
+                diag.append("Device: ").append(Build.MANUFACTURER).append(" ").append(Build.MODEL).append("\n");
+                diag.append("Android: ").append(Build.VERSION.RELEASE).append(" (SDK ").append(Build.VERSION.SDK_INT).append(")\n");
+                diag.append("App Version: v").append(AutoUpdateManager.getAppVersion(MainActivity.this)).append("\n");
+                diag.append("Active Tab: ").append(currentTab).append(" · Theme: ").append(activeTheme).append("\n");
+                diag.append("Ada Chain Records: ").append(Core.entryCount()).append(" entries\n");
+                if (currentFireSnapshot != null && currentFireSnapshot.dangerRating != null) {
+                    diag.append("Fire Danger: ").append(currentFireSnapshot.dangerRating.label).append("\n");
                 }
+
+                final String cat = categories[selectedIndex[0]];
+                final String tName = getTesterIdentityName();
+
+                RemoteTelemetryClient.transmitFeedbackAsync(
+                        MainActivity.this,
+                        tName,
+                        cat,
+                        title.isEmpty() ? "Field Observation" : title,
+                        details,
+                        diag.toString(),
+                        "",
+                        new RemoteTelemetryClient.TelemetryCallback() {
+                            @Override
+                            public void onSuccess(String response) {
+                                btnSubmit.setText("✓ Submitted to Development AI");
+                                btnSubmit.setEnabled(true);
+                                Toast.makeText(MainActivity.this, "✓ Feedback dispatched wirelessly to Development AI", Toast.LENGTH_LONG).show();
+                                note(Core.TOPIC_ROUTINE, "[TESTER FEEDBACK] [" + cat + "] (" + tName + ") " + title + " - " + details);
+                                etSummary.setText("");
+                                etDetails.setText("");
+                                refreshRecentList.run();
+                            }
+
+                            @Override
+                            public void onError(String error) {
+                                btnSubmit.setText("➤ Submit to Gatehouse Development");
+                                btnSubmit.setEnabled(true);
+                                refreshRecentList.run();
+                            }
+                        });
             }
         });
 
-        btnCancel.setOnClickListener(new View.OnClickListener() {
-            public void onClick(View v) {
-                hapticClick();
-                dlg.dismiss();
-            }
-        });
-
+        dlg.setContentView(mainScroll);
         dlg.show();
     }
 
