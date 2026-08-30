@@ -6474,35 +6474,22 @@ private void updateTabSelection(int tabIndex) {
                 case MotionEvent.ACTION_DOWN:
                     startTouchX = ev.getX();
                     startTouchY = ev.getY();
-                    if (!isCarbonCopyMode) {
-                        // In Original mode, intercept touches originating on right half or right edge
-                        if (startTouchX > w * 0.4f) {
-                            isCurling = true;
-                            curlX = startTouchX;
-                            curlY = startTouchY;
-                            calculateCurlGeometry(curlX, curlY, w, h);
-                            return true;
-                        }
-                    } else {
-                        // In Duplicate mode, intercept touches originating on left half or left edge
-                        if (startTouchX < w * 0.6f) {
-                            isCurling = true;
-                            curlX = startTouchX;
-                            curlY = startTouchY;
-                            calculateCurlGeometry(curlX, curlY, w, h);
-                            return true;
-                        }
-                    }
+                    isCurling = false;
                     break;
                 case MotionEvent.ACTION_MOVE:
                     float dx = ev.getX() - startTouchX;
-                    if (!isCarbonCopyMode && dx < -dpf(12)) {
+                    float dy = Math.abs(ev.getY() - startTouchY);
+                    if (!isCarbonCopyMode && dx < -dpf(10) && Math.abs(dx) > dy * 0.7f) {
                         isCurling = true;
+                        curlX = ev.getX();
+                        calculateCurlGeometry(curlX, h * 0.5f, w, h);
                         if (getParent() != null) getParent().requestDisallowInterceptTouchEvent(true);
                         return true;
                     }
-                    if (isCarbonCopyMode && dx > dpf(12)) {
+                    if (isCarbonCopyMode && dx > dpf(10) && Math.abs(dx) > dy * 0.7f) {
                         isCurling = true;
+                        curlX = ev.getX();
+                        calculateCurlGeometry(curlX, h * 0.5f, w, h);
                         if (getParent() != null) getParent().requestDisallowInterceptTouchEvent(true);
                         return true;
                     }
@@ -6521,18 +6508,24 @@ private void updateTabSelection(int tabIndex) {
                 case MotionEvent.ACTION_DOWN:
                     startTouchX = ev.getX();
                     startTouchY = ev.getY();
-                    isCurling = true;
-                    curlX = startTouchX;
-                    curlY = startTouchY;
-                    calculateCurlGeometry(curlX, curlY, w, h);
-                    invalidate();
+                    isCurling = false;
                     return true;
 
                 case MotionEvent.ACTION_MOVE:
+                    float dx = ev.getX() - startTouchX;
+                    float dy = Math.abs(ev.getY() - startTouchY);
+                    if (!isCurling) {
+                        if (!isCarbonCopyMode && dx < -dpf(8) && Math.abs(dx) > dy * 0.7f) {
+                            isCurling = true;
+                            if (getParent() != null) getParent().requestDisallowInterceptTouchEvent(true);
+                        } else if (isCarbonCopyMode && dx > dpf(8) && Math.abs(dx) > dy * 0.7f) {
+                            isCurling = true;
+                            if (getParent() != null) getParent().requestDisallowInterceptTouchEvent(true);
+                        }
+                    }
                     if (isCurling) {
                         curlX = ev.getX();
-                        curlY = ev.getY();
-                        calculateCurlGeometry(curlX, curlY, w, h);
+                        calculateCurlGeometry(curlX, h * 0.5f, w, h);
                         invalidate();
                         return true;
                     }
