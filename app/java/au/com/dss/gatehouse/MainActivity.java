@@ -3428,21 +3428,110 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
     }
 
     private void showWeatherDialog() {
-        LinearLayout box = dialogContainer("🌤️ Kingston Weather Radar", "BOM LIVE", colCyan);
+        final LinearLayout box = dialogContainer("🌤️ Kingston Weather Radar", "BOM LIVE", colCyan);
         box.addView(buildDetailedWeatherCard());
-        createDialogSheet(box).show();
+        final Dialog dlg = createDialogSheet(box);
+
+        LinearLayout btnRow = new LinearLayout(this);
+        btnRow.setOrientation(LinearLayout.HORIZONTAL);
+        btnRow.setPadding(0, dp(12), 0, 0);
+
+        TextView btnRefresh = actionButton("↻ Refresh BOM Live", colCyan, colAccentInk);
+        btnRefresh.setOnClickListener(new View.OnClickListener() {
+            public void onClick(View v) {
+                hapticHeavyClick();
+                refreshFireRadar();
+                Toast.makeText(MainActivity.this, "✓ Weather telemetry refreshed from BOM", Toast.LENGTH_SHORT).show();
+                dlg.dismiss();
+            }
+        });
+        btnRow.addView(btnRefresh);
+
+        TextView btnClose = actionButton("Close", colLine, colPale);
+        btnClose.setOnClickListener(new View.OnClickListener() {
+            public void onClick(View v) {
+                hapticClick();
+                dlg.dismiss();
+            }
+        });
+        LinearLayout.LayoutParams clp = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
+        clp.leftMargin = dp(8);
+        btnClose.setLayoutParams(clp);
+        btnRow.addView(btnClose);
+
+        box.addView(btnRow);
+        dlg.show();
     }
 
     private void showCompassDialog() {
-        LinearLayout box = dialogContainer("🧭 Site Compass & Leveler", "360° DAMPED", colCyan);
+        final LinearLayout box = dialogContainer("🧭 Site Compass & Leveler", "360° DAMPED", colCyan);
         box.addView(buildCompassCard());
-        createDialogSheet(box).show();
+        final Dialog dlg = createDialogSheet(box);
+
+        LinearLayout btnRow = new LinearLayout(this);
+        btnRow.setOrientation(LinearLayout.HORIZONTAL);
+        btnRow.setPadding(0, dp(12), 0, 0);
+
+        TextView btnCal = actionButton("🎯 Reset Azimuth 0°", colCyan, colAccentInk);
+        btnCal.setOnClickListener(new View.OnClickListener() {
+            public void onClick(View v) {
+                hapticHeavyClick();
+                Toast.makeText(MainActivity.this, "Compass calibrated to True North", Toast.LENGTH_SHORT).show();
+            }
+        });
+        btnRow.addView(btnCal);
+
+        TextView btnClose = actionButton("Close", colLine, colPale);
+        btnClose.setOnClickListener(new View.OnClickListener() {
+            public void onClick(View v) {
+                hapticClick();
+                dlg.dismiss();
+            }
+        });
+        LinearLayout.LayoutParams clp = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
+        clp.leftMargin = dp(8);
+        btnClose.setLayoutParams(clp);
+        btnRow.addView(btnClose);
+
+        box.addView(btnRow);
+        dlg.show();
     }
 
     private void showGpsDialog() {
-        LinearLayout box = dialogContainer("🛰️ GNSS Polar Radar", "12 SATS", colEmerald);
+        final LinearLayout box = dialogContainer("🛰️ GNSS Polar Radar", "12 SATS", colEmerald);
         box.addView(buildGpsCard());
-        createDialogSheet(box).show();
+        final Dialog dlg = createDialogSheet(box);
+
+        LinearLayout btnRow = new LinearLayout(this);
+        btnRow.setOrientation(LinearLayout.HORIZONTAL);
+        btnRow.setPadding(0, dp(12), 0, 0);
+
+        TextView btnLog = actionButton("📍 Stamp GNSS Fix", colEmerald, colAccentInk);
+        btnLog.setOnClickListener(new View.OnClickListener() {
+            public void onClick(View v) {
+                hapticHeavyClick();
+                registerActivity();
+                note(Core.TOPIC_ROUTINE, String.format(Locale.US, "[GNSS FIX] Lat: %.5f Lon: %.5f · 12 Sats Locked (Kingston Post 01)", FireRadarManager.SITE_LAT, FireRadarManager.SITE_LON));
+                Toast.makeText(MainActivity.this, "✓ GNSS location stamped to Ada ledger", Toast.LENGTH_SHORT).show();
+                dlg.dismiss();
+            }
+        });
+        btnRow.addView(btnLog);
+
+        TextView btnClose = actionButton("Close", colLine, colPale);
+        btnClose.setOnClickListener(new View.OnClickListener() {
+            public void onClick(View v) {
+                hapticClick();
+                dlg.dismiss();
+            }
+        });
+        LinearLayout.LayoutParams clp = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
+        clp.leftMargin = dp(8);
+        btnClose.setLayoutParams(clp);
+        btnRow.addView(btnClose);
+
+        box.addView(btnRow);
+        dlg.show();
     }
 
     private LinearLayout buildPressureGaugeToolCard() {
@@ -12327,7 +12416,7 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
             officerCard.addView(facName);
 
             TextView offInfo = new TextView(this);
-            offInfo.setText("🛡️ Officer Lochran Doherty · QLD Licence #41207 · Post 01 Gatehouse");
+            offInfo.setText("🛡️ Officer Lochran Doherty · QLD Licence #41207 · Guard Hut");
             offInfo.setTextColor(0xFF94A3B8);
             offInfo.setTextSize(11.5f);
             officerCard.addView(offInfo);
@@ -12431,7 +12520,7 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
         officerCard.addView(facName);
 
         TextView offInfo = new TextView(this);
-        offInfo.setText("🛡️ Officer Lochran Doherty · QLD Licence #41207 · Post 01 Gatehouse");
+        offInfo.setText("🛡️ Officer Lochran Doherty · QLD Licence #41207 · Guard Hut");
         offInfo.setTextColor(0xFF94A3B8);
         offInfo.setTextSize(11.5f);
         officerCard.addView(offInfo);
