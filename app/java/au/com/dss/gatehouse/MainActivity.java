@@ -11120,9 +11120,6 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
                     if (nearestTheme != lastHapticIndex) {
                         lastHapticIndex = nearestTheme;
                         MainActivity.this.hapticTick();
-                        if (nearestTheme != activeTheme) {
-                            MainActivity.this.switchTheme(nearestTheme);
-                        }
                     }
                     invalidate();
                     return true;
@@ -11132,7 +11129,10 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
                     if (getParent() != null) getParent().requestDisallowInterceptTouchEvent(false);
                     isThemeScrubbing = false;
                     final int finalTheme = Math.max(0, Math.min(3, Math.round(indicatorFloat)));
-                    MainActivity.this.switchTheme(finalTheme);
+                    animateToTheme(finalTheme);
+                    if (finalTheme != activeTheme) {
+                        MainActivity.this.switchTheme(finalTheme);
+                    }
                     return true;
             }
             return super.onTouchEvent(event);
@@ -11658,33 +11658,11 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
         if (root != null) root.setBackgroundColor(colBg);
         if (rootFrame != null) rootFrame.setBackgroundColor(colBg);
         if (mainSurfaceContainer != null) mainSurfaceContainer.setBackgroundColor(colBg);
-        if (scrollPatrol != null) {
-            scrollPatrol.removeAllViews();
-            root = new LinearLayout(this);
-            root.setOrientation(LinearLayout.VERTICAL);
-            root.setPadding(0, 0, 0, dp(56));
-            patrolContent = buildPatrolTab();
-            root.addView(patrolContent);
-            scrollPatrol.addView(root);
-            scrollPatrol.setBackgroundColor(colBg);
-        }
-        if (scrollContacts != null) {
-            scrollContacts.removeAllViews();
-            contactsContent = buildContactsTab();
-            scrollContacts.addView(contactsContent);
-            scrollContacts.setBackgroundColor(colBg);
-        }
-        if (scrollHandbook != null) {
-            scrollHandbook.removeAllViews();
-            scrollHandbook.addView(buildRosterView());
-            scrollHandbook.setBackgroundColor(colBg);
-        }
-        if (scrollTools != null) {
-            scrollTools.removeAllViews();
-            toolsContent = buildToolsTab();
-            scrollTools.addView(toolsContent);
-            scrollTools.setBackgroundColor(colBg);
-        }
+
+        // 1. Instantly rebuild the currently visible tab for zero perceived latency
+        rebuildSingleTab(currentTab);
+
+        // 2. Refresh dynamic vector and canvas views
         if (animatedTabBar != null) animatedTabBar.invalidate();
         if (animatedThemeBar != null) animatedThemeBar.invalidate();
         if (rosterScrubber != null) rosterScrubber.invalidate();
@@ -11694,5 +11672,59 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
         }
         refresh();
         updateDiagnostics();
+
+        // 3. Defer background tabs to prevent CPU spikes and GC pauses on low-end chipsets
+        final int active = currentTab;
+        if (getWindow() != null && getWindow().getDecorView() != null) {
+            getWindow().getDecorView().post(new Runnable() {
+                public void run() {
+                    for (int t = 0; t < 4; t++) {
+                        if (t != active) {
+                            rebuildSingleTab(t);
+                        }
+                    }
+                }
+            });
+        }
+    }
+
+    private void rebuildSingleTab(int tabIndex) {
+        switch (tabIndex) {
+            case 0:
+                if (scrollPatrol != null) {
+                    scrollPatrol.removeAllViews();
+                    root = new LinearLayout(this);
+                    root.setOrientation(LinearLayout.VERTICAL);
+                    root.setPadding(0, 0, 0, dp(56));
+                    patrolContent = buildPatrolTab();
+                    root.addView(patrolContent);
+                    scrollPatrol.addView(root);
+                    scrollPatrol.setBackgroundColor(colBg);
+                }
+                break;
+            case 1:
+                if (scrollContacts != null) {
+                    scrollContacts.removeAllViews();
+                    contactsContent = buildContactsTab();
+                    scrollContacts.addView(contactsContent);
+                    scrollContacts.setBackgroundColor(colBg);
+                }
+                break;
+            case 2:
+                if (scrollHandbook != null) {
+                    scrollHandbook.removeAllViews();
+                    scrollHandbook.addView(buildRosterView());
+                    scrollHandbook.setBackgroundColor(colBg);
+                }
+                break;
+            case 3:
+                if (scrollTools != null) {
+                    scrollTools.removeAllViews();
+                    toolsContent = buildToolsTab();
+                    scrollTools.addView(toolsContent);
+                    scrollTools.setBackgroundColor(colBg);
+                }
+                break;
+        }
     }
 }
