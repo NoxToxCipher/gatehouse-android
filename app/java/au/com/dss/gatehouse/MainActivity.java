@@ -3015,6 +3015,10 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
         card.addView(desc);
 
         final TextView btnCheck = actionButton("⚡ Check for Updates Now", colAccent, colAccentInk);
+        LinearLayout.LayoutParams blp = new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+        blp.topMargin = dp(6);
+        btnCheck.setLayoutParams(blp);
         btnCheck.setOnClickListener(new View.OnClickListener() {
             public void onClick(View v) {
                 hapticHeavyClick();
