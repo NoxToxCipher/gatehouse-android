@@ -436,6 +436,14 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
                     }
                 });
             }
+        } else if (getIntent() != null && getIntent().getBooleanExtra("OPEN_CREDENTIAL_VAULT", false)) {
+            if (rootFrame != null) {
+                rootFrame.post(new Runnable() {
+                    public void run() {
+                        showOfficerCredentialVaultDialog();
+                    }
+                });
+            }
         }
         loadPending();
         startShift();
@@ -443,6 +451,8 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
         updateDiagnostics();
         FireRadarManager.initChannels(this);
         refreshFireRadar();
+        LicenceVerificationManager.initChannels(this);
+        LicenceVerificationManager.checkAndNotifyLicenceExpiry(this);
         AutoUpdateManager.init(this);
         ticker.postDelayed(tick, 1000);
     }
@@ -5070,7 +5080,7 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
                     textPaint.setColor(colAccent);
                     textPaint.setTextSize(dpf(14.5f));
                     textPaint.setTypeface(Typeface.create(Typeface.MONOSPACE, Typeface.BOLD));
-                    canvas.drawText(activeGuard != null ? activeGuard.licence : "LIC-3943517", dp(18), dp(118), textPaint);
+                    canvas.drawText("LIC #" + LicenceVerificationManager.getLicenceNumber(getContext()), dp(18), dp(118), textPaint);
                     textPaint.setTypeface(Typeface.DEFAULT);
 
                     // Employer & Jurisdiction
@@ -5087,7 +5097,7 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
                     textPaint.setColor(colQuiet);
                     textPaint.setTextSize(dpf(9f));
                     textPaint.setTextAlign(Paint.Align.RIGHT);
-                    canvas.drawText("EXP: 15 MAY 2027", w - dp(18), h - dp(16), textPaint);
+                    canvas.drawText("EXP: 14 OCT 2027", w - dp(18), h - dp(16), textPaint);
 
                 } else {
                     // Header Row
@@ -5180,7 +5190,7 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
                 textPaint.setTextSize(dpf(9.5f));
                 canvas.drawText("HASH: 7f8a9b2c...41207", qx + qrSize + dp(14), qy + dp(38), textPaint);
                 canvas.drawText("CHAIN: SHA-256 SPARK", qx + qrSize + dp(14), qy + dp(56), textPaint);
-                canvas.drawText("SECURITY LIC: #3943517", qx + qrSize + dp(14), qy + dp(74), textPaint);
+                canvas.drawText("SECURITY LIC: #41207", qx + qrSize + dp(14), qy + dp(74), textPaint);
                 canvas.drawText("FIRST AID: SJA-849102", qx + qrSize + dp(14), qy + dp(92), textPaint);
 
                 textPaint.setColor(colEmerald);
@@ -5194,6 +5204,9 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
 
     private void showOfficerCredentialVaultDialog() {
         hapticHeavyClick();
+        final LicenceVerificationManager.LicenceStatus licStatus = LicenceVerificationManager.getLicenceStatus(this);
+        final List<LicenceVerificationManager.RenewalMilestone> milestones = LicenceVerificationManager.getRenewalMilestones(this);
+
         final LinearLayout box = dialogContainer("🪪 Officer Credential Vault", "LEGAL AUDIT", colAccent);
 
         TextView info = new TextView(this);
@@ -5274,12 +5287,86 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
             }
         });
 
+        // =========================================================================
+        // AUTOMATED LICENCE EXPIRY & RENEWAL MILESTONE SCHEDULE
+        // =========================================================================
+        LinearLayout schedCard = new LinearLayout(this);
+        schedCard.setOrientation(LinearLayout.VERTICAL);
+        schedCard.setBackground(rounded(colPanel2, dp(12)));
+        schedCard.setPadding(dp(14), dp(12), dp(14), dp(12));
+        LinearLayout.LayoutParams sclp = new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+        sclp.bottomMargin = dp(12);
+        schedCard.setLayoutParams(sclp);
+
+        LinearLayout schedHead = new LinearLayout(this);
+        schedHead.setOrientation(LinearLayout.HORIZONTAL);
+        schedHead.setGravity(Gravity.CENTER_VERTICAL);
+
+        TextView schedTitle = new TextView(this);
+        schedTitle.setText("AUTOMATED EXPIRY & RENEWAL SCHEDULE");
+        schedTitle.setTextColor(colAccent);
+        schedTitle.setTextSize(10f);
+        schedTitle.setTypeface(Typeface.MONOSPACE);
+        LinearLayout.LayoutParams stlp = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
+        schedTitle.setLayoutParams(stlp);
+        schedHead.addView(schedTitle);
+
+        TextView badgeDays = new TextView(this);
+        badgeDays.setText(licStatus.statusBadgeText);
+        badgeDays.setTextColor(licStatus.statusColor);
+        badgeDays.setTextSize(9f);
+        badgeDays.setTypeface(Typeface.MONOSPACE);
+        badgeDays.setPadding(dp(6), dp(2), dp(6), dp(2));
+        badgeDays.setBackground(rounded(licStatus.statusBgColor, dp(4)));
+        schedHead.addView(badgeDays);
+        schedCard.addView(schedHead);
+
+        TextView schedDesc = new TextView(this);
+        schedDesc.setText("Expires " + licStatus.formattedExpiryDate + " (" + licStatus.daysRemaining + " days remaining) · Fair Trading QLD");
+        schedDesc.setTextColor(colPale);
+        schedDesc.setTextSize(11.5f);
+        schedDesc.setPadding(0, dp(4), 0, dp(8));
+        schedCard.addView(schedDesc);
+
+        for (final LicenceVerificationManager.RenewalMilestone m : milestones) {
+            LinearLayout mRow = new LinearLayout(this);
+            mRow.setOrientation(LinearLayout.HORIZONTAL);
+            mRow.setGravity(Gravity.CENTER_VERTICAL);
+            mRow.setPadding(0, dp(3), 0, dp(3));
+
+            TextView mIcon = new TextView(this);
+            mIcon.setText(m.isPassed ? "✓" : (m.isCurrent ? "⚠️" : "🔔"));
+            mIcon.setTextColor(m.isPassed ? colEmerald : (m.isCurrent ? colAccent : colMuted));
+            mIcon.setTextSize(11f);
+            mIcon.setTypeface(Typeface.MONOSPACE);
+            mIcon.setPadding(0, 0, dp(6), 0);
+            mRow.addView(mIcon);
+
+            TextView mLabel = new TextView(this);
+            mLabel.setText(m.label + " (" + m.targetDateStr + "): ");
+            mLabel.setTextColor(m.isCurrent ? colAccent : (m.isPassed ? colMuted : colPale));
+            mLabel.setTextSize(11f);
+            mLabel.setTypeface(Typeface.DEFAULT_BOLD);
+            mRow.addView(mLabel);
+
+            TextView mAdvice = new TextView(this);
+            mAdvice.setText(m.actionAdvice);
+            mAdvice.setTextColor(m.isPassed ? colQuiet : colMuted);
+            mAdvice.setTextSize(10.5f);
+            mAdvice.setSingleLine(true);
+            mRow.addView(mAdvice);
+
+            schedCard.addView(mRow);
+        }
+        box.addView(schedCard);
+
         final Dialog dlg = createDialogSheet(box);
 
         LinearLayout btnRow = new LinearLayout(this);
         btnRow.setOrientation(LinearLayout.HORIZONTAL);
 
-        TextView btnCopy = actionButton("📋 Copy Licence Details", colPanel2, colPale);
+        TextView btnCopy = actionButton("📋 Copy Details", colPanel2, colPale);
         btnCopy.setOnClickListener(new View.OnClickListener() {
             public void onClick(View v) {
                 hapticClick();
@@ -5294,15 +5381,33 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
         });
         btnRow.addView(btnCopy);
 
-        TextView btnClose = actionButton("Close Vault", colAccent, colAccentInk);
+        TextView btnTestAlert = actionButton("🔔 Test Reminder", colPanel3, colAccent);
+        btnTestAlert.setOnClickListener(new View.OnClickListener() {
+            public void onClick(View v) {
+                hapticDoublePulse();
+                LicenceVerificationManager.postLicenceNotification(
+                        MainActivity.this,
+                        "🛡️ QLD Security Licence Renewal Reminder",
+                        "Officer Lochran Doherty · QLD Security Licence #41207 expires in 30 days (14 Oct 2027). Please submit renewal with Fair Trading QLD.",
+                        licStatus
+                );
+                Toast.makeText(MainActivity.this, "✓ Luxury licence renewal alert dispatched to status bar", Toast.LENGTH_LONG).show();
+            }
+        });
+        LinearLayout.LayoutParams tlp = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1.1f);
+        tlp.leftMargin = dp(6);
+        btnTestAlert.setLayoutParams(tlp);
+        btnRow.addView(btnTestAlert);
+
+        TextView btnClose = actionButton("Close", colAccent, colAccentInk);
         btnClose.setOnClickListener(new View.OnClickListener() {
             public void onClick(View v) {
                 hapticClick();
                 dlg.dismiss();
             }
         });
-        LinearLayout.LayoutParams cml = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1.2f);
-        cml.leftMargin = dp(8);
+        LinearLayout.LayoutParams cml = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 0.9f);
+        cml.leftMargin = dp(6);
         btnClose.setLayoutParams(cml);
         btnRow.addView(btnClose);
 
@@ -5915,6 +6020,8 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
         site.setPadding(0, dp(4), 0, dp(4));
         card.addView(site);
 
+        final LicenceVerificationManager.LicenceStatus licStatus = LicenceVerificationManager.getLicenceStatus(this);
+
         LinearLayout guardRow = new LinearLayout(this);
         guardRow.setOrientation(LinearLayout.HORIZONTAL);
         guardRow.setGravity(Gravity.CENTER_VERTICAL);
@@ -5927,12 +6034,12 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
         guardRow.addView(who);
 
         TextView lic = new TextView(this);
-        lic.setText("LIC #41207 🪪");
-        lic.setTextColor(colAccent);
+        lic.setText("LIC #" + licStatus.licenceNumber + " · " + licStatus.statusBadgeText + " 🪪");
+        lic.setTextColor(licStatus.statusColor);
         lic.setTextSize(9.5f);
-        lic.setTypeface(Typeface.MONOSPACE);
-        lic.setPadding(dp(6), dp(2), dp(6), dp(2));
-        lic.setBackground(rounded(colPanel3, dp(4)));
+        lic.setTypeface(Typeface.create(Typeface.MONOSPACE, Typeface.BOLD));
+        lic.setPadding(dp(7), dp(2), dp(7), dp(2));
+        lic.setBackground(rounded(licStatus.statusBgColor, dp(4)));
         LinearLayout.LayoutParams llic = new LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT);
         llic.leftMargin = dp(6);
@@ -6234,7 +6341,11 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
                     break;
                 case MotionEvent.ACTION_MOVE:
                     float dy = ev.getRawY() - startY;
-                    if (dy > touchSlop) {
+                    boolean isAtTop = true;
+                    if (targetContentView instanceof ScrollView) {
+                        isAtTop = ((ScrollView) targetContentView).getScrollY() <= 0;
+                    }
+                    if (isAtTop && dy > touchSlop) {
                         isDragging = true;
                         if (getParent() != null) getParent().requestDisallowInterceptTouchEvent(true);
                         return true;
@@ -6270,7 +6381,12 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
         final Dialog dlg = new Dialog(this);
         dlg.requestWindowFeature(Window.FEATURE_NO_TITLE);
 
-        PullDownDismissLayout pullContainer = new PullDownDismissLayout(this, dlg, content);
+        ScrollView dialogScroll = new ScrollView(this);
+        dialogScroll.setVerticalScrollBarEnabled(false);
+        dialogScroll.setFillViewport(true);
+        dialogScroll.addView(content);
+
+        PullDownDismissLayout pullContainer = new PullDownDismissLayout(this, dlg, dialogScroll);
         dlg.setContentView(pullContainer);
 
         if (dlg.getWindow() != null) {
@@ -9292,39 +9408,49 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
         card.setLayoutParams(lp);
 
         card.setOnTouchListener(new View.OnTouchListener() {
-            private float from;
-            private boolean dragging;
+            private float fromX, fromY;
+            private boolean dragging = false;
 
             public boolean onTouch(View v, android.view.MotionEvent e) {
                 switch (e.getActionMasked()) {
                 case android.view.MotionEvent.ACTION_DOWN:
-                    from = e.getRawX();
-                    dragging = true;
-                    return true;
+                    fromX = e.getRawX();
+                    fromY = e.getRawY();
+                    dragging = false;
+                    break;
                 case android.view.MotionEvent.ACTION_MOVE:
+                    float dx = e.getRawX() - fromX;
+                    float dy = Math.abs(e.getRawY() - fromY);
+                    if (!dragging && Math.abs(dx) > dp(16) && Math.abs(dx) > dy * 1.3f) {
+                        dragging = true;
+                        if (v.getParent() != null) v.getParent().requestDisallowInterceptTouchEvent(true);
+                    }
                     if (dragging) {
-                        float dx = e.getRawX() - from;
                         v.setTranslationX(dx);
                         v.setAlpha(Math.max(0.25f, 1f - Math.abs(dx) / (dp(200) * 1f)));
+                        return true;
                     }
-                    return true;
+                    break;
                 case android.view.MotionEvent.ACTION_UP:
                 case android.view.MotionEvent.ACTION_CANCEL:
-                    float dx2 = e.getRawX() - from;
-                    dragging = false;
-                    if (Math.abs(dx2) > dp(110)) {
-                        hapticHeavyClick();
-                        v.post(new Runnable() {
-                            public void run() { takeBack(p); }
-                        });
-                    } else {
-                        v.setTranslationX(0f);
-                        v.setAlpha(1f);
+                    if (dragging) {
+                        float dx2 = e.getRawX() - fromX;
+                        dragging = false;
+                        if (v.getParent() != null) v.getParent().requestDisallowInterceptTouchEvent(false);
+                        if (Math.abs(dx2) > dp(110)) {
+                            hapticHeavyClick();
+                            v.post(new Runnable() {
+                                public void run() { takeBack(p); }
+                            });
+                        } else {
+                            v.setTranslationX(0f);
+                            v.setAlpha(1f);
+                        }
+                        return true;
                     }
-                    return true;
-                default:
-                    return false;
+                    break;
                 }
+                return false;
             }
         });
         return card;
@@ -11593,28 +11719,44 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
         // Horizontal Swipe detector directly on the card to cycle days
         card.setOnTouchListener(new View.OnTouchListener() {
             private float downX, downY;
+            private boolean isSwiping = false;
             public boolean onTouch(View v, MotionEvent ev) {
                 switch (ev.getActionMasked()) {
                     case MotionEvent.ACTION_DOWN:
                         downX = ev.getX();
                         downY = ev.getY();
-                        return true;
-                    case MotionEvent.ACTION_UP:
+                        isSwiping = false;
+                        break;
+                    case MotionEvent.ACTION_MOVE:
                         float dx = ev.getX() - downX;
                         float dy = Math.abs(ev.getY() - downY);
-                        if (Math.abs(dx) > dp(36) && Math.abs(dx) > dy * 1.2f) {
-                            if (dx < 0 && dayIndex < 6) {
+                        if (!isSwiping && Math.abs(dx) > dp(20) && Math.abs(dx) > dy * 1.3f) {
+                            isSwiping = true;
+                            if (v.getParent() != null) v.getParent().requestDisallowInterceptTouchEvent(true);
+                        }
+                        if (isSwiping) return true;
+                        break;
+                    case MotionEvent.ACTION_UP:
+                        if (isSwiping) {
+                            float totalDx = ev.getX() - downX;
+                            isSwiping = false;
+                            if (v.getParent() != null) v.getParent().requestDisallowInterceptTouchEvent(false);
+                            if (totalDx < -dp(36) && dayIndex < 6) {
                                 hapticClick();
                                 if (rosterScrubber != null) rosterScrubber.animateToPosition(dayIndex + 1);
                                 updateRosterDayDetail(dayIndex + 1);
                                 return true;
-                            } else if (dx > 0 && dayIndex > 0) {
+                            } else if (totalDx > dp(36) && dayIndex > 0) {
                                 hapticClick();
                                 if (rosterScrubber != null) rosterScrubber.animateToPosition(dayIndex - 1);
                                 updateRosterDayDetail(dayIndex - 1);
                                 return true;
                             }
                         }
+                        break;
+                    case MotionEvent.ACTION_CANCEL:
+                        isSwiping = false;
+                        if (v.getParent() != null) v.getParent().requestDisallowInterceptTouchEvent(false);
                         break;
                 }
                 return false;
