@@ -5842,12 +5842,13 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
                                      String badgeText, final int badgeColor) {
         LinearLayout card = new LinearLayout(this);
         card.setOrientation(LinearLayout.VERTICAL);
-        card.setBackground(rounded(colPanel, dp(14)));
-        card.setPadding(dp(14), dp(12), dp(14), dp(12));
+        card.setBackground(rounded(colPanel, dp(16)));
+        card.setPadding(dp(16), dp(14), dp(16), dp(14));
+        card.setElevation(dp(4));
 
         LinearLayout.LayoutParams clp = new LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
-        clp.bottomMargin = dp(8);
+        clp.bottomMargin = dp(10);
         card.setLayoutParams(clp);
 
         LinearLayout top = new LinearLayout(this);
@@ -5857,7 +5858,7 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
         TextView title = new TextView(this);
         title.setText(name);
         title.setTextColor(colPale);
-        title.setTextSize(14);
+        title.setTextSize(14.5f);
         title.setTypeface(Typeface.DEFAULT_BOLD);
         LinearLayout.LayoutParams tl = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
         title.setLayoutParams(tl);
@@ -5866,18 +5867,18 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
         TextView badge = new TextView(this);
         badge.setText(badgeText);
         badge.setTextColor(badgeColor);
-        badge.setTextSize(9);
+        badge.setTextSize(9.5f);
         badge.setTypeface(Typeface.MONOSPACE);
-        badge.setPadding(dp(6), dp(2), dp(6), dp(2));
-        badge.setBackground(rounded(colPanel2, dp(4)));
+        badge.setPadding(dp(8), dp(3), dp(8), dp(3));
+        badge.setBackground(rounded(colPanel2, dp(6)));
         top.addView(badge);
         card.addView(top);
 
         TextView sub = new TextView(this);
         sub.setText(subtitle);
         sub.setTextColor(colMuted);
-        sub.setTextSize(12);
-        sub.setPadding(0, dp(2), 0, dp(8));
+        sub.setTextSize(12f);
+        sub.setPadding(0, dp(3), 0, dp(10));
         card.addView(sub);
 
         LinearLayout btm = new LinearLayout(this);
@@ -5888,8 +5889,8 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
         TextView num = new TextView(this);
         num.setText("📞 " + formattedNum);
         num.setTextColor(colAccent);
-        num.setTextSize(13);
-        num.setTypeface(Typeface.MONOSPACE);
+        num.setTextSize(13f);
+        num.setTypeface(Typeface.create(Typeface.MONOSPACE, Typeface.BOLD));
         num.setPadding(0, dp(4), dp(8), dp(4));
         num.setOnClickListener(new View.OnClickListener() {
             public void onClick(View v) {
@@ -5913,10 +5914,10 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
             TextView btnSms = new TextView(this);
             btnSms.setText("SMS");
             btnSms.setTextColor(colCyan);
-            btnSms.setTextSize(11);
+            btnSms.setTextSize(11f);
             btnSms.setTypeface(Typeface.DEFAULT_BOLD);
-            btnSms.setPadding(dp(10), dp(6), dp(10), dp(6));
-            btnSms.setBackground(pressable(colPanel2, dp(8)));
+            btnSms.setPadding(dp(12), dp(7), dp(12), dp(7));
+            btnSms.setBackground(rounded(colPanel2, dp(8)));
             LinearLayout.LayoutParams slp = new LinearLayout.LayoutParams(
                     LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT);
             slp.rightMargin = dp(6);
@@ -5939,13 +5940,13 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
         TextView btnCall = new TextView(this);
         btnCall.setText(phoneDisplay.equals("000") ? "CALL 000" : "CALL");
         btnCall.setTextColor(phoneDisplay.equals("000") ? 0xFFFFFFFF : colAccentInk);
-        btnCall.setTextSize(11);
+        btnCall.setTextSize(11f);
         btnCall.setTypeface(Typeface.DEFAULT_BOLD);
-        btnCall.setPadding(dp(12), dp(6), dp(12), dp(6));
-        btnCall.setBackground(pressable(phoneDisplay.equals("000") ? colCrimson : colAccent, dp(8)));
+        btnCall.setPadding(dp(14), dp(7), dp(14), dp(7));
+        btnCall.setBackground(rounded(phoneDisplay.equals("000") ? colCrimson : colAccent, dp(8)));
         btnCall.setOnClickListener(new View.OnClickListener() {
             public void onClick(View v) {
-                hapticClick();
+                hapticHeavyClick();
                 registerActivity();
                 dialNumber(phoneDisplay);
             }
@@ -6252,12 +6253,29 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
         return dock;
     }
 
-    private LinearLayout dockButton(String title, int iconType, int primaryCol, int accentCol, View.OnClickListener onClick, int pos) {
-        LinearLayout btn = new LinearLayout(this);
+    private LinearLayout dockButton(String title, int iconType, int primaryCol, int accentCol, final View.OnClickListener onClick, int pos) {
+        final LinearLayout btn = new LinearLayout(this);
         btn.setOrientation(LinearLayout.VERTICAL);
         btn.setGravity(Gravity.CENTER);
-        btn.setBackground(pressable(colPanel, dp(14)));
+        btn.setBackground(pressable(colPanel, dp(16)));
         btn.setPadding(dp(4), dp(10), dp(4), dp(10));
+        btn.setElevation(dp(4));
+
+        btn.setOnTouchListener(new View.OnTouchListener() {
+            public boolean onTouch(View v, MotionEvent e) {
+                switch (e.getActionMasked()) {
+                    case MotionEvent.ACTION_DOWN:
+                        v.animate().scaleX(0.92f).scaleY(0.92f).setDuration(80).start();
+                        break;
+                    case MotionEvent.ACTION_UP:
+                    case MotionEvent.ACTION_CANCEL:
+                        v.animate().scaleX(1.0f).scaleY(1.0f).setDuration(160)
+                                .setInterpolator(new android.view.animation.OvershootInterpolator(1.2f)).start();
+                        break;
+                }
+                return false;
+            }
+        });
         btn.setOnClickListener(onClick);
 
         ModernDockIconView iconView = new ModernDockIconView(this, iconType, primaryCol, accentCol);
@@ -6270,7 +6288,7 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
         lbl.setTextColor(colPale);
         lbl.setTextSize(10f);
         lbl.setTypeface(Typeface.create(Typeface.DEFAULT, Typeface.BOLD));
-        lbl.setLetterSpacing(0.04f);
+        lbl.setLetterSpacing(0.06f);
         lbl.setPadding(0, dp(6), 0, 0);
         lbl.setGravity(Gravity.CENTER);
         btn.addView(lbl);
