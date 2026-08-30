@@ -2307,6 +2307,48 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
             hsv.addView(presRow);
             box.addView(hsv);
 
+            final Dialog[] activeDlg = new Dialog[1];
+
+            final TextView btnQuickLog = actionButton("💾 Quick Log Pressure (1200 PSI)", colAccent, colAccentInk);
+            LinearLayout.LayoutParams qlp = new LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+            qlp.topMargin = dp(4);
+            qlp.bottomMargin = dp(10);
+            btnQuickLog.setLayoutParams(qlp);
+
+            pressureField.addTextChangedListener(new TextWatcher() {
+                public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
+                public void onTextChanged(CharSequence s, int start, int before, int count) {}
+                public void afterTextChanged(Editable s) {
+                    String p = s.toString().trim();
+                    btnQuickLog.setText("💾 Quick Log Pressure (" + (p.isEmpty() ? "0" : p) + " PSI)");
+                }
+            });
+
+            btnQuickLog.setOnClickListener(new View.OnClickListener() {
+                public void onClick(View v) {
+                    hapticHeavyClick();
+                    registerActivity();
+                    String pVal = pressureField.getText().toString().trim();
+                    int pNum = 1200;
+                    try { pNum = Integer.parseInt(pVal); } catch (Exception e) {}
+
+                    ArrayList<PressureRecord> list = pressureHistory.get(name);
+                    if (list == null) {
+                        list = new ArrayList<PressureRecord>();
+                        pressureHistory.put(name, list);
+                    }
+                    list.add(new PressureRecord(nowMinutes(), pNum));
+
+                    note(Core.TOPIC_ROUTINE, "[GAUGE READING] " + name + ": " + pNum + " PSI (Manual Pressure Log)");
+                    banner.setText("✓ " + name + " " + pNum + " PSI committed to Ada chain");
+                    banner.setVisibility(View.VISIBLE);
+                    Toast.makeText(MainActivity.this, "✓ " + pNum + " PSI recorded into shift logbook", Toast.LENGTH_SHORT).show();
+                    if (activeDlg[0] != null) activeDlg[0].dismiss();
+                }
+            });
+            box.addView(btnQuickLog);
+
             box.addView(formSectionLabel("SYSTEM STATUS & FAULTS"));
             final ArrayList<String> selectedConditions = new ArrayList<String>();
             selectedConditions.add("✓ Pressure Normal (1,200 PSI In Spec)");
@@ -2366,6 +2408,7 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
             }
 
             final Dialog dlg = createDialogSheet(box);
+            activeDlg[0] = dlg;
 
             LinearLayout btnRow = new LinearLayout(this);
             btnRow.setOrientation(LinearLayout.HORIZONTAL);
@@ -3018,10 +3061,64 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
         container.addView(contactsSectionHeader("🧭 SITE COMPASS & AZIMUTH", colCyan));
         container.addView(buildCompassCard());
 
+        container.addView(contactsSectionHeader("🎛️ HYDRAULIC & FIRE LINE GAUGES", colAccent));
+        container.addView(buildPressureGaugeToolCard());
+
         container.addView(contactsSectionHeader("🛰️ GNSS & SATELLITE RADAR", colEmerald));
         container.addView(buildGpsCard());
 
         return container;
+    }
+
+    private LinearLayout buildPressureGaugeToolCard() {
+        LinearLayout card = new LinearLayout(this);
+        card.setOrientation(LinearLayout.VERTICAL);
+        card.setBackground(rounded(colPanel, dp(16)));
+        card.setPadding(dp(16), dp(14), dp(16), dp(14));
+        LinearLayout.LayoutParams clp = new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+        clp.bottomMargin = dp(12);
+        card.setLayoutParams(clp);
+
+        LinearLayout top = new LinearLayout(this);
+        top.setOrientation(LinearLayout.HORIZONTAL);
+        top.setGravity(Gravity.CENTER_VERTICAL);
+
+        TextView title = new TextView(this);
+        title.setText("🎛️ Hydraulic & Line Gauges");
+        title.setTextColor(colPale);
+        title.setTextSize(13.5f);
+        title.setTypeface(Typeface.DEFAULT_BOLD);
+        LinearLayout.LayoutParams tl = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
+        title.setLayoutParams(tl);
+        top.addView(title);
+
+        TextView badge = new TextView(this);
+        badge.setText("CALIBRATED");
+        badge.setTextColor(colEmerald);
+        badge.setTextSize(9);
+        badge.setTypeface(Typeface.MONOSPACE);
+        badge.setPadding(dp(6), dp(2), dp(6), dp(2));
+        badge.setBackground(rounded(colEmeraldSoft, dp(4)));
+        top.addView(badge);
+        card.addView(top);
+
+        TextView desc = new TextView(this);
+        desc.setText("Interactive pressure gauge dial and manual hydrostatic line logging. Commits readings directly to the tamper-evident Ada Chain ledger.");
+        desc.setTextColor(colMuted);
+        desc.setTextSize(11);
+        desc.setPadding(0, dp(6), 0, dp(10));
+        card.addView(desc);
+
+        TextView btnOpen = actionButton("🎛️ Open Gauge Dial & Log", colAccent, colAccentInk);
+        btnOpen.setOnClickListener(new View.OnClickListener() {
+            public void onClick(View v) {
+                hapticHeavyClick();
+                promptPumpHouseCheck("Manual Line Gauge (Lot 16 Booster)", "GAUGE-MANUAL-01");
+            }
+        });
+        card.addView(btnOpen);
+        return card;
     }
 
     private LinearLayout buildAutoUpdateCard() {
@@ -3275,8 +3372,43 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
 
         final LinearLayout root = new LinearLayout(this);
         root.setOrientation(LinearLayout.VERTICAL);
-        root.setPadding(dp(16), dp(24), dp(16), dp(48));
+        root.setPadding(dp(16), dp(48), dp(16), dp(48));
         mainScroll.addView(root);
+
+        root.setOnApplyWindowInsetsListener(new View.OnApplyWindowInsetsListener() {
+            @Override
+            public WindowInsets onApplyWindowInsets(View v, WindowInsets insets) {
+                int topInset = 0;
+                int botInset = 0;
+                int leftInset = 0;
+                int rightInset = 0;
+
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+                    android.graphics.Insets sb = insets.getInsets(WindowInsets.Type.systemBars() | WindowInsets.Type.displayCutout());
+                    topInset = sb.top;
+                    botInset = sb.bottom;
+                    leftInset = sb.left;
+                    rightInset = sb.right;
+                } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+                    topInset = insets.getSystemWindowInsetTop();
+                    botInset = insets.getSystemWindowInsetBottom();
+                    leftInset = insets.getSystemWindowInsetLeft();
+                    rightInset = insets.getSystemWindowInsetRight();
+                }
+
+                int calculatedTop = Math.max(topInset + dp(18), dp(48));
+                int calculatedBot = Math.max(botInset + dp(24), dp(48));
+                root.setPadding(dp(16) + leftInset, calculatedTop, dp(16) + rightInset, calculatedBot);
+                return insets;
+            }
+        });
+        root.post(new Runnable() {
+            public void run() {
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.KITKAT_WATCH) {
+                    root.requestApplyInsets();
+                }
+            }
+        });
 
         // 1. Top App Bar with Back Arrow
         LinearLayout topBar = new LinearLayout(this);
@@ -3733,6 +3865,7 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
         };
 
         refreshRecentList.run();
+        RemoteTelemetryClient.fetchRemoteFeedbackAsync(this, refreshRecentList);
 
         // Submit Action Handler
         btnSubmit.setOnClickListener(new View.OnClickListener() {

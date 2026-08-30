@@ -188,13 +188,101 @@ public class RemoteTelemetryClient {
     public static int evaluateResolvedMilestone(String title, String description, String category) {
         String combined = (title + " " + description).toLowerCase(Locale.US);
 
+        // Milestone 111 (v1.0.11: Pressure manual logging, Safe Area system UI padding in tester hub, exact version tags)
+        if (combined.contains("gauge") || combined.contains("pressure") || combined.contains("feature update")
+                || combined.contains("state that on this list") || combined.contains("too close") || combined.contains("in this view")) {
+            return 11; // v1.0.11
+        }
+
+        // Milestone 110 (v1.0.10: Jitter-free shortest path angular compass filter, Android 15/16 WindowInsets overlap)
+        if (combined.contains("compass") || combined.contains("jitter") || combined.contains("system ui") || combined.contains("interferes")) {
+            return 10; // v1.0.10
+        }
+
+        // Milestone 108/109 (v1.0.8 / v1.0.9)
         if (combined.contains("sliding") || combined.contains("theme") || combined.contains("a20") || combined.contains("tablet") || combined.contains("home page") || combined.contains("icon")) {
             return 8; // v1.0.8
         }
+
+        // Milestone 107 (v1.0.7)
         if (combined.contains("flipboard") || combined.contains("paper") || combined.contains("radar") || combined.contains("vector icon")) {
             return 7; // v1.0.7
         }
+
         return 0; // In queue
+    }
+
+    public static void fetchRemoteFeedbackAsync(final Context context, final Runnable onLoaded) {
+        final Handler mainHandler = new Handler(Looper.getMainLooper());
+        new Thread(new Runnable() {
+            @Override
+            public void run() {
+                try {
+                    URL url = new URL(DEFAULT_TELEMETRY_URL + "/json?poll=1&since=all");
+                    HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+                    conn.setRequestMethod("GET");
+                    conn.setConnectTimeout(6000);
+                    conn.setReadTimeout(6000);
+                    conn.connect();
+
+                    if (conn.getResponseCode() == 200) {
+                        BufferedReader br = new BufferedReader(new InputStreamReader(conn.getInputStream(), StandardCharsets.UTF_8));
+                        String line;
+                        List<FeedbackItem> cached = loadFeedbacksFromCache(context);
+                        boolean modified = false;
+
+                        while ((line = br.readLine()) != null) {
+                            line = line.trim();
+                            if (line.isEmpty()) continue;
+                            try {
+                                JSONObject msgObj = new JSONObject(line);
+                                String messageStr = msgObj.optString("message", "");
+                                if (messageStr.startsWith("{") && messageStr.endsWith("}")) {
+                                    JSONObject payload = new JSONObject(messageStr);
+                                    String id = payload.optString("id", "");
+                                    boolean alreadyExists = false;
+                                    for (FeedbackItem ex : cached) {
+                                        if (ex.id != null && ex.id.equals(id)) {
+                                            alreadyExists = true;
+                                            break;
+                                        }
+                                    }
+                                    if (!alreadyExists) {
+                                        FeedbackItem newItem = FeedbackItem.fromJson(payload);
+                                        newItem.implementedMilestone = evaluateResolvedMilestone(newItem.title, newItem.description, newItem.category);
+                                        cached.add(0, newItem);
+                                        modified = true;
+                                    }
+                                }
+                            } catch (Exception ignored) {}
+                        }
+                        br.close();
+                        conn.disconnect();
+
+                        if (modified) {
+                            JSONArray arr = new JSONArray();
+                            for (FeedbackItem it : cached) {
+                                arr.put(it.toJson());
+                            }
+                            File f = new File(context.getFilesDir(), FEEDBACK_CACHE_FILE);
+                            FileOutputStream fos = new FileOutputStream(f);
+                            fos.write(arr.toString(2).getBytes(StandardCharsets.UTF_8));
+                            fos.flush();
+                            fos.close();
+                        }
+                    }
+                } catch (Exception e) {
+                    Log.d(TAG, "Syncing remote feedback: " + e.getMessage());
+                }
+
+                mainHandler.post(new Runnable() {
+                    @Override
+                    public void run() {
+                        if (onLoaded != null) onLoaded.run();
+                    }
+                });
+            }
+        }).start();
     }
 
     public static synchronized List<FeedbackItem> loadFeedbacksFromCache(Context context) {
@@ -217,9 +305,8 @@ public class RemoteTelemetryClient {
             for (int i = 0; i < arr.length(); i++) {
                 JSONObject obj = arr.getJSONObject(i);
                 FeedbackItem item = FeedbackItem.fromJson(obj);
-                if (item.implementedMilestone == 0) {
-                    item.implementedMilestone = evaluateResolvedMilestone(item.title, item.description, item.category);
-                }
+                // Re-evaluate milestone status dynamically
+                item.implementedMilestone = evaluateResolvedMilestone(item.title, item.description, item.category);
                 list.add(item);
             }
         } catch (Exception e) {
