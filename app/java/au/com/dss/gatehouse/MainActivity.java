@@ -11192,10 +11192,14 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
         private final Paint indicatorPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
         private final Paint indicatorGlowPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
         private final Paint textPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+        private final Paint iconPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+        private final Paint iconFillPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+        private final Path iconPath = new Path();
         private final RectF bgRect = new RectF();
         private final RectF indRect = new RectF();
+        private final RectF tempRect = new RectF();
 
-        private final String[] tabTitles = {"🛡️ PATROL", "📞 CONTACTS", "📅 ROSTER", "🛠️ TOOLS"};
+        private final String[] tabTitles = {"PATROL", "CONTACTS", "ROSTER", "TOOLS"};
         private float indicatorFloat = 0f;
         private ValueAnimator indAnimator;
         private boolean isTabScrubbing = false;
@@ -11213,8 +11217,13 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
             indicatorPaint.setStyle(Paint.Style.FILL);
             indicatorGlowPaint.setStyle(Paint.Style.STROKE);
             indicatorGlowPaint.setStrokeWidth(dpf(1.5f));
-            textPaint.setTextAlign(Paint.Align.CENTER);
+            textPaint.setTextAlign(Paint.Align.LEFT);
             textPaint.setTypeface(Typeface.DEFAULT_BOLD);
+
+            iconPaint.setStyle(Paint.Style.STROKE);
+            iconPaint.setStrokeCap(Paint.Cap.ROUND);
+            iconPaint.setStrokeJoin(Paint.Join.ROUND);
+            iconFillPaint.setStyle(Paint.Style.FILL);
         }
 
         public void setIndicatorFloat(float f) {
@@ -11287,6 +11296,87 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
             return super.onTouchEvent(event);
         }
 
+        private void drawTabVectorIcon(Canvas canvas, int tabIndex, float cx, float cy, float size, int color) {
+            iconPaint.setColor(color);
+            iconPaint.setStrokeWidth(dpf(1.5f));
+            iconFillPaint.setColor(color);
+
+            switch (tabIndex) {
+                case 0: // Patrol: Modern Angular Security Shield + Verified Check
+                    iconPath.reset();
+                    float shTop = cy - size * 0.40f;
+                    float shBottom = cy + size * 0.44f;
+                    float shLeft = cx - size * 0.38f;
+                    float shRight = cx + size * 0.38f;
+
+                    iconPath.moveTo(shLeft, shTop);
+                    iconPath.lineTo(shRight, shTop);
+                    iconPath.lineTo(shRight, cy + size * 0.06f);
+                    iconPath.quadTo(shRight, cy + size * 0.28f, cx, shBottom);
+                    iconPath.quadTo(shLeft, cy + size * 0.28f, shLeft, cy + size * 0.06f);
+                    iconPath.close();
+                    canvas.drawPath(iconPath, iconPaint);
+
+                    // Inner Checkmark
+                    iconPath.reset();
+                    iconPath.moveTo(cx - size * 0.16f, cy - size * 0.02f);
+                    iconPath.lineTo(cx - size * 0.03f, cy + size * 0.13f);
+                    iconPath.lineTo(cx + size * 0.18f, cy - size * 0.10f);
+                    canvas.drawPath(iconPath, iconPaint);
+                    break;
+
+                case 1: // Contacts: Officer Silhouette + Wireless Comms Signal Waves
+                    // Head
+                    canvas.drawCircle(cx - size * 0.10f, cy - size * 0.16f, size * 0.16f, iconPaint);
+                    // Torso
+                    iconPath.reset();
+                    iconPath.moveTo(cx - size * 0.34f, cy + size * 0.36f);
+                    iconPath.quadTo(cx - size * 0.34f, cy + size * 0.14f, cx - size * 0.10f, cy + size * 0.14f);
+                    iconPath.quadTo(cx + size * 0.14f, cy + size * 0.14f, cx + size * 0.14f, cy + size * 0.36f);
+                    canvas.drawPath(iconPath, iconPaint);
+
+                    // Comms Waves
+                    tempRect.set(cx - size * 0.18f, cy - size * 0.32f, cx + size * 0.28f, cy + size * 0.14f);
+                    canvas.drawArc(tempRect, -38, 76, false, iconPaint);
+
+                    tempRect.set(cx - size * 0.28f, cy - size * 0.44f, cx + size * 0.40f, cy + size * 0.24f);
+                    canvas.drawArc(tempRect, -38, 76, false, iconPaint);
+                    break;
+
+                case 2: // Roster: Shift Calendar Schedule Matrix + Shift Marker Dots
+                    float calL = cx - size * 0.38f;
+                    float calT = cy - size * 0.32f;
+                    float calR = cx + size * 0.38f;
+                    float calB = cy + size * 0.40f;
+                    tempRect.set(calL, calT, calR, calB);
+                    canvas.drawRoundRect(tempRect, dpf(2.5f), dpf(2.5f), iconPaint);
+
+                    // Upper Header Bar
+                    canvas.drawLine(calL, cy - size * 0.08f, calR, cy - size * 0.08f, iconPaint);
+
+                    // Binding Clips
+                    canvas.drawLine(cx - size * 0.20f, cy - size * 0.42f, cx - size * 0.20f, calT, iconPaint);
+                    canvas.drawLine(cx + size * 0.20f, cy - size * 0.42f, cx + size * 0.20f, calT, iconPaint);
+
+                    // Shift Grid Nodes
+                    canvas.drawCircle(cx - size * 0.16f, cy + size * 0.08f, size * 0.05f, iconFillPaint);
+                    canvas.drawCircle(cx + size * 0.16f, cy + size * 0.08f, size * 0.05f, iconPaint);
+                    canvas.drawCircle(cx - size * 0.16f, cy + size * 0.24f, size * 0.05f, iconPaint);
+                    canvas.drawCircle(cx + size * 0.16f, cy + size * 0.24f, size * 0.05f, iconFillPaint);
+                    break;
+
+                case 3: // Tools: Modern Precision Diagnostic Sliders
+                    // Top Slider
+                    canvas.drawLine(cx - size * 0.38f, cy - size * 0.18f, cx + size * 0.38f, cy - size * 0.18f, iconPaint);
+                    canvas.drawCircle(cx + size * 0.14f, cy - size * 0.18f, size * 0.12f, iconFillPaint);
+
+                    // Bottom Slider
+                    canvas.drawLine(cx - size * 0.38f, cy + size * 0.18f, cx + size * 0.38f, cy + size * 0.18f, iconPaint);
+                    canvas.drawCircle(cx - size * 0.14f, cy + size * 0.18f, size * 0.12f, iconFillPaint);
+                    break;
+            }
+        }
+
         @Override
         protected void onDraw(Canvas canvas) {
             super.onDraw(canvas);
@@ -11319,18 +11409,36 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
             }
             canvas.drawRoundRect(indRect, dp(11), dp(11), indicatorGlowPaint);
 
-            textPaint.setTextSize(dpf(10.5f));
-            float textY = h / 2f + dpf(3.8f);
+            textPaint.setTextSize(dpf(9.8f));
+            float iconSize = dpf(13f);
+            float gap = dpf(4.5f);
 
             for (int i = 0; i < 4; i++) {
-                float tx = i * segW + segW / 2f;
+                float segCenterX = i * segW + segW / 2f;
                 float dist = Math.abs(indicatorFloat - i);
+
+                int itemColor;
                 if (dist < 0.5f) {
-                    textPaint.setColor(colAccentInk);
+                    itemColor = colAccentInk;
                 } else {
-                    textPaint.setColor(colMuted);
+                    itemColor = colMuted;
                 }
-                canvas.drawText(tabTitles[i], tx, textY, textPaint);
+
+                String label = tabTitles[i];
+                float textW = textPaint.measureText(label);
+                float totalW = iconSize + gap + textW;
+
+                float startX = segCenterX - totalW / 2f;
+                float iconCenterX = startX + iconSize / 2f;
+                float iconCenterY = h / 2f;
+
+                float textX = startX + iconSize + gap;
+                float textY = h / 2f + dpf(3.5f);
+
+                drawTabVectorIcon(canvas, i, iconCenterX, iconCenterY, iconSize, itemColor);
+
+                textPaint.setColor(itemColor);
+                canvas.drawText(label, textX, textY, textPaint);
             }
         }
     }
