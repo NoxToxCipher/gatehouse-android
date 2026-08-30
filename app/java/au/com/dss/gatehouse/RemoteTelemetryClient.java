@@ -212,6 +212,11 @@ public class RemoteTelemetryClient {
         RESOLVED_REPORT_IDS.put("fb_1788087323075", 14); // Gauges - Better (Pull down & clean dial)
         RESOLVED_REPORT_IDS.put("fb_1788087421526", 14); // Deputy Cached Roster & Key
         RESOLVED_REPORT_IDS.put("fb_1788087492186", 14); // The Logbook UI Safe Area insets
+
+        // v1.0.15 (Milestone 115)
+        RESOLVED_REPORT_IDS.put("fb_1788087693673", 15); // The scroll bar visual elevation
+        RESOLVED_REPORT_IDS.put("fb_1788087750924", 15); // Crowded ID Cards overhaul
+        RESOLVED_REPORT_IDS.put("fb_1788087875837", 15); // Roster days and date dynamic sync
     }
 
     public static int evaluateResolvedMilestone(String reportId, String title, String description, String category) {

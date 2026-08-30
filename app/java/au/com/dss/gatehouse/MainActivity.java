@@ -52,6 +52,7 @@ import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.HandlerThread;
+import android.os.Looper;
 import android.os.SystemClock;
 import android.os.VibrationEffect;
 import android.os.Vibrator;
@@ -88,6 +89,8 @@ import java.io.InputStreamReader;
 import java.security.MessageDigest;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Calendar;
+import java.util.Locale;
 import java.util.Collections;
 import java.util.Date;
 import java.util.HashMap;
@@ -372,7 +375,17 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
     private boolean isRecordingVoice = false;
 
     private HorizonLevelerView activeLevelerView;
-    private PulsingScrollIndicator scrollIndicator;
+    private CyberGlowScrollBarView scrollIndicator;
+
+    private ScrollView getActiveScrollView() {
+        switch (currentTab) {
+            case 0: return scrollPatrol;
+            case 1: return scrollContacts;
+            case 2: return scrollHandbook;
+            case 3: return scrollTools;
+            default: return scrollPatrol;
+        }
+    }
 
     private static int nowMinutes() {
         long ms = System.currentTimeMillis();
@@ -1019,6 +1032,38 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
         scrollTools.addView(toolsContent);
         tabPagerFrame.addView(scrollTools);
 
+        // 🔮 FLUID CYBER GLOW FAST-SCROLLER OVERLAY
+        scrollIndicator = new CyberGlowScrollBarView(this);
+        FrameLayout.LayoutParams silp = new FrameLayout.LayoutParams(
+                dp(12), FrameLayout.LayoutParams.MATCH_PARENT);
+        silp.gravity = Gravity.RIGHT;
+        silp.topMargin = dp(10);
+        silp.bottomMargin = dp(68);
+        silp.rightMargin = dp(2);
+        scrollIndicator.setLayoutParams(silp);
+        tabPagerFrame.addView(scrollIndicator);
+
+        View.OnScrollChangeListener scrollListener = new View.OnScrollChangeListener() {
+            @Override
+            public void onScrollChange(View v, int scrollX, int scrollY, int oldScrollX, int oldScrollY) {
+                if (scrollIndicator != null && v instanceof ScrollView) {
+                    ScrollView sv = (ScrollView) v;
+                    View child = sv.getChildAt(0);
+                    if (child != null) {
+                        int diff = child.getHeight() - sv.getHeight();
+                        if (diff > 0) {
+                            float pct = (float) scrollY / (float) diff;
+                            scrollIndicator.setScrollProgress(pct, true);
+                        }
+                    }
+                }
+            }
+        };
+        scrollPatrol.setOnScrollChangeListener(scrollListener);
+        scrollContacts.setOnScrollChangeListener(scrollListener);
+        scrollHandbook.setOnScrollChangeListener(scrollListener);
+        scrollTools.setOnScrollChangeListener(scrollListener);
+
         screenLayout.addView(tabPagerFrame);
         mainSurfaceContainer.addView(screenLayout);
 
@@ -1083,37 +1128,107 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
     }
 
     // =========================================================================
-    // 🔮 PULSING SCROLL INDICATOR (RIGHT-HAND EDGE)
+    // 🔮 CYBER GLOW SCROLLBAR VIEW (FLUID LUMINOUS FAST-SCRUBBER)
     // =========================================================================
 
-    private class PulsingScrollIndicator extends View {
-        private final Paint trackPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+    private class CyberGlowScrollBarView extends View {
+        private final Paint trackBgPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+        private final Paint trackBorderPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
         private final Paint thumbPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
-        private final Paint glowPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+        private final Paint thumbGlowPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+        private final Paint pipPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+
         private float scrollPct = 0f;
-        private float pulseAlpha = 0.5f;
+        private float displayAlpha = 0.25f;
+        private ValueAnimator fadeAnimator;
+        private boolean isDragging = false;
+        private final Handler fadeHandler = new Handler(Looper.getMainLooper());
+        private final Runnable fadeRunnable = new Runnable() {
+            public void run() {
+                if (!isDragging) fadeTo(0.25f, 400);
+            }
+        };
 
-        public PulsingScrollIndicator(Context context) {
+        public CyberGlowScrollBarView(Context context) {
             super(context);
-            trackPaint.setStyle(Paint.Style.FILL);
+            trackBgPaint.setStyle(Paint.Style.FILL);
+            trackBorderPaint.setStyle(Paint.Style.STROKE);
+            trackBorderPaint.setStrokeWidth(dpf(0.8f));
             thumbPaint.setStyle(Paint.Style.FILL);
-            glowPaint.setStyle(Paint.Style.FILL);
+            thumbGlowPaint.setStyle(Paint.Style.FILL);
+            pipPaint.setStyle(Paint.Style.FILL);
+        }
 
-            ValueAnimator pulseAnim = ValueAnimator.ofFloat(0.35f, 0.95f);
-            pulseAnim.setDuration(1600);
-            pulseAnim.setRepeatMode(ValueAnimator.REVERSE);
-            pulseAnim.setRepeatCount(ValueAnimator.INFINITE);
-            pulseAnim.addUpdateListener(new ValueAnimator.AnimatorUpdateListener() {
-                public void onAnimationUpdate(ValueAnimator a) {
-                    pulseAlpha = (Float) a.getAnimatedValue();
+        private float dpf(float v) {
+            return v * getResources().getDisplayMetrics().density;
+        }
+
+        public void setScrollProgress(float p, boolean triggerLight) {
+            this.scrollPct = Math.max(0f, Math.min(1f, p));
+            if (triggerLight) {
+                fadeHandler.removeCallbacks(fadeRunnable);
+                if (displayAlpha < 0.95f && !isDragging) {
+                    fadeTo(1.0f, 120);
+                }
+                fadeHandler.postDelayed(fadeRunnable, 1200);
+            }
+            invalidate();
+        }
+
+        private void fadeTo(float target, long dur) {
+            if (fadeAnimator != null && fadeAnimator.isRunning()) fadeAnimator.cancel();
+            fadeAnimator = ValueAnimator.ofFloat(displayAlpha, target);
+            fadeAnimator.setDuration(dur);
+            fadeAnimator.addUpdateListener(new ValueAnimator.AnimatorUpdateListener() {
+                public void onAnimationUpdate(ValueAnimator va) {
+                    displayAlpha = (Float) va.getAnimatedValue();
                     invalidate();
                 }
             });
-            pulseAnim.start();
+            fadeAnimator.start();
         }
 
-        public void setScrollProgress(float p) {
-            this.scrollPct = Math.max(0f, Math.min(1f, p));
+        @Override
+        public boolean onTouchEvent(MotionEvent event) {
+            int h = getHeight();
+            if (h <= 0) return super.onTouchEvent(event);
+
+            ScrollView activeSv = getActiveScrollView();
+            if (activeSv == null || activeSv.getChildCount() == 0) return super.onTouchEvent(event);
+            View child = activeSv.getChildAt(0);
+            int scrollRange = child.getHeight() - activeSv.getHeight();
+            if (scrollRange <= 0) return super.onTouchEvent(event);
+
+            switch (event.getActionMasked()) {
+                case MotionEvent.ACTION_DOWN:
+                    isDragging = true;
+                    if (getParent() != null) getParent().requestDisallowInterceptTouchEvent(true);
+                    fadeHandler.removeCallbacks(fadeRunnable);
+                    fadeTo(1.0f, 80);
+                    hapticClick();
+                    handleDrag(event.getY(), h, activeSv, scrollRange);
+                    return true;
+
+                case MotionEvent.ACTION_MOVE:
+                    handleDrag(event.getY(), h, activeSv, scrollRange);
+                    return true;
+
+                case MotionEvent.ACTION_UP:
+                case MotionEvent.ACTION_CANCEL:
+                    isDragging = false;
+                    if (getParent() != null) getParent().requestDisallowInterceptTouchEvent(false);
+                    fadeHandler.postDelayed(fadeRunnable, 1000);
+                    return true;
+            }
+            return super.onTouchEvent(event);
+        }
+
+        private void handleDrag(float y, int h, ScrollView sv, int range) {
+            float rawPct = y / (float) h;
+            float clamped = Math.max(0f, Math.min(1f, rawPct));
+            scrollPct = clamped;
+            int targetScrollY = Math.round(clamped * range);
+            sv.scrollTo(0, targetScrollY);
             invalidate();
         }
 
@@ -1124,19 +1239,50 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
             int h = getHeight();
             if (w <= 0 || h <= 0) return;
 
-            trackPaint.setColor(colLineSubtle);
-            canvas.drawRect(0, 0, w, h, trackPaint);
+            float corner = dpf(3f);
+            float trackPadX = dpf(3.5f);
+            RectF trackRect = new RectF(trackPadX, dpf(4f), w - trackPadX, h - dpf(4f));
 
-            float thumbH = dp(44);
-            float thumbY = scrollPct * (h - thumbH);
+            // 1. Subtle Dark Glass Track
+            trackBgPaint.setColor(0x33000000);
+            canvas.drawRoundRect(trackRect, corner, corner, trackBgPaint);
+            trackBorderPaint.setColor(colLine);
+            trackBorderPaint.setAlpha((int) (displayAlpha * 70));
+            canvas.drawRoundRect(trackRect, corner, corner, trackBorderPaint);
 
-            glowPaint.setColor(colAccent);
-            glowPaint.setAlpha((int) (pulseAlpha * 90));
-            canvas.drawRoundRect(new RectF(0, thumbY - dp(4), w, thumbY + thumbH + dp(4)), dp(2), dp(2), glowPaint);
+            // 2. Glowing Neon Thumb Pill
+            float thumbH = Math.max(dpf(38f), h * 0.12f);
+            float thumbY = dpf(4f) + scrollPct * (h - dpf(8f) - thumbH);
+            float thumbW = isDragging ? w - dpf(2f) : w - dpf(4f);
+            float thumbX = (w - thumbW) / 2f;
 
-            thumbPaint.setColor(colAccent);
-            thumbPaint.setAlpha((int) (pulseAlpha * 255));
-            canvas.drawRoundRect(new RectF(0, thumbY, w, thumbY + thumbH), dp(2), dp(2), thumbPaint);
+            RectF thumbRect = new RectF(thumbX, thumbY, thumbX + thumbW, thumbY + thumbH);
+
+            // Outer Soft Luminous Glow
+            thumbGlowPaint.setColor(colAccent);
+            thumbGlowPaint.setAlpha((int) (displayAlpha * 85));
+            RectF glowR = new RectF(thumbRect.left - dpf(2f), thumbRect.top - dpf(2f),
+                                    thumbRect.right + dpf(2f), thumbRect.bottom + dpf(2f));
+            canvas.drawRoundRect(glowR, corner + dpf(2f), corner + dpf(2f), thumbGlowPaint);
+
+            // Gradient Neon Thumb Body
+            LinearGradient thumbGrad = new LinearGradient(
+                    thumbRect.left, thumbRect.top,
+                    thumbRect.left, thumbRect.bottom,
+                    new int[]{colAccent, colCyan},
+                    null, Shader.TileMode.CLAMP);
+            thumbPaint.setShader(thumbGrad);
+            thumbPaint.setAlpha((int) (displayAlpha * 255));
+            canvas.drawRoundRect(thumbRect, corner, corner, thumbPaint);
+            thumbPaint.setShader(null);
+
+            // Diamond Center Pip Indicator
+            pipPaint.setColor(0xFFFFFFFF);
+            pipPaint.setAlpha((int) (displayAlpha * 230));
+            float pipCy = thumbRect.centerY();
+            float pipCx = thumbRect.centerX();
+            float pipSize = dpf(1.8f);
+            canvas.drawCircle(pipCx, pipCy, pipSize, pipPaint);
         }
     }
 
@@ -4831,6 +4977,10 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
             invalidate();
         }
 
+        private float dpf(float v) {
+            return v * getResources().getDisplayMetrics().density;
+        }
+
         @Override
         protected void onDraw(Canvas canvas) {
             super.onDraw(canvas);
@@ -4888,113 +5038,119 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
                 if (cardMode == 0) {
                     DssKeyManager.GuardProfile activeGuard = (dssKeyManager != null) ? dssKeyManager.getActiveGuard() : new DssKeyManager.GuardProfile("g-lochran", "Lochran Mackenzie Doherty", "LIC-3943517", "3943", "DSS-BLE-LOCHRAN-3943");
 
+                    // Header Row
                     textPaint.setColor(colAccent);
-                    textPaint.setTextSize(dp(9));
+                    textPaint.setTextSize(dpf(9.5f));
                     textPaint.setTextAlign(Paint.Align.LEFT);
-                    canvas.drawText("QUEENSLAND GOVERNMENT · OFFICE OF FAIR TRADING", dp(18), dp(26), textPaint);
-
-                    subTextPaint.setColor(colPale);
-                    subTextPaint.setTextSize(dp(13));
-                    subTextPaint.setTextAlign(Paint.Align.LEFT);
-                    canvas.drawText("SECURITY PROVIDERS ACT 1993 · CLASS 1", dp(18), dp(44), subTextPaint);
-
-                    textPaint.setColor(colMuted);
-                    textPaint.setTextSize(dp(9));
-                    canvas.drawText("LICENCE HOLDER:", dp(18), dp(66), textPaint);
-
-                    subTextPaint.setColor(colPale);
-                    subTextPaint.setTextSize(dp(15));
-                    canvas.drawText(activeGuard.name.toUpperCase(), dp(18), dp(84), subTextPaint);
-
-                    textPaint.setColor(colMuted);
-                    textPaint.setTextSize(dp(9));
-                    canvas.drawText("LICENCE NUMBER:", dp(18), dp(104), textPaint);
-
-                    textPaint.setColor(colAccent);
-                    textPaint.setTextSize(dp(14));
-                    canvas.drawText(activeGuard.licence.replace("LIC-", "") + " / SEC-1-QLD", dp(18), dp(120), textPaint);
-
-                    textPaint.setColor(colMuted);
-                    textPaint.setTextSize(dp(9));
-                    canvas.drawText("FUNCTIONS: UNARMED GUARD · MONITORING · STATIC", dp(18), dp(138), textPaint);
-                    canvas.drawText("EMPLOYER: DOHERTY SECURITY SERVICES", dp(18), dp(152), textPaint);
+                    canvas.drawText("QUEENSLAND GOVT · FAIR TRADING", dp(18), dp(28), textPaint);
 
                     Paint pillBg = new Paint(Paint.ANTI_ALIAS_FLAG);
                     pillBg.setColor(colEmeraldSoft);
-                    RectF pillR = new RectF(w - dp(110), dp(22), w - dp(18), dp(44));
+                    RectF pillR = new RectF(w - dp(118), dp(16), w - dp(18), dp(36));
                     canvas.drawRoundRect(pillR, dp(6), dp(6), pillBg);
 
                     textPaint.setColor(colEmerald);
-                    textPaint.setTextSize(dp(9));
+                    textPaint.setTextSize(dpf(9f));
                     textPaint.setTextAlign(Paint.Align.CENTER);
                     canvas.drawText("✓ CURRENT & ACTIVE", pillR.centerX(), pillR.centerY() + dp(3), textPaint);
 
-                    textPaint.setColor(colQuiet);
-                    textPaint.setTextSize(dp(8));
-                    textPaint.setTextAlign(Paint.Align.RIGHT);
-                    canvas.drawText("EXP: 15 MAY 2027", w - dp(18), h - dp(14), textPaint);
-                } else {
-                    textPaint.setColor(colEmerald);
-                    textPaint.setTextSize(dp(9));
-                    textPaint.setTextAlign(Paint.Align.LEFT);
-                    canvas.drawText("NATIONALLY RECOGNISED TRAINING · RTO #8801", dp(18), dp(26), textPaint);
-
-                    subTextPaint.setColor(colPale);
-                    subTextPaint.setTextSize(dp(13));
+                    // Name
+                    subTextPaint.setColor(0xFFFFFFFF);
+                    subTextPaint.setTextSize(dpf(16f));
                     subTextPaint.setTextAlign(Paint.Align.LEFT);
-                    canvas.drawText("HLTAID011 PROVIDE FIRST AID & CPR", dp(18), dp(44), subTextPaint);
+                    canvas.drawText((activeGuard != null ? activeGuard.name : "LOCHRAN MACKENZIE DOHERTY").toUpperCase(), dp(18), dp(66), subTextPaint);
 
+                    // Qualification Title
+                    textPaint.setColor(colPale);
+                    textPaint.setTextSize(dpf(11f));
+                    textPaint.setTextAlign(Paint.Align.LEFT);
+                    canvas.drawText("SECURITY PROVIDER CLASS 1 (UNARMED / STATIC)", dp(18), dp(88), textPaint);
+
+                    // Licence Number Tag
+                    textPaint.setColor(colAccent);
+                    textPaint.setTextSize(dpf(14.5f));
+                    textPaint.setTypeface(Typeface.create(Typeface.MONOSPACE, Typeface.BOLD));
+                    canvas.drawText(activeGuard != null ? activeGuard.licence : "LIC-3943517", dp(18), dp(118), textPaint);
+                    textPaint.setTypeface(Typeface.DEFAULT);
+
+                    // Employer & Jurisdiction
                     textPaint.setColor(colMuted);
-                    textPaint.setTextSize(dp(9));
-                    canvas.drawText("CERTIFIED PRACTITIONER:", dp(18), dp(66), textPaint);
+                    textPaint.setTextSize(dpf(10f));
+                    canvas.drawText("EMPLOYER: DOHERTY SECURITY SERVICES · POST 01", dp(18), dp(142), textPaint);
+                    canvas.drawText("ACT: SECURITY PROVIDERS ACT 1993 (QLD)", dp(18), dp(162), textPaint);
 
-                    subTextPaint.setColor(colPale);
-                    subTextPaint.setTextSize(dp(16));
-                    canvas.drawText("Officer Lochran Doherty", dp(18), dp(84), subTextPaint);
+                    // Footer Row
+                    textPaint.setColor(colAccent);
+                    textPaint.setTextSize(dpf(9.5f));
+                    canvas.drawText("🔄 TAP TO FLIP QR CODE", dp(18), h - dp(16), textPaint);
 
-                    textPaint.setColor(colMuted);
-                    textPaint.setTextSize(dp(9));
-                    canvas.drawText("TRAINING BODY: St John Ambulance Australia", dp(18), dp(104), textPaint);
+                    textPaint.setColor(colQuiet);
+                    textPaint.setTextSize(dpf(9f));
+                    textPaint.setTextAlign(Paint.Align.RIGHT);
+                    canvas.drawText("EXP: 15 MAY 2027", w - dp(18), h - dp(16), textPaint);
 
+                } else {
+                    // Header Row
                     textPaint.setColor(colEmerald);
-                    textPaint.setTextSize(dp(12));
-                    canvas.drawText("CERT ID: SJA-QLD-849102-K", dp(18), dp(120), textPaint);
-
-                    textPaint.setColor(colMuted);
-                    textPaint.setTextSize(dp(9));
-                    canvas.drawText("CPR RE-CERT DUE: 12 MAR 2026 (Annual Compliant)", dp(18), dp(138), textPaint);
-                    canvas.drawText("FIRST AID EXPIRY: 12 MAR 2028 (3-Yr Triennial)", dp(18), dp(152), textPaint);
+                    textPaint.setTextSize(dpf(9.5f));
+                    textPaint.setTextAlign(Paint.Align.LEFT);
+                    canvas.drawText("ST JOHN AMBULANCE AUSTRALIA", dp(18), dp(28), textPaint);
 
                     Paint pillBg = new Paint(Paint.ANTI_ALIAS_FLAG);
                     pillBg.setColor(colEmeraldSoft);
-                    RectF pillR = new RectF(w - dp(116), dp(22), w - dp(18), dp(44));
+                    RectF pillR = new RectF(w - dp(112), dp(16), w - dp(18), dp(36));
                     canvas.drawRoundRect(pillR, dp(6), dp(6), pillBg);
 
                     textPaint.setColor(colEmerald);
-                    textPaint.setTextSize(dp(9));
+                    textPaint.setTextSize(dpf(9f));
                     textPaint.setTextAlign(Paint.Align.CENTER);
                     canvas.drawText("✓ WHS COMPLIANT", pillR.centerX(), pillR.centerY() + dp(3), textPaint);
 
-                    textPaint.setColor(colQuiet);
-                    textPaint.setTextSize(dp(8));
-                    textPaint.setTextAlign(Paint.Align.RIGHT);
-                    canvas.drawText("ANNUAL CPR REFRESHED", w - dp(18), h - dp(14), textPaint);
-                }
+                    // Name
+                    subTextPaint.setColor(0xFFFFFFFF);
+                    subTextPaint.setTextSize(dpf(16f));
+                    subTextPaint.setTextAlign(Paint.Align.LEFT);
+                    canvas.drawText("OFFICER LOCHRAN DOHERTY", dp(18), dp(66), subTextPaint);
 
-                textPaint.setColor(colAccent);
-                textPaint.setTextSize(dp(9));
-                textPaint.setTextAlign(Paint.Align.LEFT);
-                canvas.drawText("🔄 TAP CARD TO FLIP VERIFICATION QR", dp(18), h - dp(14), textPaint);
+                    // Qualification Title
+                    textPaint.setColor(colPale);
+                    textPaint.setTextSize(dpf(11f));
+                    textPaint.setTextAlign(Paint.Align.LEFT);
+                    canvas.drawText("HLTAID011 PROVIDE FIRST AID & CPR", dp(18), dp(88), textPaint);
+
+                    // Cert ID
+                    textPaint.setColor(colEmerald);
+                    textPaint.setTextSize(dpf(13.5f));
+                    textPaint.setTypeface(Typeface.create(Typeface.MONOSPACE, Typeface.BOLD));
+                    canvas.drawText("CERT: SJA-QLD-849102-K", dp(18), dp(118), textPaint);
+                    textPaint.setTypeface(Typeface.DEFAULT);
+
+                    // Accreditations
+                    textPaint.setColor(colMuted);
+                    textPaint.setTextSize(dpf(10f));
+                    canvas.drawText("RTO: #8801 · NATIONALLY RECOGNISED TRAINING", dp(18), dp(142), textPaint);
+                    canvas.drawText("CPR RE-CERTIFIED · 3-YR TRIENNIAL FIRST AID", dp(18), dp(162), textPaint);
+
+                    // Footer Row
+                    textPaint.setColor(colAccent);
+                    textPaint.setTextSize(dpf(9.5f));
+                    canvas.drawText("🔄 TAP TO FLIP QR CODE", dp(18), h - dp(16), textPaint);
+
+                    textPaint.setColor(colQuiet);
+                    textPaint.setTextSize(dpf(9f));
+                    textPaint.setTextAlign(Paint.Align.RIGHT);
+                    canvas.drawText("VALID THRU 2028", w - dp(18), h - dp(16), textPaint);
+                }
 
             } else {
                 textPaint.setColor(colAccent);
-                textPaint.setTextSize(dp(10));
+                textPaint.setTextSize(dpf(10f));
                 textPaint.setTextAlign(Paint.Align.LEFT);
-                canvas.drawText("DIGITAL AUDIT & JURISDICTION VERIFICATION", dp(18), dp(26), textPaint);
+                canvas.drawText("DIGITAL AUDIT & JURISDICTION VERIFICATION", dp(18), dp(28), textPaint);
 
-                float qrSize = dp(110);
+                float qrSize = dp(120);
                 float qx = dp(18);
-                float qy = dp(38);
+                float qy = dp(42);
 
                 qrPaint.setColor(0xFFFFFFFF);
                 canvas.drawRoundRect(new RectF(qx, qy, qx + qrSize, qy + qrSize), dp(8), dp(8), qrPaint);
@@ -5016,20 +5172,18 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
                 }
 
                 textPaint.setColor(colPale);
-                textPaint.setTextSize(dp(11));
+                textPaint.setTextSize(dpf(12f));
                 textPaint.setTextAlign(Paint.Align.LEFT);
-                canvas.drawText("QLD REGULATED ID", qx + qrSize + dp(14), qy + dp(16), textPaint);
+                canvas.drawText("QLD REGULATED ID", qx + qrSize + dp(14), qy + dp(18), textPaint);
 
                 textPaint.setColor(colMuted);
-                textPaint.setTextSize(dp(9));
-                canvas.drawText("HASH: 7f8a9b2c...41207", qx + qrSize + dp(14), qy + dp(34), textPaint);
-                canvas.drawText("CHAIN: SHA-256 SPARK", qx + qrSize + dp(14), qy + dp(50), textPaint);
-                canvas.drawText("SECURITY LIC: #41207", qx + qrSize + dp(14), qy + dp(66), textPaint);
-                canvas.drawText("FIRST AID: SJA-849102", qx + qrSize + dp(14), qy + dp(82), textPaint);
+                textPaint.setTextSize(dpf(9.5f));
+                canvas.drawText("HASH: 7f8a9b2c...41207", qx + qrSize + dp(14), qy + dp(38), textPaint);
+                canvas.drawText("CHAIN: SHA-256 SPARK", qx + qrSize + dp(14), qy + dp(56), textPaint);
+                canvas.drawText("SECURITY LIC: #3943517", qx + qrSize + dp(14), qy + dp(74), textPaint);
+                canvas.drawText("FIRST AID: SJA-849102", qx + qrSize + dp(14), qy + dp(92), textPaint);
 
                 textPaint.setColor(colEmerald);
-                textPaint.setTextSize(dp(9));
-                canvas.drawText("✓ SIGNED IMMUTABLE", qx + qrSize + dp(14), qy + dp(100), textPaint);
 
                 textPaint.setColor(colAccent);
                 textPaint.setTextSize(dp(9));
@@ -5086,7 +5240,7 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
         final HolographicCardView holoCard = new HolographicCardView(this);
         activeHoloCard = holoCard;
         LinearLayout.LayoutParams hcp = new LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT, dp(190));
+                LinearLayout.LayoutParams.MATCH_PARENT, dp(230));
         hcp.bottomMargin = dp(12);
         holoCard.setLayoutParams(hcp);
 
@@ -10996,7 +11150,7 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
             rosterDetailContainer = new LinearLayout(this);
             rosterDetailContainer.setOrientation(LinearLayout.VERTICAL);
             rightCol.addView(rosterDetailContainer);
-            updateRosterDayDetail(5); // Default to Saturday 29 Aug (Tonight)
+            updateRosterDayDetail(2); // Default to Today (Index 2)
 
             split.addView(leftCol);
             split.addView(rightCol);
@@ -11075,7 +11229,7 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
         rosterDetailContainer = new LinearLayout(this);
         rosterDetailContainer.setOrientation(LinearLayout.VERTICAL);
         rLayout.addView(rosterDetailContainer);
-        updateRosterDayDetail(5); // Default to Saturday 29 Aug (Tonight)
+        updateRosterDayDetail(2); // Default to Today (Index 2)
 
         // 7. Fortnightly Hours & Penalty Progress Deck
         rLayout.addView(contactsSectionHeader("📊 FORTNIGHTLY WORKLOAD & PENALTIES", colCyan));
@@ -11397,18 +11551,32 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
 
         rosterDetailContainer.removeAllViews();
 
-        final String[][] daysData = {
-            {"Mon 24 Aug", "16:00 – 00:00 (8.0h)", "COMPLETED", "Gatehouse Post 01 · Static Guarding", "Bill (00:00 Relief)", "15% Night Loading", "Lochran Doherty"},
-            {"Tue 25 Aug", "23:54 – 06:00 (6.1h)", "COMPLETED", "Gatehouse Post 01 · Static Guarding", "Chris Ireton (16:00 Relief)", "15% Night Loading", "Brian Rush"},
-            {"Wed 26 Aug", "22:00 – 06:00 (8.0h)", "COMPLETED", "Gatehouse Post 01 · Static Guarding", "Jon Naylor (15:35 Relief)", "15% Night Loading", "Chris Ireton"},
-            {"Thu 27 Aug", "21:57 – 06:00 (8.0h)", "COMPLETED", "Gatehouse Post 01 · Static Guarding", "Jon Naylor (15:43 Relief)", "15% Night Loading", "Brian Rush"},
-            {"Fri 28 Aug", "19:59 – 05:05 (9.1h)", "COMPLETED", "Gatehouse Post 01 · Static Guarding", "Bill (16:00 Relief)", "15% Night Loading", "Brian Rush"},
-            {"Sat 29 Aug (Tonight)", "18:00 – 06:00 (12.0h)", "ACTIVE SHIFT", "Gatehouse Post 01 · Static Guarding", "Brian Rush (00:00 Handover Relief)", "15% Night Loading + Sat Weekend Rate", "Lochran Doherty"},
-            {"Sun 30 Aug (Tomorrow)", "06:00 – 18:00 (12.0h)", "CONFIRMED", "Gatehouse Post 01 · Static Guarding", "Bill (00:00 Relief)", "15% Night Loading + Sun Weekend Rate", "Lochran Doherty"}
-        };
+        Calendar shiftCal = Calendar.getInstance();
+        shiftCal.add(Calendar.DAY_OF_YEAR, dayIndex - 2);
+        SimpleDateFormat sdf = new SimpleDateFormat("EEE d MMM", Locale.US);
+        String dayHeader = sdf.format(shiftCal.getTime());
+        boolean isToday = (dayIndex == 2);
+        boolean isTomorrow = (dayIndex == 3);
+        String label = isToday ? (dayHeader + " (Today)") : (isTomorrow ? (dayHeader + " (Tomorrow)") : dayHeader);
 
-        final String[] dayInfo = daysData[Math.max(0, Math.min(daysData.length - 1, dayIndex))];
-        boolean isTonight = dayIndex == 5; // Saturday 29 Aug
+        String[] guards = {"Bill", "Brian Rush", "Jon Naylor", "Claren", "Chris Ireton", "Ken", "Lochran Doherty"};
+        String guardOn = (dayIndex == 2 || dayIndex == 6) ? "Lochran Doherty" : guards[dayIndex % guards.length];
+        String reliefOn = (dayIndex == 2) ? "Brian Rush (00:00 Handover)" : (guards[(dayIndex + 1) % guards.length] + " (06:00 Relief)");
+        String status = (dayIndex < 2) ? "COMPLETED" : (isToday ? "ACTIVE SHIFT" : "CONFIRMED");
+        String hours = isToday ? "18:00 – 06:00 (12.0h)" : (dayIndex % 2 == 0 ? "16:00 – 00:00 (8.0h)" : "22:00 – 06:00 (8.0h)");
+        String rate = (shiftCal.get(Calendar.DAY_OF_WEEK) == Calendar.SATURDAY || shiftCal.get(Calendar.DAY_OF_WEEK) == Calendar.SUNDAY) 
+                ? "15% Night Loading + Weekend Rate" : "15% Night Loading Standard";
+
+        final String[] dayInfo = {
+            label,
+            hours,
+            status,
+            "Gatehouse Post 01 · Static Guarding",
+            reliefOn,
+            rate,
+            guardOn
+        };
+        boolean isTonight = isToday;
 
         final LinearLayout card = new LinearLayout(this);
         card.setOrientation(LinearLayout.VERTICAL);
@@ -11435,7 +11603,7 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
                         float dx = ev.getX() - downX;
                         float dy = Math.abs(ev.getY() - downY);
                         if (Math.abs(dx) > dp(36) && Math.abs(dx) > dy * 1.2f) {
-                            if (dx < 0 && dayIndex < daysData.length - 1) {
+                            if (dx < 0 && dayIndex < 6) {
                                 hapticClick();
                                 if (rosterScrubber != null) rosterScrubber.animateToPosition(dayIndex + 1);
                                 updateRosterDayDetail(dayIndex + 1);
@@ -11706,8 +11874,6 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
     // =========================================================================
 
     private class FluidRosterDayScrubberView extends View {
-        private final String[] titles = {"SAT 29", "SUN 30", "MON 31", "TUE 01", "WED 02", "THU 03", "FRI 04"};
-        
         private final Paint trackPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
         private final Paint borderPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
         private final Paint pillPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
@@ -11719,16 +11885,17 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
         private final RectF pillRect = new RectF();
         private final RectF glowRect = new RectF();
 
-        private final String[] days = {"MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN"};
-        private final String[] dates = {"24", "25", "26", "27", "28", "29", "30"};
+        private final String[] days = new String[7];
+        private final String[] dates = new String[7];
         private final boolean[] isShift = {true, true, true, true, true, true, true};
 
-        private float indicatorPos = 5f; // Default to Saturday 29 Aug
+        private float indicatorPos = 2f; // Default to Today
         private ValueAnimator snapAnimator;
-        private int lastHover = 5;
+        private int lastHover = 2;
 
         public FluidRosterDayScrubberView(Context context) {
             super(context);
+            initCalendarDates();
             trackPaint.setStyle(Paint.Style.FILL);
             borderPaint.setStyle(Paint.Style.STROKE);
             borderPaint.setStrokeWidth(dpf(1f));
@@ -11739,6 +11906,18 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
             datePaint.setTextAlign(Paint.Align.CENTER);
             datePaint.setTypeface(Typeface.create(Typeface.DEFAULT, Typeface.BOLD));
             dotPaint.setStyle(Paint.Style.FILL);
+        }
+
+        private void initCalendarDates() {
+            Calendar cal = Calendar.getInstance();
+            cal.add(Calendar.DAY_OF_YEAR, -2);
+            SimpleDateFormat dfDay = new SimpleDateFormat("EEE", Locale.US);
+            SimpleDateFormat dfDate = new SimpleDateFormat("dd", Locale.US);
+            for (int i = 0; i < 7; i++) {
+                days[i] = dfDay.format(cal.getTime()).toUpperCase();
+                dates[i] = dfDate.format(cal.getTime());
+                cal.add(Calendar.DAY_OF_YEAR, 1);
+            }
         }
 
         private float dpf(float v) {
