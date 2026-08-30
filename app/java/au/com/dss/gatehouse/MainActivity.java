@@ -303,6 +303,8 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
     private boolean hasAccel = false;
     private boolean hasMag = false;
     private float currentAzimuth = 0f;
+    private float smoothedAzimuth = 0f;
+    private boolean isCompassInitialized = false;
 
     // 🔦 Robust Double-Chop Shake Detector
     private float[] lastGravity = new float[3];
@@ -843,19 +845,39 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
         rootFrame.setOnApplyWindowInsetsListener(new View.OnApplyWindowInsetsListener() {
             @Override
             public WindowInsets onApplyWindowInsets(View v, WindowInsets insets) {
-                int topInset = insets.getSystemWindowInsetTop();
-                int botInset = insets.getSystemWindowInsetBottom();
-                int leftInset = insets.getSystemWindowInsetLeft();
-                int rightInset = insets.getSystemWindowInsetRight();
+                int topInset = 0;
+                int botInset = 0;
+                int leftInset = 0;
+                int rightInset = 0;
 
-                int calculatedTop = Math.max(defaultPadTop, topInset + dp(6));
-                int calculatedBot = Math.max(dp(12), botInset + dp(6));
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+                    android.graphics.Insets sb = insets.getInsets(WindowInsets.Type.systemBars() | WindowInsets.Type.displayCutout());
+                    topInset = sb.top;
+                    botInset = sb.bottom;
+                    leftInset = sb.left;
+                    rightInset = sb.right;
+                } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+                    topInset = insets.getSystemWindowInsetTop();
+                    botInset = insets.getSystemWindowInsetBottom();
+                    leftInset = insets.getSystemWindowInsetLeft();
+                    rightInset = insets.getSystemWindowInsetRight();
+                }
+
+                int calculatedTop = Math.max(topInset + dp(6), defaultPadTop);
+                int calculatedBot = Math.max(botInset + dp(10), dp(16));
 
                 screenLayout.setPadding(defaultPadSide + leftInset, calculatedTop, defaultPadSide + rightInset, calculatedBot);
                 if (fDeputyScroll != null) {
                     fDeputyScroll.setPadding(leftInset, calculatedTop, rightInset, calculatedBot);
                 }
                 return insets;
+            }
+        });
+        rootFrame.post(new Runnable() {
+            public void run() {
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.KITKAT_WATCH) {
+                    rootFrame.requestApplyInsets();
+                }
             }
         });
 
@@ -1284,13 +1306,17 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
 
     @Override
     public void onSensorChanged(SensorEvent event) {
-        float azimuthDegrees = 0;
+        boolean hasNewHeading = false;
+        float rawAzimuthDegrees = 0f;
+
         if (event.sensor.getType() == Sensor.TYPE_ROTATION_VECTOR) {
             float[] rotationMatrix = new float[9];
             SensorManager.getRotationMatrixFromVector(rotationMatrix, event.values);
             float[] orientation = new float[3];
             SensorManager.getOrientation(rotationMatrix, orientation);
-            azimuthDegrees = (float) Math.toDegrees(orientation[0]);
+            rawAzimuthDegrees = (float) Math.toDegrees(orientation[0]);
+            if (rawAzimuthDegrees < 0) rawAzimuthDegrees += 360f;
+            hasNewHeading = true;
         } else if (event.sensor.getType() == Sensor.TYPE_ACCELEROMETER) {
             System.arraycopy(event.values, 0, lastAccel, 0, 3);
             hasAccel = true;
@@ -1333,19 +1359,37 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
             hasMag = true;
         }
 
-        if (rotationSensor == null && hasAccel && hasMag) {
+        // Fallback calculation if device has no hardware TYPE_ROTATION_VECTOR sensor
+        if (rotationSensor == null && hasAccel && hasMag && (event.sensor.getType() == Sensor.TYPE_MAGNETIC_FIELD || event.sensor.getType() == Sensor.TYPE_ACCELEROMETER)) {
             float[] r = new float[9];
             float[] i = new float[9];
             if (SensorManager.getRotationMatrix(r, i, lastAccel, lastMag)) {
                 float[] orientation = new float[3];
                 SensorManager.getOrientation(r, orientation);
-                azimuthDegrees = (float) Math.toDegrees(orientation[0]);
+                rawAzimuthDegrees = (float) Math.toDegrees(orientation[0]);
+                if (rawAzimuthDegrees < 0) rawAzimuthDegrees += 360f;
+                hasNewHeading = true;
             }
         }
 
-        if (azimuthDegrees < 0) azimuthDegrees += 360;
-        currentAzimuth = azimuthDegrees;
-        updateCompassDisplay(azimuthDegrees);
+        if (hasNewHeading) {
+            if (!isCompassInitialized) {
+                smoothedAzimuth = rawAzimuthDegrees;
+                isCompassInitialized = true;
+            } else {
+                // Circular shortest-path angular low-pass filter to completely eliminate jitter & micro-spikes
+                float delta = rawAzimuthDegrees - smoothedAzimuth;
+                while (delta < -180f) delta += 360f;
+                while (delta > 180f) delta -= 360f;
+
+                // 0.12f damping factor provides butter-smooth interpolation with immediate response
+                smoothedAzimuth += delta * 0.12f;
+                if (smoothedAzimuth < 0) smoothedAzimuth += 360f;
+                if (smoothedAzimuth >= 360f) smoothedAzimuth -= 360f;
+            }
+            currentAzimuth = smoothedAzimuth;
+            updateCompassDisplay(smoothedAzimuth);
+        }
     }
 
     @Override
