@@ -86,14 +86,23 @@ public class DeputyNotifier {
         }
     }
 
+    public static void cancelShiftNotifications(Context context) {
+        if (context != null) {
+            NotificationManager nm = (NotificationManager) context.getSystemService(Context.NOTIFICATION_SERVICE);
+            if (nm != null) {
+                nm.cancel(1001);
+                for (int id = 2000; id <= 2999; id++) {
+                    nm.cancel(id);
+                }
+            }
+        }
+    }
+
     public static void clearNotificationHistory(Context context) {
         if (context != null) {
             context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE).edit().clear().apply();
-            NotificationManager nm = (NotificationManager) context.getSystemService(Context.NOTIFICATION_SERVICE);
-            if (nm != null) {
-                nm.cancelAll();
-            }
-            Log.i(TAG, "Notification history cleared for fresh briefing dispatch");
+            cancelShiftNotifications(context);
+            Log.i(TAG, "Notification history cleared");
         }
     }
 
@@ -114,6 +123,8 @@ public class DeputyNotifier {
      */
     public static void processSyncResult(final Context context, final DeputyApi.DeputyRosterResult result) {
         if (context == null || result == null || result.weekShifts == null) return;
+        // Do not spam shift notifications for offline fallback or mock cached schedules
+        if (!result.isLive) return;
         initChannels(context);
 
         Executors.newSingleThreadExecutor().execute(new Runnable() {

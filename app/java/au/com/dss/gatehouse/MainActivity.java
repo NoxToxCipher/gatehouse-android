@@ -418,7 +418,7 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
         initCameraManager();
 
         DeputyNotifier.initChannels(this);
-        DeputyNotifier.clearNotificationHistory(this);
+        DeputyNotifier.cancelShiftNotifications(this);
         DeputyNotifier.schedulePeriodicAlarm(this);
         if (Build.VERSION.SDK_INT >= 33 && checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
             requestPermissions(new String[]{Manifest.permission.POST_NOTIFICATIONS}, 101);
