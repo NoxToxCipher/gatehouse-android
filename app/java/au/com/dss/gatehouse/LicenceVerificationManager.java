@@ -298,6 +298,8 @@ public class LicenceVerificationManager {
                             "Tap to open Officer Credential Vault & Compliance Sheet."
                     ))
                     .setContentIntent(pi)
+                    .addAction(iconShield, "[ RENEWAL DETAILS ]", pi)
+                    .setVibrate(new long[]{0, 150, 100, 150})
                     .setAutoCancel(true);
 
             try {

@@ -365,6 +365,8 @@ public class AirspaceRadarManager {
                     .setColor(0xFFFF5252)
                     .setAutoCancel(true)
                     .setContentIntent(pi)
+                    .addAction(iconShield, "[ AIRSPACE RADAR ]", pi)
+                    .setVibrate(new long[]{0, 200, 100, 200, 100, 200})
                     .setPriority(Notification.PRIORITY_HIGH);
 
             try {

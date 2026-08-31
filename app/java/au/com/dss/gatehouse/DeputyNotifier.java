@@ -453,6 +453,8 @@ public class DeputyNotifier {
                    .setContentText(shift.getFormattedHoursRange() + " · 🌤️ " + String.format(Locale.US, "%.1f°C", wf.tempC) + " · " + shift.operationalUnit)
                    .setSubText("DOHERTY SECURITY SERVICES")
                    .setContentIntent(pi)
+                   .addAction(iconShield, "[ OPEN ROSTER ]", pi)
+                   .setVibrate(new long[]{0, 150, 100, 150})
                    .setAutoCancel(true);
 
             try {

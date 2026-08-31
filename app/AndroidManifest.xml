@@ -30,6 +30,7 @@
     <uses-feature android:name="android.hardware.microphone" android:required="false" />
     <uses-feature android:name="android.hardware.nfc" android:required="false" />
     <uses-feature android:name="android.hardware.bluetooth_le" android:required="false" />
+    <uses-feature android:name="android.hardware.type.watch" android:required="false" />
     <application
         android:label="Gatehouse"
         android:icon="@mipmap/ic_launcher"
@@ -48,6 +49,31 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+
+        <!-- ⌚ Wear OS Interactive Watch Surfaces -->
+        <activity
+            android:name=".WearChronographActivity"
+            android:exported="true"
+            android:launchMode="singleTask"
+            android:theme="@android:style/Theme.Material.NoActionBar" />
+
+        <activity
+            android:name=".WearPressureGaugeActivity"
+            android:exported="true"
+            android:launchMode="singleTask"
+            android:theme="@android:style/Theme.Material.NoActionBar" />
+
+        <activity
+            android:name=".WearRadarActivity"
+            android:exported="true"
+            android:launchMode="singleTask"
+            android:theme="@android:style/Theme.Material.NoActionBar" />
+
+        <activity
+            android:name=".WearPttActivity"
+            android:exported="true"
+            android:launchMode="singleTask"
+            android:theme="@android:style/Theme.Material.NoActionBar" />
 
         <!-- Home Screen App Widget (Chronograph Dial) -->
         <receiver android:name=".GatehouseWidgetProvider"

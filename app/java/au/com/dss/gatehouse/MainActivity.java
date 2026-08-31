@@ -1009,27 +1009,19 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
             }
         });
 
-        // 1. 🎨 4-Theme Fluid Animated Sliding Switcher Bar
-        animatedThemeBar = new FluidAnimatedThemeBarView(this);
-        LinearLayout.LayoutParams tblp = new LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT, dp(32));
-        tblp.bottomMargin = dp(2);
-        animatedThemeBar.setLayoutParams(tblp);
-        screenLayout.addView(animatedThemeBar);
-
-        // 2. ⚡ Real-Time Diagnostics Strip
+        // 1. ⚡ Real-Time Diagnostics Strip
         screenLayout.addView(buildDiagnosticsStrip());
 
-        // 3. 📱 4-Tab Fluid Animated Sliding Tab Bar
+        // 2. 📱 3-Tab Fluid Animated Sliding Tab Bar
         animatedTabBar = new FluidAnimatedTabBarView(this);
         LinearLayout.LayoutParams abl = new LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT, dp(40));
+                LinearLayout.LayoutParams.MATCH_PARENT, dp(42));
         abl.topMargin = dp(2);
         abl.bottomMargin = dp(4);
         animatedTabBar.setLayoutParams(abl);
         screenLayout.addView(animatedTabBar);
 
-        // 4. 🎛️ 4-PAGE SYNCHRONIZED HORIZONTAL PAGER CONTAINER
+        // 3. 🎛️ 3-PAGE SYNCHRONIZED HORIZONTAL PAGER CONTAINER
         tabPagerFrame = new FrameLayout(this) {
             @Override
             public boolean onInterceptTouchEvent(MotionEvent ev) {
@@ -1082,7 +1074,7 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
                             isPageSwiping = false;
                             getParent().requestDisallowInterceptTouchEvent(false);
                             float totalDx = ev.getX() - pageSwipeDownX;
-                            if (totalDx < -w * 0.18f && currentTab < 3) {
+                            if (totalDx < -w * 0.18f && currentTab < 2) {
                                 animateTabToPosition(currentTab + 1);
                             } else if (totalDx > w * 0.18f && currentTab > 0) {
                                 animateTabToPosition(currentTab - 1);
@@ -1128,16 +1120,7 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
         scrollContacts.addView(contactsContent);
         tabPagerFrame.addView(scrollContacts);
 
-        // --- PAGE 2: 📅 UNIFIED DEPUTY ROSTER VIEW ---
-        scrollHandbook = new ScrollView(this);
-        scrollHandbook.setBackgroundColor(colBg);
-        scrollHandbook.setVerticalScrollBarEnabled(false);
-        scrollHandbook.setLayoutParams(new FrameLayout.LayoutParams(
-                FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT));
-        scrollHandbook.addView(buildRosterView());
-        tabPagerFrame.addView(scrollHandbook);
-
-        // --- PAGE 3: 🛠️ TOOLS VIEW ---
+        // --- PAGE 2: 🛠️ TOOLS VIEW ---
         scrollTools = new ScrollView(this);
         scrollTools.setBackgroundColor(colBg);
         scrollTools.setVerticalScrollBarEnabled(false);
@@ -3223,7 +3206,7 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
 
     
     public void applyTabScrollPosition(float pos) {
-        currentTabFloat = Math.max(0f, Math.min(3f, pos));
+        currentTabFloat = Math.max(0f, Math.min(2f, pos));
         if (animatedTabBar != null) {
             animatedTabBar.setIndicatorFloat(currentTabFloat);
         }
@@ -3231,7 +3214,7 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
         int w = tabPagerFrame.getWidth();
         if (w <= 0) return;
 
-        final ScrollView[] pages = {scrollPatrol, scrollContacts, scrollHandbook, scrollTools};
+        final ScrollView[] pages = {scrollPatrol, scrollContacts, scrollTools};
         for (int i = 0; i < pages.length; i++) {
             ScrollView p = pages[i];
             if (p == null) continue;
@@ -3256,7 +3239,7 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
         if (tabSlideAnimator != null && tabSlideAnimator.isRunning()) {
             tabSlideAnimator.cancel();
         }
-        final int target = Math.max(0, Math.min(3, targetTab));
+        final int target = Math.max(0, Math.min(2, targetTab));
         currentTab = target;
         if (animatedTabBar != null) {
             animatedTabBar.animateToTab(target);
@@ -3293,130 +3276,84 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
         // 1. Hero Card: Crake-style Tester Feedback Hub (Overlord & Testers)
         container.addView(buildTesterFeedbackCard());
 
-        // 2. Interactive Operational Grid (2 Columns, High Density, Zero Wasted Space)
-        LinearLayout grid = new LinearLayout(this);
-        grid.setOrientation(LinearLayout.VERTICAL);
-
-        // Row 1: Hourly OTA & Hydraulic Line Gauges
+        // 2. ⚡ OPERATIONAL HARDWARE & COMMS DECK
+        container.addView(sectionHeader("⚡ OPERATIONAL HARDWARE & COMMS", null));
         LinearLayout r1 = new LinearLayout(this);
         r1.setOrientation(LinearLayout.HORIZONTAL);
-        r1.addView(buildCompactToolTile("⚡", "OTA Updates", "v" + AutoUpdateManager.getAppVersion(this), colEmerald, "Check & install live build", new View.OnClickListener() {
-            public void onClick(View v) {
-                hapticHeavyClick();
-                AutoUpdateManager.checkForUpdateAsync(MainActivity.this, true, new AutoUpdateManager.UpdateCheckCallback() {
-                    @Override
-                    public void onUpdateFound(final String newSha, final long bytes) {
-                        runOnUiThread(new Runnable() {
-                            public void run() {
-                                banner.setText("✓ New OTA update ready (SHA " + (newSha.length() > 8 ? newSha.substring(0, 8) : newSha) + ") · Installing");
-                                banner.setVisibility(View.VISIBLE);
-                            }
-                        });
-                    }
-                    @Override
-                    public void onNoUpdateAvailable() {
-                        runOnUiThread(new Runnable() {
-                            public void run() {
-                                Toast.makeText(MainActivity.this, "✓ Gatehouse is up to date", Toast.LENGTH_SHORT).show();
-                            }
-                        });
-                    }
-                    @Override
-                    public void onError(final String message) {
-                        runOnUiThread(new Runnable() {
-                            public void run() {
-                                Toast.makeText(MainActivity.this, "Update check: " + message, Toast.LENGTH_SHORT).show();
-                            }
-                        });
-                    }
-                });
-            }
-        }));
-        r1.addView(buildCompactToolTile("🎛️", "Line Gauges", "1,200 PSI", colAccent, "Analog dial & Ada log", new View.OnClickListener() {
-            public void onClick(View v) {
-                hapticHeavyClick();
-                promptPumpHouseCheck("Manual Line Gauge (Lot 16 Booster)", "GAUGE-MANUAL-01");
-            }
-        }));
-        grid.addView(r1);
-
-        // Row 2: Site Compass & Site Lighting (Torch)
-        LinearLayout r2 = new LinearLayout(this);
-        r2.setOrientation(LinearLayout.HORIZONTAL);
-        r2.addView(buildCompactToolTile("🧭", "Site Compass", "360° LIVE", colCyan, "Shortest-path azimuth", new View.OnClickListener() {
-            public void onClick(View v) {
-                hapticClick();
-                showCompassDialog();
-            }
-        }));
-        r2.addView(buildCompactToolTile("🔦", "Site Torch", isHardwareTorchOn ? "ON" : "CHOP READY", isHardwareTorchOn ? colEmerald : colAccent, "Shake / chop gesture", new View.OnClickListener() {
+        r1.addView(buildCompactToolTile("🔦", "Site Torch", isHardwareTorchOn ? "ACTIVE" : "READY", isHardwareTorchOn ? colEmerald : colAccent, "High-beam flashlight", new View.OnClickListener() {
             public void onClick(View v) {
                 hapticHeavyClick();
                 toggleHardwareTorch();
             }
         }));
-        grid.addView(r2);
-
-        // Row 3: Kingston Weather & GNSS Radar
-        LinearLayout r3 = new LinearLayout(this);
-        r3.setOrientation(LinearLayout.HORIZONTAL);
-        r3.addView(buildCompactToolTile("🌤️", "Site Weather", String.format(Locale.US, "%.1f°C", curTempC), colCyan, "Thermal & hydration", new View.OnClickListener() {
-            public void onClick(View v) {
-                hapticClick();
-                showWeatherDialog();
-            }
-        }));
-        r3.addView(buildCompactToolTile("🛰️", "GNSS Radar", "12 SATS", colEmerald, "Polar satellite fix", new View.OnClickListener() {
-            public void onClick(View v) {
-                hapticClick();
-                showGpsDialog();
-            }
-        }));
-        grid.addView(r3);
-
-        // Row 4: Peer Mesh & Officer Vault
-        LinearLayout r4 = new LinearLayout(this);
-        r4.setOrientation(LinearLayout.HORIZONTAL);
-        r4.addView(buildCompactToolTile("📡", "Offline Mesh", "P2P SYNC", colCyan, "Encrypted local sync", new View.OnClickListener() {
-            public void onClick(View v) {
-                hapticClick();
-                showNfcBleMeshDialog();
-            }
-        }));
-        r4.addView(buildCompactToolTile("🪪", "Officer Vault", "VERIFIED", colPale, "Digital ID & Certs", new View.OnClickListener() {
-            public void onClick(View v) {
-                hapticClick();
-                showOfficerCredentialVaultDialog();
-            }
-        }));
-        grid.addView(r4);
-
-        // Row 5: DSS Digital Radio (PTT) & Emergency SOS
-        LinearLayout r5 = new LinearLayout(this);
-        r5.setOrientation(LinearLayout.HORIZONTAL);
-        r5.addView(buildCompactToolTile("📻", "PTT Radio", "CH 01 TALK", colAccent, "Encrypted local PTT", new View.OnClickListener() {
+        r1.addView(buildCompactToolTile("📻", "PTT Radio", "CH 01 TALK", colAccent, "467.56 MHz · Encrypted", new View.OnClickListener() {
             public void onClick(View v) {
                 hapticHeavyClick();
                 showPttRadioDialog();
             }
         }));
-        r5.addView(buildCompactToolTile("🚨", "Hot-Mic SOS", "10s BURST", 0xFFEF4444, "Priority distress audio", new View.OnClickListener() {
+        container.addView(r1);
+
+        LinearLayout r2 = new LinearLayout(this);
+        r2.setOrientation(LinearLayout.HORIZONTAL);
+        r2.addView(buildCompactToolTile("🚨", "Hot-Mic SOS", "10s BURST", 0xFFEF4444, "Priority distress audio", new View.OnClickListener() {
             public void onClick(View v) {
                 triggerPttHotMicSos();
             }
         }));
-        grid.addView(r5);
-
-        // Row 6: Deputy Compliance Library & Award Guide
-        LinearLayout r6 = new LinearLayout(this);
-        r6.setOrientation(LinearLayout.HORIZONTAL);
-        r6.addView(buildCompactToolTile("📚", "Deputy Docs", "8 DOCS", 0xFF00E5FF, "Award, Fair Work & WHS", new View.OnClickListener() {
+        r2.addView(buildCompactToolTile("🎛️", "Line Gauges", "1,200 PSI", colAccent, "Pump house inspection", new View.OnClickListener() {
             public void onClick(View v) {
                 hapticHeavyClick();
-                showDocumentLibraryDialog();
+                promptPumpHouseCheck("Manual Line Gauge (Lot 16 Booster)", "GAUGE-MANUAL-01");
             }
         }));
-        r6.addView(buildCompactToolTile("⚖️", "Security Award", "MA000016", colAccent, "Pay rates & allowances", new View.OnClickListener() {
+        container.addView(r2);
+
+        // 3. 🛰️ SENSORS & ENVIRONMENTAL RADAR
+        container.addView(sectionHeader("🛰️ SENSORS & ENVIRONMENTAL RADAR", null));
+        LinearLayout r3 = new LinearLayout(this);
+        r3.setOrientation(LinearLayout.HORIZONTAL);
+        r3.addView(buildCompactToolTile("🧭", "Site Compass", "360° LIVE", colCyan, "Shortest-path azimuth", new View.OnClickListener() {
+            public void onClick(View v) {
+                hapticClick();
+                showCompassDialog();
+            }
+        }));
+        r3.addView(buildCompactToolTile("🌤️", "Site Weather", String.format(Locale.US, "%.1f°C", curTempC), colCyan, "Kingston thermal index", new View.OnClickListener() {
+            public void onClick(View v) {
+                hapticClick();
+                showWeatherDialog();
+            }
+        }));
+        container.addView(r3);
+
+        LinearLayout r4 = new LinearLayout(this);
+        r4.setOrientation(LinearLayout.HORIZONTAL);
+        r4.addView(buildCompactToolTile("📡", "GNSS & Radar", "12 SATS", colEmerald, "Polar satellite fix", new View.OnClickListener() {
+            public void onClick(View v) {
+                hapticClick();
+                showGpsDialog();
+            }
+        }));
+        r4.addView(buildCompactToolTile("✨", "Starlink / ISS", "RADAR PASS", 0xFF00E5FF, "Overhead celestial HUD", new View.OnClickListener() {
+            public void onClick(View v) {
+                hapticHeavyClick();
+                showSatelliteRadarDialog();
+            }
+        }));
+        container.addView(r4);
+
+        // 4. 🪪 OFFICER VAULT & COMPLIANCE
+        container.addView(sectionHeader("🪪 OFFICER VAULT & COMPLIANCE", null));
+        LinearLayout r5 = new LinearLayout(this);
+        r5.setOrientation(LinearLayout.HORIZONTAL);
+        r5.addView(buildCompactToolTile("🪪", "Officer Vault", "LIC #41207", colPale, "Digital ID & credentials", new View.OnClickListener() {
+            public void onClick(View v) {
+                hapticClick();
+                showOfficerCredentialVaultDialog();
+            }
+        }));
+        r5.addView(buildCompactToolTile("⚖️", "Security Award", "MA000016", colAccent, "Pay rates & allowances", new View.OnClickListener() {
             public void onClick(View v) {
                 hapticHeavyClick();
                 List<DeputyApi.DeputyDocument> docs = DeputyApi.getPreloadedDocuments();
@@ -3427,54 +3364,28 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
                 }
             }
         }));
-        grid.addView(r6);
+        container.addView(r5);
 
-        // Row 7: Satellite Ground Track & Starlink Train Radar
+        LinearLayout r6 = new LinearLayout(this);
+        r6.setOrientation(LinearLayout.HORIZONTAL);
+        r6.addView(buildCompactToolTile("📡", "Offline Mesh", "P2P SYNC", colCyan, "Encrypted local sync", new View.OnClickListener() {
+            public void onClick(View v) {
+                hapticClick();
+                showNfcBleMeshDialog();
+            }
+        }));
+        r6.addView(buildCompactToolTile("📚", "Deputy Docs", "8 DOCS", 0xFF00E5FF, "Award, Fair Work & WHS", new View.OnClickListener() {
+            public void onClick(View v) {
+                hapticHeavyClick();
+                showDocumentLibraryDialog();
+            }
+        }));
+        container.addView(r6);
+
+        // 5. ⚙️ PREFERENCES & SYSTEM HUB
+        container.addView(sectionHeader("⚙️ PREFERENCES & SYSTEM HUB", null));
         LinearLayout r7 = new LinearLayout(this);
         r7.setOrientation(LinearLayout.HORIZONTAL);
-        r7.addView(buildCompactToolTile("🛰️", "Satellite Sky HUD", "N2YO LIVE", 0xFF00E5FF, "ISS & Starlink Trains", new View.OnClickListener() {
-            public void onClick(View v) {
-                hapticHeavyClick();
-                showSatelliteRadarDialog();
-            }
-        }));
-        r7.addView(buildCompactToolTile("✨", "Starlink Radar", "PRE-PASS ALERT", 0xFF10B981, "2-min visual alert", new View.OnClickListener() {
-            public void onClick(View v) {
-                hapticHeavyClick();
-                showSatelliteRadarDialog();
-            }
-        }));
-        grid.addView(r7);
-
-        boolean isLandscape = getResources().getConfiguration().orientation == android.content.res.Configuration.ORIENTATION_LANDSCAPE;
-        if (isLandscape) {
-            LinearLayout split = new LinearLayout(this);
-            split.setOrientation(LinearLayout.HORIZONTAL);
-            split.setBaselineAligned(false);
-
-            LinearLayout leftCol = new LinearLayout(this);
-            leftCol.setOrientation(LinearLayout.VERTICAL);
-            LinearLayout.LayoutParams lclp = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1.05f);
-            lclp.rightMargin = dp(10);
-            leftCol.setLayoutParams(lclp);
-            leftCol.addView(contactsSectionHeader("💬 TESTER HUB & FIELD TELEMETRY", colCyan));
-            leftCol.addView(buildTesterFeedbackCard());
-
-            leftCol.addView(contactsSectionHeader("🛰️ REGIONAL FIRE & WEATHER SENSORS", colCyan));
-            FireRadarSweepView radarMini = new FireRadarSweepView(this);
-            radarMini.setLayoutParams(new LinearLayout.LayoutParams(
-                    LinearLayout.LayoutParams.MATCH_PARENT, dp(220)));
-            leftCol.addView(radarMini);
-
-            LinearLayout rightCol = new LinearLayout(this);
-            rightCol.setOrientation(LinearLayout.VERTICAL);
-            LinearLayout.LayoutParams rclp = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 0.95f);
-            rclp.leftMargin = dp(10);
-            rightCol.setLayoutParams(rclp);
-            rightCol.addView(contactsSectionHeader("🎛️ OPERATIONAL SENSOR & TOOL DECK", colAccent));
-            rightCol.addView(grid);
-
-            split.addView(leftCol);
             split.addView(rightCol);
             container.addView(split);
             return container;
@@ -15585,7 +15496,7 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
         private final RectF indRect = new RectF();
         private final RectF tempRect = new RectF();
 
-        private final String[] tabTitles = {"PATROL", "CONTACTS", "ROSTER", "TOOLS"};
+        private final String[] tabTitles = {"PATROL", "CONTACTS", "TOOLS"};
         private float indicatorFloat = 0f;
         private ValueAnimator indAnimator;
         private boolean isTabScrubbing = false;
@@ -15613,7 +15524,7 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
         }
 
         public void setIndicatorFloat(float f) {
-            this.indicatorFloat = Math.max(0f, Math.min(3f, f));
+            this.indicatorFloat = Math.max(0f, Math.min(2f, f));
             invalidate();
         }
 
@@ -15654,9 +15565,9 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
                         isDragging = true;
                     }
                     if (isDragging) {
-                        float frac = Math.max(0f, Math.min(3f, (event.getX() / w) * 4f - 0.5f));
+                        float frac = Math.max(0f, Math.min(2f, (event.getX() / w) * 3f - 0.5f));
                         indicatorFloat = frac;
-                        int nearestTab = (int) Math.min(3, Math.max(0, Math.floor(event.getX() / (w / 4f))));
+                        int nearestTab = (int) Math.min(2, Math.max(0, Math.floor(event.getX() / (w / 3f))));
                         if (nearestTab != lastHapticTab) {
                             lastHapticTab = nearestTab;
                             MainActivity.this.hapticTick();
@@ -15671,9 +15582,9 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
                     if (getParent() != null) getParent().requestDisallowInterceptTouchEvent(false);
                     int finalTab;
                     if (!isDragging) {
-                        finalTab = (int) Math.min(3, Math.max(0, Math.floor(event.getX() / (w / 4f))));
+                        finalTab = (int) Math.min(2, Math.max(0, Math.floor(event.getX() / (w / 3f))));
                     } else {
-                        finalTab = (int) Math.min(3, Math.max(0, Math.round(indicatorFloat)));
+                        finalTab = (int) Math.min(2, Math.max(0, Math.round(indicatorFloat)));
                     }
                     MainActivity.this.animateTabToPosition(finalTab);
                     invalidate();
@@ -15729,29 +15640,7 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
                     canvas.drawArc(tempRect, -38, 76, false, iconPaint);
                     break;
 
-                case 2: // Roster: Shift Calendar Schedule Matrix + Shift Marker Dots
-                    float calL = cx - size * 0.38f;
-                    float calT = cy - size * 0.32f;
-                    float calR = cx + size * 0.38f;
-                    float calB = cy + size * 0.40f;
-                    tempRect.set(calL, calT, calR, calB);
-                    canvas.drawRoundRect(tempRect, dpf(2.5f), dpf(2.5f), iconPaint);
-
-                    // Upper Header Bar
-                    canvas.drawLine(calL, cy - size * 0.08f, calR, cy - size * 0.08f, iconPaint);
-
-                    // Binding Clips
-                    canvas.drawLine(cx - size * 0.20f, cy - size * 0.42f, cx - size * 0.20f, calT, iconPaint);
-                    canvas.drawLine(cx + size * 0.20f, cy - size * 0.42f, cx + size * 0.20f, calT, iconPaint);
-
-                    // Shift Grid Nodes
-                    canvas.drawCircle(cx - size * 0.16f, cy + size * 0.08f, size * 0.05f, iconFillPaint);
-                    canvas.drawCircle(cx + size * 0.16f, cy + size * 0.08f, size * 0.05f, iconPaint);
-                    canvas.drawCircle(cx - size * 0.16f, cy + size * 0.24f, size * 0.05f, iconPaint);
-                    canvas.drawCircle(cx + size * 0.16f, cy + size * 0.24f, size * 0.05f, iconFillPaint);
-                    break;
-
-                case 3: // Tools: Modern Precision Diagnostic Sliders
+                case 2: // Tools: Modern Precision Diagnostic Sliders
                     // Top Slider
                     canvas.drawLine(cx - size * 0.38f, cy - size * 0.18f, cx + size * 0.38f, cy - size * 0.18f, iconPaint);
                     canvas.drawCircle(cx + size * 0.14f, cy - size * 0.18f, size * 0.12f, iconFillPaint);
@@ -15774,7 +15663,7 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
             bgPaint.setColor(colPanel);
             canvas.drawRoundRect(bgRect, dp(14), dp(14), bgPaint);
 
-            float segW = w / 4f;
+            float segW = w / 3f;
             float indPad = dp(3);
             float indX = indicatorFloat * segW + indPad;
             float indW = segW - indPad * 2;
@@ -15795,11 +15684,11 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
             }
             canvas.drawRoundRect(indRect, dp(11), dp(11), indicatorGlowPaint);
 
-            textPaint.setTextSize(dpf(9.8f));
-            float iconSize = dpf(13f);
-            float gap = dpf(4.5f);
+            textPaint.setTextSize(dpf(11f));
+            float iconSize = dpf(14f);
+            float gap = dpf(6f);
 
-            for (int i = 0; i < 4; i++) {
+            for (int i = 0; i < 3; i++) {
                 float segCenterX = i * segW + segW / 2f;
                 float dist = Math.abs(indicatorFloat - i);
 
@@ -15819,7 +15708,7 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
                 float iconCenterY = h / 2f;
 
                 float textX = startX + iconSize + gap;
-                float textY = h / 2f + dpf(3.5f);
+                float textY = h / 2f + dpf(4f);
 
                 drawTabVectorIcon(canvas, i, iconCenterX, iconCenterY, iconSize, itemColor);
 

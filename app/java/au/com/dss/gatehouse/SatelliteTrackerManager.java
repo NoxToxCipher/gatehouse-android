@@ -588,6 +588,8 @@ public class SatelliteTrackerManager {
                     .setColor(pass.category != null ? pass.category.color : 0xFF00E5FF)
                     .setAutoCancel(true)
                     .setContentIntent(pi)
+                    .addAction(icon, "[ TRACK SKY DOME ]", pi)
+                    .setVibrate(new long[]{0, 100, 80, 100, 80, 180})
                     .setPriority(Notification.PRIORITY_MAX);
 
             try {
