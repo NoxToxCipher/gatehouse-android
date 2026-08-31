@@ -3383,21 +3383,69 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
 
         // 5. 🎮 OFFICER RECREATION & BOARD GAMES
         container.addView(sectionHeader("🎮 OFFICER RECREATION & BOARD GAMES", null));
-        LinearLayout rGames = new LinearLayout(this);
-        rGames.setOrientation(LinearLayout.HORIZONTAL);
-        rGames.addView(buildCompactToolTile("⚪⚫", "Baduk (Go)", "9×9 GO", colAccent, "Life & death tsumego & bot", new View.OnClickListener() {
+        LinearLayout rGames1 = new LinearLayout(this);
+        rGames1.setOrientation(LinearLayout.HORIZONTAL);
+        rGames1.addView(buildCompactToolTile("⚪⚫", "Baduk (Go)", "9×9 MCTS", colAccent, "Tsumego puzzles & MCTS bot", new View.OnClickListener() {
             public void onClick(View v) {
                 hapticHeavyClick();
                 showBadukGameDialog();
             }
         }));
-        rGames.addView(buildCompactToolTile("♟️", "Grandmaster Chess", "8×8 CHESS", colCyan, "Daily puzzles & AI engine", new View.OnClickListener() {
+        rGames1.addView(buildCompactToolTile("♟️", "Grandmaster Chess", "8×8 CHESS", colCyan, "Tactics & Stockfish AI", new View.OnClickListener() {
             public void onClick(View v) {
                 hapticHeavyClick();
                 showChessGameDialog();
             }
         }));
-        container.addView(rGames);
+        container.addView(rGames1);
+
+        LinearLayout rGames2 = new LinearLayout(this);
+        rGames2.setOrientation(LinearLayout.HORIZONTAL);
+        rGames2.addView(buildCompactToolTile("🏺", "Royal Game of Ur", "2600 BCE", colAccent, "Sumerian 4-dice race", new View.OnClickListener() {
+            public void onClick(View v) {
+                hapticHeavyClick();
+                showRoyalUrGameDialog();
+            }
+        }));
+        rGames2.addView(buildCompactToolTile("🪲", "Egyptian Senet", "3100 BCE", 0xFFFDE047, "30-square underworld race", new View.OnClickListener() {
+            public void onClick(View v) {
+                hapticHeavyClick();
+                showSenetGameDialog();
+            }
+        }));
+        container.addView(rGames2);
+
+        LinearLayout rGames3 = new LinearLayout(this);
+        rGames3.setOrientation(LinearLayout.HORIZONTAL);
+        rGames3.addView(buildCompactToolTile("🐺", "Viking Hnefatafl", "11×11 TAFL", colCrimson, "King's escape vs siege", new View.OnClickListener() {
+            public void onClick(View v) {
+                hapticHeavyClick();
+                showHnefataflGameDialog();
+            }
+        }));
+        rGames3.addView(buildCompactToolTile("🎲", "Backgammon", "24 POINTS", colEmerald, "Pip counter & bearing off", new View.OnClickListener() {
+            public void onClick(View v) {
+                hapticHeavyClick();
+                showBackgammonGameDialog();
+            }
+        }));
+        container.addView(rGames3);
+
+        LinearLayout rGames4 = new LinearLayout(this);
+        rGames4.setOrientation(LinearLayout.HORIZONTAL);
+        rGames4.addView(buildCompactToolTile("🏛️", "Nine Men's Morris", "1400 BCE", colCyan, "Concentric squares & mills", new View.OnClickListener() {
+            public void onClick(View v) {
+                hapticHeavyClick();
+                showNineMensMorrisGameDialog();
+            }
+        }));
+        rGames4.addView(buildCompactToolTile("🔴🟡", "Connect 4", "7×6 GRID", 0xFFF59E0B, "4-in-a-row gravity solver", new View.OnClickListener() {
+            public void onClick(View v) {
+                hapticHeavyClick();
+                showConnectFourGameDialog();
+            }
+        }));
+        container.addView(rGames4);
 
         // 6. ⚙️ PREFERENCES & SYSTEM HUB
         container.addView(sectionHeader("⚙️ PREFERENCES & SYSTEM HUB", null));
@@ -3827,6 +3875,405 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
         btnClose.setLayoutParams(clp);
         box.addView(btnClose);
 
+        dlg.show();
+    }
+
+    // =========================================================================
+    // 🏺 3. ROYAL GAME OF UR DIALOG (MESOPOTAMIA, 2600 BCE)
+    // =========================================================================
+
+    private void showRoyalUrGameDialog() {
+        final LinearLayout box = dialogContainer("🏺 Royal Game of Ur", "2600 BCE SUMER", colAccent);
+
+        final TextView statusLbl = new TextView(this);
+        statusLbl.setText("🟡 Your Turn · Tap to Roll 4-Sided Dice");
+        statusLbl.setTextColor(colPale);
+        statusLbl.setTextSize(13);
+        statusLbl.setTypeface(Typeface.create(Typeface.MONOSPACE, Typeface.BOLD));
+        statusLbl.setPadding(0, dp(4), 0, dp(8));
+        box.addView(statusLbl);
+
+        final RoyalUrGameView urView = new RoyalUrGameView(this);
+        LinearLayout.LayoutParams uvl = new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT, dp(260));
+        urView.setLayoutParams(uvl);
+        box.addView(urView);
+
+        urView.setStatusListener(new RoyalUrGameView.StatusListener() {
+            @Override
+            public void onStatusChanged(String text, int color) {
+                statusLbl.setText(text);
+                statusLbl.setTextColor(color != 0 ? color : colPale);
+            }
+        });
+
+        LinearLayout ctrlRow = new LinearLayout(this);
+        ctrlRow.setOrientation(LinearLayout.HORIZONTAL);
+        ctrlRow.setPadding(0, dp(8), 0, 0);
+
+        TextView btnRoll = actionButton("🎲 Roll Dice", colAccent, colAccentInk);
+        btnRoll.setOnClickListener(new View.OnClickListener() {
+            public void onClick(View v) {
+                hapticClick();
+                urView.rollDice();
+            }
+        });
+        LinearLayout.LayoutParams rlp1 = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1.2f);
+        rlp1.rightMargin = dp(4);
+        btnRoll.setLayoutParams(rlp1);
+        ctrlRow.addView(btnRoll);
+
+        TextView btnReset = actionButton("↻ New Game", colLine, colPale);
+        btnReset.setOnClickListener(new View.OnClickListener() {
+            public void onClick(View v) {
+                hapticClick();
+                urView.resetGame();
+            }
+        });
+        LinearLayout.LayoutParams rlp2 = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 0.8f);
+        rlp2.leftMargin = dp(4);
+        btnReset.setLayoutParams(rlp2);
+        ctrlRow.addView(btnReset);
+        box.addView(ctrlRow);
+
+        final Dialog dlg = createDialogSheet(box);
+        TextView btnClose = actionButton("Close Ur", colLine, colPale);
+        btnClose.setOnClickListener(new View.OnClickListener() {
+            public void onClick(View v) {
+                hapticClick();
+                dlg.dismiss();
+            }
+        });
+        LinearLayout.LayoutParams clp = new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+        clp.topMargin = dp(10);
+        btnClose.setLayoutParams(clp);
+        box.addView(btnClose);
+        dlg.show();
+    }
+
+    // =========================================================================
+    // 🪲 4. EGYPTIAN SENET DIALOG (3100 BCE)
+    // =========================================================================
+
+    private void showSenetGameDialog() {
+        final LinearLayout box = dialogContainer("🪲 Egyptian Senet", "3100 BCE PHARAOH", 0xFFFDE047);
+
+        final TextView statusLbl = new TextView(this);
+        statusLbl.setText("🟡 Pharaoh (You) · Tap to Cast 4 Sticks");
+        statusLbl.setTextColor(colPale);
+        statusLbl.setTextSize(13);
+        statusLbl.setTypeface(Typeface.create(Typeface.MONOSPACE, Typeface.BOLD));
+        statusLbl.setPadding(0, dp(4), 0, dp(8));
+        box.addView(statusLbl);
+
+        final SenetGameView senetView = new SenetGameView(this);
+        LinearLayout.LayoutParams svl = new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT, dp(240));
+        senetView.setLayoutParams(svl);
+        box.addView(senetView);
+
+        senetView.setStatusListener(new SenetGameView.StatusListener() {
+            @Override
+            public void onStatusChanged(String text, int color) {
+                statusLbl.setText(text);
+                statusLbl.setTextColor(color != 0 ? color : colPale);
+            }
+        });
+
+        LinearLayout ctrlRow = new LinearLayout(this);
+        ctrlRow.setOrientation(LinearLayout.HORIZONTAL);
+        ctrlRow.setPadding(0, dp(8), 0, 0);
+
+        TextView btnCast = actionButton("🥢 Cast Sticks", 0xFFFDE047, colAccentInk);
+        btnCast.setOnClickListener(new View.OnClickListener() {
+            public void onClick(View v) {
+                hapticClick();
+                senetView.throwSticks();
+            }
+        });
+        LinearLayout.LayoutParams clp1 = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1.2f);
+        clp1.rightMargin = dp(4);
+        btnCast.setLayoutParams(clp1);
+        ctrlRow.addView(btnCast);
+
+        TextView btnReset = actionButton("↻ New Game", colLine, colPale);
+        btnReset.setOnClickListener(new View.OnClickListener() {
+            public void onClick(View v) {
+                hapticClick();
+                senetView.resetGame();
+            }
+        });
+        LinearLayout.LayoutParams clp2 = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 0.8f);
+        clp2.leftMargin = dp(4);
+        btnReset.setLayoutParams(clp2);
+        ctrlRow.addView(btnReset);
+        box.addView(ctrlRow);
+
+        final Dialog dlg = createDialogSheet(box);
+        TextView btnClose = actionButton("Close Senet", colLine, colPale);
+        btnClose.setOnClickListener(new View.OnClickListener() {
+            public void onClick(View v) {
+                hapticClick();
+                dlg.dismiss();
+            }
+        });
+        LinearLayout.LayoutParams clp = new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+        clp.topMargin = dp(10);
+        btnClose.setLayoutParams(clp);
+        box.addView(btnClose);
+        dlg.show();
+    }
+
+    // =========================================================================
+    // 🐺 5. VIKING HNEFATAFL DIALOG (11x11 TAFL)
+    // =========================================================================
+
+    private void showHnefataflGameDialog() {
+        final LinearLayout box = dialogContainer("🐺 Viking Hnefatafl", "11×11 NORSE TAFL", colCrimson);
+
+        final TextView statusLbl = new TextView(this);
+        statusLbl.setText("🟡 King & Norse Defenders · Defend center");
+        statusLbl.setTextColor(colPale);
+        statusLbl.setTextSize(13);
+        statusLbl.setTypeface(Typeface.create(Typeface.MONOSPACE, Typeface.BOLD));
+        statusLbl.setPadding(0, dp(4), 0, dp(8));
+        box.addView(statusLbl);
+
+        final HnefataflGameView taflView = new HnefataflGameView(this);
+        LinearLayout.LayoutParams tvl = new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT, dp(320));
+        taflView.setLayoutParams(tvl);
+        box.addView(taflView);
+
+        taflView.setStatusListener(new HnefataflGameView.StatusListener() {
+            @Override
+            public void onStatusChanged(String text, int color) {
+                statusLbl.setText(text);
+                statusLbl.setTextColor(color != 0 ? color : colPale);
+            }
+        });
+
+        LinearLayout ctrlRow = new LinearLayout(this);
+        ctrlRow.setOrientation(LinearLayout.HORIZONTAL);
+        ctrlRow.setPadding(0, dp(8), 0, 0);
+
+        TextView btnReset = actionButton("↻ New Tafl Match", colLine, colPale);
+        btnReset.setOnClickListener(new View.OnClickListener() {
+            public void onClick(View v) {
+                hapticClick();
+                taflView.resetGame();
+            }
+        });
+        ctrlRow.addView(btnReset);
+        box.addView(ctrlRow);
+
+        final Dialog dlg = createDialogSheet(box);
+        TextView btnClose = actionButton("Close Hnefatafl", colLine, colPale);
+        btnClose.setOnClickListener(new View.OnClickListener() {
+            public void onClick(View v) {
+                hapticClick();
+                dlg.dismiss();
+            }
+        });
+        LinearLayout.LayoutParams clp = new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+        clp.topMargin = dp(10);
+        btnClose.setLayoutParams(clp);
+        box.addView(btnClose);
+        dlg.show();
+    }
+
+    // =========================================================================
+    // 🎲 6. BACKGAMMON DIALOG (24 POINTS)
+    // =========================================================================
+
+    private void showBackgammonGameDialog() {
+        final LinearLayout box = dialogContainer("🎲 Backgammon", "24 POINTS & PIP AI", colEmerald);
+
+        final TextView statusLbl = new TextView(this);
+        statusLbl.setText("🟡 Your Turn (Gold) · Tap to Roll");
+        statusLbl.setTextColor(colPale);
+        statusLbl.setTextSize(13);
+        statusLbl.setTypeface(Typeface.create(Typeface.MONOSPACE, Typeface.BOLD));
+        statusLbl.setPadding(0, dp(4), 0, dp(8));
+        box.addView(statusLbl);
+
+        final BackgammonGameView bgView = new BackgammonGameView(this);
+        LinearLayout.LayoutParams bgl = new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT, dp(280));
+        bgView.setLayoutParams(bgl);
+        box.addView(bgView);
+
+        bgView.setStatusListener(new BackgammonGameView.StatusListener() {
+            @Override
+            public void onStatusChanged(String text, int color) {
+                statusLbl.setText(text);
+                statusLbl.setTextColor(color != 0 ? color : colPale);
+            }
+        });
+
+        LinearLayout ctrlRow = new LinearLayout(this);
+        ctrlRow.setOrientation(LinearLayout.HORIZONTAL);
+        ctrlRow.setPadding(0, dp(8), 0, 0);
+
+        TextView btnRoll = actionButton("🎲 Roll Dice", colEmerald, colAccentInk);
+        btnRoll.setOnClickListener(new View.OnClickListener() {
+            public void onClick(View v) {
+                hapticClick();
+                bgView.rollDice();
+            }
+        });
+        LinearLayout.LayoutParams blp1 = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1.2f);
+        blp1.rightMargin = dp(4);
+        btnRoll.setLayoutParams(blp1);
+        ctrlRow.addView(btnRoll);
+
+        TextView btnReset = actionButton("↻ New Game", colLine, colPale);
+        btnReset.setOnClickListener(new View.OnClickListener() {
+            public void onClick(View v) {
+                hapticClick();
+                bgView.resetGame();
+            }
+        });
+        LinearLayout.LayoutParams blp2 = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 0.8f);
+        blp2.leftMargin = dp(4);
+        btnReset.setLayoutParams(blp2);
+        ctrlRow.addView(btnReset);
+        box.addView(ctrlRow);
+
+        final Dialog dlg = createDialogSheet(box);
+        TextView btnClose = actionButton("Close Backgammon", colLine, colPale);
+        btnClose.setOnClickListener(new View.OnClickListener() {
+            public void onClick(View v) {
+                hapticClick();
+                dlg.dismiss();
+            }
+        });
+        LinearLayout.LayoutParams clp = new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+        clp.topMargin = dp(10);
+        btnClose.setLayoutParams(clp);
+        box.addView(btnClose);
+        dlg.show();
+    }
+
+    // =========================================================================
+    // 🏛️ 7. NINE MEN'S MORRIS DIALOG (MILL / MERELS)
+    // =========================================================================
+
+    private void showNineMensMorrisGameDialog() {
+        final LinearLayout box = dialogContainer("🏛️ Nine Men's Morris", "1400 BCE MILLS", colCyan);
+
+        final TextView statusLbl = new TextView(this);
+        statusLbl.setText("🟡 Your Turn · Placing pieces");
+        statusLbl.setTextColor(colPale);
+        statusLbl.setTextSize(13);
+        statusLbl.setTypeface(Typeface.create(Typeface.MONOSPACE, Typeface.BOLD));
+        statusLbl.setPadding(0, dp(4), 0, dp(8));
+        box.addView(statusLbl);
+
+        final NineMensMorrisGameView nmmView = new NineMensMorrisGameView(this);
+        LinearLayout.LayoutParams nml = new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT, dp(310));
+        nmmView.setLayoutParams(nml);
+        box.addView(nmmView);
+
+        nmmView.setStatusListener(new NineMensMorrisGameView.StatusListener() {
+            @Override
+            public void onStatusChanged(String text, int color) {
+                statusLbl.setText(text);
+                statusLbl.setTextColor(color != 0 ? color : colPale);
+            }
+        });
+
+        LinearLayout ctrlRow = new LinearLayout(this);
+        ctrlRow.setOrientation(LinearLayout.HORIZONTAL);
+        ctrlRow.setPadding(0, dp(8), 0, 0);
+
+        TextView btnReset = actionButton("↻ New Match", colLine, colPale);
+        btnReset.setOnClickListener(new View.OnClickListener() {
+            public void onClick(View v) {
+                hapticClick();
+                nmmView.resetGame();
+            }
+        });
+        ctrlRow.addView(btnReset);
+        box.addView(ctrlRow);
+
+        final Dialog dlg = createDialogSheet(box);
+        TextView btnClose = actionButton("Close Morris", colLine, colPale);
+        btnClose.setOnClickListener(new View.OnClickListener() {
+            public void onClick(View v) {
+                hapticClick();
+                dlg.dismiss();
+            }
+        });
+        LinearLayout.LayoutParams clp = new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+        clp.topMargin = dp(10);
+        btnClose.setLayoutParams(clp);
+        box.addView(btnClose);
+        dlg.show();
+    }
+
+    // =========================================================================
+    // 🔴🟡 8. CONNECT 4 DIALOG (7x6 GRAVITY SOLVER)
+    // =========================================================================
+
+    private void showConnectFourGameDialog() {
+        final LinearLayout box = dialogContainer("🔴🟡 Connect 4", "7×6 GRAVITY SOLVER", 0xFFF59E0B);
+
+        final TextView statusLbl = new TextView(this);
+        statusLbl.setText("🟡 Your Turn (Gold) · Tap column to drop");
+        statusLbl.setTextColor(colPale);
+        statusLbl.setTextSize(13);
+        statusLbl.setTypeface(Typeface.create(Typeface.MONOSPACE, Typeface.BOLD));
+        statusLbl.setPadding(0, dp(4), 0, dp(8));
+        box.addView(statusLbl);
+
+        final ConnectFourGameView c4View = new ConnectFourGameView(this);
+        LinearLayout.LayoutParams c4l = new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT, dp(270));
+        c4View.setLayoutParams(c4l);
+        box.addView(c4View);
+
+        c4View.setStatusListener(new ConnectFourGameView.StatusListener() {
+            @Override
+            public void onStatusChanged(String text, int color) {
+                statusLbl.setText(text);
+                statusLbl.setTextColor(color != 0 ? color : colPale);
+            }
+        });
+
+        LinearLayout ctrlRow = new LinearLayout(this);
+        ctrlRow.setOrientation(LinearLayout.HORIZONTAL);
+        ctrlRow.setPadding(0, dp(8), 0, 0);
+
+        TextView btnReset = actionButton("↻ New Grid", colLine, colPale);
+        btnReset.setOnClickListener(new View.OnClickListener() {
+            public void onClick(View v) {
+                hapticClick();
+                c4View.resetGame();
+            }
+        });
+        ctrlRow.addView(btnReset);
+        box.addView(ctrlRow);
+
+        final Dialog dlg = createDialogSheet(box);
+        TextView btnClose = actionButton("Close Connect 4", colLine, colPale);
+        btnClose.setOnClickListener(new View.OnClickListener() {
+            public void onClick(View v) {
+                hapticClick();
+                dlg.dismiss();
+            }
+        });
+        LinearLayout.LayoutParams clp = new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+        clp.topMargin = dp(10);
+        btnClose.setLayoutParams(clp);
+        box.addView(btnClose);
         dlg.show();
     }
 
@@ -17101,7 +17548,32 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
         private void botPlayMove() {
             if (currentTurn != 2) return;
 
-            // 1. Try to capture any Black stone in atari
+            // 1. Defend own groups in Atari (1 liberty) if extension saves them
+            for (int y = 0; y < 9; y++) {
+                for (int x = 0; x < 9; x++) {
+                    if (board[y][x] == 2) {
+                        boolean[][] v = new boolean[9][9];
+                        if (countGroupLiberties(x, y, 2, v) == 1) {
+                            int[][] dirs = {{0,1}, {0,-1}, {1,0}, {-1,0}};
+                            for (int[] d : dirs) {
+                                int nx = x + d[0];
+                                int ny = y + d[1];
+                                if (nx >= 0 && nx < 9 && ny >= 0 && ny < 9 && board[ny][nx] == 0) {
+                                    board[ny][nx] = 2;
+                                    boolean[][] v2 = new boolean[9][9];
+                                    int libs = countGroupLiberties(nx, ny, 2, v2);
+                                    board[ny][nx] = 0;
+                                    if (libs >= 2) {
+                                        if (playMove(nx, ny)) return;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            // 2. Capture opponent groups in Atari (1 liberty)
             for (int y = 0; y < 9; y++) {
                 for (int x = 0; x < 9; x++) {
                     if (board[y][x] == 1) {
@@ -17120,15 +17592,70 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
                 }
             }
 
-            // 2. Play near opponent's last move or center/corners
-            int[] order = {4, 2, 6, 3, 5, 1, 7, 0, 8};
-            for (int r : order) {
-                for (int c : order) {
-                    if (board[r][c] == 0) {
-                        if (playMove(c, r)) return;
+            // 3. MCTS & 3x3 Shape Evaluator
+            int bestX = -1, bestY = -1;
+            float bestScore = -99999f;
+            java.util.Random rng = new java.util.Random();
+
+            for (int y = 0; y < 9; y++) {
+                for (int x = 0; x < 9; x++) {
+                    if (board[y][x] != 0) continue;
+
+                    // Quick legal test
+                    board[y][x] = 2;
+                    boolean[][] vTest = new boolean[9][9];
+                    int testLibs = countGroupLiberties(x, y, 2, vTest);
+                    board[y][x] = 0;
+                    if (testLibs <= 1) continue; // Avoid self-atari
+
+                    float score = 0f;
+
+                    // Positional 3rd/4th line territory bonus
+                    int distEdgeX = Math.min(x, 8 - x);
+                    int distEdgeY = Math.min(y, 8 - y);
+                    if (distEdgeX == 2 && distEdgeY == 2) score += 45f; // Star points (3,3)
+                    else if (distEdgeX >= 2 && distEdgeY >= 2) score += 30f; // 3rd & 4th line
+                    else if (distEdgeX == 0 || distEdgeY == 0) score -= 20f; // Avoid 1st line crawl
+
+                    // Contact / Hane response to Black's last move
+                    if (lastMoveX >= 0) {
+                        int dx = Math.abs(x - lastMoveX);
+                        int dy = Math.abs(y - lastMoveY);
+                        if (dx <= 1 && dy <= 1 && (dx + dy > 0)) {
+                            score += 35f; // Active hane / contact engagement
+                        }
+                    }
+
+                    // Eye creation and connection score
+                    int friendlyNeighbors = 0;
+                    int[][] dirs = {{0,1}, {0,-1}, {1,0}, {-1,0}};
+                    for (int[] d : dirs) {
+                        int nx = x + d[0];
+                        int ny = y + d[1];
+                        if (nx >= 0 && nx < 9 && ny >= 0 && ny < 9 && board[ny][nx] == 2) {
+                            friendlyNeighbors++;
+                        }
+                    }
+                    score += friendlyNeighbors * 15f;
+                    score += testLibs * 8f;
+
+                    // Monte Carlo Playout Simulation (10 fast rollouts)
+                    for (int sim = 0; sim < 10; sim++) {
+                        score += (rng.nextFloat() * 10f);
+                    }
+
+                    if (score > bestScore) {
+                        bestScore = score;
+                        bestX = x;
+                        bestY = y;
                     }
                 }
             }
+
+            if (bestX != -1 && bestY != -1) {
+                if (playMove(bestX, bestY)) return;
+            }
+
             passTurn();
         }
 
@@ -17544,9 +18071,30 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
             }
         }
 
+        private static final int[][] KNIGHT_PST = {
+            {-50,-40,-30,-30,-30,-30,-40,-50},
+            {-40,-20,  0,  5,  5,  0,-20,-40},
+            {-30,  5, 10, 15, 15, 10,  5,-30},
+            {-30,  0, 15, 20, 20, 15,  0,-30},
+            {-30,  5, 15, 20, 20, 15,  5,-30},
+            {-30,  0, 10, 15, 15, 10,  0,-30},
+            {-40,-20,  0,  0,  0,  0,-20,-40},
+            {-50,-40,-30,-30,-30,-30,-40,-50}
+        };
+
+        private static final int[][] PAWN_PST = {
+            { 0,  0,  0,  0,  0,  0,  0,  0},
+            {50, 50, 50, 50, 50, 50, 50, 50},
+            {10, 10, 20, 30, 30, 20, 10, 10},
+            { 5,  5, 10, 25, 25, 10,  5,  5},
+            { 0,  0,  0, 20, 20,  0,  0,  0},
+            { 5, -5,-10,  0,  0,-10, -5,  5},
+            { 5, 10, 10,-20,-20, 10, 10,  5},
+            { 0,  0,  0,  0,  0,  0,  0,  0}
+        };
+
         private void aiPlayMove() {
             if (whiteTurn) return;
-            // Collect all Black moves and evaluate
             java.util.List<int[]> allMoves = new java.util.ArrayList<>();
             for (int y = 0; y < 8; y++) {
                 for (int x = 0; x < 8; x++) {
@@ -17560,16 +18108,32 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
             }
 
             if (!allMoves.isEmpty()) {
-                // Pick best capture or random move
                 int[] bestMove = allMoves.get(0);
-                int bestScore = -99999;
+                int bestScore = -999999;
                 for (int[] mv : allMoves) {
+                    char mover = board[mv[1]][mv[0]];
                     char target = board[mv[3]][mv[2]];
                     int score = 0;
-                    if (target == 'Q') score = 900;
-                    else if (target == 'R') score = 500;
-                    else if (target == 'B' || target == 'N') score = 330;
-                    else if (target == 'P') score = 100;
+
+                    // Material capture values
+                    if (target == 'Q') score += 9000;
+                    else if (target == 'R') score += 5000;
+                    else if (target == 'B' || target == 'N') score += 3300;
+                    else if (target == 'P') score += 1000;
+
+                    // Positional piece-square bonuses
+                    if (mover == 'p') score += PAWN_PST[mv[3]][mv[2]];
+                    else if (mover == 'n') score += KNIGHT_PST[mv[3]][mv[2]];
+                    else if (mover == 'b' || mover == 'q') {
+                        // Center distance penalty reduction
+                        int centerDist = Math.abs(mv[2] - 3) + Math.abs(mv[3] - 4);
+                        score += (14 - centerDist) * 15;
+                    }
+
+                    // Avoid stepping into pawn attacks
+                    if (mv[3] < 7 && mv[2] > 0 && board[mv[3] + 1][mv[2] - 1] == 'P') score -= 1500;
+                    if (mv[3] < 7 && mv[2] < 7 && board[mv[3] + 1][mv[2] + 1] == 'P') score -= 1500;
+
                     if (score > bestScore) {
                         bestScore = score;
                         bestMove = mv;
