@@ -1,0 +1,123 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:background="@drawable/notif_bg_obsidian"
+    android:padding="14dp">
+
+    <!-- Top Luxury Header -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:layout_marginBottom="8dp">
+
+        <ImageView
+            android:layout_width="18dp"
+            android:layout_height="18dp"
+            android:src="@drawable/ic_shield_gold"
+            android:layout_marginEnd="7dp" />
+
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:orientation="vertical">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="DOHERTY SECURITY SERVICES"
+                android:textColor="#F59E0B"
+                android:textSize="11sp"
+                android:textStyle="bold"
+                android:letterSpacing="0.05" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="DEPUTY ROSTER LEDGER UPDATE"
+                android:textColor="#64748B"
+                android:textSize="8.5sp"
+                android:textStyle="bold"
+                android:letterSpacing="0.08" />
+        </LinearLayout>
+
+        <TextView
+            android:id="@+id/notif_roster_badge"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="LIVE SYNC"
+            android:textColor="#14B8A6"
+            android:textSize="9sp"
+            android:textStyle="bold"
+            android:background="@drawable/notif_pill_teal"
+            android:paddingStart="8dp"
+            android:paddingEnd="8dp"
+            android:paddingTop="3dp"
+            android:paddingBottom="3dp" />
+    </LinearLayout>
+
+    <!-- Headline -->
+    <TextView
+        android:id="@+id/notif_roster_headline"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="📅 Roster Schedule Alterations Detected"
+        android:textColor="#FFFFFF"
+        android:textSize="13.5sp"
+        android:textStyle="bold"
+        android:layout_marginBottom="6dp" />
+
+    <!-- Ledger Changes Box -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:background="@drawable/notif_stat_box"
+        android:padding="10dp"
+        android:layout_marginBottom="8dp">
+
+        <TextView
+            android:id="@+id/notif_roster_changes_text"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="• NEW: Officer Brian Rush (Tonight 20:00 – 00:00)\n• UPDATED: Shift timing confirmed on Deputy"
+            android:textColor="#CBD5E1"
+            android:textSize="11sp"
+            android:lineSpacingExtra="3dp" />
+    </LinearLayout>
+
+    <!-- Footer -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center_vertical">
+
+        <TextView
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="👑 Doherty Security Services · Hume Doors Kingston"
+            android:textColor="#475569"
+            android:textSize="8.5sp"
+            android:textStyle="bold" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="📖 INSPECT ROSTER"
+            android:textColor="#F59E0B"
+            android:textSize="9sp"
+            android:textStyle="bold"
+            android:background="@drawable/notif_pill_amber"
+            android:paddingStart="9dp"
+            android:paddingEnd="9dp"
+            android:paddingTop="3dp"
+            android:paddingBottom="3dp" />
+    </LinearLayout>
+
+</LinearLayout>

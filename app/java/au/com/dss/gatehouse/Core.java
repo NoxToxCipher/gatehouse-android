@@ -23,7 +23,12 @@ public final class Core {
     public static final int TOPIC_SITE_ACCESS = 3;
 
     public static final int DEVICE_PERSONAL = 0;
+    public static final int DEVICE_SHARED = 1;
+
     public static final int METHOD_SESSION = 0;
+    public static final int METHOD_PIN = 1;
+    public static final int METHOD_CARD = 2;
+    public static final int METHOD_ROSTER_ONLY = 3;
 
     public static final int AUTH_CRYPTOGRAPHIC = 2;
 

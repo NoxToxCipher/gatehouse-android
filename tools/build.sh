@@ -102,9 +102,10 @@ MSYS_NO_PATHCONV=1 "$BT/aapt2.exe" link \
   -o "${W}${BS}build${BS}base.apk" \
   -I "$JARW" \
   --manifest "${W}${BS}app${BS}AndroidManifest.xml" \
+  --version-code 126 --version-name "1.0.26" \
   --min-sdk-version 26 --target-sdk-version 35 \
-  $(for fl in "$OUT"/res/*.flat; do printf "%s " "${W}${BS}build${BS}res${BS}$(basename "$fl")"; done) > "$OUT/aapt2.log" 2>&1 \
-  || { echo "FAILED"; cat "$OUT/aapt2.log"; exit 1; }
+  $(for fl in "$OUT"/res/*.flat; do printf "%s " "${W}${BS}build${BS}res${BS}$(basename "$fl")"; done) > build/aapt2.log 2>&1 \
+  || { echo "FAILED"; cat build/aapt2.log; exit 1; }
 ok
 
 # ---- code -----------------------------------------------------------------
@@ -171,12 +172,16 @@ ls -la "$OUT/gatehouse.apk" | awk '{print "  " $5 " bytes"}'
 
 if [ "${1:-}" = "install" ]; then
   echo
-  DEVICE=$(MSYS_NO_PATHCONV=1 "$ADB" devices | awk '/device$/ {print $1}' \
-             | grep -v emulator | head -1)
-  [ -n "$DEVICE" ] || { echo "no phone attached (an emulator cannot run arm64)"; exit 1; }
+  DEVICE=$(MSYS_NO_PATHCONV=1 "$ADB" devices | awk '/device$/ {print $1}' | grep -v emulator | head -1)
+  if [ -z "$DEVICE" ]; then
+    echo "no phone attached"
+    exit 1
+  fi
+  echo "force-stopping previous process on $DEVICE"
+  MSYS_NO_PATHCONV=1 "$ADB" -s "$DEVICE" shell am force-stop au.com.dss.gatehouse || true
   echo "installing on $DEVICE"
-  "$ADB" -s "$DEVICE" install -r "$OUT/gatehouse.apk"
-  MSYS_NO_PATHCONV=1 "$ADB" -s "$DEVICE" shell monkey -p au.com.dss.gatehouse \
-    -c android.intent.category.LAUNCHER 1 >/dev/null 2>&1
+  "$ADB" -s "$DEVICE" install -r build/gatehouse.apk
+  echo "launching fresh process on $DEVICE"
+  MSYS_NO_PATHCONV=1 "$ADB" -s "$DEVICE" shell am start -n au.com.dss.gatehouse/.MainActivity
   echo "launched"
 fi
