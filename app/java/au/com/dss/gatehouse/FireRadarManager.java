@@ -482,7 +482,8 @@ public class FireRadarManager {
 
             String text = snapshot.lightningStandDownReason;
 
-            int iconShield = context.getResources().getIdentifier("ic_shield_gold", "drawable", context.getPackageName());
+            int iconShield = context.getResources().getIdentifier("ic_stat_gatehouse", "drawable", context.getPackageName());
+            if (iconShield == 0) iconShield = context.getResources().getIdentifier("ic_shield_gold", "drawable", context.getPackageName());
             if (iconShield == 0) iconShield = context.getApplicationInfo().icon;
 
             b.setSmallIcon(iconShield)
@@ -542,7 +543,8 @@ public class FireRadarManager {
             String title = String.format(Locale.US, "🧊 SEVERE HAIL WARNING: %s (Est. %.0fmm)", snapshot.hailRiskLevel, snapshot.estimatedHailSizeMm);
             String text = "Severe storm cell detected over Kingston. Move patrol vehicle under cover & shelter in Guard Hut.";
 
-            int iconShield = context.getResources().getIdentifier("ic_shield_gold", "drawable", context.getPackageName());
+            int iconShield = context.getResources().getIdentifier("ic_stat_gatehouse", "drawable", context.getPackageName());
+            if (iconShield == 0) iconShield = context.getResources().getIdentifier("ic_shield_gold", "drawable", context.getPackageName());
             if (iconShield == 0) iconShield = context.getApplicationInfo().icon;
 
             b.setSmallIcon(iconShield)
@@ -693,7 +695,8 @@ public class FireRadarManager {
                 ? new Notification.Builder(context, CHANNEL_FIRE_HAZARDS)
                 : new Notification.Builder(context);
 
-        int iconShield = context.getResources().getIdentifier("ic_shield_gold", "drawable", context.getPackageName());
+        int iconShield = context.getResources().getIdentifier("ic_stat_gatehouse", "drawable", context.getPackageName());
+        if (iconShield == 0) iconShield = context.getResources().getIdentifier("ic_shield_gold", "drawable", context.getPackageName());
         if (iconShield == 0) iconShield = context.getApplicationInfo().icon;
 
         b.setSmallIcon(iconShield)
@@ -732,7 +735,8 @@ public class FireRadarManager {
                 ? new Notification.Builder(context, CHANNEL_FIRE_HAZARDS)
                 : new Notification.Builder(context);
 
-        int iconShield = context.getResources().getIdentifier("ic_shield_gold", "drawable", context.getPackageName());
+        int iconShield = context.getResources().getIdentifier("ic_stat_gatehouse", "drawable", context.getPackageName());
+        if (iconShield == 0) iconShield = context.getResources().getIdentifier("ic_shield_gold", "drawable", context.getPackageName());
         if (iconShield == 0) iconShield = context.getApplicationInfo().icon;
 
         b.setSmallIcon(iconShield)

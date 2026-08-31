@@ -283,7 +283,8 @@ public class LicenceVerificationManager {
                 builder.setPriority(Notification.PRIORITY_HIGH);
             }
 
-            int iconShield = context.getResources().getIdentifier("ic_shield_gold", "drawable", context.getPackageName());
+            int iconShield = context.getResources().getIdentifier("ic_stat_gatehouse", "drawable", context.getPackageName());
+            if (iconShield == 0) iconShield = context.getResources().getIdentifier("ic_shield_gold", "drawable", context.getPackageName());
             if (iconShield == 0) iconShield = context.getApplicationInfo().icon;
 
             builder.setSmallIcon(iconShield)

@@ -567,7 +567,8 @@ public class SatelliteTrackerManager {
                     ? String.format(Locale.US, "Look %s → Peak %.0f° at %s. %d luminous satellites in tight train.", pass.startAzCompass, pass.maxEl, pass.getPeakTimeString(), pass.trainSatCount)
                     : String.format(Locale.US, "Look %s → Peak %.0f° %s at %s. %s", pass.startAzCompass, pass.maxEl, pass.maxAzCompass, pass.getPeakTimeString(), pass.getBrightnessDescription());
 
-            int icon = context.getResources().getIdentifier("ic_shield_gold", "drawable", context.getPackageName());
+            int icon = context.getResources().getIdentifier("ic_stat_gatehouse", "drawable", context.getPackageName());
+            if (icon == 0) icon = context.getResources().getIdentifier("ic_shield_gold", "drawable", context.getPackageName());
             if (icon == 0) icon = context.getApplicationInfo().icon;
 
             String bigText = (pass.isStarlinkTrain ? "✨ STARLINK SATELLITE TRAIN PASS OVERHEAD\n" : ("🛰️ " + pass.satName + " VISUAL PASS\n")) +
