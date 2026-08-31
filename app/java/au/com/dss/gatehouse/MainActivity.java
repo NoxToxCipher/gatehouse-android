@@ -3381,11 +3381,11 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
         }));
         container.addView(r6);
 
-        // 5. 🎮 OFFICER RECREATION & TACTICAL GAMES
-        container.addView(sectionHeader("🎮 OFFICER RECREATION & TACTICAL GAMES", null));
+        // 5. 🎮 OFFICER RECREATION & BOARD GAMES
+        container.addView(sectionHeader("🎮 OFFICER RECREATION & BOARD GAMES", null));
         LinearLayout rGames = new LinearLayout(this);
         rGames.setOrientation(LinearLayout.HORIZONTAL);
-        rGames.addView(buildCompactToolTile("⚪⚫", "Tactical Baduk", "9×9 GO", colAccent, "Life & death tsumego & bot", new View.OnClickListener() {
+        rGames.addView(buildCompactToolTile("⚪⚫", "Baduk (Go)", "9×9 GO", colAccent, "Life & death tsumego & bot", new View.OnClickListener() {
             public void onClick(View v) {
                 hapticHeavyClick();
                 showBadukGameDialog();
@@ -3569,11 +3569,11 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
         dlg.show();
     }
     // =========================================================================
-    // ⚪⚫ 1. TACTICAL BADUK (GO / TSUMEGO) ENGINE & DIALOG
+    // ⚪⚫ 1. BADUK (GO / TSUMEGO) ENGINE & DIALOG
     // =========================================================================
 
     private void showBadukGameDialog() {
-        final LinearLayout box = dialogContainer("⚪⚫ Tactical Baduk", "9×9 GO & TSUMEGO", colAccent);
+        final LinearLayout box = dialogContainer("⚪⚫ Baduk (Go)", "9×9 GO & TSUMEGO", colAccent);
 
         final TextView statusLbl = new TextView(this);
         statusLbl.setText("● Black to play · 9×9 Match");
@@ -3734,7 +3734,7 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
         modeRow.setPadding(0, dp(8), 0, 0);
 
         final TextView btnBotMatch = actionButton("🤖 vs Stockfish AI", colCyan, colAccentInk);
-        final TextView btnTactics = actionButton("🧩 Tactical Puzzles", colPanel2, colPale);
+        final TextView btnTactics = actionButton("🧩 Chess Puzzles", colPanel2, colPale);
 
         btnBotMatch.setOnClickListener(new View.OnClickListener() {
             public void onClick(View v) {
@@ -17257,7 +17257,7 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
         private int selectedX = -1;
         private int selectedY = -1;
         private final java.util.List<Point> validMoves = new java.util.ArrayList<>();
-        private int mode = 0; // 0 = vs AI, 1 = Tactical Puzzles
+        private int mode = 0; // 0 = vs AI, 1 = Chess Puzzles
         private int puzzleIndex = 0;
         private boolean puzzleSolved = false;
 
@@ -17524,7 +17524,7 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
                     return;
                 } else {
                     if (statusListener != null) {
-                        statusListener.onStatusChanged("✗ Incorrect move. Try another tactical strike!", 0xFFF87171);
+                        statusListener.onStatusChanged("✗ Incorrect move. Try another line!", 0xFFF87171);
                     }
                     selectedX = -1;
                     selectedY = -1;

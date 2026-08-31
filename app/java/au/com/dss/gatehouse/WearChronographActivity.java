@@ -24,7 +24,7 @@ import java.util.Locale;
 import java.util.TimeZone;
 
 /**
- * WearChronographActivity — Screen 1: Clean Tactical Shift Chronograph Face for Wear OS.
+ * WearChronographActivity — Screen 1: Clean Shift Chronograph Face for Wear OS.
  * Features vector 270° amber shift progress arc, live monospace digital clock,
  * AEST timezone, and seamless swipe navigation to companion watch tools.
  */
