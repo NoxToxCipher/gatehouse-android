@@ -454,6 +454,8 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
         refreshFireRadar();
         AirspaceRadarManager.initChannels(this);
         refreshAirspaceRadar();
+        SatelliteTrackerManager.initChannels(this);
+        SatelliteTrackerManager.fetchVisualPassesAsync(this, null);
         LicenceVerificationManager.initChannels(this);
         LicenceVerificationManager.checkAndNotifyLicenceExpiry(this);
         try {
@@ -468,6 +470,16 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
         }
         AutoUpdateManager.init(this);
         ticker.postDelayed(tick, 1000);
+
+        if (getIntent() != null && getIntent().getBooleanExtra("open_satellite_radar", false)) {
+            if (rootFrame != null) {
+                rootFrame.post(new Runnable() {
+                    public void run() {
+                        showSatelliteRadarDialog();
+                    }
+                });
+            }
+        }
     }
 
     private void refreshFireRadar() {
@@ -2698,12 +2710,18 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
         top.addView(title);
 
         TextView tag = new TextView(this);
-        tag.setText("SOLAR NIGHT SWEEP");
+        tag.setText("SOLAR NIGHT SWEEP 🛰️");
         tag.setTextColor(colAccent);
         tag.setTextSize(9);
         tag.setTypeface(Typeface.MONOSPACE);
         tag.setPadding(dp(7), dp(3), dp(7), dp(3));
         tag.setBackground(rounded(colPanel2, dp(6)));
+        tag.setOnClickListener(new View.OnClickListener() {
+            public void onClick(View v) {
+                hapticHeavyClick();
+                showSatelliteRadarDialog();
+            }
+        });
         top.addView(tag);
         container.addView(top);
 
@@ -3335,6 +3353,23 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
             }
         }));
         grid.addView(r6);
+
+        // Row 7: Satellite Ground Track & Starlink Train Radar
+        LinearLayout r7 = new LinearLayout(this);
+        r7.setOrientation(LinearLayout.HORIZONTAL);
+        r7.addView(buildCompactToolTile("🛰️", "Satellite Sky HUD", "N2YO LIVE", 0xFF00E5FF, "ISS & Starlink Trains", new View.OnClickListener() {
+            public void onClick(View v) {
+                hapticHeavyClick();
+                showSatelliteRadarDialog();
+            }
+        }));
+        r7.addView(buildCompactToolTile("✨", "Starlink Radar", "PRE-PASS ALERT", 0xFF10B981, "2-min visual alert", new View.OnClickListener() {
+            public void onClick(View v) {
+                hapticHeavyClick();
+                showSatelliteRadarDialog();
+            }
+        }));
+        grid.addView(r7);
 
         boolean isLandscape = getResources().getConfiguration().orientation == android.content.res.Configuration.ORIENTATION_LANDSCAPE;
         if (isLandscape) {
@@ -7478,6 +7513,275 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
                 Toast.makeText(MainActivity.this, "✓ SOS Hot-mic broadcast completed", Toast.LENGTH_SHORT).show();
             }
         }, 10000);
+    }
+
+    private void showSatelliteRadarDialog() {
+        hapticHeavyClick();
+        final LinearLayout box = dialogContainer("🛰️ Night Sky & Satellite Radar", "N2YO LIVE", colCyan);
+
+        TextView info = new TextView(this);
+        info.setText("Real-time ground track & visual pass predictor above Kingston Gatehouse (-27.63°S, 153.11°E). Automated alerts are dispatched 2 minutes before pass rise:");
+        info.setTextColor(colMuted);
+        info.setTextSize(11.5f);
+        info.setPadding(0, 0, 0, dp(8));
+        box.addView(info);
+
+        // Polar Sky Dome View
+        final NightSkyDomeView domeView = new NightSkyDomeView(this);
+        LinearLayout.LayoutParams dlp = new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT, dp(210));
+        dlp.bottomMargin = dp(10);
+        domeView.setLayoutParams(dlp);
+        box.addView(domeView);
+
+        // Target Satellite Selector Chips
+        HorizontalScrollView hsv = new HorizontalScrollView(this);
+        hsv.setHorizontalScrollBarEnabled(false);
+        final LinearLayout chipRow = new LinearLayout(this);
+        chipRow.setOrientation(LinearLayout.HORIZONTAL);
+        chipRow.setPadding(0, 0, 0, dp(10));
+        hsv.addView(chipRow);
+        box.addView(hsv);
+
+        // Detail Telemetry Focus Card
+        final LinearLayout detailCard = new LinearLayout(this);
+        detailCard.setOrientation(LinearLayout.VERTICAL);
+        detailCard.setBackground(rounded(colPanel2, dp(14)));
+        detailCard.setPadding(dp(14), dp(12), dp(14), dp(12));
+        LinearLayout.LayoutParams dclp = new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+        dclp.bottomMargin = dp(12);
+        detailCard.setLayoutParams(dclp);
+        box.addView(detailCard);
+
+        final List<SatelliteTrackerManager.VisualPass>[] currentPasses = new List[]{SatelliteTrackerManager.generatePredictiveNightPasses(this)};
+        final int[] selectedIndex = new int[]{0};
+
+        final Runnable updatePassDetail = new Runnable() {
+            @Override
+            public void run() {
+                if (currentPasses[0].isEmpty()) {
+                    detailCard.removeAllViews();
+                    TextView empty = new TextView(MainActivity.this);
+                    empty.setText("Fetching tonight's visual orbital passes...");
+                    empty.setTextColor(colQuiet);
+                    empty.setTextSize(11);
+                    detailCard.addView(empty);
+                    return;
+                }
+                int idx = Math.min(selectedIndex[0], currentPasses[0].size() - 1);
+                final SatelliteTrackerManager.VisualPass vp = currentPasses[0].get(idx);
+                domeView.setVisualPass(vp);
+
+                detailCard.removeAllViews();
+
+                // Row 1: Satellite Name + Live Countdown Badge
+                LinearLayout r1 = new LinearLayout(MainActivity.this);
+                r1.setOrientation(LinearLayout.HORIZONTAL);
+                r1.setGravity(Gravity.CENTER_VERTICAL);
+
+                TextView satTitle = new TextView(MainActivity.this);
+                satTitle.setText(vp.satName);
+                satTitle.setTextColor(vp.category != null ? vp.category.color : colAccent);
+                satTitle.setTextSize(13);
+                satTitle.setTypeface(Typeface.DEFAULT_BOLD);
+                LinearLayout.LayoutParams stlp = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
+                satTitle.setLayoutParams(stlp);
+                r1.addView(satTitle);
+
+                TextView tvCountdown = new TextView(MainActivity.this);
+                tvCountdown.setText("⏱️ " + vp.getCountdown());
+                tvCountdown.setTextColor(colEmerald);
+                tvCountdown.setTextSize(10f);
+                tvCountdown.setTypeface(Typeface.MONOSPACE);
+                tvCountdown.setPadding(dp(7), dp(2), dp(7), dp(2));
+                tvCountdown.setBackground(rounded(0x2210B981, dp(6)));
+                r1.addView(tvCountdown);
+                detailCard.addView(r1);
+
+                // Row 2: Trajectory Arc
+                TextView tvTraj = new TextView(MainActivity.this);
+                tvTraj.setText("🧭 " + vp.getTrajectorySummary());
+                tvTraj.setTextColor(colPale);
+                tvTraj.setTextSize(11f);
+                tvTraj.setPadding(0, dp(4), 0, dp(2));
+                detailCard.addView(tvTraj);
+
+                // Row 3: Brightness & Sighting Advisory
+                TextView tvBright = new TextView(MainActivity.this);
+                tvBright.setText("✨ " + vp.getBrightnessDescription() + " · Duration: " + (vp.durationSec / 60) + "m " + (vp.durationSec % 60) + "s");
+                tvBright.setTextColor(colQuiet);
+                tvBright.setTextSize(10.5f);
+                detailCard.addView(tvBright);
+
+                if (vp.isStarlinkTrain) {
+                    TextView tvTrain = new TextView(MainActivity.this);
+                    tvTrain.setText("🛰️ Cluster Formation: String of " + vp.trainSatCount + " Starlink satellites visible in straight line");
+                    tvTrain.setTextColor(colEmerald);
+                    tvTrain.setTextSize(10f);
+                    tvTrain.setPadding(0, dp(3), 0, 0);
+                    detailCard.addView(tvTrain);
+                }
+            }
+        };
+
+        final Runnable populateChips = new Runnable() {
+            @Override
+            public void run() {
+                chipRow.removeAllViews();
+                List<SatelliteTrackerManager.VisualPass> passes = currentPasses[0];
+                for (int i = 0; i < passes.size(); i++) {
+                    final int fi = i;
+                    final SatelliteTrackerManager.VisualPass p = passes.get(i);
+                    final TextView chip = new TextView(MainActivity.this);
+                    chip.setText((p.isStarlinkTrain ? "✨ " : "🛰️ ") + p.satName + " (" + p.getRiseTimeString() + ")");
+                    chip.setTextSize(10f);
+                    chip.setTypeface(Typeface.DEFAULT_BOLD);
+                    chip.setPadding(dp(10), dp(6), dp(10), dp(6));
+                    LinearLayout.LayoutParams clp = new LinearLayout.LayoutParams(
+                            LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+                    if (fi > 0) clp.leftMargin = dp(6);
+                    chip.setLayoutParams(clp);
+
+                    boolean isSel = (fi == selectedIndex[0]);
+                    int chipColor = p.category != null ? p.category.color : colCyan;
+                    chip.setBackground(rounded(isSel ? chipColor : colPanel, dp(8)));
+                    chip.setTextColor(isSel ? 0xFF0A0F1D : colPale);
+
+                    chip.setOnClickListener(new View.OnClickListener() {
+                        @Override
+                        public void onClick(View v) {
+                            hapticClick();
+                            selectedIndex[0] = fi;
+                            for (int k = 0; k < chipRow.getChildCount(); k++) {
+                                View c = chipRow.getChildAt(k);
+                                if (c instanceof TextView) {
+                                    boolean s = (k == fi);
+                                    SatelliteTrackerManager.VisualPass pk = currentPasses[0].get(k);
+                                    int col = pk.category != null ? pk.category.color : colCyan;
+                                    c.setBackground(rounded(s ? col : colPanel, dp(8)));
+                                    ((TextView) c).setTextColor(s ? 0xFF0A0F1D : colPale);
+                                }
+                            }
+                            updatePassDetail.run();
+                        }
+                    });
+                    chipRow.addView(chip);
+                }
+                updatePassDetail.run();
+            }
+        };
+
+        // Populate initial passes immediately
+        populateChips.run();
+
+        // Fetch live passes async in background
+        SatelliteTrackerManager.fetchVisualPassesAsync(this, new SatelliteTrackerManager.PassCallback() {
+            @Override
+            public void onPassesLoaded(final List<SatelliteTrackerManager.VisualPass> passes, boolean fromLiveApi) {
+                currentPasses[0] = passes;
+                populateChips.run();
+            }
+        });
+
+        final Dialog dlg = createDialogSheet(box);
+
+        // Actions Row
+        LinearLayout btnRow = new LinearLayout(this);
+        btnRow.setOrientation(LinearLayout.HORIZONTAL);
+        btnRow.setPadding(0, dp(4), 0, 0);
+
+        TextView btnTestAlert = actionButton("🔔 Test 2-Min Alert", colEmerald, colAccentInk);
+        btnTestAlert.setTextSize(11f);
+        btnTestAlert.setOnClickListener(new View.OnClickListener() {
+            public void onClick(View v) {
+                hapticHeavyClick();
+                if (!currentPasses[0].isEmpty()) {
+                    int idx = Math.min(selectedIndex[0], currentPasses[0].size() - 1);
+                    SatelliteTrackerManager.VisualPass vp = currentPasses[0].get(idx);
+                    SatelliteTrackerManager.dispatchPassAlert(MainActivity.this, vp, true);
+                    Toast.makeText(MainActivity.this, "✓ Test 2-min satellite pass alert dispatched to notification bar!", Toast.LENGTH_LONG).show();
+                }
+            }
+        });
+        btnRow.addView(btnTestAlert);
+
+        TextView btnApiKey = actionButton("⚙️ N2YO Key", colLine, colCyan);
+        btnApiKey.setTextSize(11f);
+        LinearLayout.LayoutParams aklp = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
+        aklp.leftMargin = dp(6);
+        btnApiKey.setLayoutParams(aklp);
+        btnApiKey.setOnClickListener(new View.OnClickListener() {
+            public void onClick(View v) {
+                hapticClick();
+                showN2yoApiKeyDialog();
+            }
+        });
+        btnRow.addView(btnApiKey);
+
+        TextView btnClose = actionButton("Close", colLine, colPale);
+        btnClose.setTextSize(11f);
+        LinearLayout.LayoutParams clp = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
+        clp.leftMargin = dp(6);
+        btnClose.setLayoutParams(clp);
+        btnClose.setOnClickListener(new View.OnClickListener() {
+            public void onClick(View v) {
+                hapticClick();
+                dlg.dismiss();
+            }
+        });
+        btnRow.addView(btnClose);
+
+        box.addView(btnRow);
+        dlg.show();
+    }
+
+    private void showN2yoApiKeyDialog() {
+        hapticHeavyClick();
+        final LinearLayout box = dialogContainer("⚙️ N2YO.com API Settings", "ORBITAL CONFIG", colCyan);
+
+        TextView tvDesc = new TextView(this);
+        tvDesc.setText("Configure your personal N2YO REST API Key for live satellite pass predictions from Space-Track / NORAD. Default key is active and operational:");
+        tvDesc.setTextColor(colQuiet);
+        tvDesc.setTextSize(11.5f);
+        tvDesc.setPadding(0, 0, 0, dp(10));
+        box.addView(tvDesc);
+
+        final EditText etKey = modernInputField(SatelliteTrackerManager.getApiKey(this));
+        box.addView(etKey);
+
+        final Dialog dlg = createDialogSheet(box);
+
+        LinearLayout btnRow = new LinearLayout(this);
+        btnRow.setOrientation(LinearLayout.HORIZONTAL);
+        btnRow.setPadding(0, dp(12), 0, 0);
+
+        TextView btnSave = actionButton("Save Key", colCyan, colAccentInk);
+        btnSave.setOnClickListener(new View.OnClickListener() {
+            public void onClick(View v) {
+                hapticHeavyClick();
+                String key = etKey.getText().toString().trim();
+                SatelliteTrackerManager.setApiKey(MainActivity.this, key);
+                Toast.makeText(MainActivity.this, "✓ N2YO API Key saved", Toast.LENGTH_SHORT).show();
+                dlg.dismiss();
+            }
+        });
+        btnRow.addView(btnSave);
+
+        TextView btnClose = actionButton("Cancel", colLine, colPale);
+        LinearLayout.LayoutParams clp = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
+        clp.leftMargin = dp(8);
+        btnClose.setLayoutParams(clp);
+        btnClose.setOnClickListener(new View.OnClickListener() {
+            public void onClick(View v) {
+                hapticClick();
+                dlg.dismiss();
+            }
+        });
+        btnRow.addView(btnClose);
+
+        box.addView(btnRow);
+        dlg.show();
     }
 
     // =========================================================================
@@ -11790,6 +12094,8 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
         setIntent(intent);
         if (intent != null && DeputyNotifier.ACTION_OPEN_DEPUTY.equals(intent.getAction())) {
             openDeputy(true);
+        } else if (intent != null && intent.getBooleanExtra("open_satellite_radar", false)) {
+            showSatelliteRadarDialog();
         }
     }
 
