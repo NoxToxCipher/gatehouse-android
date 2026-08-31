@@ -49,16 +49,29 @@
             </intent-filter>
         </activity>
 
-        <!-- Home Screen App Widget -->
+        <!-- Home Screen App Widget (Chronograph Dial) -->
         <receiver android:name=".GatehouseWidgetProvider"
             android:exported="true">
             <intent-filter>
                 <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
                 <action android:name="au.com.dss.gatehouse.WIDGET_TORCH" />
+                <action android:name="au.com.dss.gatehouse.WIDGET_SYNC_DEPUTY" />
             </intent-filter>
             <meta-data
                 android:name="android.appwidget.provider"
                 android:resource="@xml/gatehouse_widget_info" />
+        </receiver>
+
+        <!-- Full-Week Master Shift Roster Widget (Deputy Peek Board) -->
+        <receiver android:name=".RosterWidgetProvider"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+                <action android:name="au.com.dss.gatehouse.WIDGET_ROSTER_SYNC_DEPUTY" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/roster_widget_info" />
         </receiver>
 
         <!-- Hourly Auto-Update Broadcast Receiver -->

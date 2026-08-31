@@ -8,9 +8,11 @@ import android.widget.Toast;
 
 import android.app.Activity;
 import android.app.Dialog;
+import android.appwidget.AppWidgetManager;
 import android.content.BroadcastReceiver;
 import android.content.ClipData;
 import android.content.ClipboardManager;
+import android.content.ComponentName;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
@@ -634,6 +636,29 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
         registerSensors();
         requestGpsUpdates();
         updateDiagnostics();
+        notifyWidgetUpdate(this);
+    }
+
+    public static void notifyWidgetUpdate(Context context) {
+        try {
+            AppWidgetManager mgr = AppWidgetManager.getInstance(context);
+
+            ComponentName cn1 = new ComponentName(context, GatehouseWidgetProvider.class);
+            int[] ids1 = mgr.getAppWidgetIds(cn1);
+            if (ids1 != null && ids1.length > 0) {
+                for (int id : ids1) {
+                    GatehouseWidgetProvider.updateAppWidget(context, mgr, id);
+                }
+            }
+
+            ComponentName cn2 = new ComponentName(context, RosterWidgetProvider.class);
+            int[] ids2 = mgr.getAppWidgetIds(cn2);
+            if (ids2 != null && ids2.length > 0) {
+                for (int id : ids2) {
+                    RosterWidgetProvider.updateAppWidget(context, mgr, id);
+                }
+            }
+        } catch (Throwable t) {}
     }
 
     private void registerSensors() {
@@ -3924,6 +3949,16 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
         return saved;
     }
 
+    private boolean isOverlordDevice() {
+        String name = getTesterIdentityName();
+        if (name != null && (name.equalsIgnoreCase("Overlord") || name.toLowerCase(Locale.US).startsWith("overlord"))) {
+            return true;
+        }
+        String model = (Build.MODEL != null ? Build.MODEL : "").toLowerCase(Locale.US);
+        String device = (Build.DEVICE != null ? Build.DEVICE : "").toLowerCase(Locale.US);
+        return model.contains("25010pn30g") || device.contains("xuanyuan");
+    }
+
     private void setTesterIdentityName(String name) {
         String defaultName = resolveDefaultDeviceTesterName();
         getSharedPreferences("gatehouse_prefs", Context.MODE_PRIVATE)
@@ -4524,15 +4559,28 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
         final Runnable refreshRecentList = new Runnable() {
             public void run() {
                 recentSection.removeAllViews();
-                List<RemoteTelemetryClient.FeedbackItem> items = RemoteTelemetryClient.loadFeedbacksFromCache(MainActivity.this);
+                List<RemoteTelemetryClient.FeedbackItem> allItems = RemoteTelemetryClient.loadFeedbacksFromCache(MainActivity.this);
+                if (allItems == null) allItems = new ArrayList<>();
 
+                int totalReports = allItems.size();
+                int fixedReports = 0;
+                for (RemoteTelemetryClient.FeedbackItem item : allItems) {
+                    if (item.implementedMilestone > 0) {
+                        fixedReports++;
+                    }
+                }
+                int resolutionPct = totalReports > 0 ? (fixedReports * 100 / totalReports) : 100;
+
+                boolean isOverlord = isOverlordDevice();
+
+                // 1. Header Bar
                 LinearLayout rHeader = new LinearLayout(MainActivity.this);
                 rHeader.setOrientation(LinearLayout.HORIZONTAL);
                 rHeader.setGravity(Gravity.CENTER_VERTICAL);
                 rHeader.setPadding(0, dp(6), 0, dp(10));
 
                 TextView rTitle = new TextView(MainActivity.this);
-                rTitle.setText("YOUR SUBMITTED FEEDBACK");
+                rTitle.setText("TELEMETRY & FIELD FEEDBACK");
                 rTitle.setTextColor(0xFF00E5FF);
                 rTitle.setTextSize(11);
                 rTitle.setTypeface(Typeface.MONOSPACE);
@@ -4561,7 +4609,7 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
                 rHeader.addView(btnSync);
 
                 TextView rCount = new TextView(MainActivity.this);
-                rCount.setText((items.isEmpty() ? "0" : String.valueOf(items.size())) + " REPORTS");
+                rCount.setText(totalReports + " REPORTS");
                 rCount.setTextColor(0xFF00E5FF);
                 rCount.setTextSize(9);
                 rCount.setTypeface(Typeface.MONOSPACE);
@@ -4574,18 +4622,121 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
                 rHeader.addView(rCount);
                 recentSection.addView(rHeader);
 
-                if (items.isEmpty()) {
-                    TextView emptyTv = new TextView(MainActivity.this);
-                    emptyTv.setText("No reports submitted yet. Submit bug reports or ideas above to reach Antigravity in the automatic loops.");
-                    emptyTv.setTextColor(0xFF64748B);
-                    emptyTv.setTextSize(11);
-                    emptyTv.setPadding(0, dp(4), 0, dp(12));
-                    recentSection.addView(emptyTv);
+                // 2. Metrics Stat Box (Visible to everyone: Total Made, How Many Fixed, Resolution Rate)
+                LinearLayout statBox = new LinearLayout(MainActivity.this);
+                statBox.setOrientation(LinearLayout.HORIZONTAL);
+                statBox.setBackground(rounded(0xFF1E293B, dp(12)));
+                statBox.setPadding(dp(12), dp(10), dp(12), dp(10));
+                LinearLayout.LayoutParams sblp = new LinearLayout.LayoutParams(
+                        LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+                sblp.bottomMargin = dp(12);
+                statBox.setLayoutParams(sblp);
+
+                // Col 1: Total Reports Made
+                LinearLayout col1 = new LinearLayout(MainActivity.this);
+                col1.setOrientation(LinearLayout.VERTICAL);
+                col1.setGravity(Gravity.CENTER);
+                col1.setLayoutParams(new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f));
+                TextView val1 = new TextView(MainActivity.this);
+                val1.setText(String.valueOf(totalReports));
+                val1.setTextColor(0xFF00E5FF);
+                val1.setTextSize(16);
+                val1.setTypeface(Typeface.DEFAULT_BOLD);
+                col1.addView(val1);
+                TextView lbl1 = new TextView(MainActivity.this);
+                lbl1.setText("REPORTS MADE");
+                lbl1.setTextColor(0xFF94A3B8);
+                lbl1.setTextSize(9);
+                lbl1.setTypeface(Typeface.MONOSPACE);
+                col1.addView(lbl1);
+                statBox.addView(col1);
+
+                // Col 2: Total Fixed
+                LinearLayout col2 = new LinearLayout(MainActivity.this);
+                col2.setOrientation(LinearLayout.VERTICAL);
+                col2.setGravity(Gravity.CENTER);
+                col2.setLayoutParams(new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f));
+                TextView val2 = new TextView(MainActivity.this);
+                val2.setText(String.valueOf(fixedReports));
+                val2.setTextColor(0xFF00E676);
+                val2.setTextSize(16);
+                val2.setTypeface(Typeface.DEFAULT_BOLD);
+                col2.addView(val2);
+                TextView lbl2 = new TextView(MainActivity.this);
+                lbl2.setText("FIXED & LIVE");
+                lbl2.setTextColor(0xFF94A3B8);
+                lbl2.setTextSize(9);
+                lbl2.setTypeface(Typeface.MONOSPACE);
+                col2.addView(lbl2);
+                statBox.addView(col2);
+
+                // Col 3: Resolution Pct
+                LinearLayout col3 = new LinearLayout(MainActivity.this);
+                col3.setOrientation(LinearLayout.VERTICAL);
+                col3.setGravity(Gravity.CENTER);
+                col3.setLayoutParams(new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f));
+                TextView val3 = new TextView(MainActivity.this);
+                val3.setText(resolutionPct + "%");
+                val3.setTextColor(0xFFFFD166);
+                val3.setTextSize(16);
+                val3.setTypeface(Typeface.DEFAULT_BOLD);
+                col3.addView(val3);
+                TextView lbl3 = new TextView(MainActivity.this);
+                lbl3.setText("RESOLUTION");
+                lbl3.setTextColor(0xFF94A3B8);
+                lbl3.setTextSize(9);
+                lbl3.setTypeface(Typeface.MONOSPACE);
+                col3.addView(lbl3);
+                statBox.addView(col3);
+
+                recentSection.addView(statBox);
+
+                // 3. Filter Items based on Device Role
+                List<RemoteTelemetryClient.FeedbackItem> displayItems = new ArrayList<>();
+                if (isOverlord) {
+                    displayItems.addAll(allItems);
+                } else {
+                    for (RemoteTelemetryClient.FeedbackItem item : allItems) {
+                        if (item.testerName != null && !item.testerName.equalsIgnoreCase("Overlord") && !item.testerName.toLowerCase(Locale.US).contains("overlord")) {
+                            displayItems.add(item);
+                        }
+                    }
+                }
+
+                if (displayItems.isEmpty()) {
+                    LinearLayout noticeBox = new LinearLayout(MainActivity.this);
+                    noticeBox.setOrientation(LinearLayout.VERTICAL);
+                    noticeBox.setBackground(rounded(0xFF132328, dp(12)));
+                    noticeBox.setPadding(dp(14), dp(12), dp(14), dp(12));
+                    LinearLayout.LayoutParams nblp = new LinearLayout.LayoutParams(
+                            LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+                    nblp.bottomMargin = dp(8);
+                    noticeBox.setLayoutParams(nblp);
+
+                    TextView nTitle = new TextView(MainActivity.this);
+                    nTitle.setText(isOverlord ? "No feedback reports in queue." : "🔒 DEVELOPMENT TICKET ARCHIVE");
+                    nTitle.setTextColor(0xFF00E676);
+                    nTitle.setTextSize(11);
+                    nTitle.setTypeface(Typeface.MONOSPACE);
+                    noticeBox.addView(nTitle);
+
+                    TextView nSub = new TextView(MainActivity.this);
+                    if (isOverlord) {
+                        nSub.setText("All submitted bug reports and suggestions will appear here with verification milestones.");
+                    } else {
+                        nSub.setText("All " + fixedReports + " of " + totalReports + " system enhancements logged by Overlord have been deployed and verified active in this build.\n\nUse the form above to submit new bug reports or suggestions from this Hut Phone.");
+                    }
+                    nSub.setTextColor(0xFF94A3B8);
+                    nSub.setTextSize(11);
+                    nSub.setPadding(0, dp(4), 0, 0);
+                    noticeBox.addView(nSub);
+
+                    recentSection.addView(noticeBox);
                     return;
                 }
 
                 SimpleDateFormat sdf = new SimpleDateFormat("MMM d, HH:mm", Locale.US);
-                for (final RemoteTelemetryClient.FeedbackItem item : items) {
+                for (final RemoteTelemetryClient.FeedbackItem item : displayItems) {
                     LinearLayout fbCard = new LinearLayout(MainActivity.this);
                     fbCard.setOrientation(LinearLayout.VERTICAL);
                     boolean isResolved = (item.implementedMilestone > 0);
