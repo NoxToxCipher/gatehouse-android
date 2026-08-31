@@ -483,56 +483,74 @@ public class DeputyApi {
         res.statusMessage = "Offline (Cached Doherty Security Services Roster)";
 
         long nowSec = System.currentTimeMillis() / 1000L;
-        Calendar cal = Calendar.getInstance();
 
-        // Authentic Doherty Security Services Guards & Timetable
-        String[] guardNames = {
-            "Brian Rush", "Bill", "Jon Naylor", "Claren", "Chris Ireton", "Ken", "Roger", "Josh", "Lochran Doherty"
+        // Authentic Doherty Security Services Deputy Schedule
+        // [DayOffset, StartHour, GuardName, TotalHours, OpUnit]
+        Object[][] timetable = {
+            // Monday
+            {0, 16, "Lochran Doherty", 8.0, "Security"},
+            {1, 0, "Bill", 6.0, "Security"},
+            // Tuesday
+            {1, 16, "Chris Ireton", 8.0, "Security"},
+            {2, 0, "Brian Rush", 6.0, "Security"},
+            // Wednesday
+            {2, 16, "Jon Naylor", 6.0, "Security"},
+            {2, 22, "Chris Ireton", 8.0, "Security"},
+            // Thursday
+            {3, 16, "Jon Naylor", 6.0, "Security"},
+            {3, 22, "Claren", 8.0, "Security"},
+            // Friday
+            {4, 16, "Bill", 8.0, "Security"},
+            {4, 20, "Brian Rush", 9.0, "Security"},
+            // Saturday
+            {5, 0, "Claren", 10.0, "Security"},
+            {5, 10, "Ken", 6.0, "Security"},
+            {5, 16, "Chris Ireton", 8.0, "Security"},
+            {5, 20, "Roger", 9.0, "Security"},
+            // Sunday
+            {6, 0, "Bill", 6.0, "Security"},
+            {6, 6, "Lochran Doherty", 12.0, "Security"},
+            {6, 18, "Chris Ireton", 6.0, "Security"},
+            {6, 20, "Brian Rush", 4.0, "Security"}
         };
 
-        for (int i = 0; i < 7; i++) {
-            Calendar shiftCal = Calendar.getInstance();
-            shiftCal.add(Calendar.DAY_OF_YEAR, i - 1);
-            shiftCal.set(Calendar.HOUR_OF_DAY, 18);
-            shiftCal.set(Calendar.MINUTE, 0);
-            shiftCal.set(Calendar.SECOND, 0);
-            long sTs = shiftCal.getTimeInMillis() / 1000L;
-            long eTs = sTs + 43200L; // 12 hours (18:00 - 06:00)
+        for (int i = 0; i < timetable.length; i++) {
+            Object[] row = timetable[i];
+            int dayOffset = (Integer) row[0];
+            int sHour = (Integer) row[1];
+            String guard = (String) row[2];
+            double hours = (Double) row[3];
+            String opUnit = (String) row[4];
+
+            Calendar sCal = Calendar.getInstance();
+            sCal.setFirstDayOfWeek(Calendar.MONDAY);
+            sCal.set(Calendar.DAY_OF_WEEK, Calendar.MONDAY);
+            sCal.add(Calendar.DAY_OF_YEAR, dayOffset);
+            sCal.set(Calendar.HOUR_OF_DAY, sHour);
+            sCal.set(Calendar.MINUTE, 0);
+            sCal.set(Calendar.SECOND, 0);
+            long sTs = sCal.getTimeInMillis() / 1000L;
+            long eTs = sTs + (long)(hours * 3600L);
 
             DeputyShift s = new DeputyShift();
-            s.id = 5000 + i;
-            s.guardName = (i == 1 || i == 5) ? "Lochran Doherty" : guardNames[i % guardNames.length];
+            s.id = 1400 + i;
+            s.guardName = guard;
             s.startTs = sTs;
             s.endTs = eTs;
-            s.totalHours = 12.0;
-            s.operationalUnit = "Security - Doherty Security Services";
-            s.isCurrentGuard = s.guardName.contains("Lochran");
-            s.status = (i == 1) ? "ACTIVE" : (i < 1 ? "COMPLETED" : "CONFIRMED");
-            s.isLiveNow = (i == 1);
+            s.totalHours = hours;
+            s.operationalUnit = opUnit;
+            s.isCurrentGuard = guard.contains("Lochran");
+            s.isLiveNow = (nowSec >= sTs && nowSec <= eTs);
+            s.status = s.isLiveNow ? "ACTIVE" : (nowSec > eTs ? "COMPLETED" : "CONFIRMED");
             res.weekShifts.add(s);
 
-            if (s.isLiveNow && s.isCurrentGuard) {
-                res.activeShift = s;
+            if (s.isLiveNow) {
                 res.onDutyGuards.add(s);
+                if (s.isCurrentGuard) res.activeShift = s;
+            } else if (nowSec < sTs && res.nextRelief == null && !s.isCurrentGuard) {
+                res.nextRelief = s;
             }
         }
-
-        DeputyShift relief = new DeputyShift();
-        relief.guardName = "Brian Rush";
-        relief.operationalUnit = "Security - Doherty Security Services";
-        relief.startTs = nowSec + 14400L;
-        relief.endTs = relief.startTs + 21600L;
-        relief.totalHours = 6.0;
-        res.nextRelief = relief;
-
-        DeputyShift yardGuard = new DeputyShift();
-        yardGuard.guardName = "Chris Ireton";
-        yardGuard.operationalUnit = "Security - Doherty Security Services";
-        yardGuard.startTs = nowSec - 7200L;
-        yardGuard.endTs = nowSec + 14400L;
-        yardGuard.status = "ACTIVE";
-        yardGuard.isLiveNow = true;
-        res.onDutyGuards.add(yardGuard);
 
         return res;
     }

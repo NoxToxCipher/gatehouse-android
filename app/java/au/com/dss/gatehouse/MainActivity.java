@@ -3799,27 +3799,94 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
         Calendar cal = Calendar.getInstance();
         int dayOfWeek = cal.get(Calendar.DAY_OF_WEEK); // 1 = Sun, 2 = Mon, 3 = Tue, 4 = Wed, 5 = Thu, 6 = Fri, 7 = Sat
         int hour = cal.get(Calendar.HOUR_OF_DAY);
+        int min = cal.get(Calendar.MINUTE);
+        double time = hour + (min / 60.0);
 
-        // Night shift 18:00 - 06:00: hours 00:00 - 05:59 belong to previous day's evening shift
-        int shiftDay = (hour < 6) ? ((dayOfWeek == Calendar.SUNDAY) ? Calendar.SATURDAY : (dayOfWeek - 1)) : dayOfWeek;
-
-        switch (shiftDay) {
+        switch (dayOfWeek) {
             case Calendar.MONDAY:
+                if (time < 6.0) return "Bill";
+                if (time >= 16.0) return "Lochran Doherty";
                 return "Lochran Doherty";
             case Calendar.TUESDAY:
-                return "Brian Rush";
+                if (time < 6.0) return "Bill";
+                if (time >= 16.0) return "Chris Ireton";
+                return "Chris Ireton";
             case Calendar.WEDNESDAY:
+                if (time < 6.0) return "Brian Rush";
+                if (time >= 16.0 && time < 22.0) return "Jon Naylor";
+                if (time >= 22.0) return "Chris Ireton";
                 return "Jon Naylor";
             case Calendar.THURSDAY:
-                return "Claren";
+                if (time < 6.0) return "Chris Ireton";
+                if (time >= 16.0 && time < 22.0) return "Jon Naylor";
+                if (time >= 22.0) return "Claren";
+                return "Jon Naylor";
             case Calendar.FRIDAY:
-                return "Chris Ireton";
+                if (time < 6.0) return "Claren";
+                if (time >= 16.0 && time < 20.0) return "Bill";
+                if (time >= 20.0) return "Brian Rush";
+                return "Bill";
             case Calendar.SATURDAY:
-                return "Lochran Doherty";
+                if (time < 10.0) return "Claren";
+                if (time >= 10.0 && time < 16.0) return "Ken";
+                if (time >= 16.0 && time < 20.0) return "Chris Ireton";
+                if (time >= 20.0) return "Roger";
+                return "Chris Ireton";
             case Calendar.SUNDAY:
-                return "Ken";
+                if (time < 6.0) return "Bill";
+                if (time >= 6.0 && time < 18.0) return "Lochran Doherty";
+                if (time >= 18.0 && time < 20.0) return "Chris Ireton";
+                if (time >= 20.0) return "Brian Rush";
+                return "Chris Ireton";
             default:
                 return "Lochran Doherty";
+        }
+    }
+
+    public String getActiveShiftHoursWindow() {
+        Calendar cal = Calendar.getInstance();
+        int dayOfWeek = cal.get(Calendar.DAY_OF_WEEK);
+        int hour = cal.get(Calendar.HOUR_OF_DAY);
+        int min = cal.get(Calendar.MINUTE);
+        double time = hour + (min / 60.0);
+
+        switch (dayOfWeek) {
+            case Calendar.MONDAY:
+                if (time < 6.0) return "00:00–06:00";
+                if (time >= 16.0) return "16:00–00:00";
+                return "16:00–00:00";
+            case Calendar.TUESDAY:
+                if (time < 6.0) return "00:00–06:00";
+                if (time >= 16.0) return "16:00–00:00";
+                return "16:00–00:00";
+            case Calendar.WEDNESDAY:
+                if (time < 6.0) return "00:00–06:00";
+                if (time >= 16.0 && time < 22.0) return "16:00–22:00";
+                if (time >= 22.0) return "22:00–06:00";
+                return "16:00–22:00";
+            case Calendar.THURSDAY:
+                if (time < 6.0) return "22:00–06:00";
+                if (time >= 16.0 && time < 22.0) return "16:00–22:00";
+                if (time >= 22.0) return "22:00–06:00";
+                return "16:00–22:00";
+            case Calendar.FRIDAY:
+                if (time < 6.0) return "22:00–06:00";
+                if (time >= 16.0 && time < 20.0) return "16:00–00:00";
+                if (time >= 20.0) return "20:00–05:00";
+                return "16:00–00:00";
+            case Calendar.SATURDAY:
+                if (time < 10.0) return "00:00–10:00";
+                if (time >= 10.0 && time < 16.0) return "10:00–16:00";
+                if (time >= 16.0 && time < 20.0) return "16:00–00:00";
+                if (time >= 20.0) return "20:00–05:00";
+                return "16:00–00:00";
+            case Calendar.SUNDAY:
+                if (time < 6.0) return "00:00–06:00";
+                if (time >= 6.0 && time < 18.0) return "06:00–18:00";
+                if (time >= 18.0) return "18:00–00:00";
+                return "06:00–18:00";
+            default:
+                return "16:00–00:00";
         }
     }
 
@@ -7138,7 +7205,7 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
         rowOfficer.addView(who);
 
         TextView shiftTime = new TextView(this);
-        shiftTime.setText("18:00–06:00");
+        shiftTime.setText(getActiveShiftHoursWindow());
         shiftTime.setTextColor(colQuiet);
         shiftTime.setTextSize(10.5f);
         shiftTime.setTypeface(Typeface.MONOSPACE);
@@ -13537,46 +13604,46 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
         gridRow.setOrientation(LinearLayout.HORIZONTAL);
 
         final String[][][] weeklyData = {
-            // MON
+            // MON (31 Aug)
             {
-                {"00:00 - 06:00", "Bill", "CONFIRMED", "Post 01"},
-                {"00:00 - 05:10", "Brian Rush", "CONFIRMED", "Mobile 4"},
-                {"18:00 - 06:00", "Lochran Doherty", "ACTIVE", "Gatehouse"}
+                {"16:00 - 00:00", "Lochran Doherty", "ACTIVE", "Security"},
+                {"00:00 - 06:00", "Bill", "CONFIRMED", "Security"}
             },
-            // TUE
+            // TUE (01 Sep)
             {
-                {"00:00 - 06:00", "Bill", "CONFIRMED", "Post 01"},
-                {"16:00 - 00:00", "Chris Ireton", "SCHEDULED", "Yard"},
-                {"23:54 - 06:00", "Brian Rush", "SCHEDULED", "Gatehouse"}
+                {"00:00 - 06:00", "Bill", "CONFIRMED", "Security"},
+                {"16:00 - 00:00", "Chris Ireton", "SCHEDULED", "Security"},
+                {"00:00 - 06:00", "Brian Rush", "SCHEDULED", "Security"}
             },
-            // WED
+            // WED (02 Sep)
             {
-                {"15:35 - 22:26", "Jon Naylor", "SCHEDULED", "Factory"},
-                {"22:00 - 06:00", "Chris Ireton", "SCHEDULED", "Gatehouse"}
+                {"00:00 - 06:00", "Brian Rush", "SCHEDULED", "Security"},
+                {"16:00 - 22:00", "Jon Naylor", "SCHEDULED", "Security"},
+                {"22:00 - 06:00", "Chris Ireton", "SCHEDULED", "Security"}
             },
-            // THU
+            // THU (03 Sep)
             {
-                {"15:43 - 21:53", "Jon Naylor", "SCHEDULED", "Factory"},
-                {"21:57 - 06:00", "Brian Rush", "SCHEDULED", "Gatehouse"}
+                {"16:00 - 22:00", "Jon Naylor", "SCHEDULED", "Security"},
+                {"22:00 - 06:00", "Claren", "SCHEDULED", "Security"}
             },
-            // FRI
+            // FRI (04 Sep)
             {
-                {"16:00 - 03:00", "Bill", "SCHEDULED", "Post 01"},
-                {"19:59 - 05:05", "Brian Rush", "SCHEDULED", "Gatehouse"}
+                {"16:00 - 00:00", "Bill", "SCHEDULED", "Security"},
+                {"20:00 - 05:00", "Brian Rush", "SCHEDULED", "Security"}
             },
-            // SAT
+            // SAT (05 Sep)
             {
-                {"06:00 - 18:00", "Lochran Doherty", "SCHEDULED", "Gatehouse"},
-                {"07:00 - 16:00", "Ken", "SCHEDULED", "Day Sup."},
-                {"16:00 - 00:00", "Chris Ireton", "SCHEDULED", "Yard"},
-                {"20:00 - 05:00", "Josh", "SCHEDULED", "Mobile"}
+                {"00:00 - 10:00", "Claren", "SCHEDULED", "Security"},
+                {"10:00 - 16:00", "Ken", "SCHEDULED", "Security"},
+                {"16:00 - 00:00", "Chris Ireton", "SCHEDULED", "Security"},
+                {"20:00 - 05:00", "Roger", "SCHEDULED", "Security"}
             },
-            // SUN
+            // SUN (06 Sep)
             {
-                {"00:00 - 06:00", "Bill", "SCHEDULED", "Post 01"},
-                {"18:00 - 06:00", "Lochran Doherty", "SCHEDULED", "Gatehouse"},
-                {"18:00 - 00:00", "Chris Ireton", "SCHEDULED", "Yard"},
-                {"20:00 - 00:00", "Brian Rush", "SCHEDULED", "Mobile"}
+                {"00:00 - 06:00", "Bill", "SCHEDULED", "Security"},
+                {"06:00 - 18:00", "Lochran Doherty", "SCHEDULED", "Security"},
+                {"18:00 - 00:00", "Chris Ireton", "SCHEDULED", "Security"},
+                {"20:00 - 00:00", "Brian Rush", "SCHEDULED", "Security"}
             }
         };
 
@@ -13727,17 +13794,44 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
         boolean isTomorrow = (dayIndex == (todayIdx + 1) % 7);
         String label = isToday ? (fullDayTitle + " · Today") : (isTomorrow ? (fullDayTitle + " · Tomorrow") : fullDayTitle);
 
-        final boolean isLochranShift = (dayIndex == 0 || dayIndex == 5 || dayIndex == 6);
-        final boolean isDualGuard = (dayIndex == 1 || dayIndex == 5);
-        final boolean isRestDay = (dayIndex == 3 || dayIndex == 4);
-        final boolean isOpenShift = (dayIndex == 2);
+        final boolean isLochranShift = (dayIndex == 0 || dayIndex == 6);
+        final boolean isDualGuard = (dayIndex == 1 || dayIndex == 2 || dayIndex == 4 || dayIndex == 5 || dayIndex == 6);
+        final boolean isRestDay = (dayIndex == 3);
+        final boolean isOpenShift = false;
 
-        String shiftHours = isRestDay ? "ROSTERED DAY OFF (RDO)" : (isToday ? "18:00 – 06:00 (12.0h)" : (isOpenShift ? "16:00 – 00:00 (8.0h)" : "18:00 – 06:00 (12.0h)"));
-        String statusText = isRestDay ? "⚪ REST DAY" : (isToday ? "🟢 ACTIVE SHIFT (MINE)" : (isLochranShift ? "🟢 CONFIRMED (MINE)" : (isDualGuard ? "🟣 2-GUARD OVERLAP" : (isOpenShift ? "🟡 OPEN · CLAIMABLE" : "🟢 CONFIRMED"))));
-        int statusColor = isRestDay ? 0xFF94A3B8 : (isToday ? colEmerald : (isLochranShift ? colAccent : (isDualGuard ? 0xFFA855F7 : (isOpenShift ? 0xFFF59E0B : 0xFF38BDF8))));
+        String shiftHours = (dayIndex == 0) ? "16:00 – 00:00 (8.0h) / 00:00 – 06:00"
+                : (dayIndex == 1) ? "16:00 – 00:00 (8.0h) / 00:00 – 06:00"
+                : (dayIndex == 2) ? "16:00 – 22:00 (6.0h) / 22:00 – 06:00"
+                : (dayIndex == 3) ? "16:00 – 22:00 (6.0h) / 22:00 – 06:00"
+                : (dayIndex == 4) ? "16:00 – 00:00 (8.0h) / 20:00 – 05:00"
+                : (dayIndex == 5) ? "10:00 – 16:00 / 16:00 – 00:00 / 20:00 – 05:00"
+                : "06:00 – 18:00 (12.0h Day Shift) / 18:00 – 00:00";
 
-        String primaryGuard = isRestDay ? "No Shift Assigned" : (isLochranShift ? "🛡️ Officer Lochran Doherty (You · LIC #41207)" : (isOpenShift ? "Unassigned (Open for Claim)" : "Officer Brian Rush (LIC #41208)"));
-        String coworkerName = isDualGuard ? "Officer Chris Ireton (Yard Patrol)" : "Solo Shift (Relief: Brian Rush)";
+        String statusText = isToday && isLochranShift ? "🟢 ACTIVE SHIFT (MINE)"
+                : isLochranShift ? "🟢 CONFIRMED (MINE)"
+                : isDualGuard ? "🟣 2-GUARD COVERAGE"
+                : "🟢 CONFIRMED";
+
+        int statusColor = isToday && isLochranShift ? colEmerald
+                : isLochranShift ? colAccent
+                : isDualGuard ? 0xFFA855F7
+                : 0xFF38BDF8;
+
+        String primaryGuard = (dayIndex == 0) ? "🛡️ Officer Lochran Doherty (You · LIC #41207)"
+                : (dayIndex == 1) ? "Officer Chris Ireton (LIC #41209)"
+                : (dayIndex == 2) ? "Officer Jon Naylor (LIC #41210)"
+                : (dayIndex == 3) ? "Officer Jon Naylor (LIC #41210)"
+                : (dayIndex == 4) ? "Officer Bill (LIC #41211)"
+                : (dayIndex == 5) ? "Officer Ken / Chris Ireton"
+                : "🛡️ Officer Lochran Doherty (You · LIC #41207)";
+
+        String coworkerName = (dayIndex == 0) ? "Overnight Relief: Officer Bill (00:00 – 06:00)"
+                : (dayIndex == 1) ? "Overnight Relief: Officer Brian Rush (00:00 – 06:00)"
+                : (dayIndex == 2) ? "Night Patrol: Officer Chris Ireton (22:00 – 06:00)"
+                : (dayIndex == 3) ? "Night Patrol: Officer Claren (22:00 – 06:00)"
+                : (dayIndex == 4) ? "Night Patrol: Officer Brian Rush (20:00 – 05:00)"
+                : (dayIndex == 5) ? "Night Patrol: Officer Roger (20:00 – 05:00)"
+                : "Evening Relief: Officer Chris Ireton & Brian Rush (18:00 – 00:00)";
 
         final LinearLayout card = new LinearLayout(this);
         card.setOrientation(LinearLayout.VERTICAL);
