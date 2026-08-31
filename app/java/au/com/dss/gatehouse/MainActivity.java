@@ -479,6 +479,14 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
                     }
                 });
             }
+        } else if (getIntent() != null && getIntent().getBooleanExtra("open_tester_feedback", false)) {
+            if (rootFrame != null) {
+                rootFrame.post(new Runnable() {
+                    public void run() {
+                        showTesterFeedbackScreen();
+                    }
+                });
+            }
         }
     }
 
@@ -4301,13 +4309,36 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
                 rTitle.setLayoutParams(rhlp);
                 rHeader.addView(rTitle);
 
+                TextView btnSync = new TextView(MainActivity.this);
+                btnSync.setText("🔄 SYNC STATUS");
+                btnSync.setTextColor(0xFF10B981);
+                btnSync.setTextSize(9);
+                btnSync.setTypeface(Typeface.MONOSPACE);
+                btnSync.setPadding(dp(8), dp(3), dp(8), dp(3));
+                btnSync.setBackground(rounded(0x2210B981, dp(4)));
+                btnSync.setOnClickListener(new View.OnClickListener() {
+                    public void onClick(View v) {
+                        hapticClick();
+                        RemoteTelemetryClient.fetchRemoteFeedbackAsync(MainActivity.this, new Runnable() {
+                            public void run() {
+                                Toast.makeText(MainActivity.this, "✓ Telemetry implementation status refreshed", Toast.LENGTH_SHORT).show();
+                            }
+                        });
+                    }
+                });
+                rHeader.addView(btnSync);
+
                 TextView rCount = new TextView(MainActivity.this);
                 rCount.setText((items.isEmpty() ? "0" : String.valueOf(items.size())) + " REPORTS");
                 rCount.setTextColor(0xFF00E5FF);
                 rCount.setTextSize(9);
                 rCount.setTypeface(Typeface.MONOSPACE);
-                rCount.setPadding(dp(6), dp(2), dp(6), dp(2));
+                rCount.setPadding(dp(6), dp(3), dp(6), dp(3));
                 rCount.setBackground(rounded(0x2200E5FF, dp(4)));
+                LinearLayout.LayoutParams rclp = new LinearLayout.LayoutParams(
+                        LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+                rclp.leftMargin = dp(6);
+                rCount.setLayoutParams(rclp);
                 rHeader.addView(rCount);
                 recentSection.addView(rHeader);
 
@@ -4322,11 +4353,11 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
                 }
 
                 SimpleDateFormat sdf = new SimpleDateFormat("MMM d, HH:mm", Locale.US);
-                for (RemoteTelemetryClient.FeedbackItem item : items) {
+                for (final RemoteTelemetryClient.FeedbackItem item : items) {
                     LinearLayout fbCard = new LinearLayout(MainActivity.this);
                     fbCard.setOrientation(LinearLayout.VERTICAL);
                     boolean isResolved = (item.implementedMilestone > 0);
-                    fbCard.setBackground(isResolved ? rounded(0xFF132328, dp(12)) : rounded(0xFF1E293B, dp(12)));
+                    fbCard.setBackground(isResolved ? rounded(0xFF0F261F, dp(12)) : rounded(0xFF1E293B, dp(12)));
                     fbCard.setPadding(dp(14), dp(12), dp(14), dp(12));
                     LinearLayout.LayoutParams fblp = new LinearLayout.LayoutParams(
                             LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
@@ -4345,12 +4376,12 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
                     cardTop.addView(catTv);
 
                     TextView badgeTv = new TextView(MainActivity.this);
-                    badgeTv.setText(isResolved ? ("IMPLEMENTED IN V1.0." + item.implementedMilestone) : "SUBMITTED • IN QUEUE");
-                    badgeTv.setTextColor(isResolved ? 0xFF00E676 : 0xFF00E5FF);
+                    badgeTv.setText(isResolved ? ("✓ IMPLEMENTED IN V1.0." + item.implementedMilestone) : "⏳ SUBMITTED · IN QUEUE");
+                    badgeTv.setTextColor(isResolved ? 0xFF00E676 : 0xFF38BDF8);
                     badgeTv.setTextSize(8.5f);
                     badgeTv.setTypeface(Typeface.MONOSPACE);
-                    badgeTv.setPadding(dp(6), dp(2), dp(6), dp(2));
-                    badgeTv.setBackground(rounded(isResolved ? 0x2200E676 : 0x2200E5FF, dp(4)));
+                    badgeTv.setPadding(dp(7), dp(3), dp(7), dp(3));
+                    badgeTv.setBackground(rounded(isResolved ? 0x2A00E676 : 0x2238BDF8, dp(4)));
                     LinearLayout.LayoutParams btlp = new LinearLayout.LayoutParams(
                             LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT);
                     btlp.leftMargin = dp(8);
@@ -4385,6 +4416,16 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
                         dTv.setTextColor(0xFF94A3B8);
                         dTv.setTextSize(11);
                         fbCard.addView(dTv);
+                    }
+
+                    if (isResolved) {
+                        TextView resNotice = new TextView(MainActivity.this);
+                        resNotice.setText("✓ Verified & deployed in Gatehouse v1.0." + item.implementedMilestone + " build");
+                        resNotice.setTextColor(0xFF00E676);
+                        resNotice.setTextSize(9.5f);
+                        resNotice.setTypeface(Typeface.MONOSPACE);
+                        resNotice.setPadding(0, dp(4), 0, 0);
+                        fbCard.addView(resNotice);
                     }
 
                     recentSection.addView(fbCard);
@@ -12096,6 +12137,8 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
             openDeputy(true);
         } else if (intent != null && intent.getBooleanExtra("open_satellite_radar", false)) {
             showSatelliteRadarDialog();
+        } else if (intent != null && intent.getBooleanExtra("open_tester_feedback", false)) {
+            showTesterFeedbackScreen();
         }
     }
 
