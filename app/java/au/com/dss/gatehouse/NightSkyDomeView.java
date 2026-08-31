@@ -225,7 +225,7 @@ public class NightSkyDomeView extends View {
                     if (offsetFrac >= 0f && offsetFrac <= 1f) {
                         float ou = 1f - offsetFrac;
                         float sx = ou * ou * xRise + 2 * ou * offsetFrac * xPeak + offsetFrac * offsetFrac * xSet;
-                        float sy = ou * ou * yRise + 2 * ou * offsetFrac * yPeak + offsetFrac * offsetFrac * xSet;
+                        float sy = ou * ou * yRise + 2 * ou * offsetFrac * yPeak + offsetFrac * offsetFrac * ySet;
                         float nodeSize = (i == 0) ? dp(4f) : dp(2.2f);
                         canvas.drawCircle(sx, sy, nodeSize, satPaint);
                     }
