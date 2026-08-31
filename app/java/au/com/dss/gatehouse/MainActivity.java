@@ -3386,12 +3386,46 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
         container.addView(sectionHeader("⚙️ PREFERENCES & SYSTEM HUB", null));
         LinearLayout r7 = new LinearLayout(this);
         r7.setOrientation(LinearLayout.HORIZONTAL);
-            split.addView(rightCol);
-            container.addView(split);
-            return container;
-        }
+        r7.addView(buildCompactToolTile("⚙️", "Preferences", "THEMES", colAccent, "Display themes & haptics", new View.OnClickListener() {
+            public void onClick(View v) {
+                hapticClick();
+                showSettingsDialog();
+            }
+        }));
+        r7.addView(buildCompactToolTile("⚡", "OTA Updates", "v" + AutoUpdateManager.getAppVersion(this), colEmerald, "Check live GitHub build", new View.OnClickListener() {
+            public void onClick(View v) {
+                hapticHeavyClick();
+                AutoUpdateManager.checkForUpdateAsync(MainActivity.this, true, new AutoUpdateManager.UpdateCheckCallback() {
+                    @Override
+                    public void onUpdateFound(final String newSha, final long bytes) {
+                        runOnUiThread(new Runnable() {
+                            public void run() {
+                                banner.setText("✓ New OTA update ready (SHA " + (newSha.length() > 8 ? newSha.substring(0, 8) : newSha) + ") · Installing");
+                                banner.setVisibility(View.VISIBLE);
+                            }
+                        });
+                    }
+                    @Override
+                    public void onNoUpdateAvailable() {
+                        runOnUiThread(new Runnable() {
+                            public void run() {
+                                Toast.makeText(MainActivity.this, "✓ Gatehouse is up to date", Toast.LENGTH_SHORT).show();
+                            }
+                        });
+                    }
+                    @Override
+                    public void onError(final String message) {
+                        runOnUiThread(new Runnable() {
+                            public void run() {
+                                Toast.makeText(MainActivity.this, "Update check: " + message, Toast.LENGTH_SHORT).show();
+                            }
+                        });
+                    }
+                });
+            }
+        }));
+        container.addView(r7);
 
-        container.addView(grid);
         return container;
     }
 
@@ -7313,22 +7347,127 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
         refresh();
     }
 
+    private void showSettingsDialog() {
+        final LinearLayout box = dialogContainer("⚙️ Gatehouse Preferences", "CONFIGURATION & THEMES", colAccent);
+
+        box.addView(formSectionLabel("🎨 ACTIVE DISPLAY THEME"));
+
+        final String[][] themes = {
+            {"OLED Gold (Default)", "AMOLED zero-power black & warm gold accents", String.valueOf(THEME_GOLD)},
+            {"0-Lux Red", "Night vision preservation & zero light bleed", String.valueOf(THEME_RED)},
+            {"NVG Phosphor Green", "High-contrast night perimeter surveillance", String.valueOf(THEME_NVG)},
+            {"Cyber Violet", "Low-glare indoor gatehouse console", String.valueOf(THEME_VIOLET)}
+        };
+
+        final Dialog dlg = createDialogSheet(box);
+
+        for (int i = 0; i < themes.length; i++) {
+            final int themeId = Integer.parseInt(themes[i][2]);
+            final boolean isSelected = (activeTheme == themeId);
+
+            final LinearLayout row = new LinearLayout(this);
+            row.setOrientation(LinearLayout.HORIZONTAL);
+            row.setGravity(Gravity.CENTER_VERTICAL);
+            row.setBackground(rounded(isSelected ? 0x22FFD166 : colPanel2, dp(10)));
+            row.setPadding(dp(12), dp(10), dp(12), dp(10));
+            LinearLayout.LayoutParams rlp = new LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+            rlp.bottomMargin = dp(6);
+            row.setLayoutParams(rlp);
+
+            // Signal-style Radio Circle
+            final TextView radio = new TextView(this);
+            radio.setText(isSelected ? "🔘" : "⚪");
+            radio.setTextSize(16);
+            radio.setPadding(0, 0, dp(10), 0);
+            row.addView(radio);
+
+            LinearLayout textCol = new LinearLayout(this);
+            textCol.setOrientation(LinearLayout.VERTICAL);
+            LinearLayout.LayoutParams tclp = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
+            textCol.setLayoutParams(tclp);
+
+            TextView title = new TextView(this);
+            title.setText(themes[i][0]);
+            title.setTextColor(isSelected ? colAccent : colPale);
+            title.setTextSize(13);
+            title.setTypeface(Typeface.DEFAULT_BOLD);
+            textCol.addView(title);
+
+            TextView desc = new TextView(this);
+            desc.setText(themes[i][1]);
+            desc.setTextColor(colMuted);
+            desc.setTextSize(10.5f);
+            textCol.addView(desc);
+
+            row.addView(textCol);
+
+            row.setOnClickListener(new View.OnClickListener() {
+                public void onClick(View v) {
+                    hapticClick();
+                    if (activeTheme != themeId) {
+                        activeTheme = themeId;
+                        applyThemeTokens();
+                        rebuildCurrentScreen();
+                    }
+                    dlg.dismiss();
+                }
+            });
+
+            box.addView(row);
+        }
+
+        box.addView(formSectionLabel("📱 TERMINAL HARDWARE PROFILE"));
+        box.addView(terminalProfileCard());
+
+        TextView btnClose = actionButton("Close Preferences", colLine, colPale);
+        btnClose.setOnClickListener(new View.OnClickListener() {
+            public void onClick(View v) {
+                hapticClick();
+                dlg.dismiss();
+            }
+        });
+        box.addView(btnClose);
+        dlg.show();
+    }
+
     private LinearLayout headerCard() {
         LinearLayout card = new LinearLayout(this);
         card.setOrientation(LinearLayout.VERTICAL);
         card.setBackground(rounded(colPanel, dp(18)));
         card.setPadding(dp(16), dp(16), dp(16), dp(16));
 
+        LinearLayout topRow = new LinearLayout(this);
+        topRow.setOrientation(LinearLayout.HORIZONTAL);
+        topRow.setGravity(Gravity.CENTER_VERTICAL);
+
         TextView brand = new TextView(this);
-        brand.setText("DOHERTY SECURITY SERVICES · STATIC GUARDING · " + getHutPhoneHardwareTag().toUpperCase(Locale.US));
+        brand.setText("DOHERTY SECURITY SERVICES · " + getHutPhoneHardwareTag().toUpperCase(Locale.US));
         brand.setTextColor(colAccent);
         brand.setTextSize(10);
         brand.setTypeface(Typeface.DEFAULT_BOLD);
         brand.setLetterSpacing(0.14f);
+        LinearLayout.LayoutParams blp = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
+        brand.setLayoutParams(blp);
         brand.setOnClickListener(new View.OnClickListener() {
             public void onClick(View v) { showWelfareCheckDialog(); }
         });
-        card.addView(brand);
+        topRow.addView(brand);
+
+        TextView btnSettings = new TextView(this);
+        btnSettings.setText("⚙️");
+        btnSettings.setTextSize(14);
+        btnSettings.setPadding(dp(6), dp(2), dp(6), dp(2));
+        btnSettings.setBackground(rounded(colPanel2, dp(6)));
+        btnSettings.setOnClickListener(new View.OnClickListener() {
+            public void onClick(View v) {
+                hapticClick();
+                showSettingsDialog();
+            }
+        });
+        topRow.addView(btnSettings);
+
+        card.addView(topRow);
 
         TextView site = new TextView(this);
         site.setText("Hume Doors & Timber, Kingston");
