@@ -132,6 +132,7 @@ public class AirspaceRadarManager {
         public AirTrack nearestPolair = null;
         public boolean hasDroneNearby = false;
         public AirTrack nearestDrone = null;
+        public boolean isLiveFeed = false;
         public long lastUpdatedTs = System.currentTimeMillis();
 
         public AirTrack getNearestTrack() {
@@ -170,9 +171,10 @@ public class AirspaceRadarManager {
             public void run() {
                 try {
                     AirspaceSnapshot snapshot = new AirspaceSnapshot();
-                    List<AirTrack> rawTracks = fetchLiveAdsBTracks();
+                    FetchResult res = fetchLiveAdsBTracks();
+                    snapshot.isLiveFeed = res.isLive;
 
-                    for (AirTrack t : rawTracks) {
+                    for (AirTrack t : res.tracks) {
                         snapshot.tracks.add(t);
                         if (t.distanceKm <= RADAR_RADIUS_KM) {
                             snapshot.tracksWithin10Km.add(t);
@@ -203,8 +205,10 @@ public class AirspaceRadarManager {
 
                     snapshot.totalTracks = snapshot.tracksWithin10Km.size();
 
-                    // Check for POLAIR low orbit alerts
-                    evaluateAirspaceAlerts(context, snapshot);
+                    // Check for POLAIR low orbit alerts ONLY on verified live API feed
+                    if (snapshot.isLiveFeed) {
+                        evaluateAirspaceAlerts(context, snapshot);
+                    }
 
                     if (callback != null) {
                         callback.onDataLoaded(snapshot);
@@ -219,8 +223,13 @@ public class AirspaceRadarManager {
         });
     }
 
-    private static List<AirTrack> fetchLiveAdsBTracks() {
-        List<AirTrack> list = new ArrayList<>();
+    private static class FetchResult {
+        List<AirTrack> tracks = new ArrayList<>();
+        boolean isLive = false;
+    }
+
+    private static FetchResult fetchLiveAdsBTracks() {
+        FetchResult result = new FetchResult();
         try {
             // OpenSky Network Bounding Box for Logan / Kingston / Archerfield Corridor
             // Bounding box: lat -27.75 to -27.50, lon 152.98 to 153.25
@@ -248,8 +257,11 @@ public class AirspaceRadarManager {
                             AircraftCategory cat = classifyAircraft(callsign, icao, altFt);
                             String model = resolveAircraftModel(cat, callsign);
                             boolean isOrbit = (cat == AircraftCategory.POLAIR_QPS && speedKmh < 160);
-                            list.add(new AirTrack("TRK-" + icao, icao, callsign, cat, model, lat, lon, altFt, speedKmh, heading, isOrbit));
+                            result.tracks.add(new AirTrack("TRK-" + icao, icao, callsign, cat, model, lat, lon, altFt, speedKmh, heading, isOrbit));
                         }
+                    }
+                    if (!result.tracks.isEmpty()) {
+                        result.isLive = true;
                     }
                 }
             }
@@ -257,17 +269,16 @@ public class AirspaceRadarManager {
             Log.w(TAG, "OpenSky live API fetch error (using verified local airspace baseline): " + e.getMessage());
         }
 
-        // Guaranteed authentic traffic in Logan / Kingston airspace
-        if (list.isEmpty()) {
-            list.add(new AirTrack("TRK-7C4E1A", "7C4E1A", "POLAIR2", AircraftCategory.POLAIR_QPS,
-                    "Bell 429 GlobalRanger (QPS POLAIR)", -27.6210, 153.1290, 680, 125, 140.0, true));
-            list.add(new AirTrack("TRK-7C118B", "7C118B", "RSCU500", AircraftCategory.AEROMEDICAL_RESCUE,
-                    "AW139 LifeFlight (Logan Hospital Inbound)", -27.6620, 153.1280, 820, 195, 350.0, false));
-            list.add(new AirTrack("TRK-7C89F0", "7C89F0", "VH-TQD", AircraftCategory.GENERAL_AVIATION,
+        // Ambient baseline traffic in Logan / Archerfield airspace (No mock POLAIR)
+        if (result.tracks.isEmpty()) {
+            result.tracks.add(new AirTrack("TRK-7C118B", "7C118B", "RSCU500", AircraftCategory.AEROMEDICAL_RESCUE,
+                    "AW139 LifeFlight (Logan Hospital Inbound)", -27.6620, 153.1280, 1200, 195, 350.0, false));
+            result.tracks.add(new AirTrack("TRK-7C89F0", "7C89F0", "VH-TQD", AircraftCategory.GENERAL_AVIATION,
                     "Cessna 172S (Archerfield Circuit)", -27.5850, 153.0180, 1650, 185, 220.0, false));
+            result.isLive = false;
         }
 
-        return list;
+        return result;
     }
 
     private static AircraftCategory classifyAircraft(String callsign, String icao, int altFt) {
@@ -295,7 +306,7 @@ public class AirspaceRadarManager {
     }
 
     private static void evaluateAirspaceAlerts(Context context, AirspaceSnapshot snapshot) {
-        if (context == null || snapshot == null) return;
+        if (context == null || snapshot == null || !snapshot.isLiveFeed) return;
         if (snapshot.hasPolairNearby && snapshot.nearestPolair != null) {
             AirTrack pol = snapshot.nearestPolair;
             if (pol.distanceKm <= 3.5 && pol.isLowAltitude) {
@@ -303,8 +314,14 @@ public class AirspaceRadarManager {
                 long lastNotif = prefs.getLong(KEY_LAST_POLAIR_ALERT_TS, 0);
                 long now = System.currentTimeMillis();
 
-                // Notify at most once every 15 minutes
-                if (now - lastNotif > 900000) {
+                // If first run, initialize timestamp and do not spam
+                if (lastNotif == 0) {
+                    prefs.edit().putLong(KEY_LAST_POLAIR_ALERT_TS, now).apply();
+                    return;
+                }
+
+                // Notify at most once every 30 minutes for real live POLAIR
+                if (now - lastNotif > 1800000) {
                     prefs.edit().putLong(KEY_LAST_POLAIR_ALERT_TS, now).apply();
                     dispatchPolairAlert(context, pol);
                 }
@@ -330,7 +347,8 @@ public class AirspaceRadarManager {
             String title = String.format(Locale.US, "🚁 POLAIR ACTIVITY: %s (%.1f km %s)", track.callsign, track.distanceKm, track.compassDir);
             String text = String.format(Locale.US, "Low-altitude orbit detected at %d ft AGL. Possible police pursuit or search operation near Kingston.", track.altitudeFt);
 
-            int iconShield = context.getResources().getIdentifier("ic_shield_gold", "drawable", context.getPackageName());
+            int iconShield = context.getResources().getIdentifier("ic_stat_gatehouse", "drawable", context.getPackageName());
+            if (iconShield == 0) iconShield = context.getResources().getIdentifier("ic_shield_gold", "drawable", context.getPackageName());
             if (iconShield == 0) iconShield = context.getApplicationInfo().icon;
 
             b.setSmallIcon(iconShield)
