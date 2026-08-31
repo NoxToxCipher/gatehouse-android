@@ -3034,6 +3034,9 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
             float rx = cx + (float) Math.cos(rightRad) * (rOuter + dpf(16f));
             float ry = cy + (float) Math.sin(rightRad) * (rOuter + dpf(16f));
             canvas.drawText("06:00", rx + dpf(2f), ry + dpf(8f), labelPaint);
+
+            // Pulse live clock updates every second
+            postInvalidateDelayed(1000);
         }
     }
 
