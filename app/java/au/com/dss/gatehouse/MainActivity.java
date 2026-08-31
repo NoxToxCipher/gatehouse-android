@@ -17692,13 +17692,24 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
             if (w <= 0 || h <= 0) return;
 
             boardRect.set(0, 0, w, h);
+            boardPaint.setShader(new LinearGradient(0, 0, w, h, 0xFF2D1B0D, 0xFF452B14, Shader.TileMode.CLAMP));
             canvas.drawRoundRect(boardRect, dpf(16f), dpf(16f), boardPaint);
+
+            Paint goldBorder = new Paint(Paint.ANTI_ALIAS_FLAG);
+            goldBorder.setColor(0xFFEAB308);
+            goldBorder.setStyle(Paint.Style.STROKE);
+            goldBorder.setStrokeWidth(dpf(1.5f));
+            RectF innerRect = new RectF(dpf(2f), dpf(2f), w - dpf(2f), h - dpf(2f));
+            canvas.drawRoundRect(innerRect, dpf(14f), dpf(14f), goldBorder);
 
             float pad = dpf(22f);
             float size = Math.min(w, h) - pad * 2;
             float startX = (w - size) / 2f;
             float startY = (h - size) / 2f;
             float cellSize = size / 8f;
+
+            gridPaint.setColor(0xFF8C5C33);
+            gridPaint.setStrokeWidth(dpf(1.5f));
 
             // Grid lines
             for (int i = 0; i < 9; i++) {
@@ -17708,6 +17719,8 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
                 canvas.drawLine(px, startY, px, startY + size, gridPaint);
 
                 // Coordinate labels
+                textPaint.setColor(0xFFFDE047);
+                textPaint.setTextSize(dpf(9f));
                 String colName = String.valueOf((char) ('A' + (i >= 8 ? i + 1 : i)));
                 canvas.drawText(colName, px, startY - dpf(6f), textPaint);
                 canvas.drawText(String.valueOf(9 - i), startX - dpf(10f), py + dpf(3f), textPaint);
@@ -17719,12 +17732,20 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
                 for (int hy : hoshi) {
                     float px = startX + hx * cellSize;
                     float py = startY + hy * cellSize;
-                    canvas.drawCircle(px, py, dpf(3f), starPointPaint);
+                    canvas.drawCircle(px, py, dpf(4f), goldBorder);
+                    canvas.drawCircle(px, py, dpf(2.5f), starPointPaint);
                 }
             }
 
-            // Stones
-            float stoneR = cellSize * 0.46f;
+            // 3D Bi-convex Stones with Shadows
+            float stoneR = cellSize * 0.47f;
+            Paint shadowPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+            shadowPaint.setColor(0x99000000);
+            shadowPaint.setStyle(Paint.Style.FILL);
+
+            Paint stone3dPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+            stone3dPaint.setStyle(Paint.Style.FILL);
+
             for (int y = 0; y < 9; y++) {
                 for (int x = 0; x < 9; x++) {
                     int val = board[y][x];
@@ -17733,15 +17754,35 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
                     float cx = startX + x * cellSize;
                     float cy = startY + y * cellSize;
 
-                    if (val == 1) { // Black stone
-                        canvas.drawCircle(cx, cy, stoneR, blackStonePaint);
-                        canvas.drawCircle(cx - stoneR * 0.25f, cy - stoneR * 0.25f, stoneR * 0.22f, stoneHighlightPaint);
-                    } else if (val == 2) { // White stone
-                        canvas.drawCircle(cx, cy, stoneR, whiteStonePaint);
+                    // Drop shadow
+                    canvas.drawCircle(cx + dpf(1.5f), cy + dpf(2.5f), stoneR, shadowPaint);
+
+                    if (val == 1) { // Black Slate Stone
+                        RadialGradient blackGrad = new RadialGradient(
+                            cx - stoneR * 0.35f, cy - stoneR * 0.35f, stoneR * 1.3f,
+                            new int[]{0xFF475569, 0xFF0F172A, 0xFF020617},
+                            null, Shader.TileMode.CLAMP
+                        );
+                        stone3dPaint.setShader(blackGrad);
+                        canvas.drawCircle(cx, cy, stoneR, stone3dPaint);
+                        canvas.drawCircle(cx - stoneR * 0.35f, cy - stoneR * 0.35f, stoneR * 0.26f, stoneHighlightPaint);
+                    } else if (val == 2) { // White Clamshell Stone
+                        RadialGradient whiteGrad = new RadialGradient(
+                            cx - stoneR * 0.35f, cy - stoneR * 0.35f, stoneR * 1.3f,
+                            new int[]{0xFFFFFFFF, 0xFFF1F5F9, 0xFF94A3B8},
+                            null, Shader.TileMode.CLAMP
+                        );
+                        stone3dPaint.setShader(whiteGrad);
+                        canvas.drawCircle(cx, cy, stoneR, stone3dPaint);
+                        canvas.drawCircle(cx, cy, stoneR, goldBorder);
                     }
 
                     if (x == lastMoveX && y == lastMoveY) {
-                        canvas.drawCircle(cx, cy, stoneR * 0.55f, lastMovePaint);
+                        Paint pulsePaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+                        pulsePaint.setColor(val == 1 ? 0xFFFFD166 : 0xFF00E5FF);
+                        pulsePaint.setStyle(Paint.Style.STROKE);
+                        pulsePaint.setStrokeWidth(dpf(2f));
+                        canvas.drawCircle(cx, cy, stoneR * 0.55f, pulsePaint);
                     }
                 }
             }
@@ -18188,7 +18229,15 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
             if (w <= 0 || h <= 0) return;
 
             squareRect.set(0, 0, w, h);
+            boardBgPaint.setShader(new LinearGradient(0, 0, w, h, 0xFF0F172A, 0xFF1E293B, Shader.TileMode.CLAMP));
             canvas.drawRoundRect(squareRect, dpf(16f), dpf(16f), boardBgPaint);
+
+            Paint goldBorder = new Paint(Paint.ANTI_ALIAS_FLAG);
+            goldBorder.setColor(0xFFEAB308);
+            goldBorder.setStyle(Paint.Style.STROKE);
+            goldBorder.setStrokeWidth(dpf(1.5f));
+            RectF inner = new RectF(dpf(2f), dpf(2f), w - dpf(2f), h - dpf(2f));
+            canvas.drawRoundRect(inner, dpf(14f), dpf(14f), goldBorder);
 
             float pad = dpf(18f);
             float size = Math.min(w, h) - pad * 2;
@@ -18196,7 +18245,31 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
             float startY = (h - size) / 2f;
             float cellSize = size / 8f;
 
-            piecePaint.setTextSize(cellSize * 0.76f);
+            darkSquarePaint.setColor(0xFF1E293B);
+            lightSquarePaint.setColor(0xFF334155);
+            selectPaint.setColor(0x88FFD166);
+
+            Paint textCoordPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+            textCoordPaint.setColor(0xFFFDE047);
+            textCoordPaint.setTextSize(dpf(9f));
+            textCoordPaint.setTextAlign(Paint.Align.CENTER);
+            textCoordPaint.setTypeface(Typeface.create(Typeface.MONOSPACE, Typeface.BOLD));
+
+            // Draw Files (a-h) and Ranks (1-8)
+            for (int i = 0; i < 8; i++) {
+                float px = startX + i * cellSize + cellSize / 2f;
+                canvas.drawText(String.valueOf((char) ('a' + i)), px, startY - dpf(5f), textCoordPaint);
+                float py = startY + i * cellSize + cellSize / 2f;
+                canvas.drawText(String.valueOf(8 - i), startX - dpf(8f), py + dpf(3f), textCoordPaint);
+            }
+
+            piecePaint.setTextSize(cellSize * 0.78f);
+            piecePaint.setTextAlign(Paint.Align.CENTER);
+
+            Paint shadowPiecePaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+            shadowPiecePaint.setTextSize(cellSize * 0.78f);
+            shadowPiecePaint.setTextAlign(Paint.Align.CENTER);
+            shadowPiecePaint.setColor(0x99000000);
 
             for (int r = 0; r < 8; r++) {
                 for (int c = 0; c < 8; c++) {
@@ -18214,18 +18287,24 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
                     char piece = board[r][c];
                     if (piece != '.') {
                         boolean isWhite = Character.isUpperCase(piece);
-                        piecePaint.setColor(isWhite ? 0xFFFFFFFF : 0xFFFFD166);
+                        float cx = left + cellSize / 2f;
                         float textY = top + cellSize / 2f + piecePaint.getTextSize() * 0.35f;
-                        canvas.drawText(getPieceGlyph(piece), left + cellSize / 2f, textY, piecePaint);
+
+                        // Piece drop shadow
+                        canvas.drawText(getPieceGlyph(piece), cx + dpf(1.5f), textY + dpf(2f), shadowPiecePaint);
+
+                        piecePaint.setColor(isWhite ? 0xFFFFFFFF : 0xFFFFD166);
+                        canvas.drawText(getPieceGlyph(piece), cx, textY, piecePaint);
                     }
                 }
             }
 
-            // Draw move highlight dots
+            // Draw move highlight glowing rings
             for (Point m : validMoves) {
                 float cx = startX + m.x * cellSize + cellSize / 2f;
                 float cy = startY + m.y * cellSize + cellSize / 2f;
-                canvas.drawCircle(cx, cy, dpf(4.5f), targetDotPaint);
+                canvas.drawCircle(cx, cy, dpf(5f), targetDotPaint);
+                canvas.drawCircle(cx, cy, dpf(2f), shadowPiecePaint);
             }
         }
     }

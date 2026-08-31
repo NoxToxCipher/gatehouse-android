@@ -2,9 +2,12 @@ package au.com.dss.gatehouse;
 
 import android.content.Context;
 import android.graphics.Canvas;
+import android.graphics.LinearGradient;
 import android.graphics.Paint;
 import android.graphics.Path;
+import android.graphics.RadialGradient;
 import android.graphics.RectF;
+import android.graphics.Shader;
 import android.graphics.Typeface;
 import android.view.MotionEvent;
 import android.view.View;
@@ -14,7 +17,8 @@ import java.util.Random;
 
 /**
  * BackgammonGameView — Classic 24-point Backgammon Board.
- * Features 2 rolling dice, bar entry, bearing off, pip count evaluation, and Expectimax AI.
+ * High-fidelity Lacquered Walnut & Inlaid Ivory Canvas with 3D Stacked Checkers,
+ * Central Bar dividers, Pip counter, and 3D rolling dice.
  */
 public class BackgammonGameView extends View {
 
@@ -23,25 +27,27 @@ public class BackgammonGameView extends View {
     }
 
     private StatusListener statusListener;
-    private final Paint boardBgPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+    private final Paint boardWoodPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final Paint pointDarkPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final Paint pointLightPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
-    private final Paint whiteCheckerPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
-    private final Paint blackCheckerPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+    private final Paint goldBorderPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+    private final Paint shadowPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+    private final Paint checkerPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+    private final Paint checkerRimPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+    private final Paint checkerShinePaint = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final Paint textPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
-    private final Paint selectPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+    private final Paint diceFacePaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+    private final Paint dicePipPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final RectF rect = new RectF();
     private final Path triPath = new Path();
     private final Random rand = new Random();
 
-    // 24 points: 0..23. Positive count = White (Human), Negative count = Black (Bot)
     private final int[] points = new int[24];
     private int whiteBar = 0;
     private int blackBar = 0;
     private int whiteOff = 0;
     private int blackOff = 0;
 
-    // true = White (Human), false = Black (Bot)
     private boolean whiteTurn = true;
     private final List<Integer> availableDice = new ArrayList<>();
     private boolean waitingForRoll = true;
@@ -57,22 +63,29 @@ public class BackgammonGameView extends View {
         setClickable(true);
         setFocusable(true);
 
-        boardBgPaint.setColor(0xFF0F172A);
-        pointDarkPaint.setColor(0xFF1E293B);
-        pointLightPaint.setColor(0xFF334155);
+        goldBorderPaint.setColor(0xFFEAB308);
+        goldBorderPaint.setStyle(Paint.Style.STROKE);
+        goldBorderPaint.setStrokeWidth(dpf(1.5f));
 
-        whiteCheckerPaint.setColor(0xFFFFD166); // Gold
-        whiteCheckerPaint.setStyle(Paint.Style.FILL);
+        shadowPaint.setColor(0x88000000);
+        shadowPaint.setStyle(Paint.Style.FILL);
 
-        blackCheckerPaint.setColor(0xFF38BDF8); // Cyan
-        blackCheckerPaint.setStyle(Paint.Style.FILL);
+        checkerRimPaint.setColor(0x66FFFFFF);
+        checkerRimPaint.setStyle(Paint.Style.STROKE);
+        checkerRimPaint.setStrokeWidth(dpf(1.2f));
 
-        selectPaint.setColor(0x88FFD166);
-        selectPaint.setStyle(Paint.Style.FILL);
+        checkerShinePaint.setColor(0xAAFFFFFF);
+        checkerShinePaint.setStyle(Paint.Style.FILL);
 
         textPaint.setColor(0xFFE2E8F0);
         textPaint.setTextAlign(Paint.Align.CENTER);
         textPaint.setTypeface(Typeface.create(Typeface.MONOSPACE, Typeface.BOLD));
+
+        diceFacePaint.setColor(0xFFFFFBEB);
+        diceFacePaint.setStyle(Paint.Style.FILL);
+
+        dicePipPaint.setColor(0xFF0F172A);
+        dicePipPaint.setStyle(Paint.Style.FILL);
 
         resetGame();
     }
@@ -84,16 +97,15 @@ public class BackgammonGameView extends View {
 
     public void resetGame() {
         for (int i = 0; i < 24; i++) points[i] = 0;
-        // Standard Backgammon initial setup
-        points[0] = 2;   // White 2 on point 1 (idx 0)
-        points[11] = 5;  // White 5 on point 12
-        points[16] = 3;  // White 3 on point 17
-        points[18] = 5;  // White 5 on point 19
+        points[0] = 2;
+        points[11] = 5;
+        points[16] = 3;
+        points[18] = 5;
 
-        points[23] = -2; // Black 2 on point 24 (idx 23)
-        points[12] = -5; // Black 5 on point 13
-        points[7] = -3;  // Black 3 on point 8
-        points[5] = -5;  // Black 5 on point 6
+        points[23] = -2;
+        points[12] = -5;
+        points[7] = -3;
+        points[5] = -5;
 
         whiteBar = 0;
         blackBar = 0;
@@ -195,9 +207,8 @@ public class BackgammonGameView extends View {
         if (whiteTurn) {
             int toPoint = (fromPoint == -1) ? 24 - dieVal : fromPoint - dieVal;
             if (toPoint >= 0) {
-                if (points[toPoint] < -1) return false; // blocked by 2+ enemy checkers
+                if (points[toPoint] < -1) return false;
 
-                // Hit opponent single blot
                 if (points[toPoint] == -1) {
                     points[toPoint] = 0;
                     blackBar++;
@@ -296,7 +307,7 @@ public class BackgammonGameView extends View {
             return;
         }
         if (blackOff == 15) {
-            statusListener.onStatusChanged("💀 BOT WINS! Grandmaster Backgammon.", 0xFFEF4444);
+            statusListener.onStatusChanged("💀 BOT WINS! Backgammon Master.", 0xFFEF4444);
             return;
         }
 
@@ -314,22 +325,12 @@ public class BackgammonGameView extends View {
             }
 
             if (!waitingForRoll && whiteTurn && !availableDice.isEmpty()) {
-                float w = getWidth();
-                float h = getHeight();
-                float pad = dpf(12f);
-                float colW = (w - pad * 2 - dpf(16f)) / 12f;
-
-                float ex = event.getX();
-                float ey = event.getY();
-
-                // Select and move
                 int die = availableDice.get(0);
                 if (whiteBar > 0) {
                     tryMoveChecker(-1, die);
                     return true;
                 }
 
-                // Check clicked point
                 for (int p = 0; p < 24; p++) {
                     if (points[p] > 0) {
                         if (tryMoveChecker(p, die)) return true;
@@ -348,14 +349,29 @@ public class BackgammonGameView extends View {
         if (w <= 0 || h <= 0) return;
 
         rect.set(0, 0, w, h);
-        canvas.drawRoundRect(rect, dpf(16f), dpf(16f), boardBgPaint);
+        boardWoodPaint.setShader(new LinearGradient(0, 0, w, h, 0xFF1C1917, 0xFF0F172A, Shader.TileMode.CLAMP));
+        canvas.drawRoundRect(rect, dpf(16f), dpf(16f), boardWoodPaint);
 
-        float pad = dpf(12f);
+        rect.set(dpf(2f), dpf(2f), w - dpf(2f), h - dpf(2f));
+        canvas.drawRoundRect(rect, dpf(14f), dpf(14f), goldBorderPaint);
+
+        float pad = dpf(10f);
         float barW = dpf(16f);
         float colW = (w - pad * 2 - barW) / 12f;
-        float triH = (h - dpf(30f)) * 0.42f;
+        float triH = (h - dpf(42f)) * 0.42f;
 
-        // Draw 24 triangular points
+        // Draw Center Bar
+        float barLeft = pad + 6 * colW;
+        rect.set(barLeft, dpf(10f), barLeft + barW, h - dpf(32f));
+        Paint barPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+        barPaint.setColor(0xFF292524);
+        canvas.drawRoundRect(rect, dpf(4f), dpf(4f), barPaint);
+        canvas.drawRoundRect(rect, dpf(4f), dpf(4f), goldBorderPaint);
+
+        // Draw 24 Points with Shaded Gradients
+        pointDarkPaint.setColor(0xFF1E293B);
+        pointLightPaint.setColor(0xFF451A03);
+
         for (int i = 0; i < 12; i++) {
             float left = pad + (i < 6 ? i * colW : i * colW + barW);
             boolean isDark = (i % 2 == 0);
@@ -370,32 +386,32 @@ public class BackgammonGameView extends View {
 
             // Bottom row points (11..0)
             triPath.reset();
-            triPath.moveTo(left, h - dpf(20f));
-            triPath.lineTo(left + colW, h - dpf(20f));
-            triPath.lineTo(left + colW / 2f, h - dpf(20f) - triH);
+            triPath.moveTo(left, h - dpf(32f));
+            triPath.lineTo(left + colW, h - dpf(32f));
+            triPath.lineTo(left + colW / 2f, h - dpf(32f) - triH);
             triPath.close();
             canvas.drawPath(triPath, !isDark ? pointDarkPaint : pointLightPaint);
         }
 
-        // Draw Checkers on points
-        float checkerR = Math.min(colW * 0.45f, dpf(11f));
+        // Draw Checkers with 3D Radial Shine
+        float checkerR = Math.min(colW * 0.44f, dpf(11f));
         for (int p = 0; p < 24; p++) {
             int count = points[p];
             if (count == 0) continue;
 
-            boolean isWhite = (count > 0);
+            boolean isGold = (count > 0);
             int absCount = Math.abs(count);
 
             float cx;
             float cyStart;
             float cyStep;
 
-            if (p < 12) { // Bottom row (11..0 from left to right)
+            if (p < 12) {
                 int col = 11 - p;
                 cx = pad + (col < 6 ? col * colW : col * colW + barW) + colW / 2f;
-                cyStart = h - dpf(20f) - checkerR;
+                cyStart = h - dpf(32f) - checkerR;
                 cyStep = -checkerR * 1.8f;
-            } else { // Top row (12..23 from left to right)
+            } else {
                 int col = p - 12;
                 cx = pad + (col < 6 ? col * colW : col * colW + barW) + colW / 2f;
                 cyStart = dpf(10f) + checkerR;
@@ -403,7 +419,7 @@ public class BackgammonGameView extends View {
             }
 
             for (int k = 0; k < Math.min(absCount, 5); k++) {
-                canvas.drawCircle(cx, cyStart + k * cyStep, checkerR, isWhite ? whiteCheckerPaint : blackCheckerPaint);
+                drawBackgammonChecker(canvas, cx, cyStart + k * cyStep, checkerR, isGold);
             }
             if (absCount > 5) {
                 textPaint.setTextSize(dpf(9f));
@@ -411,8 +427,49 @@ public class BackgammonGameView extends View {
             }
         }
 
-        // Center Bar and Borne Off stats
+        // Bottom Dashboard: Checkers Borne Off + 3D Rolling Dice
         textPaint.setTextSize(dpf(10f));
-        canvas.drawText("🟡 Gold Off: " + whiteOff + " (Bar: " + whiteBar + ") | 🔵 Cyan Off: " + blackOff + " (Bar: " + blackBar + ")", w / 2f, h - dpf(6f), textPaint);
+        canvas.drawText("🟡 Off: " + whiteOff + " (Bar " + whiteBar + ") | 🔵 Off: " + blackOff + " (Bar " + blackBar + ")", w * 0.35f, h - dpf(10f), textPaint);
+
+        if (lastDie1 > 0 && lastDie2 > 0) {
+            draw3DDie(canvas, w - dpf(65f), h - dpf(16f), dpf(10f), lastDie1);
+            draw3DDie(canvas, w - dpf(35f), h - dpf(16f), dpf(10f), lastDie2);
+        }
+    }
+
+    private void drawBackgammonChecker(Canvas canvas, float cx, float cy, float r, boolean isGold) {
+        canvas.drawCircle(cx + dpf(1f), cy + dpf(1.5f), r, shadowPaint);
+
+        RadialGradient grad = new RadialGradient(
+            cx - r * 0.3f, cy - r * 0.3f, r * 1.3f,
+            isGold ? new int[]{0xFFFEF08A, 0xFFEAB308, 0xFF713F12} : new int[]{0xFFBAE6FD, 0xFF0284C7, 0xFF082F49},
+            null, Shader.TileMode.CLAMP
+        );
+        checkerPaint.setShader(grad);
+        canvas.drawCircle(cx, cy, r, checkerPaint);
+        canvas.drawCircle(cx, cy, r, checkerRimPaint);
+        canvas.drawCircle(cx - r * 0.35f, cy - r * 0.35f, r * 0.28f, checkerShinePaint);
+    }
+
+    private void draw3DDie(Canvas canvas, float cx, float cy, float s, int val) {
+        rect.set(cx - s, cy - s, cx + s, cy + s);
+        canvas.drawRoundRect(rect, dpf(3f), dpf(3f), diceFacePaint);
+        canvas.drawRoundRect(rect, dpf(3f), dpf(3f), goldBorderPaint);
+
+        // Center pip
+        if (val == 1 || val == 3 || val == 5) canvas.drawCircle(cx, cy, dpf(1.8f), dicePipPaint);
+        // Corners
+        if (val >= 2) {
+            canvas.drawCircle(cx - s * 0.5f, cy - s * 0.5f, dpf(1.8f), dicePipPaint);
+            canvas.drawCircle(cx + s * 0.5f, cy + s * 0.5f, dpf(1.8f), dicePipPaint);
+        }
+        if (val >= 4) {
+            canvas.drawCircle(cx + s * 0.5f, cy - s * 0.5f, dpf(1.8f), dicePipPaint);
+            canvas.drawCircle(cx - s * 0.5f, cy + s * 0.5f, dpf(1.8f), dicePipPaint);
+        }
+        if (val == 6) {
+            canvas.drawCircle(cx - s * 0.5f, cy, dpf(1.8f), dicePipPaint);
+            canvas.drawCircle(cx + s * 0.5f, cy, dpf(1.8f), dicePipPaint);
+        }
     }
 }

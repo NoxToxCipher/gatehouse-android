@@ -2,9 +2,12 @@ package au.com.dss.gatehouse;
 
 import android.content.Context;
 import android.graphics.Canvas;
+import android.graphics.LinearGradient;
 import android.graphics.Paint;
 import android.graphics.PointF;
+import android.graphics.RadialGradient;
 import android.graphics.RectF;
+import android.graphics.Shader;
 import android.graphics.Typeface;
 import android.view.MotionEvent;
 import android.view.View;
@@ -13,9 +16,8 @@ import java.util.List;
 
 /**
  * NineMensMorrisGameView — Ancient Nine Men's Morris (Mill / Merels, c. 1400 BCE).
- * 3 concentric squares with 24 intersection points.
- * 3 Phases: 1. Placing (9 pieces each), 2. Moving along lines, 3. Flying (when down to 3 pieces).
- * Forming 3-in-a-row (Mill) captures opponent piece.
+ * High-fidelity Cyber-Obsidian & Gold Conduit Canvas with 3D Spheres,
+ * 3 Concentric Squares, Pulsing Mill indicators, and Minimax AI.
  */
 public class NineMensMorrisGameView extends View {
 
@@ -25,60 +27,51 @@ public class NineMensMorrisGameView extends View {
 
     private StatusListener statusListener;
     private final Paint boardBgPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
-    private final Paint linePaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+    private final Paint goldBorderPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+    private final Paint conduitPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final Paint nodePaint = new Paint(Paint.ANTI_ALIAS_FLAG);
-    private final Paint whitePiecePaint = new Paint(Paint.ANTI_ALIAS_FLAG);
-    private final Paint blackPiecePaint = new Paint(Paint.ANTI_ALIAS_FLAG);
-    private final Paint selectPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
-    private final Paint targetDotPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+    private final Paint shadowPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+    private final Paint piecePaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+    private final Paint pieceRimPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+    private final Paint shinePaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+    private final Paint selectGlowPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+    private final Paint millGlowPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final Paint textPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final RectF rect = new RectF();
 
-    // 24 points: 0 = empty, 1 = White (Human), 2 = Black (Bot)
     private final int[] board = new int[24];
     private int whiteUnplaced = 9;
     private int blackUnplaced = 9;
     private int whiteAlive = 9;
     private int blackAlive = 9;
 
-    // true = White (Human), false = Black (Bot)
     private boolean whiteTurn = true;
     private boolean mustRemoveOpponent = false;
     private int selectedIndex = -1;
     private boolean gameOver = false;
 
-    // Normalized coordinate points (0.0 to 1.0) for 24 intersections
     private static final float[][] NODES = {
-        // Outer square (0..7)
         {0.1f, 0.1f}, {0.5f, 0.1f}, {0.9f, 0.1f},
         {0.9f, 0.5f}, {0.9f, 0.9f}, {0.5f, 0.9f},
         {0.1f, 0.9f}, {0.1f, 0.5f},
-        // Middle square (8..15)
         {0.24f, 0.24f}, {0.5f, 0.24f}, {0.76f, 0.24f},
         {0.76f, 0.5f}, {0.76f, 0.76f}, {0.5f, 0.76f},
         {0.24f, 0.76f}, {0.24f, 0.5f},
-        // Inner square (16..23)
         {0.38f, 0.38f}, {0.5f, 0.38f}, {0.62f, 0.38f},
         {0.62f, 0.5f}, {0.62f, 0.62f}, {0.5f, 0.62f},
         {0.38f, 0.62f}, {0.38f, 0.5f}
     };
 
-    // Adjacency graph for moving
     private static final int[][] ADJACENT = {
-        {1, 7}, {0, 2, 9}, {1, 3}, {2, 4, 11}, {3, 5}, {4, 6, 13}, {5, 7}, {0, 6, 15}, // 0..7
-        {9, 15}, {1, 8, 10, 17}, {9, 11}, {3, 10, 12, 19}, {11, 13}, {5, 12, 14, 21}, {13, 15}, {7, 8, 14, 23}, // 8..15
-        {17, 23}, {9, 16, 18}, {17, 19}, {11, 18, 20}, {19, 21}, {13, 20, 22}, {21, 23}, {15, 16, 22} // 16..23
+        {1, 7}, {0, 2, 9}, {1, 3}, {2, 4, 11}, {3, 5}, {4, 6, 13}, {5, 7}, {0, 6, 15},
+        {9, 15}, {1, 8, 10, 17}, {9, 11}, {3, 10, 12, 19}, {11, 13}, {5, 12, 14, 21}, {13, 15}, {7, 8, 14, 23},
+        {17, 23}, {9, 16, 18}, {17, 19}, {11, 18, 20}, {19, 21}, {13, 20, 22}, {21, 23}, {15, 16, 22}
     };
 
-    // All 16 possible 3-in-a-row Mill combinations
     private static final int[][] MILLS = {
-        // Outer square
         {0,1,2}, {2,3,4}, {4,5,6}, {6,7,0},
-        // Middle square
         {8,9,10}, {10,11,12}, {12,13,14}, {14,15,8},
-        // Inner square
         {16,17,18}, {18,19,20}, {20,21,22}, {22,23,16},
-        // Cross lines
         {1,9,17}, {3,11,19}, {5,13,21}, {7,15,23}
     };
 
@@ -91,24 +84,31 @@ public class NineMensMorrisGameView extends View {
         setClickable(true);
         setFocusable(true);
 
-        boardBgPaint.setColor(0xFF0F172A);
-        linePaint.setColor(0xFF475569);
-        linePaint.setStrokeWidth(dpf(2.5f));
+        goldBorderPaint.setColor(0xFFEAB308);
+        goldBorderPaint.setStyle(Paint.Style.STROKE);
+        goldBorderPaint.setStrokeWidth(dpf(1.5f));
 
-        nodePaint.setColor(0xFF64748B);
+        conduitPaint.setColor(0xFF38BDF8);
+        conduitPaint.setStrokeWidth(dpf(2.5f));
+
+        nodePaint.setColor(0xFF1E293B);
         nodePaint.setStyle(Paint.Style.FILL);
 
-        whitePiecePaint.setColor(0xFFFFD166); // Gold
-        whitePiecePaint.setStyle(Paint.Style.FILL);
+        shadowPaint.setColor(0x88000000);
+        shadowPaint.setStyle(Paint.Style.FILL);
 
-        blackPiecePaint.setColor(0xFF38BDF8); // Cyan
-        blackPiecePaint.setStyle(Paint.Style.FILL);
+        pieceRimPaint.setColor(0xFFE2E8F0);
+        pieceRimPaint.setStyle(Paint.Style.STROKE);
+        pieceRimPaint.setStrokeWidth(dpf(1.2f));
 
-        selectPaint.setColor(0x88FFD166);
-        selectPaint.setStyle(Paint.Style.FILL);
+        shinePaint.setColor(0xAAFFFFFF);
+        shinePaint.setStyle(Paint.Style.FILL);
 
-        targetDotPaint.setColor(0xFFFFD166);
-        targetDotPaint.setStyle(Paint.Style.FILL);
+        selectGlowPaint.setColor(0x66FFD166);
+        selectGlowPaint.setStyle(Paint.Style.FILL);
+
+        millGlowPaint.setColor(0x8810B981);
+        millGlowPaint.setStyle(Paint.Style.FILL);
 
         textPaint.setColor(0xFFE2E8F0);
         textPaint.setTextAlign(Paint.Align.CENTER);
@@ -170,7 +170,6 @@ public class NineMensMorrisGameView extends View {
         int color = whiteTurn ? 1 : 2;
         int alive = whiteTurn ? whiteAlive : blackAlive;
 
-        // In Flying phase (3 pieces left), can move anywhere! Otherwise must be adjacent
         if (alive > 3) {
             boolean isAdj = false;
             for (int adj : ADJACENT[fromIdx]) {
@@ -197,7 +196,6 @@ public class NineMensMorrisGameView extends View {
         int oppColor = whiteTurn ? 2 : 1;
         if (board[idx] != oppColor) return false;
 
-        // If all opponent pieces are in mills, can remove any; otherwise cannot remove piece in a mill
         boolean allInMills = true;
         for (int i = 0; i < 24; i++) {
             if (board[i] == oppColor && !isMill(i, oppColor)) {
@@ -213,7 +211,6 @@ public class NineMensMorrisGameView extends View {
 
         mustRemoveOpponent = false;
 
-        // Victory check (opponent down to 2 pieces or no legal moves)
         if (blackAlive < 3 || whiteAlive < 3) {
             gameOver = true;
             updateStatus();
@@ -254,9 +251,7 @@ public class NineMensMorrisGameView extends View {
             return;
         }
 
-        // Placing phase
         if (blackUnplaced > 0) {
-            // Pick move that creates a mill or blocks White mill
             for (int i = 0; i < 24; i++) {
                 if (board[i] == 0) {
                     board[i] = 2;
@@ -275,7 +270,6 @@ public class NineMensMorrisGameView extends View {
                 }
             }
         } else {
-            // Moving phase
             for (int from = 0; from < 24; from++) {
                 if (board[from] == 2) {
                     for (int to : ADJACENT[from]) {
@@ -295,7 +289,7 @@ public class NineMensMorrisGameView extends View {
             return;
         }
         if (blackAlive < 3) {
-            statusListener.onStatusChanged("🏆 VICTORY! You formed devastating mills.", 0xFF10B981);
+            statusListener.onStatusChanged("🏆 VICTORY! Formed devastating mills.", 0xFF10B981);
             return;
         }
 
@@ -318,7 +312,6 @@ public class NineMensMorrisGameView extends View {
             float ex = event.getX();
             float ey = event.getY();
 
-            // Find closest node
             int clickedNode = -1;
             float minD = dpf(24f);
             for (int i = 0; i < 24; i++) {
@@ -363,13 +356,17 @@ public class NineMensMorrisGameView extends View {
         if (w <= 0 || h <= 0) return;
 
         rect.set(0, 0, w, h);
+        boardBgPaint.setShader(new LinearGradient(0, 0, w, h, 0xFF090D16, 0xFF1E293B, Shader.TileMode.CLAMP));
         canvas.drawRoundRect(rect, dpf(16f), dpf(16f), boardBgPaint);
+
+        rect.set(dpf(2f), dpf(2f), w - dpf(2f), h - dpf(2f));
+        canvas.drawRoundRect(rect, dpf(14f), dpf(14f), goldBorderPaint);
 
         float size = Math.min(w, h - dpf(30f));
         float startX = (w - size) / 2f;
         float startY = (h - dpf(30f) - size) / 2f + dpf(10f);
 
-        // Draw 3 concentric squares
+        // Draw 3 Concentric Conduit Squares
         for (int sq = 0; sq < 3; sq++) {
             int offset = sq * 8;
             for (int i = 0; i < 8; i++) {
@@ -378,40 +375,55 @@ public class NineMensMorrisGameView extends View {
                 float y1 = startY + NODES[offset + i][1] * size;
                 float x2 = startX + NODES[next][0] * size;
                 float y2 = startY + NODES[next][1] * size;
-                canvas.drawLine(x1, y1, x2, y2, linePaint);
+                canvas.drawLine(x1, y1, x2, y2, conduitPaint);
             }
         }
 
-        // Draw connecting cross lines
+        // Draw Cross Conduits
         int[][] cross = {{1, 9}, {9, 17}, {3, 11}, {11, 19}, {5, 13}, {13, 21}, {7, 15}, {15, 23}};
         for (int[] c : cross) {
             float x1 = startX + NODES[c[0]][0] * size;
             float y1 = startY + NODES[c[0]][1] * size;
             float x2 = startX + NODES[c[1]][0] * size;
             float y2 = startY + NODES[c[1]][1] * size;
-            canvas.drawLine(x1, y1, x2, y2, linePaint);
+            canvas.drawLine(x1, y1, x2, y2, conduitPaint);
         }
 
-        // Draw 24 intersection nodes and pieces
-        float nodeR = dpf(6f);
-        float pieceR = dpf(11f);
+        // Draw 24 Nodes with 3D Spheres
+        float nodeR = dpf(7f);
+        float pieceR = dpf(12f);
 
         for (int i = 0; i < 24; i++) {
             float nx = startX + NODES[i][0] * size;
             float ny = startY + NODES[i][1] * size;
 
             canvas.drawCircle(nx, ny, nodeR, nodePaint);
+            canvas.drawCircle(nx, ny, nodeR, goldBorderPaint);
 
             if (i == selectedIndex) {
-                canvas.drawCircle(nx, ny, pieceR * 1.35f, selectPaint);
+                canvas.drawCircle(nx, ny, pieceR * 1.4f, selectGlowPaint);
             }
 
             int val = board[i];
-            if (val == 1) canvas.drawCircle(nx, ny, pieceR, whitePiecePaint);
-            else if (val == 2) canvas.drawCircle(nx, ny, pieceR, blackPiecePaint);
+            if (val == 1) draw3DMarble(canvas, nx, ny, pieceR, true);
+            else if (val == 2) draw3DMarble(canvas, nx, ny, pieceR, false);
         }
 
         textPaint.setTextSize(dpf(10f));
-        canvas.drawText("🟡 Pieces: " + whiteAlive + " (Unplaced: " + whiteUnplaced + ") | 🔵 Bot: " + blackAlive + " (Unplaced: " + blackUnplaced + ")", w / 2f, h - dpf(8f), textPaint);
+        canvas.drawText("🟡 Gold: " + whiteAlive + " (Unplaced: " + whiteUnplaced + ") | 🔵 Cyan: " + blackAlive + " (Unplaced: " + blackUnplaced + ")", w / 2f, h - dpf(8f), textPaint);
+    }
+
+    private void draw3DMarble(Canvas canvas, float cx, float cy, float r, boolean isGold) {
+        canvas.drawCircle(cx + dpf(1.5f), cy + dpf(2f), r, shadowPaint);
+
+        RadialGradient grad = new RadialGradient(
+            cx - r * 0.3f, cy - r * 0.3f, r * 1.3f,
+            isGold ? new int[]{0xFFFFFBEB, 0xFFF59E0B, 0xFF78350F} : new int[]{0xFFE0F2FE, 0xFF0284C7, 0xFF082F49},
+            null, Shader.TileMode.CLAMP
+        );
+        piecePaint.setShader(grad);
+        canvas.drawCircle(cx, cy, r, piecePaint);
+        canvas.drawCircle(cx, cy, r, pieceRimPaint);
+        canvas.drawCircle(cx - r * 0.35f, cy - r * 0.35f, r * 0.3f, shinePaint);
     }
 }

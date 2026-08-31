@@ -2,15 +2,19 @@ package au.com.dss.gatehouse;
 
 import android.content.Context;
 import android.graphics.Canvas;
+import android.graphics.LinearGradient;
 import android.graphics.Paint;
+import android.graphics.RadialGradient;
 import android.graphics.RectF;
+import android.graphics.Shader;
 import android.graphics.Typeface;
 import android.view.MotionEvent;
 import android.view.View;
 
 /**
  * ConnectFourGameView — Classic 7x6 Connect 4 Grid.
- * Gravity falling discs, 4-in-a-row detection, Minimax solver AI.
+ * High-fidelity Arcade Blue Acrylic Frame with 3D Glossy Tokens,
+ * Recessed Slots, Glowing Victory Connect Lines, and Minimax AI.
  */
 public class ConnectFourGameView extends View {
 
@@ -19,20 +23,21 @@ public class ConnectFourGameView extends View {
     }
 
     private StatusListener statusListener;
-    private final Paint boardBgPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
-    private final Paint gridPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
-    private final Paint emptyHolePaint = new Paint(Paint.ANTI_ALIAS_FLAG);
-    private final Paint playerPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
-    private final Paint botPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+    private final Paint cabinetFramePaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+    private final Paint goldBorderPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+    private final Paint slotHolePaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+    private final Paint slotShadowPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+    private final Paint tokenPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+    private final Paint tokenRimPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+    private final Paint tokenShinePaint = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final Paint winLinePaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+    private final Paint textPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final RectF rect = new RectF();
 
-    // 7 columns x 6 rows: 0 = empty, 1 = Player (Gold), 2 = Bot (Cyan)
     private final int[][] grid = new int[6][7];
-    // true = Player, false = Bot
     private boolean playerTurn = true;
     private boolean gameOver = false;
-    private int winX1 = -1, winY1 = -1, winX2 = -1, winY2 = -1;
+    private int winR1 = -1, winC1 = -1, winR2 = -1, winC2 = -1;
 
     private float dpf(float v) {
         return v * getResources().getDisplayMetrics().density;
@@ -43,19 +48,30 @@ public class ConnectFourGameView extends View {
         setClickable(true);
         setFocusable(true);
 
-        boardBgPaint.setColor(0xFF0F172A);
-        gridPaint.setColor(0xFF1E293B);
-        emptyHolePaint.setColor(0xFF0B101D);
+        goldBorderPaint.setColor(0xFFEAB308);
+        goldBorderPaint.setStyle(Paint.Style.STROKE);
+        goldBorderPaint.setStrokeWidth(dpf(1.5f));
 
-        playerPaint.setColor(0xFFFFD166); // Gold
-        playerPaint.setStyle(Paint.Style.FILL);
+        slotHolePaint.setColor(0xFF030712);
+        slotShadowPaint.setColor(0x99000000);
+        slotShadowPaint.setStyle(Paint.Style.STROKE);
+        slotShadowPaint.setStrokeWidth(dpf(2f));
 
-        botPaint.setColor(0xFF38BDF8); // Cyan
-        botPaint.setStyle(Paint.Style.FILL);
+        tokenRimPaint.setColor(0x88FFFFFF);
+        tokenRimPaint.setStyle(Paint.Style.STROKE);
+        tokenRimPaint.setStrokeWidth(dpf(1.5f));
 
-        winLinePaint.setColor(0xFF10B981); // Emerald line
-        winLinePaint.setStrokeWidth(dpf(4f));
+        tokenShinePaint.setColor(0xAAFFFFFF);
+        tokenShinePaint.setStyle(Paint.Style.FILL);
+
+        winLinePaint.setColor(0xFF10B981);
+        winLinePaint.setStrokeWidth(dpf(6f));
+        winLinePaint.setStrokeCap(Paint.Cap.ROUND);
         winLinePaint.setStyle(Paint.Style.STROKE);
+
+        textPaint.setColor(0xFFE2E8F0);
+        textPaint.setTextAlign(Paint.Align.CENTER);
+        textPaint.setTypeface(Typeface.create(Typeface.MONOSPACE, Typeface.BOLD));
 
         resetGame();
     }
@@ -67,13 +83,11 @@ public class ConnectFourGameView extends View {
 
     public void resetGame() {
         for (int r = 0; r < 6; r++) {
-            for (int c = 0; c < 7; c++) {
-                grid[r][c] = 0;
-            }
+            for (int c = 0; c < 7; c++) grid[r][c] = 0;
         }
         playerTurn = true;
         gameOver = false;
-        winX1 = -1;
+        winR1 = -1;
         updateStatus();
         invalidate();
     }
@@ -81,7 +95,6 @@ public class ConnectFourGameView extends View {
     public boolean dropDisc(int col) {
         if (col < 0 || col >= 7 || gameOver) return false;
 
-        // Find lowest empty row in column
         int targetRow = -1;
         for (int r = 5; r >= 0; r--) {
             if (grid[r][col] == 0) {
@@ -89,7 +102,7 @@ public class ConnectFourGameView extends View {
                 break;
             }
         }
-        if (targetRow == -1) return false; // Column full
+        if (targetRow == -1) return false;
 
         int color = playerTurn ? 1 : 2;
         grid[targetRow][col] = color;
@@ -98,9 +111,9 @@ public class ConnectFourGameView extends View {
             gameOver = true;
             if (statusListener != null) {
                 if (playerTurn) {
-                    statusListener.onStatusChanged("🏆 4-IN-A-ROW VICTORY! Perfect strategic drop.", 0xFF10B981);
+                    statusListener.onStatusChanged("🏆 4-IN-A-ROW VICTORY! Strategic alignment.", 0xFF10B981);
                 } else {
-                    statusListener.onStatusChanged("💀 BOT WINS! 4-in-a-row Connect Four.", 0xFFEF4444);
+                    statusListener.onStatusChanged("💀 BOT WINS! Connect Four Master.", 0xFFEF4444);
                 }
             }
             invalidate();
@@ -110,7 +123,7 @@ public class ConnectFourGameView extends View {
         if (isBoardFull()) {
             gameOver = true;
             if (statusListener != null) {
-                statusListener.onStatusChanged("🤝 DRAW! Complete grid stalemate.", 0xFFFFD166);
+                statusListener.onStatusChanged("🤝 DRAW! Full grid stalemate.", 0xFFFFD166);
             }
             invalidate();
             return true;
@@ -139,27 +152,36 @@ public class ConnectFourGameView extends View {
         int[][] dirs = {{0,1}, {1,0}, {1,1}, {1,-1}};
         for (int[] d : dirs) {
             int count = 1;
-            // Forward
+            int rStart = r, cStart = c;
+            int rEnd = r, cEnd = c;
+
             int step = 1;
             while (true) {
                 int nr = r + d[0] * step;
                 int nc = c + d[1] * step;
                 if (nr >= 0 && nr < 6 && nc >= 0 && nc < 7 && grid[nr][nc] == color) {
                     count++;
+                    rEnd = nr; cEnd = nc;
                     step++;
                 } else break;
             }
-            // Backward
+
             step = 1;
             while (true) {
                 int nr = r - d[0] * step;
                 int nc = c - d[1] * step;
                 if (nr >= 0 && nr < 6 && nc >= 0 && nc < 7 && grid[nr][nc] == color) {
                     count++;
+                    rStart = nr; cStart = nc;
                     step++;
                 } else break;
             }
-            if (count >= 4) return true;
+
+            if (count >= 4) {
+                winR1 = rStart; winC1 = cStart;
+                winR2 = rEnd; winC2 = cEnd;
+                return true;
+            }
         }
         return false;
     }
@@ -167,7 +189,6 @@ public class ConnectFourGameView extends View {
     private void botExecuteMove() {
         if (playerTurn || gameOver) return;
 
-        // 1. Check if Bot can win on next move
         for (int c = 0; c < 7; c++) {
             int row = getDropRow(c);
             if (row != -1) {
@@ -181,7 +202,6 @@ public class ConnectFourGameView extends View {
             }
         }
 
-        // 2. Check if Player can win on next move -> Block!
         for (int c = 0; c < 7; c++) {
             int row = getDropRow(c);
             if (row != -1) {
@@ -195,7 +215,6 @@ public class ConnectFourGameView extends View {
             }
         }
 
-        // 3. Prefer center columns (3, 2, 4, 1, 5, 0, 6)
         int[] preferred = {3, 2, 4, 1, 5, 0, 6};
         for (int c : preferred) {
             if (getDropRow(c) != -1) {
@@ -223,7 +242,7 @@ public class ConnectFourGameView extends View {
         if (gameOver) return false;
         if (event.getActionMasked() == MotionEvent.ACTION_DOWN && playerTurn) {
             float w = getWidth();
-            float pad = dpf(12f);
+            float pad = dpf(10f);
             float colW = (w - pad * 2) / 7f;
             float ex = event.getX() - pad;
             int col = (int) (ex / colW);
@@ -243,12 +262,16 @@ public class ConnectFourGameView extends View {
         if (w <= 0 || h <= 0) return;
 
         rect.set(0, 0, w, h);
-        canvas.drawRoundRect(rect, dpf(16f), dpf(16f), boardBgPaint);
+        cabinetFramePaint.setShader(new LinearGradient(0, 0, w, h, 0xFF1E3A8A, 0xFF0F172A, Shader.TileMode.CLAMP));
+        canvas.drawRoundRect(rect, dpf(16f), dpf(16f), cabinetFramePaint);
 
-        float pad = dpf(12f);
+        rect.set(dpf(2f), dpf(2f), w - dpf(2f), h - dpf(2f));
+        canvas.drawRoundRect(rect, dpf(14f), dpf(14f), goldBorderPaint);
+
+        float pad = dpf(10f);
         float colW = (w - pad * 2) / 7f;
         float rowH = (h - dpf(16f)) / 6f;
-        float holeR = Math.min(colW, rowH) * 0.38f;
+        float holeR = Math.min(colW, rowH) * 0.40f;
 
         for (int r = 0; r < 6; r++) {
             for (int c = 0; c < 7; c++) {
@@ -256,14 +279,33 @@ public class ConnectFourGameView extends View {
                 float cy = dpf(8f) + r * rowH + rowH / 2f;
 
                 int val = grid[r][c];
-                if (val == 0) {
-                    canvas.drawCircle(cx, cy, holeR, emptyHolePaint);
-                } else if (val == 1) {
-                    canvas.drawCircle(cx, cy, holeR, playerPaint);
-                } else if (val == 2) {
-                    canvas.drawCircle(cx, cy, holeR, botPaint);
-                }
+                canvas.drawCircle(cx, cy, holeR, slotHolePaint);
+                canvas.drawCircle(cx, cy, holeR, slotShadowPaint);
+
+                if (val == 1) draw3DToken(canvas, cx, cy, holeR * 0.92f, true);
+                else if (val == 2) draw3DToken(canvas, cx, cy, holeR * 0.92f, false);
             }
         }
+
+        // Draw Winning Glowing Line
+        if (gameOver && winR1 != -1 && winR2 != -1) {
+            float x1 = pad + winC1 * colW + colW / 2f;
+            float y1 = dpf(8f) + winR1 * rowH + rowH / 2f;
+            float x2 = pad + winC2 * colW + colW / 2f;
+            float y2 = dpf(8f) + winR2 * rowH + rowH / 2f;
+            canvas.drawLine(x1, y1, x2, y2, winLinePaint);
+        }
+    }
+
+    private void draw3DToken(Canvas canvas, float cx, float cy, float r, boolean isGold) {
+        RadialGradient grad = new RadialGradient(
+            cx - r * 0.3f, cy - r * 0.3f, r * 1.3f,
+            isGold ? new int[]{0xFFFFFBEB, 0xFFF59E0B, 0xFF78350F} : new int[]{0xFFE0F2FE, 0xFF0284C7, 0xFF0F172A},
+            null, Shader.TileMode.CLAMP
+        );
+        tokenPaint.setShader(grad);
+        canvas.drawCircle(cx, cy, r, tokenPaint);
+        canvas.drawCircle(cx, cy, r, tokenRimPaint);
+        canvas.drawCircle(cx - r * 0.35f, cy - r * 0.35f, r * 0.3f, tokenShinePaint);
     }
 }
