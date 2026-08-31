@@ -9,6 +9,7 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.res.Resources;
+import android.graphics.BitmapFactory;
 import android.graphics.Color;
 import android.os.Build;
 import android.util.Log;
@@ -227,7 +228,7 @@ public class DeputyNotifier {
             int layoutCollapsed = id(context, "notif_shift_weather_collapsed", "layout");
             int layoutExpanded = id(context, "notif_roster_update_expanded", "layout");
             int iconShield = id(context, "ic_shield_gold", "drawable");
-            if (iconShield == 0) iconShield = android.R.drawable.ic_dialog_info;
+            if (iconShield == 0) iconShield = context.getApplicationInfo().icon;
 
             Notification.Builder builder;
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
@@ -243,6 +244,10 @@ public class DeputyNotifier {
                    .setSubText("DOHERTY SECURITY SERVICES")
                    .setContentIntent(pi)
                    .setAutoCancel(true);
+
+            try {
+                builder.setLargeIcon(BitmapFactory.decodeResource(context.getResources(), context.getApplicationInfo().icon));
+            } catch (Throwable ignored) {}
 
             if (layoutCollapsed != 0 && layoutExpanded != 0) {
                 RemoteViews collapsed = new RemoteViews(context.getPackageName(), layoutCollapsed);
@@ -431,7 +436,7 @@ public class DeputyNotifier {
             int layoutCollapsed = id(context, "notif_shift_weather_collapsed", "layout");
             int layoutExpanded = id(context, "notif_shift_weather_expanded", "layout");
             int iconShield = id(context, "ic_shield_gold", "drawable");
-            if (iconShield == 0) iconShield = android.R.drawable.ic_dialog_info;
+            if (iconShield == 0) iconShield = context.getApplicationInfo().icon;
 
             Notification.Builder builder;
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
@@ -447,6 +452,10 @@ public class DeputyNotifier {
                    .setSubText("DOHERTY SECURITY SERVICES")
                    .setContentIntent(pi)
                    .setAutoCancel(true);
+
+            try {
+                builder.setLargeIcon(BitmapFactory.decodeResource(context.getResources(), context.getApplicationInfo().icon));
+            } catch (Throwable ignored) {}
 
             if (layoutCollapsed != 0 && layoutExpanded != 0) {
                 // 1. Bespoke Collapsed View

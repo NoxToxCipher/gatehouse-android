@@ -7,6 +7,7 @@ import android.app.PendingIntent;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
+import android.graphics.BitmapFactory;
 import android.graphics.Color;
 import android.os.Build;
 import android.util.Log;
@@ -481,8 +482,8 @@ public class FireRadarManager {
 
             String text = snapshot.lightningStandDownReason;
 
-            int iconShield = context.getResources().getIdentifier("ic_stat_duty", "drawable", context.getPackageName());
-            if (iconShield == 0) iconShield = android.R.drawable.stat_notify_error;
+            int iconShield = context.getResources().getIdentifier("ic_shield_gold", "drawable", context.getPackageName());
+            if (iconShield == 0) iconShield = context.getApplicationInfo().icon;
 
             b.setSmallIcon(iconShield)
                     .setContentTitle(title)
@@ -499,6 +500,10 @@ public class FireRadarManager {
                     .setAutoCancel(true)
                     .setContentIntent(pi)
                     .setPriority(Notification.PRIORITY_MAX);
+
+            try {
+                b.setLargeIcon(BitmapFactory.decodeResource(context.getResources(), context.getApplicationInfo().icon));
+            } catch (Throwable ignored) {}
 
             nm.notify(8888, b.build());
         } catch (Exception e) {
@@ -537,8 +542,8 @@ public class FireRadarManager {
             String title = String.format(Locale.US, "🧊 SEVERE HAIL WARNING: %s (Est. %.0fmm)", snapshot.hailRiskLevel, snapshot.estimatedHailSizeMm);
             String text = "Severe storm cell detected over Kingston. Move patrol vehicle under cover & shelter in Guard Hut.";
 
-            int iconShield = context.getResources().getIdentifier("ic_stat_duty", "drawable", context.getPackageName());
-            if (iconShield == 0) iconShield = android.R.drawable.stat_notify_error;
+            int iconShield = context.getResources().getIdentifier("ic_shield_gold", "drawable", context.getPackageName());
+            if (iconShield == 0) iconShield = context.getApplicationInfo().icon;
 
             b.setSmallIcon(iconShield)
                     .setContentTitle(title)
@@ -553,7 +558,11 @@ public class FireRadarManager {
                     .setColor(0xFF38BDF8)
                     .setAutoCancel(true)
                     .setContentIntent(pi)
-                    .setPriority(Notification.PRIORITY_MAX);
+                    .setPriority(Notification.PRIORITY_HIGH);
+
+            try {
+                b.setLargeIcon(BitmapFactory.decodeResource(context.getResources(), context.getApplicationInfo().icon));
+            } catch (Throwable ignored) {}
 
             nm.notify(8889, b.build());
         } catch (Exception e) {
@@ -684,7 +693,10 @@ public class FireRadarManager {
                 ? new Notification.Builder(context, CHANNEL_FIRE_HAZARDS)
                 : new Notification.Builder(context);
 
-        b.setSmallIcon(android.R.drawable.stat_notify_error)
+        int iconShield = context.getResources().getIdentifier("ic_shield_gold", "drawable", context.getPackageName());
+        if (iconShield == 0) iconShield = context.getApplicationInfo().icon;
+
+        b.setSmallIcon(iconShield)
                 .setContentTitle("🔥 FIRE DANGER RATING: " + newRating.label)
                 .setContentText("Rating updated from " + oldRating.label + " → " + newRating.label + ". " + newRating.advice)
                 .setStyle(new Notification.BigTextStyle().bigText(
@@ -698,6 +710,10 @@ public class FireRadarManager {
                 .setAutoCancel(true)
                 .setContentIntent(pi)
                 .setPriority(Notification.PRIORITY_MAX);
+
+        try {
+            b.setLargeIcon(BitmapFactory.decodeResource(context.getResources(), context.getApplicationInfo().icon));
+        } catch (Throwable ignored) {}
 
         nm.notify(9001, b.build());
     }
@@ -716,7 +732,10 @@ public class FireRadarManager {
                 ? new Notification.Builder(context, CHANNEL_FIRE_HAZARDS)
                 : new Notification.Builder(context);
 
-        b.setSmallIcon(android.R.drawable.stat_notify_error)
+        int iconShield = context.getResources().getIdentifier("ic_shield_gold", "drawable", context.getPackageName());
+        if (iconShield == 0) iconShield = context.getApplicationInfo().icon;
+
+        b.setSmallIcon(iconShield)
                 .setContentTitle("🚨 FIRE WITHIN 10KM: " + String.format(Locale.US, "%.1f km %s", inc.distanceKm, inc.compassDir))
                 .setContentText(inc.name + " · Wind: " + windDir + " " + String.format(Locale.US, "%.0f km/h", windSpeed))
                 .setStyle(new Notification.BigTextStyle().bigText(
@@ -731,6 +750,10 @@ public class FireRadarManager {
                 .setAutoCancel(true)
                 .setContentIntent(pi)
                 .setPriority(Notification.PRIORITY_MAX);
+
+        try {
+            b.setLargeIcon(BitmapFactory.decodeResource(context.getResources(), context.getApplicationInfo().icon));
+        } catch (Throwable ignored) {}
 
         nm.notify(9002 + inc.id.hashCode(), b.build());
     }

@@ -7,6 +7,7 @@ import android.app.PendingIntent;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
+import android.graphics.BitmapFactory;
 import android.os.Build;
 import android.util.Log;
 
@@ -329,8 +330,8 @@ public class AirspaceRadarManager {
             String title = String.format(Locale.US, "🚁 POLAIR ACTIVITY: %s (%.1f km %s)", track.callsign, track.distanceKm, track.compassDir);
             String text = String.format(Locale.US, "Low-altitude orbit detected at %d ft AGL. Possible police pursuit or search operation near Kingston.", track.altitudeFt);
 
-            int iconShield = context.getResources().getIdentifier("ic_stat_duty", "drawable", context.getPackageName());
-            if (iconShield == 0) iconShield = android.R.drawable.stat_notify_error;
+            int iconShield = context.getResources().getIdentifier("ic_shield_gold", "drawable", context.getPackageName());
+            if (iconShield == 0) iconShield = context.getApplicationInfo().icon;
 
             b.setSmallIcon(iconShield)
                     .setContentTitle(title)
@@ -343,10 +344,14 @@ public class AirspaceRadarManager {
                             "Flight Status: " + track.statusText + "\n\n" +
                             "Guard Advisory: Maintain heightened perimeter vigilance at Gate A & Gate B. Monitor fence line for suspect movement."
                     ))
-                    .setColor(0xFF00E5FF)
+                    .setColor(0xFFFF5252)
                     .setAutoCancel(true)
                     .setContentIntent(pi)
-                    .setPriority(Notification.PRIORITY_MAX);
+                    .setPriority(Notification.PRIORITY_HIGH);
+
+            try {
+                b.setLargeIcon(BitmapFactory.decodeResource(context.getResources(), context.getApplicationInfo().icon));
+            } catch (Throwable ignored) {}
 
             nm.notify(7777, b.build());
         } catch (Exception e) {

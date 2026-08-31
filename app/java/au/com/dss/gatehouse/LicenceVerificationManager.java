@@ -7,6 +7,7 @@ import android.app.PendingIntent;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
+import android.graphics.BitmapFactory;
 import android.graphics.Color;
 import android.os.Build;
 import android.util.Log;
@@ -282,8 +283,8 @@ public class LicenceVerificationManager {
                 builder.setPriority(Notification.PRIORITY_HIGH);
             }
 
-            int iconShield = context.getResources().getIdentifier("ic_stat_duty", "drawable", context.getPackageName());
-            if (iconShield == 0) iconShield = android.R.drawable.ic_lock_idle_lock;
+            int iconShield = context.getResources().getIdentifier("ic_shield_gold", "drawable", context.getPackageName());
+            if (iconShield == 0) iconShield = context.getApplicationInfo().icon;
 
             builder.setSmallIcon(iconShield)
                     .setContentTitle(title)
@@ -297,6 +298,10 @@ public class LicenceVerificationManager {
                     ))
                     .setContentIntent(pi)
                     .setAutoCancel(true);
+
+            try {
+                builder.setLargeIcon(BitmapFactory.decodeResource(context.getResources(), context.getApplicationInfo().icon));
+            } catch (Throwable ignored) {}
 
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
                 builder.setColor(status.statusColor);
