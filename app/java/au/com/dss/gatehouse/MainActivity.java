@@ -3880,7 +3880,7 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
     // =========================================================================
 
     private void showChessGameDialog() {
-        final LinearLayout box = dialogContainer("♟️ Grandmaster Chess", "8×8 ENGINE & PUZZLES", colCyan);
+        final LinearLayout box = dialogContainer("♟️ Grandmaster Chess", "8×8 TOURNAMENT ENGINE", colCyan);
 
         final TextView statusLbl = new TextView(this);
         statusLbl.setText("♔ White to move · vs AI");
@@ -3890,13 +3890,13 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
         statusLbl.setPadding(0, dp(4), 0, dp(8));
         box.addView(statusLbl);
 
-        final ChessBoardView chessView = new ChessBoardView(this);
+        final ChessGameView chessView = new ChessGameView(this);
         LinearLayout.LayoutParams cvl = new LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT, dp(320));
         chessView.setLayoutParams(cvl);
         box.addView(chessView);
 
-        chessView.setStatusListener(new ChessBoardView.StatusListener() {
+        chessView.setStatusListener(new ChessGameView.StatusListener() {
             @Override
             public void onStatusChanged(String statusText, int textColor) {
                 statusLbl.setText(statusText);
@@ -3910,7 +3910,7 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
         modeRow.setPadding(0, dp(8), 0, 0);
 
         final TextView btnBotMatch = actionButton("🤖 vs Stockfish AI", colCyan, colAccentInk);
-        final TextView btnTactics = actionButton("🧩 Chess Puzzles", colPanel2, colPale);
+        final TextView btnPuzzles = actionButton("🧩 Chess Puzzles", colPanel2, colPale);
 
         btnBotMatch.setOnClickListener(new View.OnClickListener() {
             public void onClick(View v) {
@@ -3918,17 +3918,17 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
                 chessView.setMode(0);
                 btnBotMatch.setBackground(rounded(colCyan, dp(8)));
                 btnBotMatch.setTextColor(colAccentInk);
-                btnTactics.setBackground(rounded(colPanel2, dp(8)));
-                btnTactics.setTextColor(colPale);
+                btnPuzzles.setBackground(rounded(colPanel2, dp(8)));
+                btnPuzzles.setTextColor(colPale);
             }
         });
 
-        btnTactics.setOnClickListener(new View.OnClickListener() {
+        btnPuzzles.setOnClickListener(new View.OnClickListener() {
             public void onClick(View v) {
                 hapticClick();
                 chessView.setMode(1);
-                btnTactics.setBackground(rounded(colCyan, dp(8)));
-                btnTactics.setTextColor(colAccentInk);
+                btnPuzzles.setBackground(rounded(colCyan, dp(8)));
+                btnPuzzles.setTextColor(colAccentInk);
                 btnBotMatch.setBackground(rounded(colPanel2, dp(8)));
                 btnBotMatch.setTextColor(colPale);
             }
@@ -3941,8 +3941,8 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
 
         LinearLayout.LayoutParams mlp2 = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
         mlp2.leftMargin = dp(4);
-        btnTactics.setLayoutParams(mlp2);
-        modeRow.addView(btnTactics);
+        btnPuzzles.setLayoutParams(mlp2);
+        modeRow.addView(btnPuzzles);
         box.addView(modeRow);
 
         // Control actions row
@@ -17362,529 +17362,6 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
                     }
                 }
             });
-        }
-    }
-
-    // =========================================================================
-
-
-    // =========================================================================
-    // ♟️ GRANDMASTER CHESS INTERACTIVE CANVAS VIEW & MINIMAX AI
-    // =========================================================================
-
-    public static class ChessBoardView extends View {
-        public interface StatusListener {
-            void onStatusChanged(String text, int color);
-        }
-
-        private StatusListener statusListener;
-        private final Paint boardBgPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
-        private final Paint darkSquarePaint = new Paint(Paint.ANTI_ALIAS_FLAG);
-        private final Paint lightSquarePaint = new Paint(Paint.ANTI_ALIAS_FLAG);
-        private final Paint selectPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
-        private final Paint targetDotPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
-        private final Paint textPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
-        private final Paint piecePaint = new Paint(Paint.ANTI_ALIAS_FLAG);
-        private final RectF squareRect = new RectF();
-
-        private final char[][] board = new char[8][8];
-        private boolean whiteTurn = true;
-        private int selectedX = -1;
-        private int selectedY = -1;
-        private final java.util.List<Point> validMoves = new java.util.ArrayList<>();
-        private int mode = 0; // 0 = vs AI, 1 = Chess Puzzles
-        private int puzzleIndex = 0;
-        private boolean puzzleSolved = false;
-
-        private float dpf(float v) {
-            return v * getResources().getDisplayMetrics().density;
-        }
-
-        public ChessBoardView(Context context) {
-            super(context);
-            setClickable(true);
-            setFocusable(true);
-
-            boardBgPaint.setColor(0xFF131B2A);
-            darkSquarePaint.setColor(0xFF1E293B);
-            lightSquarePaint.setColor(0xFF334155);
-
-            selectPaint.setColor(0x88FFD166);
-            selectPaint.setStyle(Paint.Style.FILL);
-
-            targetDotPaint.setColor(0xFFFFD166);
-            targetDotPaint.setStyle(Paint.Style.FILL);
-
-            textPaint.setColor(0xFF94A3B8);
-            textPaint.setTextSize(dpf(8.5f));
-            textPaint.setTextAlign(Paint.Align.CENTER);
-            textPaint.setTypeface(Typeface.create(Typeface.MONOSPACE, Typeface.BOLD));
-
-            piecePaint.setTextAlign(Paint.Align.CENTER);
-            piecePaint.setTypeface(Typeface.DEFAULT_BOLD);
-
-            resetGame();
-        }
-
-        public void setStatusListener(StatusListener listener) {
-            this.statusListener = listener;
-            updateStatus();
-        }
-
-        public void setMode(int m) {
-            this.mode = m;
-            if (mode == 1) {
-                loadPuzzle(puzzleIndex);
-            } else {
-                resetGame();
-            }
-        }
-
-        public void resetGame() {
-            String[] setup = {
-                "rnbqkbnr",
-                "pppppppp",
-                "........",
-                "........",
-                "........",
-                "........",
-                "PPPPPPPP",
-                "RNBQKBNR"
-            };
-            for (int r = 0; r < 8; r++) {
-                for (int c = 0; c < 8; c++) {
-                    board[r][c] = setup[r].charAt(c);
-                }
-            }
-            whiteTurn = true;
-            selectedX = -1;
-            selectedY = -1;
-            validMoves.clear();
-            puzzleSolved = false;
-            updateStatus();
-            invalidate();
-        }
-
-        public void undoMove() {
-            resetGame();
-        }
-
-        public void nextPuzzle() {
-            puzzleIndex = (puzzleIndex + 1) % 6;
-            loadPuzzle(puzzleIndex);
-        }
-
-        private static class ChessPuzzle {
-            String title;
-            String[] grid;
-            int fromX, fromY, toX, toY;
-
-            ChessPuzzle(String title, String[] grid, int fromX, int fromY, int toX, int toY) {
-                this.title = title;
-                this.grid = grid;
-                this.fromX = fromX;
-                this.fromY = fromY;
-                this.toX = toX;
-                this.toY = toY;
-            }
-        }
-
-        private static final ChessPuzzle[] PUZZLES = {
-            new ChessPuzzle("1. Back-Rank Checkmate", new String[]{
-                "....k...", "pppp.ppp", "........", "........", "........", "........", "PPPP.PPP", "....R.K."
-            }, 4, 7, 4, 0),
-            new ChessPuzzle("2. Royal Knight Fork", new String[]{
-                "...q.rk.", "ppp..ppp", "....n...", "........", "....N...", "........", "PPP..PPP", "....R.K."
-            }, 4, 4, 3, 2),
-            new ChessPuzzle("3. Smothered Mate", new String[]{
-                "...r..k.", "ppp...pp", "....N...", "........", "........", "........", "PPP..PPP", "....R.K."
-            }, 4, 2, 5, 0),
-            new ChessPuzzle("4. Greek Gift Sacrifice", new String[]{
-                "r.bq.rk.", "pppp.ppp", "..n.....", "....B...", "....P...", ".....N..", "PPPP..PP", "R.BQK..R"
-            }, 4, 3, 7, 0),
-            new ChessPuzzle("5. Queen Skewer", new String[]{
-                "....k...", "........", "........", "........", "....q...", "........", "....Q...", "....K..."
-            }, 4, 6, 4, 4),
-            new ChessPuzzle("6. Deflection Tactic", new String[]{
-                "....r.k.", "ppp...pp", "........", "........", "........", "........", "PPP...PP", "....R.K."
-            }, 4, 7, 4, 0)
-        };
-
-        private void loadPuzzle(int idx) {
-            if (idx < 0 || idx >= PUZZLES.length) idx = 0;
-            ChessPuzzle p = PUZZLES[idx];
-            for (int r = 0; r < 8; r++) {
-                for (int c = 0; c < 8; c++) {
-                    board[r][c] = p.grid[r].charAt(c);
-                }
-            }
-            whiteTurn = true;
-            selectedX = -1;
-            selectedY = -1;
-            validMoves.clear();
-            puzzleSolved = false;
-            updateStatus();
-            invalidate();
-        }
-
-        private void updateStatus() {
-            if (statusListener == null) return;
-            if (mode == 1) {
-                ChessPuzzle p = PUZZLES[puzzleIndex];
-                if (puzzleSolved) {
-                    statusListener.onStatusChanged("✓ " + p.title + " SOLVED! Brilliant tactic.", 0xFF10B981);
-                } else {
-                    statusListener.onStatusChanged("♔ White to play · " + p.title, 0xFF38BDF8);
-                }
-            } else {
-                String turn = whiteTurn ? "♔ White to move" : "♚ Black to move (AI)";
-                statusListener.onStatusChanged(turn + " · 8×8 Tournament Engine", 0xFFE2E8F0);
-            }
-        }
-
-        private String getPieceGlyph(char p) {
-            switch (p) {
-                case 'K': return "♔";
-                case 'Q': return "♕";
-                case 'R': return "♖";
-                case 'B': return "♗";
-                case 'N': return "♘";
-                case 'P': return "♙";
-                case 'k': return "♚";
-                case 'q': return "♛";
-                case 'r': return "♜";
-                case 'b': return "♝";
-                case 'n': return "♞";
-                case 'p': return "♟";
-                default: return "";
-            }
-        }
-
-        private void generateValidMoves(int x, int y) {
-            validMoves.clear();
-            char p = board[y][x];
-            if (p == '.') return;
-            boolean isWhite = Character.isUpperCase(p);
-            char type = Character.toLowerCase(p);
-
-            switch (type) {
-                case 'p': // Pawn
-                    int dir = isWhite ? -1 : 1;
-                    int startRank = isWhite ? 6 : 1;
-                    if (y + dir >= 0 && y + dir < 8 && board[y + dir][x] == '.') {
-                        validMoves.add(new Point(x, y + dir));
-                        if (y == startRank && board[y + dir * 2][x] == '.') {
-                            validMoves.add(new Point(x, y + dir * 2));
-                        }
-                    }
-                    // Captures
-                    int[] capCols = {x - 1, x + 1};
-                    for (int cc : capCols) {
-                        if (cc >= 0 && cc < 8 && y + dir >= 0 && y + dir < 8) {
-                            char target = board[y + dir][cc];
-                            if (target != '.' && (Character.isUpperCase(target) != isWhite)) {
-                                validMoves.add(new Point(cc, y + dir));
-                            }
-                        }
-                    }
-                    break;
-
-                case 'n': // Knight
-                    int[][] kMoves = {{-2,-1},{-2,1},{-1,-2},{-1,2},{1,-2},{1,2},{2,-1},{2,1}};
-                    for (int[] m : kMoves) {
-                        int tx = x + m[0];
-                        int ty = y + m[1];
-                        if (tx >= 0 && tx < 8 && ty >= 0 && ty < 8) {
-                            char target = board[ty][tx];
-                            if (target == '.' || (Character.isUpperCase(target) != isWhite)) {
-                                validMoves.add(new Point(tx, ty));
-                            }
-                        }
-                    }
-                    break;
-
-                case 'b': // Bishop
-                case 'r': // Rook
-                case 'q': // Queen
-                    int[][] dirs = (type == 'b') ? new int[][]{{1,1},{1,-1},{-1,1},{-1,-1}}
-                                : (type == 'r') ? new int[][]{{1,0},{-1,0},{0,1},{0,-1}}
-                                : new int[][]{{1,0},{-1,0},{0,1},{0,-1},{1,1},{1,-1},{-1,1},{-1,-1}};
-                    for (int[] d : dirs) {
-                        int tx = x + d[0];
-                        int ty = y + d[1];
-                        while (tx >= 0 && tx < 8 && ty >= 0 && ty < 8) {
-                            char target = board[ty][tx];
-                            if (target == '.') {
-                                validMoves.add(new Point(tx, ty));
-                            } else {
-                                if (Character.isUpperCase(target) != isWhite) {
-                                    validMoves.add(new Point(tx, ty));
-                                }
-                                break;
-                            }
-                            tx += d[0];
-                            ty += d[1];
-                        }
-                    }
-                    break;
-
-                case 'k': // King
-                    int[][] kingMoves = {{1,0},{-1,0},{0,1},{0,-1},{1,1},{1,-1},{-1,1},{-1,-1}};
-                    for (int[] m : kingMoves) {
-                        int tx = x + m[0];
-                        int ty = y + m[1];
-                        if (tx >= 0 && tx < 8 && ty >= 0 && ty < 8) {
-                            char target = board[ty][tx];
-                            if (target == '.' || (Character.isUpperCase(target) != isWhite)) {
-                                validMoves.add(new Point(tx, ty));
-                            }
-                        }
-                    }
-                    break;
-            }
-        }
-
-        private void executeMove(int fromX, int fromY, int toX, int toY) {
-            if (mode == 1) {
-                ChessPuzzle p = PUZZLES[puzzleIndex];
-                if (fromX == p.fromX && fromY == p.fromY && toX == p.toX && toY == p.toY) {
-                    board[toY][toX] = board[fromY][fromX];
-                    board[fromY][fromX] = '.';
-                    puzzleSolved = true;
-                    selectedX = -1;
-                    selectedY = -1;
-                    validMoves.clear();
-                    updateStatus();
-                    invalidate();
-                    return;
-                } else {
-                    if (statusListener != null) {
-                        statusListener.onStatusChanged("✗ Incorrect move. Try another line!", 0xFFF87171);
-                    }
-                    selectedX = -1;
-                    selectedY = -1;
-                    validMoves.clear();
-                    invalidate();
-                    return;
-                }
-            }
-
-            char p = board[fromY][fromX];
-            board[toY][toX] = p;
-            board[fromY][fromX] = '.';
-
-            // Pawn promotion
-            if (p == 'P' && toY == 0) board[toY][toX] = 'Q';
-            if (p == 'p' && toY == 7) board[toY][toX] = 'q';
-
-            selectedX = -1;
-            selectedY = -1;
-            validMoves.clear();
-            whiteTurn = !whiteTurn;
-            updateStatus();
-            invalidate();
-
-            if (mode == 0 && !whiteTurn) {
-                postDelayed(new Runnable() {
-                    public void run() { aiPlayMove(); }
-                }, 380);
-            }
-        }
-
-        private static final int[][] KNIGHT_PST = {
-            {-50,-40,-30,-30,-30,-30,-40,-50},
-            {-40,-20,  0,  5,  5,  0,-20,-40},
-            {-30,  5, 10, 15, 15, 10,  5,-30},
-            {-30,  0, 15, 20, 20, 15,  0,-30},
-            {-30,  5, 15, 20, 20, 15,  5,-30},
-            {-30,  0, 10, 15, 15, 10,  0,-30},
-            {-40,-20,  0,  0,  0,  0,-20,-40},
-            {-50,-40,-30,-30,-30,-30,-40,-50}
-        };
-
-        private static final int[][] PAWN_PST = {
-            { 0,  0,  0,  0,  0,  0,  0,  0},
-            {50, 50, 50, 50, 50, 50, 50, 50},
-            {10, 10, 20, 30, 30, 20, 10, 10},
-            { 5,  5, 10, 25, 25, 10,  5,  5},
-            { 0,  0,  0, 20, 20,  0,  0,  0},
-            { 5, -5,-10,  0,  0,-10, -5,  5},
-            { 5, 10, 10,-20,-20, 10, 10,  5},
-            { 0,  0,  0,  0,  0,  0,  0,  0}
-        };
-
-        private void aiPlayMove() {
-            if (whiteTurn) return;
-            java.util.List<int[]> allMoves = new java.util.ArrayList<>();
-            for (int y = 0; y < 8; y++) {
-                for (int x = 0; x < 8; x++) {
-                    if (board[y][x] != '.' && Character.isLowerCase(board[y][x])) {
-                        generateValidMoves(x, y);
-                        for (Point m : validMoves) {
-                            allMoves.add(new int[]{x, y, m.x, m.y});
-                        }
-                    }
-                }
-            }
-
-            if (!allMoves.isEmpty()) {
-                int[] bestMove = allMoves.get(0);
-                int bestScore = -999999;
-                for (int[] mv : allMoves) {
-                    char mover = board[mv[1]][mv[0]];
-                    char target = board[mv[3]][mv[2]];
-                    int score = 0;
-
-                    // Material capture values
-                    if (target == 'Q') score += 9000;
-                    else if (target == 'R') score += 5000;
-                    else if (target == 'B' || target == 'N') score += 3300;
-                    else if (target == 'P') score += 1000;
-
-                    // Positional piece-square bonuses
-                    if (mover == 'p') score += PAWN_PST[mv[3]][mv[2]];
-                    else if (mover == 'n') score += KNIGHT_PST[mv[3]][mv[2]];
-                    else if (mover == 'b' || mover == 'q') {
-                        // Center distance penalty reduction
-                        int centerDist = Math.abs(mv[2] - 3) + Math.abs(mv[3] - 4);
-                        score += (14 - centerDist) * 15;
-                    }
-
-                    // Avoid stepping into pawn attacks
-                    if (mv[3] < 7 && mv[2] > 0 && board[mv[3] + 1][mv[2] - 1] == 'P') score -= 1500;
-                    if (mv[3] < 7 && mv[2] < 7 && board[mv[3] + 1][mv[2] + 1] == 'P') score -= 1500;
-
-                    if (score > bestScore) {
-                        bestScore = score;
-                        bestMove = mv;
-                    }
-                }
-                executeMove(bestMove[0], bestMove[1], bestMove[2], bestMove[3]);
-            }
-        }
-
-        @Override
-        public boolean onTouchEvent(MotionEvent event) {
-            if (event.getActionMasked() == MotionEvent.ACTION_DOWN) {
-                float w = getWidth();
-                float h = getHeight();
-                float pad = dpf(18f);
-                float size = Math.min(w, h) - pad * 2;
-                float startX = (w - size) / 2f;
-                float startY = (h - size) / 2f;
-                float cellSize = size / 8f;
-
-                int gx = (int) ((event.getX() - startX) / cellSize);
-                int gy = (int) ((event.getY() - startY) / cellSize);
-
-                if (gx >= 0 && gx < 8 && gy >= 0 && gy < 8) {
-                    if (selectedX != -1 && selectedY != -1) {
-                        for (Point m : validMoves) {
-                            if (m.x == gx && m.y == gy) {
-                                executeMove(selectedX, selectedY, gx, gy);
-                                return true;
-                            }
-                        }
-                    }
-
-                    char p = board[gy][gx];
-                    if (p != '.' && (Character.isUpperCase(p) == whiteTurn)) {
-                        selectedX = gx;
-                        selectedY = gy;
-                        generateValidMoves(gx, gy);
-                        invalidate();
-                        return true;
-                    }
-                }
-            }
-            return super.onTouchEvent(event);
-        }
-
-        @Override
-        protected void onDraw(Canvas canvas) {
-            super.onDraw(canvas);
-            float w = getWidth();
-            float h = getHeight();
-            if (w <= 0 || h <= 0) return;
-
-            squareRect.set(0, 0, w, h);
-            boardBgPaint.setShader(new LinearGradient(0, 0, w, h, 0xFF0F172A, 0xFF1E293B, Shader.TileMode.CLAMP));
-            canvas.drawRoundRect(squareRect, dpf(16f), dpf(16f), boardBgPaint);
-
-            Paint goldBorder = new Paint(Paint.ANTI_ALIAS_FLAG);
-            goldBorder.setColor(0xFFEAB308);
-            goldBorder.setStyle(Paint.Style.STROKE);
-            goldBorder.setStrokeWidth(dpf(1.5f));
-            RectF inner = new RectF(dpf(2f), dpf(2f), w - dpf(2f), h - dpf(2f));
-            canvas.drawRoundRect(inner, dpf(14f), dpf(14f), goldBorder);
-
-            float pad = dpf(18f);
-            float size = Math.min(w, h) - pad * 2;
-            float startX = (w - size) / 2f;
-            float startY = (h - size) / 2f;
-            float cellSize = size / 8f;
-
-            darkSquarePaint.setColor(0xFF1E293B);
-            lightSquarePaint.setColor(0xFF334155);
-            selectPaint.setColor(0x88FFD166);
-
-            Paint textCoordPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
-            textCoordPaint.setColor(0xFFFDE047);
-            textCoordPaint.setTextSize(dpf(9f));
-            textCoordPaint.setTextAlign(Paint.Align.CENTER);
-            textCoordPaint.setTypeface(Typeface.create(Typeface.MONOSPACE, Typeface.BOLD));
-
-            // Draw Files (a-h) and Ranks (1-8)
-            for (int i = 0; i < 8; i++) {
-                float px = startX + i * cellSize + cellSize / 2f;
-                canvas.drawText(String.valueOf((char) ('a' + i)), px, startY - dpf(5f), textCoordPaint);
-                float py = startY + i * cellSize + cellSize / 2f;
-                canvas.drawText(String.valueOf(8 - i), startX - dpf(8f), py + dpf(3f), textCoordPaint);
-            }
-
-            piecePaint.setTextSize(cellSize * 0.78f);
-            piecePaint.setTextAlign(Paint.Align.CENTER);
-
-            Paint shadowPiecePaint = new Paint(Paint.ANTI_ALIAS_FLAG);
-            shadowPiecePaint.setTextSize(cellSize * 0.78f);
-            shadowPiecePaint.setTextAlign(Paint.Align.CENTER);
-            shadowPiecePaint.setColor(0x99000000);
-
-            for (int r = 0; r < 8; r++) {
-                for (int c = 0; c < 8; c++) {
-                    float left = startX + c * cellSize;
-                    float top = startY + r * cellSize;
-                    squareRect.set(left, top, left + cellSize, top + cellSize);
-
-                    boolean isDark = (r + c) % 2 == 1;
-                    canvas.drawRect(squareRect, isDark ? darkSquarePaint : lightSquarePaint);
-
-                    if (c == selectedX && r == selectedY) {
-                        canvas.drawRect(squareRect, selectPaint);
-                    }
-
-                    char piece = board[r][c];
-                    if (piece != '.') {
-                        boolean isWhite = Character.isUpperCase(piece);
-                        float cx = left + cellSize / 2f;
-                        float textY = top + cellSize / 2f + piecePaint.getTextSize() * 0.35f;
-
-                        // Piece drop shadow
-                        canvas.drawText(getPieceGlyph(piece), cx + dpf(1.5f), textY + dpf(2f), shadowPiecePaint);
-
-                        piecePaint.setColor(isWhite ? 0xFFFFFFFF : 0xFFFFD166);
-                        canvas.drawText(getPieceGlyph(piece), cx, textY, piecePaint);
-                    }
-                }
-            }
-
-            // Draw move highlight glowing rings
-            for (Point m : validMoves) {
-                float cx = startX + m.x * cellSize + cellSize / 2f;
-                float cy = startY + m.y * cellSize + cellSize / 2f;
-                canvas.drawCircle(cx, cy, dpf(5f), targetDotPaint);
-                canvas.drawCircle(cx, cy, dpf(2f), shadowPiecePaint);
-            }
         }
     }
 
