@@ -3267,231 +3267,323 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
         animateTabToPosition(tabIndex);
     }
 
+    private String toolsActiveFilter = "ALL";
+
     private LinearLayout buildToolsTab() {
-        LinearLayout container = new LinearLayout(this);
+        final LinearLayout container = new LinearLayout(this);
         container.setOrientation(LinearLayout.VERTICAL);
         container.setPadding(0, dp(4), 0, dp(56));
 
-        // 1. Hero Card: Crake-style Tester Feedback Hub (Overlord & Testers)
-        container.addView(buildTesterFeedbackCard());
+        // 1. 🧭 Top Category Filter Pills Bar
+        HorizontalScrollView filterScroll = new HorizontalScrollView(this);
+        filterScroll.setHorizontalScrollBarEnabled(false);
+        filterScroll.setPadding(0, dp(2), 0, dp(8));
 
-        // 2. ⚡ OPERATIONAL HARDWARE & COMMS DECK
-        container.addView(sectionHeader("⚡ OPERATIONAL HARDWARE & COMMS", null));
-        LinearLayout r1 = new LinearLayout(this);
-        r1.setOrientation(LinearLayout.HORIZONTAL);
-        r1.addView(buildCompactToolTile("🔦", "Site Torch", isHardwareTorchOn ? "ACTIVE" : "READY", isHardwareTorchOn ? colEmerald : colAccent, "High-beam flashlight", new View.OnClickListener() {
-            public void onClick(View v) {
-                hapticHeavyClick();
-                toggleHardwareTorch();
-            }
-        }));
-        r1.addView(buildCompactToolTile("📻", "PTT Radio", "CH 01 TALK", colAccent, "467.56 MHz · Encrypted", new View.OnClickListener() {
-            public void onClick(View v) {
-                hapticHeavyClick();
-                showPttRadioDialog();
-            }
-        }));
-        container.addView(r1);
+        final LinearLayout filterRow = new LinearLayout(this);
+        filterRow.setOrientation(LinearLayout.HORIZONTAL);
+        filterRow.setPadding(dp(4), 0, dp(4), 0);
 
-        LinearLayout r2 = new LinearLayout(this);
-        r2.setOrientation(LinearLayout.HORIZONTAL);
-        r2.addView(buildCompactToolTile("🚨", "Hot-Mic SOS", "10s BURST", 0xFFEF4444, "Priority distress audio", new View.OnClickListener() {
-            public void onClick(View v) {
-                triggerPttHotMicSos();
-            }
-        }));
-        r2.addView(buildCompactToolTile("🎛️", "Line Gauges", "1,200 PSI", colAccent, "Pump house inspection", new View.OnClickListener() {
-            public void onClick(View v) {
-                hapticHeavyClick();
-                promptPumpHouseCheck("Manual Line Gauge (Lot 16 Booster)", "GAUGE-MANUAL-01");
-            }
-        }));
-        container.addView(r2);
+        final String[][] categories = {
+            {"ALL", "🌟 All Tools"},
+            {"HARDWARE", "⚡ Comms & Gear"},
+            {"SENSORS", "🛰️ Radar & Sensors"},
+            {"GAMES", "🎮 Board Games (8)"},
+            {"VAULT", "🪪 Vault & Docs"},
+            {"SYSTEM", "⚙️ System & OTA"}
+        };
 
-        // 3. 🛰️ SENSORS & ENVIRONMENTAL RADAR
-        container.addView(sectionHeader("🛰️ SENSORS & ENVIRONMENTAL RADAR", null));
-        LinearLayout r3 = new LinearLayout(this);
-        r3.setOrientation(LinearLayout.HORIZONTAL);
-        r3.addView(buildCompactToolTile("🧭", "Site Compass", "360° LIVE", colCyan, "Shortest-path azimuth", new View.OnClickListener() {
-            public void onClick(View v) {
-                hapticClick();
-                showCompassDialog();
-            }
-        }));
-        r3.addView(buildCompactToolTile("🌤️", "Site Weather", String.format(Locale.US, "%.1f°C", curTempC), colCyan, "Kingston thermal index", new View.OnClickListener() {
-            public void onClick(View v) {
-                hapticClick();
-                showWeatherDialog();
-            }
-        }));
-        container.addView(r3);
+        final List<TextView> pillViews = new ArrayList<>();
 
-        LinearLayout r4 = new LinearLayout(this);
-        r4.setOrientation(LinearLayout.HORIZONTAL);
-        r4.addView(buildCompactToolTile("📡", "GNSS & Radar", "12 SATS", colEmerald, "Polar satellite fix", new View.OnClickListener() {
-            public void onClick(View v) {
-                hapticClick();
-                showGpsDialog();
-            }
-        }));
-        r4.addView(buildCompactToolTile("✨", "Starlink / ISS", "RADAR PASS", 0xFF00E5FF, "Overhead celestial HUD", new View.OnClickListener() {
-            public void onClick(View v) {
-                hapticHeavyClick();
-                showSatelliteRadarDialog();
-            }
-        }));
-        container.addView(r4);
+        for (final String[] cat : categories) {
+            final String catKey = cat[0];
+            final String catLabel = cat[1];
+            final TextView pill = new TextView(this);
+            pill.setText(catLabel);
+            pill.setTextSize(11f);
+            pill.setTypeface(Typeface.DEFAULT_BOLD);
+            pill.setPadding(dp(12), dp(6), dp(12), dp(6));
+
+            boolean isSelected = toolsActiveFilter.equalsIgnoreCase(catKey);
+            pill.setTextColor(isSelected ? colAccentInk : colPale);
+            pill.setBackground(rounded(isSelected ? colAccent : 0xFF1E293B, dp(14)));
+
+            LinearLayout.LayoutParams plp = new LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+            plp.setMargins(dp(3), 0, dp(3), 0);
+            pill.setLayoutParams(plp);
+
+            pill.setOnClickListener(new View.OnClickListener() {
+                public void onClick(View v) {
+                    hapticClick();
+                    toolsActiveFilter = catKey;
+                    for (int i = 0; i < categories.length; i++) {
+                        boolean sel = categories[i][0].equalsIgnoreCase(toolsActiveFilter);
+                        pillViews.get(i).setTextColor(sel ? colAccentInk : colPale);
+                        pillViews.get(i).setBackground(rounded(sel ? colAccent : 0xFF1E293B, dp(14)));
+                    }
+                    applyToolsCategoryFilter(container);
+                }
+            });
+
+            pillViews.add(pill);
+            filterRow.addView(pill);
+        }
+        filterScroll.addView(filterRow);
+        container.addView(filterScroll);
+
+        // Content Wrapper
+        LinearLayout contentWrapper = new LinearLayout(this);
+        contentWrapper.setTag("TOOLS_CONTENT");
+        contentWrapper.setOrientation(LinearLayout.VERTICAL);
+        container.addView(contentWrapper);
+
+        populateToolsContent(contentWrapper);
+        return container;
+    }
+
+    private void applyToolsCategoryFilter(LinearLayout container) {
+        LinearLayout content = container.findViewWithTag("TOOLS_CONTENT");
+        if (content != null) {
+            content.removeAllViews();
+            populateToolsContent(content);
+        }
+    }
+
+    private void populateToolsContent(LinearLayout container) {
+        boolean showAll = "ALL".equalsIgnoreCase(toolsActiveFilter);
+
+        // 1. ⚡ COMMS & OPERATIONAL GEAR
+        if (showAll || "HARDWARE".equalsIgnoreCase(toolsActiveFilter)) {
+            container.addView(sectionHeader("⚡ COMMS & OPERATIONAL GEAR", null));
+
+            // Hero Live Torch & PTT Duo Card
+            LinearLayout r1 = new LinearLayout(this);
+            r1.setOrientation(LinearLayout.HORIZONTAL);
+            r1.addView(buildCompactToolTile("🔦", "Site Torch", isHardwareTorchOn ? "ACTIVE" : "READY", isHardwareTorchOn ? colEmerald : colAccent, isHardwareTorchOn ? "High-beam torch ignited" : "Tap to toggle LED light", new View.OnClickListener() {
+                public void onClick(View v) {
+                    hapticHeavyClick();
+                    toggleHardwareTorch();
+                }
+            }));
+            r1.addView(buildCompactToolTile("📻", "PTT Radio", "CH 01 TALK", colAccent, "467.56 MHz · Encrypted", new View.OnClickListener() {
+                public void onClick(View v) {
+                    hapticHeavyClick();
+                    showPttRadioDialog();
+                }
+            }));
+            container.addView(r1);
+
+            LinearLayout r2 = new LinearLayout(this);
+            r2.setOrientation(LinearLayout.HORIZONTAL);
+            r2.addView(buildCompactToolTile("🚨", "Hot-Mic SOS", "10s BURST", 0xFFEF4444, "Priority distress audio broadcast", new View.OnClickListener() {
+                public void onClick(View v) {
+                    triggerPttHotMicSos();
+                }
+            }));
+            r2.addView(buildCompactToolTile("🎛️", "Line Gauges", "1,200 PSI", colAccent, "Booster pump inspections", new View.OnClickListener() {
+                public void onClick(View v) {
+                    hapticHeavyClick();
+                    promptPumpHouseCheck("Manual Line Gauge (Lot 16 Booster)", "GAUGE-MANUAL-01");
+                }
+            }));
+            container.addView(r2);
+        }
+
+        // 2. 🛰️ RADAR & SENSORS
+        if (showAll || "SENSORS".equalsIgnoreCase(toolsActiveFilter)) {
+            container.addView(sectionHeader("🛰️ SENSORS & ENVIRONMENTAL RADAR", null));
+            LinearLayout r3 = new LinearLayout(this);
+            r3.setOrientation(LinearLayout.HORIZONTAL);
+            r3.addView(buildCompactToolTile("🧭", "Site Compass", "360° LIVE", colCyan, "Live azimuth & shortest-path heading", new View.OnClickListener() {
+                public void onClick(View v) {
+                    hapticClick();
+                    showCompassDialog();
+                }
+            }));
+            r3.addView(buildCompactToolTile("🌤️", "Kingston Weather", String.format(Locale.US, "%.1f°C", curTempC), colCyan, "BOM live radar & thermal index", new View.OnClickListener() {
+                public void onClick(View v) {
+                    hapticClick();
+                    showWeatherDialog();
+                }
+            }));
+            container.addView(r3);
+
+            LinearLayout r4 = new LinearLayout(this);
+            r4.setOrientation(LinearLayout.HORIZONTAL);
+            r4.addView(buildCompactToolTile("📡", "GNSS & Satellites", "12 SATS", colEmerald, "Polar satellite constellation fix", new View.OnClickListener() {
+                public void onClick(View v) {
+                    hapticClick();
+                    showGpsDialog();
+                }
+            }));
+            r4.addView(buildCompactToolTile("✨", "Starlink / ISS", "RADAR PASS", 0xFF00E5FF, "Overhead celestial pass countdown", new View.OnClickListener() {
+                public void onClick(View v) {
+                    hapticHeavyClick();
+                    showSatelliteRadarDialog();
+                }
+            }));
+            container.addView(r4);
+        }
+
+        // 3. 🎮 RECREATION & BOARD GAMES ARCADE (8 GAMES)
+        if (showAll || "GAMES".equalsIgnoreCase(toolsActiveFilter)) {
+            container.addView(sectionHeader("🎮 OFFICER RECREATION & BOARD GAMES (8)", null));
+
+            LinearLayout rGames1 = new LinearLayout(this);
+            rGames1.setOrientation(LinearLayout.HORIZONTAL);
+            rGames1.addView(buildCompactToolTile("⚪⚫", "Baduk (Go)", "9×9 MCTS", colAccent, "Tsumego puzzles & MCTS bot", new View.OnClickListener() {
+                public void onClick(View v) {
+                    hapticHeavyClick();
+                    showBadukGameDialog();
+                }
+            }));
+            rGames1.addView(buildCompactToolTile("♟️", "Grandmaster Chess", "8×8 CHESS", colCyan, "Endgame puzzles & Stockfish AI", new View.OnClickListener() {
+                public void onClick(View v) {
+                    hapticHeavyClick();
+                    showChessGameDialog();
+                }
+            }));
+            container.addView(rGames1);
+
+            LinearLayout rGames2 = new LinearLayout(this);
+            rGames2.setOrientation(LinearLayout.HORIZONTAL);
+            rGames2.addView(buildCompactToolTile("🏺", "Royal Game of Ur", "2600 BCE", colAccent, "Sumerian 4-dice race & combat", new View.OnClickListener() {
+                public void onClick(View v) {
+                    hapticHeavyClick();
+                    showRoyalUrGameDialog();
+                }
+            }));
+            rGames2.addView(buildCompactToolTile("🪲", "Egyptian Senet", "3100 BCE", 0xFFFDE047, "30-square underworld race", new View.OnClickListener() {
+                public void onClick(View v) {
+                    hapticHeavyClick();
+                    showSenetGameDialog();
+                }
+            }));
+            container.addView(rGames2);
+
+            LinearLayout rGames3 = new LinearLayout(this);
+            rGames3.setOrientation(LinearLayout.HORIZONTAL);
+            rGames3.addView(buildCompactToolTile("🐺", "Viking Hnefatafl", "11×11 TAFL", colCrimson, "King's escape vs siege horde", new View.OnClickListener() {
+                public void onClick(View v) {
+                    hapticHeavyClick();
+                    showHnefataflGameDialog();
+                }
+            }));
+            rGames3.addView(buildCompactToolTile("🎲", "Backgammon", "24 POINTS", colEmerald, "Pip counter & bearing off", new View.OnClickListener() {
+                public void onClick(View v) {
+                    hapticHeavyClick();
+                    showBackgammonGameDialog();
+                }
+            }));
+            container.addView(rGames3);
+
+            LinearLayout rGames4 = new LinearLayout(this);
+            rGames4.setOrientation(LinearLayout.HORIZONTAL);
+            rGames4.addView(buildCompactToolTile("🏛️", "Nine Men's Morris", "1400 BCE", colCyan, "Concentric squares & mills", new View.OnClickListener() {
+                public void onClick(View v) {
+                    hapticHeavyClick();
+                    showNineMensMorrisGameDialog();
+                }
+            }));
+            rGames4.addView(buildCompactToolTile("🔴🟡", "Connect 4", "7×6 GRAVITY", 0xFFF59E0B, "4-in-a-row physics drop solver", new View.OnClickListener() {
+                public void onClick(View v) {
+                    hapticHeavyClick();
+                    showConnectFourGameDialog();
+                }
+            }));
+            container.addView(rGames4);
+        }
 
         // 4. 🪪 OFFICER VAULT & COMPLIANCE
-        container.addView(sectionHeader("🪪 OFFICER VAULT & COMPLIANCE", null));
-        LinearLayout r5 = new LinearLayout(this);
-        r5.setOrientation(LinearLayout.HORIZONTAL);
-        r5.addView(buildCompactToolTile("🪪", "Officer Vault", "LIC #41207", colPale, "Digital ID & credentials", new View.OnClickListener() {
-            public void onClick(View v) {
-                hapticClick();
-                showOfficerCredentialVaultDialog();
-            }
-        }));
-        r5.addView(buildCompactToolTile("⚖️", "Security Award", "MA000016", colAccent, "Pay rates & allowances", new View.OnClickListener() {
-            public void onClick(View v) {
-                hapticHeavyClick();
-                List<DeputyApi.DeputyDocument> docs = DeputyApi.getPreloadedDocuments();
-                if (!docs.isEmpty()) {
-                    showDocumentReader(docs.get(0));
-                } else {
+        if (showAll || "VAULT".equalsIgnoreCase(toolsActiveFilter)) {
+            container.addView(sectionHeader("🪪 OFFICER VAULT & COMPLIANCE", null));
+            LinearLayout r5 = new LinearLayout(this);
+            r5.setOrientation(LinearLayout.HORIZONTAL);
+            r5.addView(buildCompactToolTile("🪪", "Officer Vault", "LIC #41207", colPale, "Digital ID & credentials", new View.OnClickListener() {
+                public void onClick(View v) {
+                    hapticClick();
+                    showOfficerCredentialVaultDialog();
+                }
+            }));
+            r5.addView(buildCompactToolTile("⚖️", "Security Award", "MA000016", colAccent, "Pay rates & allowances reader", new View.OnClickListener() {
+                public void onClick(View v) {
+                    hapticHeavyClick();
+                    List<DeputyApi.DeputyDocument> docs = DeputyApi.getPreloadedDocuments();
+                    if (!docs.isEmpty()) {
+                        showDocumentReader(docs.get(0));
+                    } else {
+                        showDocumentLibraryDialog();
+                    }
+                }
+            }));
+            container.addView(r5);
+
+            LinearLayout r6 = new LinearLayout(this);
+            r6.setOrientation(LinearLayout.HORIZONTAL);
+            r6.addView(buildCompactToolTile("📡", "Offline Mesh", "P2P SYNC", colCyan, "Encrypted local peer sync", new View.OnClickListener() {
+                public void onClick(View v) {
+                    hapticClick();
+                    showNfcBleMeshDialog();
+                }
+            }));
+            r6.addView(buildCompactToolTile("📚", "Deputy Docs", "8 DOCS", 0xFF00E5FF, "Award, Fair Work & WHS manuals", new View.OnClickListener() {
+                public void onClick(View v) {
+                    hapticHeavyClick();
                     showDocumentLibraryDialog();
                 }
-            }
-        }));
-        container.addView(r5);
+            }));
+            container.addView(r6);
+        }
 
-        LinearLayout r6 = new LinearLayout(this);
-        r6.setOrientation(LinearLayout.HORIZONTAL);
-        r6.addView(buildCompactToolTile("📡", "Offline Mesh", "P2P SYNC", colCyan, "Encrypted local sync", new View.OnClickListener() {
-            public void onClick(View v) {
-                hapticClick();
-                showNfcBleMeshDialog();
-            }
-        }));
-        r6.addView(buildCompactToolTile("📚", "Deputy Docs", "8 DOCS", 0xFF00E5FF, "Award, Fair Work & WHS", new View.OnClickListener() {
-            public void onClick(View v) {
-                hapticHeavyClick();
-                showDocumentLibraryDialog();
-            }
-        }));
-        container.addView(r6);
+        // 5. ⚙️ PREFERENCES & SYSTEM HUB
+        if (showAll || "SYSTEM".equalsIgnoreCase(toolsActiveFilter)) {
+            container.addView(sectionHeader("⚙️ PREFERENCES & SYSTEM HUB", null));
 
-        // 5. 🎮 OFFICER RECREATION & BOARD GAMES
-        container.addView(sectionHeader("🎮 OFFICER RECREATION & BOARD GAMES", null));
-        LinearLayout rGames1 = new LinearLayout(this);
-        rGames1.setOrientation(LinearLayout.HORIZONTAL);
-        rGames1.addView(buildCompactToolTile("⚪⚫", "Baduk (Go)", "9×9 MCTS", colAccent, "Tsumego puzzles & MCTS bot", new View.OnClickListener() {
-            public void onClick(View v) {
-                hapticHeavyClick();
-                showBadukGameDialog();
-            }
-        }));
-        rGames1.addView(buildCompactToolTile("♟️", "Grandmaster Chess", "8×8 CHESS", colCyan, "Tactics & Stockfish AI", new View.OnClickListener() {
-            public void onClick(View v) {
-                hapticHeavyClick();
-                showChessGameDialog();
-            }
-        }));
-        container.addView(rGames1);
+            // Hero Card: Tester Feedback Hub
+            container.addView(buildTesterFeedbackCard());
 
-        LinearLayout rGames2 = new LinearLayout(this);
-        rGames2.setOrientation(LinearLayout.HORIZONTAL);
-        rGames2.addView(buildCompactToolTile("🏺", "Royal Game of Ur", "2600 BCE", colAccent, "Sumerian 4-dice race", new View.OnClickListener() {
-            public void onClick(View v) {
-                hapticHeavyClick();
-                showRoyalUrGameDialog();
-            }
-        }));
-        rGames2.addView(buildCompactToolTile("🪲", "Egyptian Senet", "3100 BCE", 0xFFFDE047, "30-square underworld race", new View.OnClickListener() {
-            public void onClick(View v) {
-                hapticHeavyClick();
-                showSenetGameDialog();
-            }
-        }));
-        container.addView(rGames2);
-
-        LinearLayout rGames3 = new LinearLayout(this);
-        rGames3.setOrientation(LinearLayout.HORIZONTAL);
-        rGames3.addView(buildCompactToolTile("🐺", "Viking Hnefatafl", "11×11 TAFL", colCrimson, "King's escape vs siege", new View.OnClickListener() {
-            public void onClick(View v) {
-                hapticHeavyClick();
-                showHnefataflGameDialog();
-            }
-        }));
-        rGames3.addView(buildCompactToolTile("🎲", "Backgammon", "24 POINTS", colEmerald, "Pip counter & bearing off", new View.OnClickListener() {
-            public void onClick(View v) {
-                hapticHeavyClick();
-                showBackgammonGameDialog();
-            }
-        }));
-        container.addView(rGames3);
-
-        LinearLayout rGames4 = new LinearLayout(this);
-        rGames4.setOrientation(LinearLayout.HORIZONTAL);
-        rGames4.addView(buildCompactToolTile("🏛️", "Nine Men's Morris", "1400 BCE", colCyan, "Concentric squares & mills", new View.OnClickListener() {
-            public void onClick(View v) {
-                hapticHeavyClick();
-                showNineMensMorrisGameDialog();
-            }
-        }));
-        rGames4.addView(buildCompactToolTile("🔴🟡", "Connect 4", "7×6 GRID", 0xFFF59E0B, "4-in-a-row gravity solver", new View.OnClickListener() {
-            public void onClick(View v) {
-                hapticHeavyClick();
-                showConnectFourGameDialog();
-            }
-        }));
-        container.addView(rGames4);
-
-        // 6. ⚙️ PREFERENCES & SYSTEM HUB
-        container.addView(sectionHeader("⚙️ PREFERENCES & SYSTEM HUB", null));
-        LinearLayout r7 = new LinearLayout(this);
-        r7.setOrientation(LinearLayout.HORIZONTAL);
-        r7.addView(buildCompactToolTile("⚙️", "Preferences", "THEMES", colAccent, "Display themes & haptics", new View.OnClickListener() {
-            public void onClick(View v) {
-                hapticClick();
-                showSettingsDialog();
-            }
-        }));
-        r7.addView(buildCompactToolTile("⚡", "OTA Updates", "v" + AutoUpdateManager.getAppVersion(this), colEmerald, "Check live GitHub build", new View.OnClickListener() {
-            public void onClick(View v) {
-                hapticHeavyClick();
-                AutoUpdateManager.checkForUpdateAsync(MainActivity.this, true, new AutoUpdateManager.UpdateCheckCallback() {
-                    @Override
-                    public void onUpdateFound(final String newSha, final long bytes) {
-                        runOnUiThread(new Runnable() {
-                            public void run() {
-                                banner.setText("✓ New OTA update ready (SHA " + (newSha.length() > 8 ? newSha.substring(0, 8) : newSha) + ") · Installing");
-                                banner.setVisibility(View.VISIBLE);
-                            }
-                        });
-                    }
-                    @Override
-                    public void onNoUpdateAvailable() {
-                        runOnUiThread(new Runnable() {
-                            public void run() {
-                                Toast.makeText(MainActivity.this, "✓ Gatehouse is up to date", Toast.LENGTH_SHORT).show();
-                            }
-                        });
-                    }
-                    @Override
-                    public void onError(final String message) {
-                        runOnUiThread(new Runnable() {
-                            public void run() {
-                                Toast.makeText(MainActivity.this, "Update check: " + message, Toast.LENGTH_SHORT).show();
-                            }
-                        });
-                    }
-                });
-            }
-        }));
-        container.addView(r7);
-
-        return container;
+            LinearLayout r7 = new LinearLayout(this);
+            r7.setOrientation(LinearLayout.HORIZONTAL);
+            r7.addView(buildCompactToolTile("⚙️", "Preferences", "THEMES", colAccent, "Display themes & haptics", new View.OnClickListener() {
+                public void onClick(View v) {
+                    hapticClick();
+                    showSettingsDialog();
+                }
+            }));
+            r7.addView(buildCompactToolTile("⚡", "OTA Updates", "v" + AutoUpdateManager.getAppVersion(this), colEmerald, "Check live GitHub build", new View.OnClickListener() {
+                public void onClick(View v) {
+                    hapticHeavyClick();
+                    AutoUpdateManager.checkForUpdateAsync(MainActivity.this, true, new AutoUpdateManager.UpdateCheckCallback() {
+                        @Override
+                        public void onUpdateFound(final String newSha, final long bytes) {
+                            runOnUiThread(new Runnable() {
+                                public void run() {
+                                    banner.setText("✓ New OTA update ready (SHA " + (newSha.length() > 8 ? newSha.substring(0, 8) : newSha) + ") · Installing");
+                                    banner.setVisibility(View.VISIBLE);
+                                }
+                            });
+                        }
+                        @Override
+                        public void onNoUpdateAvailable() {
+                            runOnUiThread(new Runnable() {
+                                public void run() {
+                                    Toast.makeText(MainActivity.this, "✓ Gatehouse is up to date", Toast.LENGTH_SHORT).show();
+                                }
+                            });
+                        }
+                        @Override
+                        public void onError(final String message) {
+                            runOnUiThread(new Runnable() {
+                                public void run() {
+                                    Toast.makeText(MainActivity.this, "Update check: " + message, Toast.LENGTH_SHORT).show();
+                                }
+                            });
+                        }
+                    });
+                }
+            }));
+            container.addView(r7);
+        }
     }
 
     private View buildCompactToolTile(String iconGlyph, String titleStr, String badgeStr, int badgeCol, String descStr, final View.OnClickListener onClick) {
