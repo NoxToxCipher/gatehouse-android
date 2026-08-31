@@ -50,13 +50,7 @@ public class RosterWidgetProvider extends AppWidgetProvider {
         RemoteViews views = new RemoteViews(pkg, layoutId);
 
         int rootId = context.getResources().getIdentifier("widget_roster_root", "id", pkg);
-        int titleId = context.getResources().getIdentifier("widget_roster_title", "id", pkg);
-        int badgeId = context.getResources().getIdentifier("widget_roster_badge", "id", pkg);
-        int facId = context.getResources().getIdentifier("widget_roster_facility", "id", pkg);
         int imgId = context.getResources().getIdentifier("widget_roster_board_img", "id", pkg);
-        int btnSyncId = context.getResources().getIdentifier("widget_btn_sync_roster", "id", pkg);
-        int btnOpenId = context.getResources().getIdentifier("widget_btn_open_roster", "id", pkg);
-        int btnTorchId = context.getResources().getIdentifier("widget_btn_torch_roster", "id", pkg);
 
         // 1. Fetch Deputy Roster
         DeputyApi api = new DeputyApi(context);
@@ -65,55 +59,21 @@ public class RosterWidgetProvider extends AppWidgetProvider {
             roster = api.createSampleFallback();
         }
 
-        // Hardware profile detection for title
-        String model = (Build.MODEL != null ? Build.MODEL : "").toLowerCase(Locale.US);
-        String brand = (Build.BRAND != null ? Build.BRAND : "").toLowerCase(Locale.US);
-        String deviceTag = "HUT PHONE";
-        if (model.contains("moto e13") || model.contains("e13") || brand.contains("motorola")) {
-            deviceTag = "HUT PHONE #1";
-        } else if (model.contains("a20") || brand.contains("samsung")) {
-            deviceTag = "HUT PHONE #2";
-        }
-
-        if (titleId != 0) {
-            views.setTextViewText(titleId, "🛡️ DSS · " + deviceTag + " · MASTER ROSTER");
-        }
-
-        if (badgeId != 0) {
-            views.setTextViewText(badgeId, "🟢 DEPUTY LIVE");
-        }
-
-        if (facId != 0) {
-            views.setTextViewText(facId, "📍 Hume Doors & Timber, Kingston · Post 01 Gatehouse");
-        }
-
-        // 2. Render Full-Week Master Roster Board Canvas
+        // 2. Render Full-Week Master Roster Board Canvas (Large, Bold, High-Legibility)
         if (imgId != 0) {
-            Bitmap boardBmp = renderRosterBoardBitmap(context, 800, 640, roster);
+            Bitmap boardBmp = renderRosterBoardBitmap(context, 800, 800, roster);
             if (boardBmp != null) {
                 views.setImageViewBitmap(imgId, boardBmp);
             }
         }
 
-        // 3. Attach PendingIntents
+        // 3. 1-Tap Launch straight into Roster Tab
         Intent openRosterIntent = new Intent(context, MainActivity.class);
         openRosterIntent.putExtra("TAB", "ROSTER");
         openRosterIntent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TOP);
         PendingIntent pOpenRoster = PendingIntent.getActivity(context, 10, openRosterIntent, PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
         if (rootId != 0) views.setOnClickPendingIntent(rootId, pOpenRoster);
-        if (btnOpenId != 0) views.setOnClickPendingIntent(btnOpenId, pOpenRoster);
-
-        // Sync Action
-        Intent syncIntent = new Intent(context, RosterWidgetProvider.class);
-        syncIntent.setAction(ACTION_SYNC_DEPUTY);
-        PendingIntent pSync = PendingIntent.getBroadcast(context, 11, syncIntent, PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
-        if (btnSyncId != 0) views.setOnClickPendingIntent(btnSyncId, pSync);
-
-        // Torch Action
-        Intent torchIntent = new Intent(context, RosterWidgetProvider.class);
-        torchIntent.setAction(ACTION_TORCH);
-        PendingIntent pTorch = PendingIntent.getBroadcast(context, 12, torchIntent, PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
-        if (btnTorchId != 0) views.setOnClickPendingIntent(btnTorchId, pTorch);
+        if (imgId != 0) views.setOnClickPendingIntent(imgId, pOpenRoster);
 
         appWidgetManager.updateAppWidget(appWidgetId, views);
     }
@@ -134,20 +94,20 @@ public class RosterWidgetProvider extends AppWidgetProvider {
 
             String[] dayLabels = {"MON 31", "TUE 01", "WED 02", "THU 03", "FRI 04", "SAT 05", "SUN 06"};
             
-            // Authentic Deputy Shift Schedule
+            // Authentic Deputy Shift Schedule (Cleaned & Direct)
             String[][] dayShifts = {
-                {"16:00 – 00:00 · Officer Lochran Doherty (8.0h)", "00:00 – 06:00 · Officer Bill (6.0h)"},
-                {"16:00 – 00:00 · Officer Chris Ireton (8.0h)", "00:00 – 06:00 · Officer Brian Rush (6.0h)"},
-                {"16:00 – 22:00 · Officer Jon Naylor (6.0h)", "22:00 – 06:00 · Officer Chris Ireton (8.0h)"},
-                {"16:00 – 22:00 · Officer Jon Naylor (6.0h)", "22:00 – 06:00 · Officer Claren (8.0h)"},
-                {"16:00 – 00:00 · Officer Bill (8.0h)", "20:00 – 05:00 · Officer Brian Rush (9.0h)"},
-                {"00:00 – 10:00 · Claren (10h)  ·  10:00 – 16:00 · Ken (6h)", "16:00 – 00:00 · Chris (8h)  ·  20:00 – 05:00 · Roger (9h)"},
-                {"00:00 – 06:00 · Bill (6h)  ·  06:00 – 18:00 · Lochran (Day 12h)", "18:00 – 00:00 · Chris (6h)  ·  20:00 – 00:00 · Brian (4h)"}
+                {"16:00 – 00:00 · Lochran Doherty (8h)", "00:00 – 06:00 · Bill (6h)"},
+                {"16:00 – 00:00 · Chris Ireton (8h)", "00:00 – 06:00 · Brian Rush (6h)"},
+                {"16:00 – 22:00 · Jon Naylor (6h)", "22:00 – 06:00 · Chris Ireton (8h)"},
+                {"16:00 – 22:00 · Jon Naylor (6h)", "22:00 – 06:00 · Claren (8h)"},
+                {"16:00 – 00:00 · Bill (8h)", "20:00 – 05:00 · Brian Rush (9h)"},
+                {"00:00 – 10:00 · Claren  ·  10:00 – 16:00 · Ken", "16:00 – 00:00 · Chris  ·  20:00 – 05:00 · Roger"},
+                {"00:00 – 06:00 · Bill  ·  06:00 – 18:00 · Lochran", "18:00 – 00:00 · Chris  ·  20:00 – 00:00 · Brian"}
             };
 
-            float padX = 14f;
-            float topY = 12f;
-            float rowH = (h - topY - 56f) / 7f;
+            float padX = 12f;
+            float topY = 10f;
+            float rowH = (h - (topY * 2)) / 7f;
 
             RectF cardRect = new RectF();
 
@@ -159,59 +119,51 @@ public class RosterWidgetProvider extends AppWidgetProvider {
 
                 // Draw Card Background
                 bgPaint.setStyle(Paint.Style.FILL);
-                bgPaint.setColor(isToday ? COL_ACTIVE_BG : COL_CARD_BG);
+                bgPaint.setColor(isToday ? 0xFF153327 : 0xFF1E293B);
                 canvas.drawRoundRect(cardRect, 14f, 14f, bgPaint);
 
                 // Card Border
                 borderPaint.setStyle(Paint.Style.STROKE);
-                borderPaint.setStrokeWidth(isToday ? 2.5f : 1.0f);
+                borderPaint.setStrokeWidth(isToday ? 3.5f : 1.2f);
                 borderPaint.setColor(isToday ? COL_ACCENT : COL_LINE);
                 canvas.drawRoundRect(cardRect, 14f, 14f, borderPaint);
 
                 // Day Label Box
-                float dayBoxW = 95f;
-                RectF dayBox = new RectF(padX + 4f, y1 + 4f, padX + dayBoxW, y2 - 4f);
-                bgPaint.setColor(isToday ? 0x33FFD166 : 0x2238BDF8);
+                float dayBoxW = 145f;
+                RectF dayBox = new RectF(padX + 5f, y1 + 5f, padX + dayBoxW, y2 - 5f);
+                bgPaint.setColor(isToday ? 0x44FFD166 : 0x2238BDF8);
                 canvas.drawRoundRect(dayBox, 10f, 10f, bgPaint);
 
                 textPaint.setTextAlign(Paint.Align.CENTER);
                 textPaint.setTypeface(Typeface.create(Typeface.MONOSPACE, Typeface.BOLD));
                 textPaint.setColor(isToday ? COL_ACCENT : 0xFFFFFFFF);
-                textPaint.setTextSize(17f);
-                canvas.drawText(dayLabels[i], dayBox.centerX(), dayBox.centerY() + 6f, textPaint);
+                textPaint.setTextSize(26f);
+                canvas.drawText(dayLabels[i], dayBox.centerX(), dayBox.centerY() + 9f, textPaint);
 
-                // Today Tag or Shifts on Right
-                float textLeft = padX + dayBoxW + 16f;
+                // Shifts on Right (Large, Crisp, Bold)
+                float textLeft = padX + dayBoxW + 18f;
                 textPaint.setTextAlign(Paint.Align.LEFT);
 
                 // Shift 1
-                textPaint.setTypeface(Typeface.create(Typeface.MONOSPACE, isToday ? Typeface.BOLD : Typeface.NORMAL));
-                textPaint.setColor(isToday ? 0xFFFFFFFF : 0xFFE2E8F0);
-                textPaint.setTextSize(14.5f);
+                textPaint.setTypeface(Typeface.create(Typeface.MONOSPACE, Typeface.BOLD));
+                textPaint.setColor(isToday ? 0xFFFFFFFF : 0xFFF1F5F9);
+                textPaint.setTextSize(23f);
                 canvas.drawText(dayShifts[i][0], textLeft, y1 + (rowH * 0.38f), textPaint);
 
                 // Shift 2
-                textPaint.setColor(isToday ? COL_EMERALD : COL_MUTED);
-                textPaint.setTextSize(13.5f);
-                canvas.drawText(dayShifts[i][1], textLeft, y1 + (rowH * 0.72f), textPaint);
+                textPaint.setColor(isToday ? COL_EMERALD : COL_CYAN);
+                textPaint.setTextSize(21f);
+                canvas.drawText(dayShifts[i][1], textLeft, y1 + (rowH * 0.76f), textPaint);
 
                 // Today Active Badge on far right
                 if (isToday) {
                     textPaint.setTextAlign(Paint.Align.RIGHT);
                     textPaint.setTypeface(Typeface.create(Typeface.MONOSPACE, Typeface.BOLD));
                     textPaint.setColor(COL_EMERALD);
-                    textPaint.setTextSize(13f);
-                    canvas.drawText("★ TODAY", w - padX - 14f, y1 + (rowH * 0.40f), textPaint);
+                    textPaint.setTextSize(20f);
+                    canvas.drawText("★ TODAY", w - padX - 16f, y1 + (rowH * 0.40f), textPaint);
                 }
             }
-
-            // Bottom Summary Footer Line
-            float footerY = h - 14f;
-            textPaint.setTextAlign(Paint.Align.CENTER);
-            textPaint.setTypeface(Typeface.create(Typeface.MONOSPACE, Typeface.BOLD));
-            textPaint.setColor(COL_CYAN);
-            textPaint.setTextSize(14.5f);
-            canvas.drawText("🤝 Deputy Site Radar: Shift Handover & Relief Synchronized (14 Total Shifts)", w / 2f, footerY, textPaint);
 
             return bmp;
         } catch (Throwable t) {

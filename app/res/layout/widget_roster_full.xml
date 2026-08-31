@@ -1,118 +1,17 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:id="@+id/widget_roster_root"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:orientation="vertical"
     android:background="@drawable/widget_bg"
-    android:padding="10dp"
-    android:gravity="center_horizontal">
+    android:padding="6dp">
 
-    <!-- Header Row -->
-    <LinearLayout
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:orientation="horizontal"
-        android:gravity="center_vertical">
-
-        <TextView
-            android:id="@+id/widget_roster_title"
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:text="🛡️ DSS · MASTER SHIFT ROSTER"
-            android:textColor="#FFFFD166"
-            android:textSize="11.5sp"
-            android:textStyle="bold"
-            android:letterSpacing="0.04" />
-
-        <TextView
-            android:id="@+id/widget_roster_badge"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="🟢 DEPUTY LIVE"
-            android:textColor="#FF10B981"
-            android:textSize="9.5sp"
-            android:textStyle="bold"
-            android:background="@drawable/widget_chip_bg"
-            android:paddingLeft="7dp"
-            android:paddingRight="7dp"
-            android:paddingTop="2dp"
-            android:paddingBottom="2dp" />
-    </LinearLayout>
-
-    <!-- Subheader: Site & Location -->
-    <TextView
-        android:id="@+id/widget_roster_facility"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:text="📍 Hume Doors &amp; Timber, Kingston · Post 01 Gatehouse"
-        android:textColor="#FF94A3B8"
-        android:textSize="10sp"
-        android:paddingTop="1dp"
-        android:paddingBottom="3dp" />
-
-    <!-- 📅 Master Roster Full-Week Board Canvas Image -->
+    <!-- 📅 Master Roster Full-Week Board Canvas Image (Large, Crisp, Legible) -->
     <ImageView
         android:id="@+id/widget_roster_board_img"
         android:layout_width="match_parent"
-        android:layout_height="0dp"
-        android:layout_weight="1"
+        android:layout_height="match_parent"
         android:scaleType="fitCenter"
         android:contentDescription="Full-Week Shift Roster Board" />
 
-    <!-- Bottom Action Deck -->
-    <LinearLayout
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:orientation="horizontal"
-        android:paddingTop="4dp">
-
-        <TextView
-            android:id="@+id/widget_btn_sync_roster"
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:layout_marginRight="4dp"
-            android:background="@drawable/widget_btn_bg"
-            android:gravity="center"
-            android:paddingTop="5dp"
-            android:paddingBottom="5dp"
-            android:text="🔄 Sync Deputy"
-            android:textColor="#FF38BDF8"
-            android:textSize="10.5sp"
-            android:textStyle="bold" />
-
-        <TextView
-            android:id="@+id/widget_btn_open_roster"
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_weight="1.3"
-            android:layout_marginLeft="2dp"
-            android:layout_marginRight="2dp"
-            android:background="@drawable/widget_btn_bg"
-            android:gravity="center"
-            android:paddingTop="5dp"
-            android:paddingBottom="5dp"
-            android:text="📅 Full Roster"
-            android:textColor="#FFFFD166"
-            android:textSize="10.5sp"
-            android:textStyle="bold" />
-
-        <TextView
-            android:id="@+id/widget_btn_torch_roster"
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:layout_marginLeft="4dp"
-            android:background="@drawable/widget_btn_bg"
-            android:gravity="center"
-            android:paddingTop="5dp"
-            android:paddingBottom="5dp"
-            android:text="🔦 Torch"
-            android:textColor="#FF10B981"
-            android:textSize="10.5sp"
-            android:textStyle="bold" />
-    </LinearLayout>
-
-</LinearLayout>
+</FrameLayout>

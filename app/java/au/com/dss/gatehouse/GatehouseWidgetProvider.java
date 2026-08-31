@@ -48,16 +48,9 @@ public class GatehouseWidgetProvider extends AppWidgetProvider {
         RemoteViews views = new RemoteViews(pkg, layoutId);
 
         int rootId = context.getResources().getIdentifier("widget_root", "id", pkg);
-        int titleId = context.getResources().getIdentifier("widget_title", "id", pkg);
-        int badgeId = context.getResources().getIdentifier("widget_badge", "id", pkg);
-        int facId = context.getResources().getIdentifier("widget_facility", "id", pkg);
         int imgId = context.getResources().getIdentifier("widget_chronograph_img", "id", pkg);
-        int radarId = context.getResources().getIdentifier("widget_relief_radar", "id", pkg);
-        int btnTorchId = context.getResources().getIdentifier("widget_btn_torch", "id", pkg);
-        int btnLogId = context.getResources().getIdentifier("widget_btn_log", "id", pkg);
-        int btnSyncId = context.getResources().getIdentifier("widget_btn_sync", "id", pkg);
 
-        // 1. Resolve Deputy Roster Telemetry
+        // 1. Fetch live or cached Deputy roster
         DeputyApi api = new DeputyApi(context);
         DeputyApi.DeputyRosterResult roster = api.loadCachedResult();
         if (roster == null) {
@@ -67,7 +60,6 @@ public class GatehouseWidgetProvider extends AppWidgetProvider {
         long nowSec = System.currentTimeMillis() / 1000L;
         DeputyApi.DeputyShift activeShift = null;
         DeputyApi.DeputyShift nextShift = null;
-
         if (roster != null && roster.weekShifts != null) {
             for (DeputyApi.DeputyShift s : roster.weekShifts) {
                 if (nowSec >= s.startTs && nowSec <= s.endTs) {
@@ -79,28 +71,10 @@ public class GatehouseWidgetProvider extends AppWidgetProvider {
             }
         }
 
-        // Hardware profile detection for title
-        String model = (Build.MODEL != null ? Build.MODEL : "").toLowerCase(Locale.US);
-        String brand = (Build.BRAND != null ? Build.BRAND : "").toLowerCase(Locale.US);
-        String deviceTag = "HUT PHONE";
-        if (model.contains("moto e13") || model.contains("e13") || brand.contains("motorola")) {
-            deviceTag = "HUT PHONE #1";
-        } else if (model.contains("a20") || brand.contains("samsung")) {
-            deviceTag = "HUT PHONE #2";
-        }
-
-        if (titleId != 0) {
-            views.setTextViewText(titleId, "🛡️ DSS · " + deviceTag);
-        }
-
         float shiftProgress = 0f;
         String startLabel = "16:00";
         String endLabel = "00:00";
-        String guardName = "Officer Lochran Doherty";
-        String shiftWindow = "16:00–00:00";
-        String elRemStr = "0h elapsed · 8h left";
         int totalHours = 8;
-        String reliefGuard = (roster != null && roster.nextRelief != null) ? roster.nextRelief.guardName : "William NEWMAN";
 
         SimpleDateFormat sdfHour = new SimpleDateFormat("HH:mm", Locale.US);
         SimpleDateFormat sdfTime = new SimpleDateFormat("HH:mm:ss", Locale.US);
@@ -108,98 +82,53 @@ public class GatehouseWidgetProvider extends AppWidgetProvider {
         String curTimeStr = sdfTime.format(new Date(nowSec * 1000L));
 
         if (activeShift != null) {
-            guardName = activeShift.guardName.isEmpty() ? "Officer Lochran Doherty" : activeShift.guardName;
             startLabel = sdfHour.format(new Date(activeShift.startTs * 1000L));
             endLabel = sdfHour.format(new Date(activeShift.endTs * 1000L));
-            shiftWindow = startLabel + "–" + endLabel;
             totalHours = Math.max(1, (int) Math.round(activeShift.totalHours));
 
             long elapsedSec = Math.max(0, nowSec - activeShift.startTs);
             long totalSec = Math.max(1, activeShift.endTs - activeShift.startTs);
             shiftProgress = Math.min(1f, Math.max(0f, (float) elapsedSec / (float) totalSec));
-
-            long remainSec = Math.max(0, activeShift.endTs - nowSec);
-            long elHours = elapsedSec / 3600;
-            long elMins = (elapsedSec % 3600) / 60;
-            long remHours = remainSec / 3600;
-            long remMins = (remainSec % 3600) / 60;
-            elRemStr = elHours + "h " + elMins + "m elapsed · " + remHours + "h " + remMins + "m left";
-
-            int pct = (int) (shiftProgress * 100);
-            if (badgeId != 0) {
-                views.setTextViewText(badgeId, "🟢 ON SHIFT (" + pct + "%)");
-            }
         } else if (nextShift != null) {
-            guardName = nextShift.guardName;
             startLabel = sdfHour.format(new Date(nextShift.startTs * 1000L));
             endLabel = sdfHour.format(new Date(nextShift.endTs * 1000L));
-            shiftWindow = startLabel + "–" + endLabel;
-            long untilSec = Math.max(0, nextShift.startTs - nowSec);
-            long uHours = untilSec / 3600;
-            long uMins = (untilSec % 3600) / 60;
-            elRemStr = "Starts in " + uHours + "h " + uMins + "m (" + startLabel + ")";
-            if (badgeId != 0) {
-                views.setTextViewText(badgeId, "NEXT: " + startLabel);
-            }
-        } else {
-            if (badgeId != 0) {
-                views.setTextViewText(badgeId, "OFF SHIFT");
-            }
+            totalHours = Math.max(1, (int) Math.round(nextShift.totalHours));
+            shiftProgress = 0f;
         }
 
-        if (facId != 0) {
-            views.setTextViewText(facId, "👤 " + guardName + " · " + shiftWindow + " · Post 01");
-        }
-
-        if (radarId != 0) {
-            views.setTextViewText(radarId, "🤝 Next Relief: " + reliefGuard + " (" + endLabel + ") · 🚰 1,200 PSI ✓");
-        }
-
-        // 2. Render Canvas Chronograph Dial Bitmap
+        // 2. Render Pure In-App Vector Chronograph Dial Bitmap
         if (imgId != 0) {
             Bitmap dialBitmap = renderChronographBitmap(
-                    context, 700, 340, shiftProgress, curTimeStr, startLabel, endLabel, totalHours, elRemStr, activeShift != null);
+                    context, 600, 600, shiftProgress, curTimeStr, startLabel, endLabel, totalHours, activeShift != null);
             if (dialBitmap != null) {
                 views.setImageViewBitmap(imgId, dialBitmap);
             }
         }
 
-        // 3. Attach PendingIntents
+        // 3. 1-Tap Launch MainActivity
         Intent openIntent = new Intent(context, MainActivity.class);
         openIntent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TOP);
         PendingIntent pOpen = PendingIntent.getActivity(context, 0, openIntent, PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
         if (rootId != 0) views.setOnClickPendingIntent(rootId, pOpen);
-        if (btnLogId != 0) views.setOnClickPendingIntent(btnLogId, pOpen);
-
-        // Torch Action
-        Intent torchIntent = new Intent(context, GatehouseWidgetProvider.class);
-        torchIntent.setAction(ACTION_TORCH);
-        PendingIntent pTorch = PendingIntent.getBroadcast(context, 1, torchIntent, PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
-        if (btnTorchId != 0) views.setOnClickPendingIntent(btnTorchId, pTorch);
-
-        // Deputy Sync Action
-        Intent syncIntent = new Intent(context, GatehouseWidgetProvider.class);
-        syncIntent.setAction(ACTION_SYNC_DEPUTY);
-        PendingIntent pSync = PendingIntent.getBroadcast(context, 2, syncIntent, PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
-        if (btnSyncId != 0) views.setOnClickPendingIntent(btnSyncId, pSync);
+        if (imgId != 0) views.setOnClickPendingIntent(imgId, pOpen);
 
         appWidgetManager.updateAppWidget(appWidgetId, views);
     }
 
     /**
-     * High-fidelity vector-quality 2D Canvas rendering of the Shift Chronograph Dial for RemoteViews.
+     * Vector 2D Canvas rendering of the Shift Chronograph Dial identical to in-app ChronographView.
      */
     private static Bitmap renderChronographBitmap(
             Context context, int w, int h, float shiftProgress, String timeStr,
-            String startLabel, String endLabel, int totalHours, String subtext, boolean onShift) {
+            String startLabel, String endLabel, int totalHours, boolean onShift) {
         try {
             Bitmap bmp = Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888);
             Canvas canvas = new Canvas(bmp);
 
             float cx = w / 2f;
-            float cy = 160f;
-            float rOuter = 135f;
-            float rInner = 114f;
+            float cy = h / 2f - 10f;
+            float rOuter = 215f;
+            float rInner = 180f;
 
             RectF outerRect = new RectF(cx - rOuter, cy - rOuter, cx + rOuter, cy + rOuter);
             RectF innerRect = new RectF(cx - rInner, cy - rInner, cx + rInner, cy + rInner);
@@ -222,7 +151,7 @@ public class GatehouseWidgetProvider extends AppWidgetProvider {
 
             // 1. Subtle Outer Track & Hourly Ticks
             trackPaint.setColor(COL_LINE);
-            trackPaint.setStrokeWidth(10f);
+            trackPaint.setStrokeWidth(13f);
             canvas.drawArc(outerRect, 135f, 270f, false, trackPaint);
 
             // Draw hour notches matching shift duration
@@ -232,14 +161,15 @@ public class GatehouseWidgetProvider extends AppWidgetProvider {
             for (int i = 0; i <= tickCount; i++) {
                 float angleDeg = 135f + (i * 270f / (float) tickCount);
                 double rad = Math.toRadians(angleDeg);
-                float tLen = (i == 0 || i == tickCount || i == tickCount / 2) ? 14f : 8f;
-                float x1 = cx + (float) Math.cos(rad) * (rOuter + 6f);
-                float y1 = cy + (float) Math.sin(rad) * (rOuter + 6f);
-                float x2 = cx + (float) Math.cos(rad) * (rOuter + 6f + tLen);
-                float y2 = cy + (float) Math.sin(rad) * (rOuter + 6f + tLen);
+                boolean isMajor = (i == 0 || i == tickCount || i == tickCount / 2);
+                float tLen = isMajor ? 20f : 11f;
+                float x1 = cx + (float) Math.cos(rad) * (rOuter + 8f);
+                float y1 = cy + (float) Math.sin(rad) * (rOuter + 8f);
+                float x2 = cx + (float) Math.cos(rad) * (rOuter + 8f + tLen);
+                float y2 = cy + (float) Math.sin(rad) * (rOuter + 8f + tLen);
 
-                tickPaint.setColor((i == 0 || i == tickCount) ? COL_ACCENT : COL_QUIET);
-                tickPaint.setStrokeWidth((i == 0 || i == tickCount) ? 4f : 2.5f);
+                tickPaint.setColor(isMajor ? COL_ACCENT : COL_QUIET);
+                tickPaint.setStrokeWidth(isMajor ? 5f : 3f);
                 canvas.drawLine(x1, y1, x2, y2, tickPaint);
             }
 
@@ -248,12 +178,12 @@ public class GatehouseWidgetProvider extends AppWidgetProvider {
             int arcColor = onShift ? COL_ACCENT : COL_QUIET;
 
             glowPaint.setColor(arcColor);
-            glowPaint.setAlpha(onShift ? 70 : 20);
-            glowPaint.setStrokeWidth(20f);
+            glowPaint.setAlpha(onShift ? 70 : 25);
+            glowPaint.setStrokeWidth(26f);
             canvas.drawArc(outerRect, 135f, outerSweep, false, glowPaint);
 
             arcPaint.setColor(arcColor);
-            arcPaint.setStrokeWidth(10f);
+            arcPaint.setStrokeWidth(13f);
             canvas.drawArc(outerRect, 135f, outerSweep, false, arcPaint);
 
             // Progress Head Pip
@@ -264,54 +194,54 @@ public class GatehouseWidgetProvider extends AppWidgetProvider {
                 Paint pipPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
                 pipPaint.setStyle(Paint.Style.FILL);
                 pipPaint.setColor(0xFFFFFFFF);
-                canvas.drawCircle(hx, hy, 6.5f, pipPaint);
+                canvas.drawCircle(hx, hy, 8.5f, pipPaint);
             }
 
             // 3. Inner Secondary Track (Cyan / Emerald Aura)
-            trackPaint.setStrokeWidth(6f);
+            trackPaint.setStrokeWidth(8f);
             trackPaint.setColor(0x22475569);
             canvas.drawArc(innerRect, 135f, 270f, false, trackPaint);
 
             float innerSweep = Math.max(0.01f, (1f - shiftProgress) * 270f);
             arcPaint.setColor(COL_EMERALD);
-            arcPaint.setStrokeWidth(6f);
+            arcPaint.setStrokeWidth(8f);
             canvas.drawArc(innerRect, 135f, innerSweep, false, arcPaint);
 
-            // 4. Center Monospace Digital Core Display
+            // 4. Center Monospace Digital Core Display (Identical to in-app Chronograph)
             int pct = (int) (shiftProgress * 100);
 
-            // Shift % Label (Above Time)
+            // Top: Shift % Label (Above Time)
             textPaint.setColor(onShift ? arcColor : COL_MUTED);
-            textPaint.setTextSize(20f);
+            textPaint.setTextSize(26f);
             textPaint.setLetterSpacing(0.08f);
-            canvas.drawText(onShift ? ("SHIFT " + pct + "%") : "OFF SHIFT", cx, cy - 36f, textPaint);
+            canvas.drawText(onShift ? ("SHIFT " + pct + "%") : "OFF SHIFT", cx, cy - 48f, textPaint);
 
-            // Hero Digital Time (Center)
+            // Center: Hero Digital Time
             textPaint.setColor(0xFFFFFFFF);
-            textPaint.setTextSize(46f);
+            textPaint.setTextSize(60f);
             textPaint.setLetterSpacing(0.02f);
-            canvas.drawText(timeStr, cx, cy + 10f, textPaint);
+            canvas.drawText(timeStr, cx, cy + 14f, textPaint);
 
-            // Subtext Elapsed / Remaining (Below Time inside dial)
-            textPaint.setColor(0xFF38BDF8);
-            textPaint.setTextSize(16.5f);
-            textPaint.setLetterSpacing(0.04f);
-            canvas.drawText(subtext, cx, cy + 42f, textPaint);
+            // Bottom: Timezone / City Sub-label
+            textPaint.setColor(COL_QUIET);
+            textPaint.setTextSize(19f);
+            textPaint.setLetterSpacing(0.12f);
+            canvas.drawText("AEST · BRISBANE", cx, cy + 62f, textPaint);
 
             // 5. Dial Baseline Start/End Time Markers
-            textPaint.setTextSize(16f);
-            textPaint.setColor(COL_ACCENT);
+            textPaint.setTextSize(21f);
+            textPaint.setColor(COL_MUTED);
             textPaint.setLetterSpacing(0f);
 
             double leftRad = Math.toRadians(135.0);
-            float lx = cx + (float) Math.cos(leftRad) * (rOuter + 26f);
-            float ly = cy + (float) Math.sin(leftRad) * (rOuter + 26f);
-            canvas.drawText(startLabel, lx - 10f, ly + 14f, textPaint);
+            float lx = cx + (float) Math.cos(leftRad) * (rOuter + 38f);
+            float ly = cy + (float) Math.sin(leftRad) * (rOuter + 38f);
+            canvas.drawText(startLabel, lx - 14f, ly + 18f, textPaint);
 
             double rightRad = Math.toRadians(45.0);
-            float rx = cx + (float) Math.cos(rightRad) * (rOuter + 26f);
-            float ry = cy + (float) Math.sin(rightRad) * (rOuter + 26f);
-            canvas.drawText(endLabel, rx + 10f, ry + 14f, textPaint);
+            float rx = cx + (float) Math.cos(rightRad) * (rOuter + 38f);
+            float ry = cy + (float) Math.sin(rightRad) * (rOuter + 38f);
+            canvas.drawText(endLabel, rx + 14f, ry + 18f, textPaint);
 
             return bmp;
         } catch (Throwable t) {
