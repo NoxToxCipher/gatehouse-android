@@ -7825,71 +7825,10 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
         });
         btnRow.addView(btnTestAlert);
 
-        TextView btnApiKey = actionButton("⚙️ N2YO Key", colLine, colCyan);
-        btnApiKey.setTextSize(11f);
-        LinearLayout.LayoutParams aklp = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 0.9f);
-        aklp.leftMargin = dp(6);
-        btnApiKey.setLayoutParams(aklp);
-        btnApiKey.setOnClickListener(new View.OnClickListener() {
-            public void onClick(View v) {
-                hapticClick();
-                showN2yoApiKeyDialog();
-            }
-        });
-        btnRow.addView(btnApiKey);
-
         TextView btnClose = actionButton("Close", colLine, colPale);
         btnClose.setTextSize(11f);
-        LinearLayout.LayoutParams clp = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 0.8f);
-        clp.leftMargin = dp(6);
-        btnClose.setLayoutParams(clp);
-        btnClose.setOnClickListener(new View.OnClickListener() {
-            public void onClick(View v) {
-                hapticClick();
-                dlg.dismiss();
-            }
-        });
-        btnRow.addView(btnClose);
-
-        box.addView(btnRow);
-        dlg.show();
-    }
-
-    private void showN2yoApiKeyDialog() {
-        hapticHeavyClick();
-        final LinearLayout box = dialogContainer("⚙️ N2YO.com API Settings", "ORBITAL CONFIG", colCyan);
-
-        TextView tvDesc = new TextView(this);
-        tvDesc.setText("Configure your personal N2YO REST API Key for live satellite pass predictions from Space-Track / NORAD. Default key is active and operational:");
-        tvDesc.setTextColor(colQuiet);
-        tvDesc.setTextSize(11.5f);
-        tvDesc.setPadding(0, 0, 0, dp(10));
-        box.addView(tvDesc);
-
-        final EditText etKey = modernInputField(SatelliteTrackerManager.getApiKey(this));
-        box.addView(etKey);
-
-        final Dialog dlg = createDialogSheet(box);
-
-        LinearLayout btnRow = new LinearLayout(this);
-        btnRow.setOrientation(LinearLayout.HORIZONTAL);
-        btnRow.setPadding(0, dp(12), 0, 0);
-
-        TextView btnSave = actionButton("Save Key", colCyan, colAccentInk);
-        btnSave.setOnClickListener(new View.OnClickListener() {
-            public void onClick(View v) {
-                hapticHeavyClick();
-                String key = etKey.getText().toString().trim();
-                SatelliteTrackerManager.setApiKey(MainActivity.this, key);
-                Toast.makeText(MainActivity.this, "✓ N2YO API Key saved", Toast.LENGTH_SHORT).show();
-                dlg.dismiss();
-            }
-        });
-        btnRow.addView(btnSave);
-
-        TextView btnClose = actionButton("Cancel", colLine, colPale);
         LinearLayout.LayoutParams clp = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
-        clp.leftMargin = dp(8);
+        clp.leftMargin = dp(6);
         btnClose.setLayoutParams(clp);
         btnClose.setOnClickListener(new View.OnClickListener() {
             public void onClick(View v) {
