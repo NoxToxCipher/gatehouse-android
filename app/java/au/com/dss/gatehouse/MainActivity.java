@@ -15,6 +15,7 @@ import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.IntentFilter;
+import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.content.res.ColorStateList;
 import android.graphics.Bitmap;
@@ -2805,15 +2806,19 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
         return container;
     }
 
-    private LinearLayout chronoTelemetryCard(String title, String val, String sub, int accentColor) {
+    private View chronoTelemetryCard(String title, String val, String sub, int accentColor) {
+        final RippleCardFrameLayout rf = new RippleCardFrameLayout(this, 12f, accentColor);
+        rf.setBackground(rounded(colPanel2, dp(12)));
+        LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
+        lp.setMargins(dp(3), 0, dp(3), 0);
+        rf.setLayoutParams(lp);
+
         LinearLayout c = new LinearLayout(this);
         c.setOrientation(LinearLayout.VERTICAL);
         c.setGravity(Gravity.CENTER);
-        c.setBackground(rounded(colPanel2, dp(12)));
         c.setPadding(dp(8), dp(8), dp(8), dp(8));
-        LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
-        lp.setMargins(dp(3), 0, dp(3), 0);
-        c.setLayoutParams(lp);
+        c.setLayoutParams(new FrameLayout.LayoutParams(
+                FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.WRAP_CONTENT));
 
         TextView tTitle = new TextView(this);
         tTitle.setText(title);
@@ -2837,14 +2842,14 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
         tSub.setTextSize(8.5f);
         c.addView(tSub);
 
-        c.setOnClickListener(new View.OnClickListener() {
+        rf.setOnClickListener(new View.OnClickListener() {
             public void onClick(View v) {
                 hapticClick();
                 showChronographBreakdownDialog();
             }
         });
-
-        return c;
+        rf.addView(c);
+        return rf;
     }
 
     private class ChronographView extends View {
@@ -3453,14 +3458,18 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
         return container;
     }
 
-    private LinearLayout buildCompactToolTile(String iconGlyph, String titleStr, String badgeStr, int badgeCol, String descStr, final View.OnClickListener onClick) {
-        final LinearLayout tile = new LinearLayout(this);
-        tile.setOrientation(LinearLayout.VERTICAL);
-        tile.setBackground(rounded(colPanel, dp(14)));
-        tile.setPadding(dp(12), dp(12), dp(12), dp(12));
+    private View buildCompactToolTile(String iconGlyph, String titleStr, String badgeStr, int badgeCol, String descStr, final View.OnClickListener onClick) {
+        final RippleCardFrameLayout rippleTile = new RippleCardFrameLayout(this, 14f, (badgeCol != 0 ? badgeCol : colCyan));
+        rippleTile.setBackground(rounded(colPanel, dp(14)));
         LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
         lp.setMargins(dp(4), dp(4), dp(4), dp(4));
-        tile.setLayoutParams(lp);
+        rippleTile.setLayoutParams(lp);
+
+        final LinearLayout tile = new LinearLayout(this);
+        tile.setOrientation(LinearLayout.VERTICAL);
+        tile.setPadding(dp(12), dp(12), dp(12), dp(12));
+        tile.setLayoutParams(new FrameLayout.LayoutParams(
+                FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.WRAP_CONTENT));
 
         LinearLayout top = new LinearLayout(this);
         top.setOrientation(LinearLayout.HORIZONTAL);
@@ -3506,7 +3515,7 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
         desc.setTextSize(10.5f);
         tile.addView(desc);
 
-        tile.setOnTouchListener(new View.OnTouchListener() {
+        rippleTile.setOnTouchListener(new View.OnTouchListener() {
             @Override
             public boolean onTouch(View v, MotionEvent event) {
                 switch (event.getActionMasked()) {
@@ -3522,13 +3531,14 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
             }
         });
 
-        tile.setOnClickListener(new View.OnClickListener() {
+        rippleTile.setOnClickListener(new View.OnClickListener() {
             public void onClick(View v) {
                 hapticClick();
                 if (onClick != null) onClick.onClick(v);
             }
         });
-        return tile;
+        rippleTile.addView(tile);
+        return rippleTile;
     }
 
     private void showWeatherDialog() {
@@ -3785,15 +3795,43 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
     // 🧪 HIGH-FIDELITY TESTER FEEDBACK & BUG REPORT SYSTEM (CRAKE PARITY)
     // =========================================================================
 
+    private String resolveDefaultDeviceTesterName() {
+        String model = (Build.MODEL != null ? Build.MODEL : "").toLowerCase(Locale.US);
+        String product = (Build.PRODUCT != null ? Build.PRODUCT : "").toLowerCase(Locale.US);
+        String device = (Build.DEVICE != null ? Build.DEVICE : "").toLowerCase(Locale.US);
+        String brand = (Build.BRAND != null ? Build.BRAND : "").toLowerCase(Locale.US);
+        String manufacturer = (Build.MANUFACTURER != null ? Build.MANUFACTURER : "").toLowerCase(Locale.US);
+
+        // 1. Motorola moto e13 -> Doherty Security Services Hut Phone #1
+        if (model.contains("moto e13") || model.contains("e13") || product.contains("sabahl") || device.contains("sabahl") || brand.contains("motorola")) {
+            return "Doherty Security Services Hut Phone #1";
+        }
+
+        // 2. Samsung Galaxy A20 -> Doherty Security Services Hut Phone #2
+        if (model.contains("sm-a20") || model.contains("a20") || product.contains("a20") || device.contains("a20") || (brand.contains("samsung") && model.contains("a20"))) {
+            return "Doherty Security Services Hut Phone #2";
+        }
+
+        // 3. Xiaomi or Primary Controller -> Overlord
+        return "Overlord";
+    }
+
     private String getTesterIdentityName() {
-        return getSharedPreferences("gatehouse_prefs", Context.MODE_PRIVATE)
-                .getString("pref_tester_identity_name", "Overlord");
+        String defaultName = resolveDefaultDeviceTesterName();
+        SharedPreferences sp = getSharedPreferences("gatehouse_prefs", Context.MODE_PRIVATE);
+        String saved = sp.getString("pref_tester_identity_name", null);
+        if (saved == null || (saved.equals("Overlord") && !defaultName.equals("Overlord"))) {
+            sp.edit().putString("pref_tester_identity_name", defaultName).apply();
+            return defaultName;
+        }
+        return saved;
     }
 
     private void setTesterIdentityName(String name) {
+        String defaultName = resolveDefaultDeviceTesterName();
         getSharedPreferences("gatehouse_prefs", Context.MODE_PRIVATE)
                 .edit()
-                .putString("pref_tester_identity_name", name.trim().isEmpty() ? "Overlord" : name.trim())
+                .putString("pref_tester_identity_name", (name == null || name.trim().isEmpty()) ? defaultName : name.trim())
                 .apply();
     }
 
@@ -3809,11 +3847,11 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
         box.setOrientation(LinearLayout.VERTICAL);
         box.setBackground(rounded(0xFF1E293B, dp(18)));
         box.setPadding(dp(20), dp(20), dp(20), dp(20));
-        LinearLayout.LayoutParams blp = new LinearLayout.LayoutParams(dp(320), LinearLayout.LayoutParams.WRAP_CONTENT);
+        LinearLayout.LayoutParams blp = new LinearLayout.LayoutParams(dp(340), LinearLayout.LayoutParams.WRAP_CONTENT);
         box.setLayoutParams(blp);
 
         TextView title = new TextView(this);
-        title.setText("👤 TESTER IDENTITY");
+        title.setText("👤 GUARD & TESTER PROFILE");
         title.setTextColor(0xFF00E5FF);
         title.setTextSize(14);
         title.setTypeface(Typeface.DEFAULT_BOLD);
@@ -3821,20 +3859,76 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
         box.addView(title);
 
         TextView desc = new TextView(this);
-        desc.setText("Enter your tester codename. All submitted feedback and suggestions will be attributed to this identity in the AI loop.");
+        desc.setText("Select or enter the device profile for this duty phone. All bug reports and field suggestions will be tagged with this profile.");
         desc.setTextColor(0xFF94A3B8);
         desc.setTextSize(11.5f);
-        desc.setPadding(0, dp(4), 0, dp(12));
+        desc.setPadding(0, dp(4), 0, dp(10));
         box.addView(desc);
 
-        final EditText etName = modernInputField("e.g. Overlord, Daya, Brian...");
+        final EditText etName = modernInputField("e.g. Doherty Security Services Hut Phone #1...");
         etName.setText(getTesterIdentityName());
         etName.setSelection(etName.getText().length());
         box.addView(etName);
 
+        // Quick Preset Profile Selection Chips
+        LinearLayout presetCol = new LinearLayout(this);
+        presetCol.setOrientation(LinearLayout.VERTICAL);
+        presetCol.setPadding(0, dp(10), 0, dp(8));
+
+        TextView presetHeader = new TextView(this);
+        presetHeader.setText("QUICK PROFILE SELECT");
+        presetHeader.setTextColor(colQuiet);
+        presetHeader.setTextSize(9f);
+        presetHeader.setTypeface(Typeface.MONOSPACE);
+        presetHeader.setPadding(0, 0, 0, dp(5));
+        presetCol.addView(presetHeader);
+
+        final String[][] presets = {
+            {"📱 Hut Phone #1 (moto e13)", "Doherty Security Services Hut Phone #1"},
+            {"📱 Hut Phone #2 (Samsung A20)", "Doherty Security Services Hut Phone #2"},
+            {"👑 Overlord", "Overlord"},
+            {"🛡️ Kingston Patrol Guard", "Kingston Patrol Guard"}
+        };
+
+        LinearLayout presetRow1 = new LinearLayout(this);
+        presetRow1.setOrientation(LinearLayout.HORIZONTAL);
+        presetRow1.setPadding(0, 0, 0, dp(5));
+
+        LinearLayout presetRow2 = new LinearLayout(this);
+        presetRow2.setOrientation(LinearLayout.HORIZONTAL);
+
+        for (int i = 0; i < presets.length; i++) {
+            final String label = presets[i][0];
+            final String val = presets[i][1];
+            TextView chip = new TextView(this);
+            chip.setText(label);
+            chip.setTextColor(colCyan);
+            chip.setTextSize(10f);
+            chip.setTypeface(Typeface.DEFAULT_BOLD);
+            chip.setPadding(dp(8), dp(5), dp(8), dp(5));
+            chip.setBackground(rounded(0x2200E5FF, dp(6)));
+            LinearLayout.LayoutParams clp = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
+            if (i % 2 == 0) clp.rightMargin = dp(4);
+            else clp.leftMargin = dp(4);
+            chip.setLayoutParams(clp);
+            chip.setGravity(Gravity.CENTER);
+            chip.setOnClickListener(new View.OnClickListener() {
+                public void onClick(View v) {
+                    hapticClick();
+                    etName.setText(val);
+                    etName.setSelection(val.length());
+                }
+            });
+            if (i < 2) presetRow1.addView(chip);
+            else presetRow2.addView(chip);
+        }
+        presetCol.addView(presetRow1);
+        presetCol.addView(presetRow2);
+        box.addView(presetCol);
+
         LinearLayout btnRow = new LinearLayout(this);
         btnRow.setOrientation(LinearLayout.HORIZONTAL);
-        btnRow.setPadding(0, dp(14), 0, 0);
+        btnRow.setPadding(0, dp(10), 0, 0);
 
         TextView btnCancel = actionButton("Cancel", 0xFF334155, 0xFF94A3B8);
         btnCancel.setOnClickListener(new View.OnClickListener() {
@@ -3845,7 +3939,7 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
         });
         btnRow.addView(btnCancel);
 
-        TextView btnSave = actionButton("Save Identity", 0xFF00E5FF, 0xFF0F172A);
+        TextView btnSave = actionButton("Save Profile", 0xFF00E5FF, 0xFF0F172A);
         LinearLayout.LayoutParams slp = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1.3f);
         slp.leftMargin = dp(8);
         btnSave.setLayoutParams(slp);
@@ -7835,8 +7929,179 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
     }
 
     // =========================================================================
-    // DIALOG CONTAINER & SATELLITE RADAR
+    // FLUID RIPPLE CARD CONTAINER (High-Quality Drag & Touch Luminous Wavefronts)
     // =========================================================================
+
+    public static class RippleCardFrameLayout extends FrameLayout {
+        private static class RippleWave {
+            float x, y;
+            float maxRadius;
+            float alpha = 0.45f;
+            long startTime;
+            long duration = 650; // ms
+        }
+
+        private final List<RippleWave> waves = new ArrayList<>();
+        private final Paint ripplePaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+        private final Paint glowPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+        private final Paint borderSheenPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+        private final Path clipPath = new Path();
+        private final RectF clipRect = new RectF();
+        private float cornerRadius = 0f;
+        private int rippleColor = 0xFF00E5FF;
+        private float lastTouchX = -1000f;
+        private float lastTouchY = -1000f;
+        private long lastSpawnMs = 0;
+
+        public RippleCardFrameLayout(Context context) {
+            super(context);
+            setWillNotDraw(false);
+            init();
+        }
+
+        public RippleCardFrameLayout(Context context, float cornerRadiusDp, int rippleColor) {
+            super(context);
+            setWillNotDraw(false);
+            this.cornerRadius = cornerRadiusDp * getResources().getDisplayMetrics().density;
+            this.rippleColor = rippleColor;
+            init();
+        }
+
+        public void setCornerRadiusDp(float dp) {
+            this.cornerRadius = dp * getResources().getDisplayMetrics().density;
+            invalidate();
+        }
+
+        public void setRippleColor(int color) {
+            this.rippleColor = color;
+            invalidate();
+        }
+
+        private void init() {
+            ripplePaint.setStyle(Paint.Style.STROKE);
+            ripplePaint.setStrokeWidth(getResources().getDisplayMetrics().density * 2.2f);
+            glowPaint.setStyle(Paint.Style.FILL);
+            borderSheenPaint.setStyle(Paint.Style.STROKE);
+            borderSheenPaint.setStrokeWidth(getResources().getDisplayMetrics().density * 1.5f);
+        }
+
+        public void addRipple(float x, float y) {
+            RippleWave w = new RippleWave();
+            w.x = x;
+            w.y = y;
+            w.startTime = SystemClock.uptimeMillis();
+            float wW = getWidth();
+            float wH = getHeight();
+            float dx = Math.max(x, wW - x);
+            float dy = Math.max(y, wH - y);
+            w.maxRadius = (float) Math.hypot(dx, dy) * 1.15f;
+            if (w.maxRadius < 60f) w.maxRadius = 350f;
+            waves.add(w);
+            if (waves.size() > 10) waves.remove(0);
+            postInvalidateOnAnimation();
+        }
+
+        @Override
+        public boolean dispatchTouchEvent(MotionEvent ev) {
+            float x = ev.getX();
+            float y = ev.getY();
+            long now = SystemClock.uptimeMillis();
+
+            switch (ev.getActionMasked()) {
+                case MotionEvent.ACTION_DOWN:
+                    lastTouchX = x;
+                    lastTouchY = y;
+                    lastSpawnMs = now;
+                    addRipple(x, y);
+                    break;
+                case MotionEvent.ACTION_MOVE:
+                    float dist = (float) Math.hypot(x - lastTouchX, y - lastTouchY);
+                    if (dist > (16f * getResources().getDisplayMetrics().density) && (now - lastSpawnMs) > 60) {
+                        lastTouchX = x;
+                        lastTouchY = y;
+                        lastSpawnMs = now;
+                        addRipple(x, y);
+                    }
+                    break;
+            }
+            return super.dispatchTouchEvent(ev);
+        }
+
+        @Override
+        protected void dispatchDraw(Canvas canvas) {
+            super.dispatchDraw(canvas);
+
+            if (waves.isEmpty()) return;
+
+            int w = getWidth();
+            int h = getHeight();
+            if (w <= 0 || h <= 0) return;
+
+            long now = SystemClock.uptimeMillis();
+            boolean needInvalidate = false;
+
+            canvas.save();
+            if (cornerRadius > 0) {
+                clipPath.reset();
+                clipRect.set(0, 0, w, h);
+                clipPath.addRoundRect(clipRect, cornerRadius, cornerRadius, Path.Direction.CW);
+                canvas.clipPath(clipPath);
+            }
+
+            for (int i = waves.size() - 1; i >= 0; i--) {
+                RippleWave wave = waves.get(i);
+                float progress = (float) (now - wave.startTime) / wave.duration;
+                if (progress >= 1.0f) {
+                    waves.remove(i);
+                    continue;
+                }
+                needInvalidate = true;
+
+                // Easing: rapid expansion followed by smooth viscous deceleration
+                float t = 1f - (float) Math.pow(1f - progress, 2.5);
+                float r = t * wave.maxRadius;
+                float alpha = (1f - progress) * wave.alpha;
+
+                int baseCol = (rippleColor != 0) ? rippleColor : 0xFF00E5FF;
+
+                // 1. Soft radial luminous core glow
+                glowPaint.setColor(baseCol);
+                glowPaint.setAlpha((int) (alpha * 0.35f * 255));
+                canvas.drawCircle(wave.x, wave.y, r * 0.65f, glowPaint);
+
+                // 2. Expanding Shimmer Wavefront Ring
+                ripplePaint.setColor(baseCol);
+                ripplePaint.setAlpha((int) (alpha * 255));
+                ripplePaint.setStrokeWidth((1f - progress * 0.6f) * 2.8f * getResources().getDisplayMetrics().density);
+                canvas.drawCircle(wave.x, wave.y, r, ripplePaint);
+
+                // 3. Highlighted border sheen glint when wave reaches perimeter
+                if (cornerRadius > 0 && r > w * 0.25f) {
+                    borderSheenPaint.setColor(baseCol);
+                    borderSheenPaint.setAlpha((int) (alpha * 0.45f * 255));
+                    canvas.drawRoundRect(clipRect, cornerRadius, cornerRadius, borderSheenPaint);
+                }
+            }
+
+            canvas.restore();
+
+            if (needInvalidate) {
+                postInvalidateOnAnimation();
+            }
+        }
+    }
+
+    private View wrapRippleCard(View view, float cornerRadiusDp, int rippleColor) {
+        RippleCardFrameLayout rippleFrame = new RippleCardFrameLayout(this, cornerRadiusDp, rippleColor);
+        ViewGroup.LayoutParams vlp = view.getLayoutParams();
+        if (vlp != null) {
+            rippleFrame.setLayoutParams(vlp);
+            view.setLayoutParams(new FrameLayout.LayoutParams(
+                    FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.WRAP_CONTENT));
+        }
+        rippleFrame.addView(view);
+        return rippleFrame;
+    }
 
     public static class PullDownDismissLayout extends FrameLayout {
         private final Dialog dialog;
@@ -7935,7 +8200,10 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
         ScrollView dialogScroll = new ScrollView(this);
         dialogScroll.setVerticalScrollBarEnabled(false);
         dialogScroll.setFillViewport(true);
-        dialogScroll.addView(content);
+
+        RippleCardFrameLayout rippleCard = new RippleCardFrameLayout(this, 24f, colCyan);
+        rippleCard.addView(content);
+        dialogScroll.addView(rippleCard);
 
         PullDownDismissLayout pullContainer = new PullDownDismissLayout(this, dlg, dialogScroll);
         dlg.setContentView(pullContainer);

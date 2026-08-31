@@ -249,6 +249,10 @@ public class RemoteTelemetryClient {
         RESOLVED_REPORT_IDS.put("fb_1788165000000", 27); // Satellite Ground Track & Starlink Train Alerts (N2YO API)
         RESOLVED_REPORT_IDS.put("fb_1788165200000", 27); // Polar Night Sky Dome HUD
         RESOLVED_REPORT_IDS.put("fb_1788167900000", 27); // Automated 2-Minute Pre-Pass Alarms
+
+        // v1.0.30 (Milestone 130) - POLAIR Broad Advisory & Interactive Fluid Touch Rippling
+        RESOLVED_REPORT_IDS.put("fb_1788177287782", 30); // Notifications of POLAIR (Broad general site advisory without assumptions)
+        RESOLVED_REPORT_IDS.put("fb_1788177398600", 30); // Rippling Cards (High-quality fluid touch ripple sheen effect)
     }
 
     private static final String PREF_IMPLEMENTED_MAP = "pref_implemented_reports_map";
@@ -369,6 +373,18 @@ public class RemoteTelemetryClient {
         if (combined.contains("compass") || combined.contains("jitter") || combined.contains("azimuth")) {
             if (context != null && reportId != null) markReportAsImplemented(context, reportId, 10);
             return 10;
+        }
+
+        // K. Broad POLAIR Notifications -> v1.0.30
+        if (combined.contains("polair") || combined.contains("specific") || combined.contains("map of the site") || combined.contains("be broad")) {
+            if (context != null && reportId != null) markReportAsImplemented(context, reportId, 30);
+            return 30;
+        }
+
+        // L. Rippling Cards & Fluid Wave Sheen -> v1.0.30
+        if (combined.contains("rippl") || combined.contains("drag my finger") || (combined.contains("card") && combined.contains("finger"))) {
+            if (context != null && reportId != null) markReportAsImplemented(context, reportId, 30);
+            return 30;
         }
 
         // FAIL-SAFE LAYER 4: Epoch Baseline Check

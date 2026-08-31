@@ -342,7 +342,7 @@ public class AirspaceRadarManager {
                             "Distance: " + String.format(Locale.US, "%.1f km %s (Bearing %.0f°)", track.distanceKm, track.compassDir, track.bearingDeg) + "\n" +
                             "Altitude: " + String.format(Locale.US, "%d ft AGL · Speed: %d km/h", track.altitudeFt, track.speedKmh) + "\n" +
                             "Flight Status: " + track.statusText + "\n\n" +
-                            "Guard Advisory: Maintain heightened perimeter vigilance at Gate A & Gate B. Monitor fence line for suspect movement."
+                            "Guard Advisory: Maintain heightened site vigilance and monitor perimeter boundaries."
                     ))
                     .setColor(0xFFFF5252)
                     .setAutoCancel(true)
