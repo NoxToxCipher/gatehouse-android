@@ -118,6 +118,8 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
 
     private FrameLayout deputyContainer;
     private SunConureFlightOverlayView conureOverlay;
+    private SatelliteFlyoverOverlayView satelliteFlyoverOverlay;
+    private String lastFlyoverPassId = "";
     private long lastHeaderTapMs = 0L;
     private int headerTapCount = 0;
     private View deputyScrim;
@@ -484,6 +486,29 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
                 rootFrame.post(new Runnable() {
                     public void run() {
                         showTesterFeedbackScreen();
+                    }
+                });
+            }
+        } else if (getIntent() != null && getIntent().getBooleanExtra("test_satellite_flyover", false)) {
+            if (rootFrame != null) {
+                rootFrame.post(new Runnable() {
+                    public void run() {
+                        triggerSatelliteFlyover(null);
+                    }
+                });
+            }
+        } else if (getIntent() != null && getIntent().getBooleanExtra("test_starlink_flyover", false)) {
+            if (rootFrame != null) {
+                rootFrame.post(new Runnable() {
+                    public void run() {
+                        List<SatelliteTrackerManager.VisualPass> passes = SatelliteTrackerManager.getCachedOrPredictivePasses(MainActivity.this);
+                        for (SatelliteTrackerManager.VisualPass p : passes) {
+                            if (p.isStarlinkTrain) {
+                                triggerSatelliteFlyover(p);
+                                return;
+                            }
+                        }
+                        triggerSatelliteFlyover(null);
                     }
                 });
             }
@@ -1147,6 +1172,13 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
         conureOverlay.setLayoutParams(colayout);
         rootFrame.addView(conureOverlay);
 
+        // 🛰️ 8. SATELLITE FLYOVER CELESTIAL EASTER EGG OVERLAY
+        satelliteFlyoverOverlay = new SatelliteFlyoverOverlayView(this);
+        FrameLayout.LayoutParams solayout = new FrameLayout.LayoutParams(
+                FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT);
+        satelliteFlyoverOverlay.setLayoutParams(solayout);
+        rootFrame.addView(satelliteFlyoverOverlay);
+
         tabPagerFrame.post(new Runnable() {
             public void run() {
                 applyTabScrollPosition(0f);
@@ -1163,6 +1195,18 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
             if (chronographView != null) chronographView.invalidate();
             checkWelfareDue();
             updateDiagnostics();
+
+            // 🛰️ Real-time celestial flyover check: trigger easter egg if a satellite is actively passing above Gatehouse
+            try {
+                SatelliteTrackerManager.VisualPass livePass = SatelliteTrackerManager.getActiveLivePass(MainActivity.this);
+                if (livePass != null && satelliteFlyoverOverlay != null && !satelliteFlyoverOverlay.isFlying()) {
+                    if (!livePass.passId.equals(lastFlyoverPassId)) {
+                        lastFlyoverPassId = livePass.passId;
+                        satelliteFlyoverOverlay.triggerFlyover(livePass);
+                    }
+                }
+            } catch (Throwable ignored) {}
+
             ticker.postDelayed(this, 1000);
         }
     };
@@ -7727,13 +7771,47 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
 
         final Dialog dlg = createDialogSheet(box);
 
+        domeView.setOnClickListener(new View.OnClickListener() {
+            public void onClick(View v) {
+                hapticHeavyClick();
+                dlg.dismiss();
+                if (!currentPasses[0].isEmpty()) {
+                    int idx = Math.min(selectedIndex[0], currentPasses[0].size() - 1);
+                    triggerSatelliteFlyover(currentPasses[0].get(idx));
+                } else {
+                    triggerSatelliteFlyover(null);
+                }
+                Toast.makeText(MainActivity.this, "🛰️ Satellite flyover active on screen! Tap it anytime.", Toast.LENGTH_SHORT).show();
+            }
+        });
+
         // Actions Row
         LinearLayout btnRow = new LinearLayout(this);
         btnRow.setOrientation(LinearLayout.HORIZONTAL);
         btnRow.setPadding(0, dp(4), 0, 0);
 
-        TextView btnTestAlert = actionButton("🔔 Test 2-Min Alert", colEmerald, colAccentInk);
+        TextView btnFlyover = actionButton("🚀 Flyover", colPanel2, colCyan);
+        btnFlyover.setTextSize(11f);
+        btnFlyover.setOnClickListener(new View.OnClickListener() {
+            public void onClick(View v) {
+                hapticHeavyClick();
+                dlg.dismiss();
+                if (!currentPasses[0].isEmpty()) {
+                    int idx = Math.min(selectedIndex[0], currentPasses[0].size() - 1);
+                    triggerSatelliteFlyover(currentPasses[0].get(idx));
+                } else {
+                    triggerSatelliteFlyover(null);
+                }
+                Toast.makeText(MainActivity.this, "🛰️ Satellite flyover active on screen! Tap it anytime.", Toast.LENGTH_SHORT).show();
+            }
+        });
+        btnRow.addView(btnFlyover);
+
+        TextView btnTestAlert = actionButton("🔔 Test 2-Min", colEmerald, colAccentInk);
         btnTestAlert.setTextSize(11f);
+        LinearLayout.LayoutParams talp = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1.1f);
+        talp.leftMargin = dp(6);
+        btnTestAlert.setLayoutParams(talp);
         btnTestAlert.setOnClickListener(new View.OnClickListener() {
             public void onClick(View v) {
                 hapticHeavyClick();
@@ -7749,7 +7827,7 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
 
         TextView btnApiKey = actionButton("⚙️ N2YO Key", colLine, colCyan);
         btnApiKey.setTextSize(11f);
-        LinearLayout.LayoutParams aklp = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
+        LinearLayout.LayoutParams aklp = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 0.9f);
         aklp.leftMargin = dp(6);
         btnApiKey.setLayoutParams(aklp);
         btnApiKey.setOnClickListener(new View.OnClickListener() {
@@ -7762,7 +7840,7 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
 
         TextView btnClose = actionButton("Close", colLine, colPale);
         btnClose.setTextSize(11f);
-        LinearLayout.LayoutParams clp = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
+        LinearLayout.LayoutParams clp = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 0.8f);
         clp.leftMargin = dp(6);
         btnClose.setLayoutParams(clp);
         btnClose.setOnClickListener(new View.OnClickListener() {
@@ -12139,6 +12217,17 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
             showSatelliteRadarDialog();
         } else if (intent != null && intent.getBooleanExtra("open_tester_feedback", false)) {
             showTesterFeedbackScreen();
+        } else if (intent != null && intent.getBooleanExtra("test_satellite_flyover", false)) {
+            triggerSatelliteFlyover(null);
+        } else if (intent != null && intent.getBooleanExtra("test_starlink_flyover", false)) {
+            List<SatelliteTrackerManager.VisualPass> passes = SatelliteTrackerManager.getCachedOrPredictivePasses(MainActivity.this);
+            for (SatelliteTrackerManager.VisualPass p : passes) {
+                if (p.isStarlinkTrain) {
+                    triggerSatelliteFlyover(p);
+                    return;
+                }
+            }
+            triggerSatelliteFlyover(null);
         }
     }
 
@@ -15256,6 +15345,226 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
         if (conureOverlay != null) {
             hapticDoublePulse();
             conureOverlay.triggerFlight();
+        }
+    }
+
+    public void triggerSatelliteFlyover(SatelliteTrackerManager.VisualPass pass) {
+        if (satelliteFlyoverOverlay != null) {
+            hapticDoublePulse();
+            satelliteFlyoverOverlay.triggerFlyover(pass);
+        }
+    }
+
+    class SatelliteFlyoverOverlayView extends View {
+        private final Paint satGlowPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+        private final Paint satBodyPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+        private final Paint solarPanelPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+        private final Paint solarGridPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+        private final Paint trailPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+        private final Paint badgeBgPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+        private final Paint badgeTextPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+        private final Paint beaconPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+
+        private ValueAnimator flyoverAnimator;
+        private float flyProgress = 0f;
+        private boolean isFlying = false;
+        private SatelliteTrackerManager.VisualPass activePass;
+
+        // Current bounding coordinates for touch interaction
+        private float currentX = -100f;
+        private float currentY = -100f;
+        private final float touchRadius = dpf(48);
+
+        public SatelliteFlyoverOverlayView(Context context) {
+            super(context);
+            initPaints();
+            setVisibility(View.GONE);
+        }
+
+        public boolean isFlying() {
+            return isFlying;
+        }
+
+        private float dpf(float v) {
+            return v * getResources().getDisplayMetrics().density;
+        }
+
+        private void initPaints() {
+            satGlowPaint.setStyle(Paint.Style.FILL);
+            satBodyPaint.setStyle(Paint.Style.FILL);
+            solarPanelPaint.setStyle(Paint.Style.FILL);
+            solarGridPaint.setStyle(Paint.Style.STROKE);
+            solarGridPaint.setStrokeWidth(dpf(0.8f));
+            trailPaint.setStyle(Paint.Style.STROKE);
+            trailPaint.setStrokeCap(Paint.Cap.ROUND);
+            badgeBgPaint.setStyle(Paint.Style.FILL);
+            badgeTextPaint.setStyle(Paint.Style.FILL);
+            badgeTextPaint.setTypeface(Typeface.DEFAULT_BOLD);
+            badgeTextPaint.setTextAlign(Paint.Align.CENTER);
+            beaconPaint.setStyle(Paint.Style.FILL);
+        }
+
+        public void triggerFlyover(SatelliteTrackerManager.VisualPass pass) {
+            if (pass == null) {
+                pass = SatelliteTrackerManager.generatePredictiveNightPasses(getContext()).get(0);
+            }
+            this.activePass = pass;
+            if (flyoverAnimator != null && flyoverAnimator.isRunning()) {
+                flyoverAnimator.cancel();
+            }
+            setVisibility(View.VISIBLE);
+            isFlying = true;
+            flyProgress = 0f;
+
+            // Smooth orbital flyover duration (12.5 seconds)
+            flyoverAnimator = ValueAnimator.ofFloat(0f, 1f);
+            flyoverAnimator.setDuration(12500);
+            flyoverAnimator.setInterpolator(new LinearInterpolator());
+            flyoverAnimator.addUpdateListener(new ValueAnimator.AnimatorUpdateListener() {
+                public void onAnimationUpdate(ValueAnimator va) {
+                    flyProgress = (Float) va.getAnimatedValue();
+                    invalidate();
+                }
+            });
+            flyoverAnimator.addListener(new AnimatorListenerAdapter() {
+                @Override
+                public void onAnimationEnd(Animator animation) {
+                    isFlying = false;
+                    setVisibility(View.GONE);
+                }
+            });
+            flyoverAnimator.start();
+        }
+
+        @Override
+        public boolean onTouchEvent(MotionEvent event) {
+            if (!isFlying || activePass == null) return false;
+            if (event.getActionMasked() == MotionEvent.ACTION_DOWN) {
+                float dx = Math.abs(event.getX() - currentX);
+                float dy = Math.abs(event.getY() - (currentY + dpf(10)));
+                if (dx <= dpf(75) && dy <= dpf(50)) {
+                    MainActivity.this.hapticHeavyClick();
+                    MainActivity.this.showSatelliteRadarDialog();
+                    return true;
+                }
+            }
+            return false;
+        }
+
+        @Override
+        protected void onDraw(Canvas canvas) {
+            super.onDraw(canvas);
+            if (!isFlying || activePass == null || flyProgress <= 0.001f || flyProgress >= 0.999f) return;
+
+            int w = getWidth();
+            int h = getHeight();
+            if (w <= 0 || h <= 0) return;
+
+            // Trajectory path from start azimuth to end azimuth
+            // Maps diagonal path across upper/mid screen (representing night sky zenith)
+            float startX = -dpf(40);
+            float startY = h * 0.48f;
+            float peakX = w * 0.5f;
+            float peakY = h * 0.18f;
+            float endX = w + dpf(60);
+            float endY = h * 0.42f;
+
+            // Calculate current position along quadratic Bezier curve
+            float t = flyProgress;
+            float omt = 1f - t;
+            float x = omt * omt * startX + 2f * omt * t * peakX + t * t * endX;
+            float y = omt * omt * startY + 2f * omt * t * peakY + t * t * endY;
+            currentX = x;
+            currentY = y;
+
+            // Draw trailing optical motion streak
+            float prevT = Math.max(0f, t - 0.08f);
+            float prevOmt = 1f - prevT;
+            float prevX = prevOmt * prevOmt * startX + 2f * prevOmt * prevT * peakX + prevT * prevT * endX;
+            float prevY = prevOmt * prevOmt * startY + 2f * prevOmt * prevT * peakY + prevT * prevT * endY;
+
+            int satCol = (activePass.category != null) ? activePass.category.color : 0xFF00E5FF;
+            trailPaint.setColor(satCol);
+            trailPaint.setAlpha((int) (90 * (1f - Math.abs(t - 0.5f) * 0.6f)));
+            trailPaint.setStrokeWidth(dpf(2.5f));
+            canvas.drawLine(prevX, prevY, x, y, trailPaint);
+
+            if (activePass.isStarlinkTrain) {
+                // RENDER STARLINK TRAIN: String of 14 luminous satellites moving in formation
+                int nodeCount = 14;
+                for (int i = 0; i < nodeCount; i++) {
+                    float nodeT = Math.max(0f, t - (i * 0.012f));
+                    float nodeOmt = 1f - nodeT;
+                    float nx = nodeOmt * nodeOmt * startX + 2f * nodeOmt * nodeT * peakX + nodeT * nodeT * endX;
+                    float ny = nodeOmt * nodeOmt * startY + 2f * nodeOmt * nodeT * peakY + nodeT * nodeT * endY;
+
+                    // Node Glow
+                    satGlowPaint.setColor(0x3310B981);
+                    canvas.drawCircle(nx, ny, dpf(6), satGlowPaint);
+
+                    // Node Body
+                    satBodyPaint.setColor(0xFFE2E8F0);
+                    canvas.drawCircle(nx, ny, dpf(2.2f), satBodyPaint);
+                }
+            } else {
+                // RENDER ISS / TIANGONG / HUBBLE: Detailed Satellite with Solar Panels & Beacon
+                // Radial Glow
+                satGlowPaint.setColor(0x4400E5FF);
+                canvas.drawCircle(x, y, dpf(18), satGlowPaint);
+
+                // Outstretched Dual Solar Panels
+                float angle = -22f; // Slight orbital angle
+                canvas.save();
+                canvas.rotate(angle, x, y);
+
+                // Left Solar Wing
+                solarPanelPaint.setColor(0xFF1E3A8A); // Deep Cobalt
+                canvas.drawRoundRect(x - dpf(24), y - dpf(6), x - dpf(6), y + dpf(6), dpf(2), dpf(2), solarPanelPaint);
+                solarGridPaint.setColor(0xFFFFD54F); // Gold Solar Grid
+                canvas.drawRect(x - dpf(24), y - dpf(6), x - dpf(6), y + dpf(6), solarGridPaint);
+                canvas.drawLine(x - dpf(15), y - dpf(6), x - dpf(15), y + dpf(6), solarGridPaint);
+
+                // Right Solar Wing
+                canvas.drawRoundRect(x + dpf(6), y - dpf(6), x + dpf(24), y + dpf(6), dpf(2), dpf(2), solarPanelPaint);
+                canvas.drawRect(x + dpf(6), y - dpf(6), x + dpf(24), y + dpf(6), solarGridPaint);
+                canvas.drawLine(x + dpf(15), y - dpf(6), x + dpf(15), y + dpf(6), solarGridPaint);
+
+                // Central Truss / Module
+                satBodyPaint.setColor(0xFFF8FAFC);
+                canvas.drawRoundRect(x - dpf(5), y - dpf(4), x + dpf(5), y + dpf(4), dpf(2), dpf(2), satBodyPaint);
+
+                // Pulsing Anti-Collision Beacon
+                boolean beaconOn = (System.currentTimeMillis() % 600 < 300);
+                if (beaconOn) {
+                    beaconPaint.setColor(0xFF00E5FF);
+                    canvas.drawCircle(x, y - dpf(3), dpf(2f), beaconPaint);
+                }
+
+                canvas.restore();
+            }
+
+            // Floating Telemetry Easter Egg Badge
+            String badgeText = (activePass.isStarlinkTrain ? "✨ STARLINK TRAIN OVERHEAD" : ("🛰️ " + activePass.satName + " FLYOVER")) +
+                    " · " + String.format(Locale.US, "%.0f° EL", activePass.maxEl);
+            badgeTextPaint.setTextSize(dpf(9.5f));
+            float textWidth = badgeTextPaint.measureText(badgeText);
+            float badgeW = textWidth + dpf(16);
+            float badgeH = dpf(20);
+            float badgeX = Math.max(dpf(12), Math.min(w - badgeW - dpf(12), x - badgeW * 0.5f));
+            float badgeY = y + dpf(18);
+
+            badgeBgPaint.setColor(0xCC0F172A);
+            canvas.drawRoundRect(badgeX, badgeY, badgeX + badgeW, badgeY + badgeH, dpf(10), dpf(10), badgeBgPaint);
+
+            badgeBgPaint.setStyle(Paint.Style.STROKE);
+            badgeBgPaint.setColor(satCol);
+            badgeBgPaint.setAlpha(160);
+            badgeBgPaint.setStrokeWidth(dpf(1.0f));
+            canvas.drawRoundRect(badgeX, badgeY, badgeX + badgeW, badgeY + badgeH, dpf(10), dpf(10), badgeBgPaint);
+            badgeBgPaint.setStyle(Paint.Style.FILL);
+
+            badgeTextPaint.setColor(satCol);
+            canvas.drawText(badgeText, badgeX + badgeW * 0.5f, badgeY + dpf(14), badgeTextPaint);
         }
     }
 

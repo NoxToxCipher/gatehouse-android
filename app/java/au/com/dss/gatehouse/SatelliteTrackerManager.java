@@ -59,6 +59,29 @@ public class SatelliteTrackerManager {
     // Built-in Default N2YO API Key (Fallback / Demo key)
     private static final String DEFAULT_API_KEY = "6M9E7N-J3R2G9-Y7X8W6-54D2";
 
+    private static final Object cachedPassesLock = new Object();
+    private static List<VisualPass> cachedPasses = new ArrayList<>();
+
+    public static List<VisualPass> getCachedOrPredictivePasses(Context context) {
+        synchronized (cachedPassesLock) {
+            if (cachedPasses == null || cachedPasses.isEmpty()) {
+                cachedPasses = generatePredictiveNightPasses(context);
+            }
+            return new ArrayList<>(cachedPasses);
+        }
+    }
+
+    public static VisualPass getActiveLivePass(Context context) {
+        long now = System.currentTimeMillis();
+        List<VisualPass> passes = getCachedOrPredictivePasses(context);
+        for (VisualPass p : passes) {
+            if (now >= p.startUtcMillis && now <= p.endUtcMillis) {
+                return p;
+            }
+        }
+        return null;
+    }
+
     public enum SatelliteCategory {
         ISS("International Space Station", "🛰️ ISS", 0xFF00E5FF, 0x2200E5FF, "Naked-eye brightness up to Mag -3.8 (Brightest orbital object)"),
         STARLINK_TRAIN("Starlink Satellite Train", "✨ STARLINK", 0xFF10B981, 0x2210B981, "Luminous string of 15–25 satellites flying in tight formation"),
@@ -244,6 +267,10 @@ public class SatelliteTrackerManager {
                         return Long.compare(a.startUtcMillis, b.startUtcMillis);
                     }
                 });
+
+                synchronized (cachedPassesLock) {
+                    cachedPasses = new ArrayList<>(livePasses);
+                }
 
                 // Schedule automated 2-minute pre-pass alerts for upcoming passes
                 scheduleUpcomingPassAlerts(context, livePasses);
