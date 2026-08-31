@@ -230,7 +230,8 @@ public final class AutoUpdateManager {
                 nb = new android.app.Notification.Builder(context);
             }
 
-            int iconShield = context.getResources().getIdentifier("ic_shield_gold", "drawable", context.getPackageName());
+            int iconShield = context.getResources().getIdentifier("ic_stat_gatehouse", "drawable", context.getPackageName());
+            if (iconShield == 0) iconShield = context.getResources().getIdentifier("ic_shield_gold", "drawable", context.getPackageName());
             if (iconShield == 0) iconShield = context.getApplicationInfo().icon;
 
             String shaShort = newSha.length() > 8 ? newSha.substring(0, 8) : newSha;

@@ -110,21 +110,23 @@ public class PttRadioService extends Service implements PttRadioEngine.PttListen
             builder.setPriority(Notification.PRIORITY_LOW);
         }
 
-        int iconShield = getResources().getIdentifier("ic_shield_gold", "drawable", getPackageName());
-        if (iconShield == 0) iconShield = getApplicationInfo().icon;
+        int iconStat = getResources().getIdentifier("ic_stat_gatehouse", "drawable", getPackageName());
+        if (iconStat == 0) iconStat = getApplicationInfo().icon;
 
-        builder.setSmallIcon(iconShield)
+        builder.setSmallIcon(iconStat)
                 .setContentTitle("🛡️ DSS Push-to-Talk Radio")
                 .setContentText(statusText)
+                .setSubText("Gatehouse")
                 .setContentIntent(pi)
-                .setOngoing(true);
+                .setOngoing(true)
+                .setShowWhen(false);
 
         try {
             builder.setLargeIcon(BitmapFactory.decodeResource(getResources(), getApplicationInfo().icon));
         } catch (Throwable ignored) {}
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
-            builder.setColor(0xFFE5A93C); // DSS Gold
+            builder.setColor(0xFFFFD166); // DSS Gold
         }
 
         return builder.build();

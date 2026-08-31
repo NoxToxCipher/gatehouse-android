@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?>
+﻿<?xml version="1.0" encoding="utf-8"?>
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     android:width="24dp"
     android:height="24dp"
@@ -7,11 +7,8 @@
     <!-- Outer Shield Crest Outline -->
     <path
         android:fillColor="#F59E0B"
-        android:pathData="M12,2L4,5v6.09c0,5.05 3.41,9.76 8,10.91c4.59,-1.15 8,-5.86 8,-10.91V5L12,2z" />
-    <!-- Inner Deep Obsidian Core -->
-    <path
-        android:fillColor="#0B0F19"
-        android:pathData="M12,4.18L5.8,6.5v4.59c0,4.02 2.65,7.77 6.2,8.73c3.55,-0.96 6.2,-4.71 6.2,-8.73V6.5L12,4.18z" />
+        android:fillType="evenOdd"
+        android:pathData="M12,2L4,5v6.09c0,5.05 3.41,9.76 8,10.91c4.59,-1.15 8,-5.86 8,-10.91V5L12,2z M12,4.18L18.2,6.5v4.59c0,4.02 -2.65,7.77 -6.2,8.73c-3.55,-0.96 -6.2,-4.71 -6.2,-8.73V6.5L12,4.18z" />
     <!-- Golden Monogram / Star in Center -->
     <path
         android:fillColor="#FBBF24"

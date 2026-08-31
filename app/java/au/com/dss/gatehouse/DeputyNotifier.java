@@ -227,7 +227,8 @@ public class DeputyNotifier {
 
             int layoutCollapsed = id(context, "notif_shift_weather_collapsed", "layout");
             int layoutExpanded = id(context, "notif_roster_update_expanded", "layout");
-            int iconShield = id(context, "ic_shield_gold", "drawable");
+            int iconShield = id(context, "ic_stat_gatehouse", "drawable");
+            if (iconShield == 0) iconShield = id(context, "ic_shield_gold", "drawable");
             if (iconShield == 0) iconShield = context.getApplicationInfo().icon;
 
             Notification.Builder builder;
@@ -435,7 +436,8 @@ public class DeputyNotifier {
 
             int layoutCollapsed = id(context, "notif_shift_weather_collapsed", "layout");
             int layoutExpanded = id(context, "notif_shift_weather_expanded", "layout");
-            int iconShield = id(context, "ic_shield_gold", "drawable");
+            int iconShield = id(context, "ic_stat_gatehouse", "drawable");
+            if (iconShield == 0) iconShield = id(context, "ic_shield_gold", "drawable");
             if (iconShield == 0) iconShield = context.getApplicationInfo().icon;
 
             Notification.Builder builder;
