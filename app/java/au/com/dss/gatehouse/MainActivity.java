@@ -7281,7 +7281,7 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
                     textPaint.setTextAlign(Paint.Align.RIGHT);
                     canvas.drawText("EXP: 14 OCT 2027", w - dp(18), h - dp(16), textPaint);
 
-                } else {
+                } else if (cardMode == 1) {
                     // Header Row
                     textPaint.setColor(colEmerald);
                     textPaint.setTextSize(dpf(9.5f));
@@ -7332,6 +7332,58 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
                     textPaint.setTextSize(dpf(9f));
                     textPaint.setTextAlign(Paint.Align.RIGHT);
                     canvas.drawText("VALID THRU 2028", w - dp(18), h - dp(16), textPaint);
+
+                } else {
+                    // Header Row: WorkSafe Queensland Construction White Card
+                    textPaint.setColor(colCyan);
+                    textPaint.setTextSize(dpf(9.5f));
+                    textPaint.setTextAlign(Paint.Align.LEFT);
+                    canvas.drawText("WORKSAFE QUEENSLAND · WHS ACT 2011", dp(18), dp(28), textPaint);
+
+                    Paint pillBg = new Paint(Paint.ANTI_ALIAS_FLAG);
+                    pillBg.setColor(colCyanSoft);
+                    RectF pillR = new RectF(w - dp(126), dp(16), w - dp(18), dp(36));
+                    canvas.drawRoundRect(pillR, dp(6), dp(6), pillBg);
+
+                    textPaint.setColor(colCyan);
+                    textPaint.setTextSize(dpf(9f));
+                    textPaint.setTextAlign(Paint.Align.CENTER);
+                    canvas.drawText("✓ GENERAL INDUCTION", pillR.centerX(), pillR.centerY() + dp(3), textPaint);
+
+                    // Name
+                    subTextPaint.setColor(0xFFFFFFFF);
+                    subTextPaint.setTextSize(dpf(16f));
+                    subTextPaint.setTextAlign(Paint.Align.LEFT);
+                    canvas.drawText("OFFICER LOCHRAN DOHERTY", dp(18), dp(66), subTextPaint);
+
+                    // Qualification Title
+                    textPaint.setColor(colPale);
+                    textPaint.setTextSize(dpf(11f));
+                    textPaint.setTextAlign(Paint.Align.LEFT);
+                    canvas.drawText("CPCWHS1001 WORK SAFELY IN CONSTRUCTION", dp(18), dp(88), textPaint);
+
+                    // Card ID
+                    textPaint.setColor(colCyan);
+                    textPaint.setTextSize(dpf(13.5f));
+                    textPaint.setTypeface(Typeface.create(Typeface.MONOSPACE, Typeface.BOLD));
+                    canvas.drawText("CARD #: QLD-CGC-7491028", dp(18), dp(118), textPaint);
+                    textPaint.setTypeface(Typeface.DEFAULT);
+
+                    // Accreditations
+                    textPaint.setColor(colMuted);
+                    textPaint.setTextSize(dpf(10f));
+                    canvas.drawText("REGULATOR: WORKPLACE HEALTH & SAFETY QLD", dp(18), dp(142), textPaint);
+                    canvas.drawText("NATIONALLY RECOGNISED QUALIFICATION · PERPETUAL", dp(18), dp(162), textPaint);
+
+                    // Footer Row
+                    textPaint.setColor(colAccent);
+                    textPaint.setTextSize(dpf(9.5f));
+                    canvas.drawText("🔄 TAP TO FLIP QR CODE", dp(18), h - dp(16), textPaint);
+
+                    textPaint.setColor(colQuiet);
+                    textPaint.setTextSize(dpf(9f));
+                    textPaint.setTextAlign(Paint.Align.RIGHT);
+                    canvas.drawText("STATUS: LIFETIME VALID", w - dp(18), h - dp(16), textPaint);
                 }
 
             } else {
@@ -7408,11 +7460,11 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
         switchRow.setLayoutParams(srp);
 
         final TextView tabLic = new TextView(this);
-        tabLic.setText("🛡️ QLD Security Licence");
-        tabLic.setTextSize(11);
+        tabLic.setText("🛡️ QLD Licence");
+        tabLic.setTextSize(10.5f);
         tabLic.setTypeface(Typeface.DEFAULT_BOLD);
         tabLic.setGravity(Gravity.CENTER);
-        tabLic.setPadding(dp(8), dp(8), dp(8), dp(8));
+        tabLic.setPadding(dp(4), dp(8), dp(4), dp(8));
         tabLic.setTextColor(colAccentInk);
         tabLic.setBackground(rounded(colAccent, dp(10)));
         LinearLayout.LayoutParams tlp1 = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
@@ -7420,16 +7472,28 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
         switchRow.addView(tabLic);
 
         final TextView tabAid = new TextView(this);
-        tabAid.setText("🩹 First Aid & CPR");
-        tabAid.setTextSize(11);
+        tabAid.setText("🩹 First Aid");
+        tabAid.setTextSize(10.5f);
         tabAid.setTypeface(Typeface.DEFAULT_BOLD);
         tabAid.setGravity(Gravity.CENTER);
-        tabAid.setPadding(dp(8), dp(8), dp(8), dp(8));
+        tabAid.setPadding(dp(4), dp(8), dp(4), dp(8));
         tabAid.setTextColor(colMuted);
         tabAid.setBackground(null);
         LinearLayout.LayoutParams tlp2 = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
         tabAid.setLayoutParams(tlp2);
         switchRow.addView(tabAid);
+
+        final TextView tabWhiteCard = new TextView(this);
+        tabWhiteCard.setText("🏗️ White Card");
+        tabWhiteCard.setTextSize(10.5f);
+        tabWhiteCard.setTypeface(Typeface.DEFAULT_BOLD);
+        tabWhiteCard.setGravity(Gravity.CENTER);
+        tabWhiteCard.setPadding(dp(4), dp(8), dp(4), dp(8));
+        tabWhiteCard.setTextColor(colMuted);
+        tabWhiteCard.setBackground(null);
+        LinearLayout.LayoutParams tlp3 = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
+        tabWhiteCard.setLayoutParams(tlp3);
+        switchRow.addView(tabWhiteCard);
         box.addView(switchRow);
 
         final HolographicCardView holoCard = new HolographicCardView(this);
@@ -7455,6 +7519,8 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
                 tabLic.setBackground(rounded(colAccent, dp(10)));
                 tabAid.setTextColor(colMuted);
                 tabAid.setBackground(null);
+                tabWhiteCard.setTextColor(colMuted);
+                tabWhiteCard.setBackground(null);
             }
         });
 
@@ -7466,6 +7532,21 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
                 tabAid.setBackground(rounded(colEmerald, dp(10)));
                 tabLic.setTextColor(colMuted);
                 tabLic.setBackground(null);
+                tabWhiteCard.setTextColor(colMuted);
+                tabWhiteCard.setBackground(null);
+            }
+        });
+
+        tabWhiteCard.setOnClickListener(new View.OnClickListener() {
+            public void onClick(View v) {
+                hapticClick();
+                holoCard.setCardMode(2);
+                tabWhiteCard.setTextColor(colAccentInk);
+                tabWhiteCard.setBackground(rounded(colCyan, dp(10)));
+                tabLic.setTextColor(colMuted);
+                tabLic.setBackground(null);
+                tabAid.setTextColor(colMuted);
+                tabAid.setBackground(null);
             }
         });
 
