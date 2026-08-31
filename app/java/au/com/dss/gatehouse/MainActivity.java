@@ -7435,35 +7435,16 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
         card.setBackground(rounded(colPanel, dp(18)));
         card.setPadding(dp(16), dp(16), dp(16), dp(16));
 
-        LinearLayout topRow = new LinearLayout(this);
-        topRow.setOrientation(LinearLayout.HORIZONTAL);
-        topRow.setGravity(Gravity.CENTER_VERTICAL);
-
         TextView brand = new TextView(this);
         brand.setText("DOHERTY SECURITY SERVICES · " + getHutPhoneHardwareTag().toUpperCase(Locale.US));
         brand.setTextColor(colAccent);
         brand.setTextSize(10);
         brand.setTypeface(Typeface.DEFAULT_BOLD);
         brand.setLetterSpacing(0.14f);
-        LinearLayout.LayoutParams blp = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
-        brand.setLayoutParams(blp);
         brand.setOnClickListener(new View.OnClickListener() {
             public void onClick(View v) { showWelfareCheckDialog(); }
         });
-        topRow.addView(brand);
-
-        VectorGearButton btnSettings = new VectorGearButton(this);
-        LinearLayout.LayoutParams glp = new LinearLayout.LayoutParams(dp(28), dp(28));
-        btnSettings.setLayoutParams(glp);
-        btnSettings.setOnClickListener(new View.OnClickListener() {
-            public void onClick(View v) {
-                hapticClick();
-                showSettingsDialog();
-            }
-        });
-        topRow.addView(btnSettings);
-
-        card.addView(topRow);
+        card.addView(brand);
 
         TextView site = new TextView(this);
         site.setText("Hume Doors & Timber, Kingston");
@@ -15705,7 +15686,7 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
         private final RectF indRect = new RectF();
         private final RectF tempRect = new RectF();
 
-        private final String[] tabTitles = {"PATROL", "CONTACTS", "TOOLS"};
+        private final String[] tabTitles = {"PATROL", "CONTACTS", "TOOLS", "SETTINGS"};
         private float indicatorFloat = 0f;
         private ValueAnimator indAnimator;
         private boolean isTabScrubbing = false;
@@ -15776,10 +15757,10 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
                         isDragging = true;
                     }
                     if (isDragging) {
-                        float frac = Math.max(0f, Math.min(2f, (event.getX() / w) * 3f - 0.5f));
+                        float frac = Math.max(0f, Math.min(2f, (event.getX() / (w * 0.75f)) * 2f));
                         indicatorFloat = frac;
-                        int nearestTab = (int) Math.min(2, Math.max(0, Math.floor(event.getX() / (w / 3f))));
-                        if (nearestTab != lastHapticTab) {
+                        int nearestTab = (int) Math.min(2, Math.max(0, Math.floor(event.getX() / (w / 4f))));
+                        if (nearestTab != lastHapticTab && nearestTab <= 2) {
                             lastHapticTab = nearestTab;
                             MainActivity.this.hapticTick();
                         }
@@ -15791,9 +15772,16 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
                 case MotionEvent.ACTION_UP:
                 case MotionEvent.ACTION_CANCEL:
                     if (getParent() != null) getParent().requestDisallowInterceptTouchEvent(false);
+                    int tappedTab = (int) Math.min(3, Math.max(0, Math.floor(event.getX() / (w / 4f))));
+                    if (!isDragging && tappedTab == 3) {
+                        MainActivity.this.hapticClick();
+                        MainActivity.this.showSettingsDialog();
+                        invalidate();
+                        return true;
+                    }
                     int finalTab;
                     if (!isDragging) {
-                        finalTab = (int) Math.min(2, Math.max(0, Math.floor(event.getX() / (w / 3f))));
+                        finalTab = Math.min(2, tappedTab);
                     } else {
                         finalTab = (int) Math.min(2, Math.max(0, Math.round(indicatorFloat)));
                     }
@@ -15860,6 +15848,38 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
                     canvas.drawLine(cx - size * 0.38f, cy + size * 0.18f, cx + size * 0.38f, cy + size * 0.18f, iconPaint);
                     canvas.drawCircle(cx - size * 0.14f, cy + size * 0.18f, size * 0.12f, iconFillPaint);
                     break;
+
+                case 3: // Settings: Precision 6-Tooth Vector Gear
+                    float rOuter = size * 0.44f;
+                    float rInner = size * 0.32f;
+                    float rHole = size * 0.16f;
+                    canvas.drawCircle(cx, cy, rHole, iconPaint);
+                    iconPath.reset();
+                    int teeth = 6;
+                    for (int t = 0; t < teeth; t++) {
+                        double a1 = (t * 60.0 - 15) * Math.PI / 180.0;
+                        double a2 = (t * 60.0 - 8) * Math.PI / 180.0;
+                        double a3 = (t * 60.0 + 8) * Math.PI / 180.0;
+                        double a4 = (t * 60.0 + 15) * Math.PI / 180.0;
+
+                        float x1 = (float) (cx + rInner * Math.cos(a1));
+                        float y1 = (float) (cy + rInner * Math.sin(a1));
+                        float x2 = (float) (cx + rOuter * Math.cos(a2));
+                        float y2 = (float) (cy + rOuter * Math.sin(a2));
+                        float x3 = (float) (cx + rOuter * Math.cos(a3));
+                        float y3 = (float) (cy + rOuter * Math.sin(a3));
+                        float x4 = (float) (cx + rInner * Math.cos(a4));
+                        float y4 = (float) (cy + rInner * Math.sin(a4));
+
+                        if (t == 0) iconPath.moveTo(x1, y1);
+                        else iconPath.lineTo(x1, y1);
+                        iconPath.lineTo(x2, y2);
+                        iconPath.lineTo(x3, y3);
+                        iconPath.lineTo(x4, y4);
+                    }
+                    iconPath.close();
+                    canvas.drawPath(iconPath, iconPaint);
+                    break;
             }
         }
 
@@ -15877,7 +15897,7 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
             borderPaint.setColor(colLineSubtle);
             canvas.drawRoundRect(bgRect, dpf(22f), dpf(22f), borderPaint);
 
-            float segW = w / 3f;
+            float segW = w / 4f;
             float indPad = dp(4);
             float indX = indicatorFloat * segW + indPad;
             float indW = segW - indPad * 2;
@@ -15898,15 +15918,15 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
             }
             canvas.drawRoundRect(indRect, dpf(18f), dpf(18f), indicatorGlowPaint);
 
-            textPaint.setTextSize(dpf(9.5f));
-            float iconSize = dpf(17f);
+            textPaint.setTextSize(dpf(8.8f));
+            float iconSize = dpf(16f);
 
-            for (int i = 0; i < 3; i++) {
+            for (int i = 0; i < 4; i++) {
                 float segCenterX = i * segW + segW / 2f;
                 float dist = Math.abs(indicatorFloat - i);
 
                 int itemColor;
-                if (dist < 0.5f) {
+                if (i < 3 && dist < 0.5f) {
                     itemColor = colAccentInk;
                 } else {
                     itemColor = colMuted;
