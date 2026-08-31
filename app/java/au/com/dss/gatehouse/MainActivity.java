@@ -10741,7 +10741,7 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
         textCol.addView(title);
 
         TextView sub = new TextView(this);
-        sub.setText("Multi-Shift Historical Ledger · SPARK Cryptographic Chain");
+        sub.setText("Multi-Shift Occurrence Ledger · Real-Time Incident Tracking");
         sub.setTextColor(colMuted);
         sub.setTextSize(10.5f);
         textCol.addView(sub);
@@ -10769,7 +10769,7 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
 
         statRow.addView(buildMiniBadge("🌙 TONIGHT", tonightCount + " LOGS", colCyan));
         statRow.addView(buildMiniBadge("📚 ARCHIVES", (totalShifts - 1) + " PAST SHIFTS", colEmerald));
-        statRow.addView(buildMiniBadge("🔒 INTEGRITY", "CRYPTOGRAPHIC", colAccent));
+        statRow.addView(buildMiniBadge("🕒 ACTIVE SHIFT", "18:00 → 06:00", colAccent));
         card.addView(statRow);
 
         // Main Action Buttons
@@ -10890,12 +10890,12 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
         }
 
         // =========================================================================
-        // 1. UNIFIED SLEEK TOP HEADER BAR (Back | Title + Subtitle | Search + Mode + Export)
+        // 1. UNIFIED SLEEK TOP HEADER BAR
         // =========================================================================
         LinearLayout topBar = new LinearLayout(this);
         topBar.setOrientation(LinearLayout.HORIZONTAL);
         topBar.setGravity(Gravity.CENTER_VERTICAL);
-        topBar.setPadding(0, 0, 0, dp(8));
+        topBar.setPadding(0, 0, 0, dp(6));
 
         TextView btnBack = new TextView(this);
         btnBack.setText("← EXIT");
@@ -10939,59 +10939,55 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
 
         topBar.addView(titleCol);
 
-        // Search Toggle Button
-        final TextView btnSearchToggle = new TextView(this);
-        btnSearchToggle.setText(logbookSearchDrawerOpen ? "✕" : "🔍");
-        btnSearchToggle.setTextColor(logbookSearchDrawerOpen ? colAccent : colPale);
-        btnSearchToggle.setTextSize(12f);
-        btnSearchToggle.setPadding(dp(8), dp(6), dp(8), dp(6));
-        btnSearchToggle.setBackground(rounded(logbookSearchDrawerOpen ? 0x33E5A93C : 0x1AFFFFFF, dp(8)));
+        TextView btnRefresh = new TextView(this);
+        btnRefresh.setText("↻");
+        btnRefresh.setTextColor(colPale);
+        btnRefresh.setTextSize(14f);
+        btnRefresh.setPadding(dp(8), dp(4), dp(8), dp(4));
+        btnRefresh.setBackground(rounded(0x1AFFFFFF, dp(8)));
+        topBar.addView(btnRefresh);
 
-        // View Mode Toggle Button
-        final TextView btnModeToggle = new TextView(this);
-        btnModeToggle.setText(logbookRuledViewMode ? "📋 FEED" : "📄 RULED");
-        btnModeToggle.setTextColor(logbookRuledViewMode ? colCyan : 0xFFFDE047);
-        btnModeToggle.setTextSize(10f);
-        btnModeToggle.setTypeface(Typeface.create(Typeface.MONOSPACE, Typeface.BOLD));
-        btnModeToggle.setPadding(dp(8), dp(6), dp(8), dp(6));
-        btnModeToggle.setBackground(rounded(logbookRuledViewMode ? 0x2206B6D4 : 0x22FDE047, dp(8)));
-        LinearLayout.LayoutParams mpl = new LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT);
-        mpl.leftMargin = dp(4);
-        btnModeToggle.setLayoutParams(mpl);
-
-        // Export Button
-        TextView btnShare = new TextView(this);
-        btnShare.setText("📤");
-        btnShare.setTextColor(colAccentInk);
-        btnShare.setTextSize(12f);
-        btnShare.setPadding(dp(8), dp(6), dp(8), dp(6));
-        btnShare.setBackground(pressable(colAccent, dp(8)));
-        LinearLayout.LayoutParams shlp = new LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT);
-        shlp.leftMargin = dp(4);
-        btnShare.setLayoutParams(shlp);
-        btnShare.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                hapticHeavyClick();
-                shareHandoverReport();
-            }
-        });
-
-        topBar.addView(btnSearchToggle);
-        topBar.addView(btnModeToggle);
-        topBar.addView(btnShare);
         contentCard.addView(topBar);
 
         // =========================================================================
-        // 2. SEGMENTED SHIFT SELECTOR (Single Clean Row)
+        // 2. LIVE OFFICER SHIFT COMMAND CARD
+        // =========================================================================
+        LinearLayout shiftCard = new LinearLayout(this);
+        shiftCard.setOrientation(LinearLayout.HORIZONTAL);
+        shiftCard.setGravity(Gravity.CENTER_VERTICAL);
+        shiftCard.setBackground(rounded(0xFF1E293B, dp(10)));
+        shiftCard.setPadding(dp(10), dp(8), dp(10), dp(8));
+        LinearLayout.LayoutParams sclp = new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+        sclp.bottomMargin = dp(6);
+        shiftCard.setLayoutParams(sclp);
+
+        TextView tvOfficer = new TextView(this);
+        tvOfficer.setText("🛡️ L. DOHERTY #41207");
+        tvOfficer.setTextColor(colAccent);
+        tvOfficer.setTextSize(10.5f);
+        tvOfficer.setTypeface(Typeface.create(Typeface.MONOSPACE, Typeface.BOLD));
+        LinearLayout.LayoutParams oflp = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
+        tvOfficer.setLayoutParams(oflp);
+        shiftCard.addView(tvOfficer);
+
+        TextView tvShiftTime = new TextView(this);
+        tvShiftTime.setText("🌙 18:00 → 06:00 · ACTIVE");
+        tvShiftTime.setTextColor(colCyan);
+        tvShiftTime.setTextSize(9.5f);
+        tvShiftTime.setTypeface(Typeface.create(Typeface.MONOSPACE, Typeface.BOLD));
+        shiftCard.addView(tvShiftTime);
+
+        contentCard.addView(shiftCard);
+
+        // =========================================================================
+        // 3. SEGMENTED SHIFT SELECTOR
         // =========================================================================
         final HorizontalScrollView shiftHsv = new HorizontalScrollView(this);
         shiftHsv.setHorizontalScrollBarEnabled(false);
         final LinearLayout shiftRow = new LinearLayout(this);
         shiftRow.setOrientation(LinearLayout.HORIZONTAL);
-        shiftRow.setPadding(0, 0, 0, dp(8));
+        shiftRow.setPadding(0, 0, 0, dp(6));
 
         final List<LogbookManager.ShiftRecord> shifts = logMgr.getAllShifts();
         final FrameLayout mainBodyContainer = new FrameLayout(this);
@@ -11013,8 +11009,8 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
                 chipTonight.setTextColor(isTonight ? 0xFF080D1A : colCyan);
                 chipTonight.setTextSize(10f);
                 chipTonight.setTypeface(Typeface.create(Typeface.MONOSPACE, Typeface.BOLD));
-                chipTonight.setPadding(dp(12), dp(6), dp(12), dp(6));
-                chipTonight.setBackground(rounded(isTonight ? colCyan : 0x2206B6D4, dp(8)));
+                chipTonight.setPadding(dp(10), dp(5), dp(10), dp(5));
+                chipTonight.setBackground(rounded(isTonight ? colCyan : 0x2206B6D4, dp(6)));
                 chipTonight.setOnClickListener(new View.OnClickListener() {
                     @Override
                     public void onClick(View v) {
@@ -11027,7 +11023,7 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
                 });
                 LinearLayout.LayoutParams tlp = new LinearLayout.LayoutParams(
                         LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT);
-                tlp.rightMargin = dp(6);
+                tlp.rightMargin = dp(4);
                 chipTonight.setLayoutParams(tlp);
                 shiftRow.addView(chipTonight);
 
@@ -11040,8 +11036,8 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
                     chip.setTextColor(isSelected ? 0xFF080D1A : colPale);
                     chip.setTextSize(10f);
                     chip.setTypeface(Typeface.create(Typeface.MONOSPACE, Typeface.BOLD));
-                    chip.setPadding(dp(12), dp(6), dp(12), dp(6));
-                    chip.setBackground(rounded(isSelected ? colEmerald : 0x1AFFFFFF, dp(8)));
+                    chip.setPadding(dp(10), dp(5), dp(10), dp(5));
+                    chip.setBackground(rounded(isSelected ? colEmerald : 0x1AFFFFFF, dp(6)));
                     chip.setOnClickListener(new View.OnClickListener() {
                         @Override
                         public void onClick(View v) {
@@ -11054,7 +11050,7 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
                     });
                     LinearLayout.LayoutParams clp = new LinearLayout.LayoutParams(
                             LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT);
-                    clp.rightMargin = dp(6);
+                    clp.rightMargin = dp(4);
                     chip.setLayoutParams(clp);
                     shiftRow.addView(chip);
                 }
@@ -11066,8 +11062,8 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
                 chipAll.setTextColor(allSelected ? colAccentInk : colMuted);
                 chipAll.setTextSize(10f);
                 chipAll.setTypeface(Typeface.create(Typeface.MONOSPACE, Typeface.BOLD));
-                chipAll.setPadding(dp(12), dp(6), dp(12), dp(6));
-                chipAll.setBackground(rounded(allSelected ? colAccent : 0x1AFFFFFF, dp(8)));
+                chipAll.setPadding(dp(10), dp(5), dp(10), dp(5));
+                chipAll.setBackground(rounded(allSelected ? colAccent : 0x1AFFFFFF, dp(6)));
                 chipAll.setOnClickListener(new View.OnClickListener() {
                     @Override
                     public void onClick(View v) {
@@ -11086,25 +11082,24 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
         contentCard.addView(shiftHsv);
 
         // =========================================================================
-        // 3. COLLAPSIBLE ON-DEMAND SEARCH & CATEGORY FILTER DRAWER
+        // 4. ALWAYS-VISIBLE LIVE SEARCH & CATEGORY FILTER BAR
         // =========================================================================
-        final LinearLayout searchDrawer = new LinearLayout(this);
-        searchDrawer.setOrientation(LinearLayout.VERTICAL);
-        searchDrawer.setVisibility(logbookSearchDrawerOpen ? View.VISIBLE : View.GONE);
-        searchDrawer.setBackground(rounded(colPanel2, dp(12)));
-        searchDrawer.setPadding(dp(10), dp(10), dp(10), dp(10));
-        LinearLayout.LayoutParams sdlp = new LinearLayout.LayoutParams(
+        LinearLayout searchBox = new LinearLayout(this);
+        searchBox.setOrientation(LinearLayout.VERTICAL);
+        searchBox.setBackground(rounded(0xFF131C2E, dp(10)));
+        searchBox.setPadding(dp(8), dp(6), dp(8), dp(6));
+        LinearLayout.LayoutParams sblp = new LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
-        sdlp.bottomMargin = dp(8);
-        searchDrawer.setLayoutParams(sdlp);
+        sblp.bottomMargin = dp(6);
+        searchBox.setLayoutParams(sblp);
 
         final EditText searchField = new EditText(this);
-        searchField.setHint("🔍 Search occurrences, regos, lot lockups, pumps...");
+        searchField.setHint("🔍 Search occurrences, regos, lot checks, pumps...");
         searchField.setHintTextColor(colMuted);
         searchField.setTextColor(colPale);
-        searchField.setTextSize(11.5f);
-        searchField.setBackground(rounded(0x22FFFFFF, dp(8)));
-        searchField.setPadding(dp(10), dp(7), dp(10), dp(7));
+        searchField.setTextSize(11f);
+        searchField.setBackground(rounded(0x18FFFFFF, dp(6)));
+        searchField.setPadding(dp(8), dp(6), dp(8), dp(6));
         searchField.setSingleLine(true);
         searchField.addTextChangedListener(new android.text.TextWatcher() {
             @Override
@@ -11117,17 +11112,17 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
             @Override
             public void afterTextChanged(android.text.Editable s) {}
         });
-        searchDrawer.addView(searchField);
+        searchBox.addView(searchField);
 
-        // Category Pills inside search drawer
+        // Category Pills inside search box
         HorizontalScrollView catHsv = new HorizontalScrollView(this);
         catHsv.setHorizontalScrollBarEnabled(false);
         final LinearLayout catRow = new LinearLayout(this);
         catRow.setOrientation(LinearLayout.HORIZONTAL);
-        catRow.setPadding(0, dp(8), 0, 0);
+        catRow.setPadding(0, dp(6), 0, 0);
 
         final String[][] categories = {
-                {"ALL", "ALL"},
+                {"ALL", "All"},
                 {"PATROL", "🛡️ Patrols"},
                 {"LOT_LOCKUP", "🏭 Lots"},
                 {"FIRE_PUMP", "💧 Pumps"},
@@ -11149,10 +11144,10 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
                     TextView chip = new TextView(MainActivity.this);
                     chip.setText(catLabel);
                     chip.setTextColor(isSelected ? colAccentInk : colMuted);
-                    chip.setTextSize(9.5f);
+                    chip.setTextSize(9f);
                     chip.setTypeface(Typeface.create(Typeface.MONOSPACE, Typeface.BOLD));
-                    chip.setPadding(dp(8), dp(4), dp(8), dp(4));
-                    chip.setBackground(rounded(isSelected ? colAccent : 0x22FFFFFF, dp(6)));
+                    chip.setPadding(dp(7), dp(3), dp(7), dp(3));
+                    chip.setBackground(rounded(isSelected ? colAccent : 0x1AFFFFFF, dp(5)));
                     chip.setOnClickListener(new View.OnClickListener() {
                         @Override
                         public void onClick(View v) {
@@ -11164,7 +11159,7 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
                     });
                     LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(
                             LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT);
-                    lp.rightMargin = dp(4);
+                    lp.rightMargin = dp(3);
                     chip.setLayoutParams(lp);
                     catRow.addView(chip);
                 }
@@ -11172,70 +11167,52 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
         };
         buildCatPills.run();
         catHsv.addView(catRow);
-        searchDrawer.addView(catHsv);
-        contentCard.addView(searchDrawer);
+        searchBox.addView(catHsv);
+        contentCard.addView(searchBox);
 
-        btnSearchToggle.setOnClickListener(new View.OnClickListener() {
+        btnRefresh.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
                 hapticClick();
-                logbookSearchDrawerOpen = !logbookSearchDrawerOpen;
-                searchDrawer.setVisibility(logbookSearchDrawerOpen ? View.VISIBLE : View.GONE);
-                btnSearchToggle.setText(logbookSearchDrawerOpen ? "✕" : "🔍");
-                btnSearchToggle.setTextColor(logbookSearchDrawerOpen ? colAccent : colPale);
-                btnSearchToggle.setBackground(rounded(logbookSearchDrawerOpen ? 0x33E5A93C : 0x1AFFFFFF, dp(8)));
-                if (!logbookSearchDrawerOpen && !logbookSearchQuery.isEmpty()) {
-                    logbookSearchQuery = "";
-                    searchField.setText("");
-                    if (refreshContent[0] != null) refreshContent[0].run();
-                }
-            }
-        });
-
-        btnModeToggle.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                hapticClick();
-                logbookRuledViewMode = !logbookRuledViewMode;
-                btnModeToggle.setText(logbookRuledViewMode ? "📋 FEED" : "📄 RULED");
-                btnModeToggle.setTextColor(logbookRuledViewMode ? colCyan : 0xFFFDE047);
-                btnModeToggle.setBackground(rounded(logbookRuledViewMode ? 0x2206B6D4 : 0x22FDE047, dp(8)));
+                logMgr.syncFromCore(Core.entryCount());
+                buildShiftSegment.run();
+                buildCatPills.run();
                 if (refreshContent[0] != null) refreshContent[0].run();
+                Toast.makeText(MainActivity.this, "✓ Logbook ledger synced", Toast.LENGTH_SHORT).show();
             }
         });
 
         // =========================================================================
-        // 4. MAIN BODY CONTAINER & REFRESH LOGIC
+        // 5. MAIN TIMELINE LEDGER & REFRESH LOGIC
         // =========================================================================
         refreshContent[0] = new Runnable() {
             @Override
             public void run() {
                 mainBodyContainer.removeAllViews();
-                if (logbookRuledViewMode) {
-                    mainBodyContainer.addView(buildLogbookRuledSheetView(isCarbonCopyMode));
-                } else {
-                    mainBodyContainer.addView(buildLogbookFeedView());
-                }
+                mainBodyContainer.addView(buildLogbookFeedView());
             }
         };
         refreshContent[0].run();
         contentCard.addView(mainBodyContainer);
 
         // =========================================================================
-        // 5. SLEEK FLOATING ACTION CAPSULE (Bottom Bar)
+        // 6. IN-LEDGER BOTTOM ACTION DOCK (+ Quick Occurrence Logging)
         // =========================================================================
         LinearLayout floatBarWrapper = new LinearLayout(this);
         floatBarWrapper.setOrientation(LinearLayout.HORIZONTAL);
         floatBarWrapper.setGravity(Gravity.CENTER);
-        floatBarWrapper.setPadding(0, dp(8), 0, 0);
+        floatBarWrapper.setPadding(0, dp(6), 0, 0);
 
         LinearLayout floatBar = new LinearLayout(this);
         floatBar.setOrientation(LinearLayout.HORIZONTAL);
         floatBar.setGravity(Gravity.CENTER_VERTICAL);
-        floatBar.setBackground(rounded(0xEE1E293B, dp(24)));
-        floatBar.setPadding(dp(8), dp(4), dp(8), dp(4));
+        floatBar.setBackground(rounded(0xFF1E293B, dp(12)));
+        floatBar.setPadding(dp(6), dp(4), dp(6), dp(4));
+        LinearLayout.LayoutParams fblp = new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+        floatBar.setLayoutParams(fblp);
 
-        TextView btnAddNote = actionPillButton("📝 Note", colPale);
+        TextView btnAddNote = actionPillButton("📝 Note", colAccent);
         btnAddNote.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
@@ -11243,6 +11220,8 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
                 showModernNotesSheet();
             }
         });
+        LinearLayout.LayoutParams bnl = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
+        btnAddNote.setLayoutParams(bnl);
         floatBar.addView(btnAddNote);
 
         TextView btnAddPhoto = actionPillButton("📷 Photo", 0xFFA855F7);
@@ -11253,6 +11232,9 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
                 checkAndLaunchFastCamera(null);
             }
         });
+        LinearLayout.LayoutParams bpl = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
+        bpl.leftMargin = dp(4);
+        btnAddPhoto.setLayoutParams(bpl);
         floatBar.addView(btnAddPhoto);
 
         TextView btnAddRego = actionPillButton("🚗 Rego", 0xFFF59E0B);
@@ -11263,6 +11245,9 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
                 showRegoPlateEntryModal();
             }
         });
+        LinearLayout.LayoutParams brl = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
+        brl.leftMargin = dp(4);
+        btnAddRego.setLayoutParams(brl);
         floatBar.addView(btnAddRego);
 
         TextView btnAddIncident = actionPillButton("🚨 Incident", colCrimson);
@@ -11273,6 +11258,9 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
                 showModernIncidentSheet();
             }
         });
+        LinearLayout.LayoutParams bil = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
+        bil.leftMargin = dp(4);
+        btnAddIncident.setLayoutParams(bil);
         floatBar.addView(btnAddIncident);
 
         floatBarWrapper.addView(floatBar);
