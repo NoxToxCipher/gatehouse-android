@@ -3713,23 +3713,23 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
     // =========================================================================
 
     private void showBadukGameDialog() {
-        final LinearLayout box = dialogContainer("⚪⚫ Baduk (Go)", "9×9 GO & TSUMEGO", colAccent);
+        final LinearLayout box = dialogContainer("⚪⚫ Baduk (Go / Weiqi)", "JAPANESE HON-KAYA GOBAN", colAccent);
 
         final TextView statusLbl = new TextView(this);
-        statusLbl.setText("● Black to play · 9×9 Match");
+        statusLbl.setText("● Black's Turn · 9×9 Match");
         statusLbl.setTextColor(colPale);
         statusLbl.setTextSize(13);
         statusLbl.setTypeface(Typeface.create(Typeface.MONOSPACE, Typeface.BOLD));
-        statusLbl.setPadding(0, dp(4), 0, dp(8));
+        statusLbl.setPadding(0, dp(4), 0, dp(6));
         box.addView(statusLbl);
 
-        final BadukBoardView badukView = new BadukBoardView(this);
+        final BadukGameView badukView = new BadukGameView(this);
         LinearLayout.LayoutParams bvl = new LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT, dp(320));
+                LinearLayout.LayoutParams.MATCH_PARENT, dp(330));
         badukView.setLayoutParams(bvl);
         box.addView(badukView);
 
-        badukView.setStatusListener(new BadukBoardView.StatusListener() {
+        badukView.setStatusListener(new BadukGameView.StatusListener() {
             @Override
             public void onStatusChanged(String statusText, int textColor) {
                 statusLbl.setText(statusText);
@@ -3737,53 +3737,112 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
             }
         });
 
-        // Mode switch row
+        // 1. Board Size Selector Row (9x9, 13x13, 19x19)
+        LinearLayout sizeRow = new LinearLayout(this);
+        sizeRow.setOrientation(LinearLayout.HORIZONTAL);
+        sizeRow.setPadding(0, dp(6), 0, 0);
+
+        final TextView btn9x9 = actionButton("9×9 Fast", colAccent, colAccentInk);
+        final TextView btn13x13 = actionButton("13×13 Mid", colPanel2, colPale);
+        final TextView btn19x19 = actionButton("19×19 Pro", colPanel2, colPale);
+
+        View.OnClickListener sizeClickListener = new View.OnClickListener() {
+            public void onClick(View v) {
+                hapticClick();
+                if (v == btn9x9) {
+                    badukView.setBoardSize(9);
+                    btn9x9.setBackground(rounded(colAccent, dp(8))); btn9x9.setTextColor(colAccentInk);
+                    btn13x13.setBackground(rounded(colPanel2, dp(8))); btn13x13.setTextColor(colPale);
+                    btn19x19.setBackground(rounded(colPanel2, dp(8))); btn19x19.setTextColor(colPale);
+                } else if (v == btn13x13) {
+                    badukView.setBoardSize(13);
+                    btn13x13.setBackground(rounded(colAccent, dp(8))); btn13x13.setTextColor(colAccentInk);
+                    btn9x9.setBackground(rounded(colPanel2, dp(8))); btn9x9.setTextColor(colPale);
+                    btn19x19.setBackground(rounded(colPanel2, dp(8))); btn19x19.setTextColor(colPale);
+                } else if (v == btn19x19) {
+                    badukView.setBoardSize(19);
+                    btn19x19.setBackground(rounded(colAccent, dp(8))); btn19x19.setTextColor(colAccentInk);
+                    btn9x9.setBackground(rounded(colPanel2, dp(8))); btn9x9.setTextColor(colPale);
+                    btn13x13.setBackground(rounded(colPanel2, dp(8))); btn13x13.setTextColor(colPale);
+                }
+            }
+        };
+
+        btn9x9.setOnClickListener(sizeClickListener);
+        btn13x13.setOnClickListener(sizeClickListener);
+        btn19x19.setOnClickListener(sizeClickListener);
+
+        LinearLayout.LayoutParams slp1 = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
+        slp1.rightMargin = dp(3); btn9x9.setLayoutParams(slp1); sizeRow.addView(btn9x9);
+
+        LinearLayout.LayoutParams slp2 = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
+        slp2.leftMargin = dp(3); slp2.rightMargin = dp(3); btn13x13.setLayoutParams(slp2); sizeRow.addView(btn13x13);
+
+        LinearLayout.LayoutParams slp3 = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
+        slp3.leftMargin = dp(3); btn19x19.setLayoutParams(slp3); sizeRow.addView(btn19x19);
+        box.addView(sizeRow);
+
+        // 2. Mode Selector Row
         LinearLayout modeRow = new LinearLayout(this);
         modeRow.setOrientation(LinearLayout.HORIZONTAL);
-        modeRow.setPadding(0, dp(8), 0, 0);
+        modeRow.setPadding(0, dp(6), 0, 0);
 
-        final TextView btnBotMatch = actionButton("🤖 vs Bot Match", colAccent, colAccentInk);
-        final TextView btnTsumego = actionButton("🧩 Tsumego Puzzles", colPanel2, colPale);
+        final TextView btnBotMatch = actionButton("🤖 vs Bot", colAccent, colAccentInk);
+        final TextView btnTsumego = actionButton("🧩 Tsumego (8)", colPanel2, colPale);
+        final TextView btn2Player = actionButton("👥 2-Player", colPanel2, colPale);
 
-        btnBotMatch.setOnClickListener(new View.OnClickListener() {
+        View.OnClickListener modeClickListener = new View.OnClickListener() {
             public void onClick(View v) {
                 hapticClick();
-                badukView.setMode(0);
-                btnBotMatch.setBackground(rounded(colAccent, dp(8)));
-                btnBotMatch.setTextColor(colAccentInk);
-                btnTsumego.setBackground(rounded(colPanel2, dp(8)));
-                btnTsumego.setTextColor(colPale);
+                if (v == btnBotMatch) {
+                    badukView.setMode(0);
+                    btnBotMatch.setBackground(rounded(colAccent, dp(8))); btnBotMatch.setTextColor(colAccentInk);
+                    btnTsumego.setBackground(rounded(colPanel2, dp(8))); btnTsumego.setTextColor(colPale);
+                    btn2Player.setBackground(rounded(colPanel2, dp(8))); btn2Player.setTextColor(colPale);
+                } else if (v == btnTsumego) {
+                    badukView.setMode(1);
+                    btnTsumego.setBackground(rounded(colAccent, dp(8))); btnTsumego.setTextColor(colAccentInk);
+                    btnBotMatch.setBackground(rounded(colPanel2, dp(8))); btnBotMatch.setTextColor(colPale);
+                    btn2Player.setBackground(rounded(colPanel2, dp(8))); btn2Player.setTextColor(colPale);
+                } else if (v == btn2Player) {
+                    badukView.setMode(2);
+                    btn2Player.setBackground(rounded(colAccent, dp(8))); btn2Player.setTextColor(colAccentInk);
+                    btnBotMatch.setBackground(rounded(colPanel2, dp(8))); btnBotMatch.setTextColor(colPale);
+                    btnTsumego.setBackground(rounded(colPanel2, dp(8))); btnTsumego.setTextColor(colPale);
+                }
             }
-        });
+        };
 
-        btnTsumego.setOnClickListener(new View.OnClickListener() {
-            public void onClick(View v) {
-                hapticClick();
-                badukView.setMode(1);
-                btnTsumego.setBackground(rounded(colAccent, dp(8)));
-                btnTsumego.setTextColor(colAccentInk);
-                btnBotMatch.setBackground(rounded(colPanel2, dp(8)));
-                btnBotMatch.setTextColor(colPale);
-            }
-        });
+        btnBotMatch.setOnClickListener(modeClickListener);
+        btnTsumego.setOnClickListener(modeClickListener);
+        btn2Player.setOnClickListener(modeClickListener);
 
         LinearLayout.LayoutParams mlp1 = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
-        mlp1.rightMargin = dp(4);
-        btnBotMatch.setLayoutParams(mlp1);
-        modeRow.addView(btnBotMatch);
+        mlp1.rightMargin = dp(3); btnBotMatch.setLayoutParams(mlp1); modeRow.addView(btnBotMatch);
 
         LinearLayout.LayoutParams mlp2 = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
-        mlp2.leftMargin = dp(4);
-        btnTsumego.setLayoutParams(mlp2);
-        modeRow.addView(btnTsumego);
+        mlp2.leftMargin = dp(3); mlp2.rightMargin = dp(3); btnTsumego.setLayoutParams(mlp2); modeRow.addView(btnTsumego);
+
+        LinearLayout.LayoutParams mlp3 = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
+        mlp3.leftMargin = dp(3); btn2Player.setLayoutParams(mlp3); modeRow.addView(btn2Player);
         box.addView(modeRow);
 
-        // Control actions row
+        // 3. Actions Row: Undo, Pass, Territory, Reset, Next
         LinearLayout ctrlRow = new LinearLayout(this);
         ctrlRow.setOrientation(LinearLayout.HORIZONTAL);
-        ctrlRow.setPadding(0, dp(8), 0, 0);
+        ctrlRow.setPadding(0, dp(6), 0, 0);
 
-        TextView btnPass = actionButton("Pass Turn", colLine, colPale);
+        TextView btnUndo = actionButton("↶ Undo", colLine, colPale);
+        btnUndo.setOnClickListener(new View.OnClickListener() {
+            public void onClick(View v) {
+                hapticClick();
+                badukView.undoMove();
+            }
+        });
+        LinearLayout.LayoutParams ulp = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
+        ulp.rightMargin = dp(2); btnUndo.setLayoutParams(ulp); ctrlRow.addView(btnUndo);
+
+        TextView btnPass = actionButton("Pass", colLine, colPale);
         btnPass.setOnClickListener(new View.OnClickListener() {
             public void onClick(View v) {
                 hapticClick();
@@ -3791,24 +3850,19 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
             }
         });
         LinearLayout.LayoutParams plp = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
-        plp.rightMargin = dp(4);
-        btnPass.setLayoutParams(plp);
-        ctrlRow.addView(btnPass);
+        plp.leftMargin = dp(2); plp.rightMargin = dp(2); btnPass.setLayoutParams(plp); ctrlRow.addView(btnPass);
 
-        TextView btnReset = actionButton("↻ Reset", colLine, colPale);
-        btnReset.setOnClickListener(new View.OnClickListener() {
+        TextView btnTerritory = actionButton("📊 Score", colLine, colCyan);
+        btnTerritory.setOnClickListener(new View.OnClickListener() {
             public void onClick(View v) {
                 hapticClick();
-                badukView.resetGame();
+                badukView.toggleTerritoryView();
             }
         });
-        LinearLayout.LayoutParams rlp = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
-        rlp.leftMargin = dp(4);
-        rlp.rightMargin = dp(4);
-        btnReset.setLayoutParams(rlp);
-        ctrlRow.addView(btnReset);
+        LinearLayout.LayoutParams tlp = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
+        tlp.leftMargin = dp(2); tlp.rightMargin = dp(2); btnTerritory.setLayoutParams(tlp); ctrlRow.addView(btnTerritory);
 
-        TextView btnNextPuzzle = actionButton("Next ➔", colLine, colCyan);
+        TextView btnNextPuzzle = actionButton("Next ➔", colLine, 0xFFFFD166);
         btnNextPuzzle.setOnClickListener(new View.OnClickListener() {
             public void onClick(View v) {
                 hapticClick();
@@ -3816,9 +3870,7 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
             }
         });
         LinearLayout.LayoutParams nlp = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
-        nlp.leftMargin = dp(4);
-        btnNextPuzzle.setLayoutParams(nlp);
-        ctrlRow.addView(btnNextPuzzle);
+        nlp.leftMargin = dp(2); btnNextPuzzle.setLayoutParams(nlp); ctrlRow.addView(btnNextPuzzle);
         box.addView(ctrlRow);
 
         final Dialog dlg = createDialogSheet(box);
@@ -3832,7 +3884,7 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
         });
         LinearLayout.LayoutParams clp = new LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
-        clp.topMargin = dp(10);
+        clp.topMargin = dp(8);
         btnClose.setLayoutParams(clp);
         box.addView(btnClose);
 
@@ -17345,541 +17397,7 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
     }
 
     // =========================================================================
-    // ⚪⚫ BADUK (GO / TSUMEGO) INTERACTIVE CANVAS VIEW & BOT ENGINE
-    // =========================================================================
 
-    public static class BadukBoardView extends View {
-        public interface StatusListener {
-            void onStatusChanged(String text, int color);
-        }
-
-        private StatusListener statusListener;
-        private final Paint boardPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
-        private final Paint gridPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
-        private final Paint textPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
-        private final Paint blackStonePaint = new Paint(Paint.ANTI_ALIAS_FLAG);
-        private final Paint whiteStonePaint = new Paint(Paint.ANTI_ALIAS_FLAG);
-        private final Paint stoneHighlightPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
-        private final Paint lastMovePaint = new Paint(Paint.ANTI_ALIAS_FLAG);
-        private final Paint starPointPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
-        private final RectF boardRect = new RectF();
-
-        private final int[][] board = new int[9][9]; // 0: Empty, 1: Black, 2: White
-        private int currentTurn = 1; // 1 = Black, 2 = White
-        private int blackCaptures = 0;
-        private int whiteCaptures = 0;
-        private int lastMoveX = -1;
-        private int lastMoveY = -1;
-        private int mode = 0; // 0 = vs Bot, 1 = Tsumego Puzzles
-        private int puzzleIndex = 0;
-        private boolean puzzleSolved = false;
-
-        private float dpf(float v) {
-            return v * getResources().getDisplayMetrics().density;
-        }
-
-        public BadukBoardView(Context context) {
-            super(context);
-            setClickable(true);
-            setFocusable(true);
-
-            boardPaint.setColor(0xFF1E2638);
-            boardPaint.setStyle(Paint.Style.FILL);
-
-            gridPaint.setColor(0xFF475569);
-            gridPaint.setStrokeWidth(dpf(1.2f));
-
-            starPointPaint.setColor(0xFFE8A33D);
-            starPointPaint.setStyle(Paint.Style.FILL);
-
-            textPaint.setColor(0xFF94A3B8);
-            textPaint.setTextSize(dpf(9f));
-            textPaint.setTextAlign(Paint.Align.CENTER);
-            textPaint.setTypeface(Typeface.create(Typeface.MONOSPACE, Typeface.BOLD));
-
-            blackStonePaint.setColor(0xFF0F172A);
-            blackStonePaint.setStyle(Paint.Style.FILL);
-
-            whiteStonePaint.setColor(0xFFF1F5F9);
-            whiteStonePaint.setStyle(Paint.Style.FILL);
-
-            stoneHighlightPaint.setColor(0x88FFFFFF);
-            stoneHighlightPaint.setStyle(Paint.Style.FILL);
-
-            lastMovePaint.setColor(0xFFFFD166);
-            lastMovePaint.setStyle(Paint.Style.STROKE);
-            lastMovePaint.setStrokeWidth(dpf(2f));
-
-            resetGame();
-        }
-
-        public void setStatusListener(StatusListener listener) {
-            this.statusListener = listener;
-            updateStatus();
-        }
-
-        public void setMode(int m) {
-            this.mode = m;
-            if (mode == 1) {
-                loadPuzzle(puzzleIndex);
-            } else {
-                resetGame();
-            }
-        }
-
-        public void resetGame() {
-            for (int r = 0; r < 9; r++) {
-                for (int c = 0; c < 9; c++) {
-                    board[r][c] = 0;
-                }
-            }
-            currentTurn = 1;
-            blackCaptures = 0;
-            whiteCaptures = 0;
-            lastMoveX = -1;
-            lastMoveY = -1;
-            puzzleSolved = false;
-            updateStatus();
-            invalidate();
-        }
-
-        public void passTurn() {
-            currentTurn = (currentTurn == 1) ? 2 : 1;
-            updateStatus();
-            if (mode == 0 && currentTurn == 2) {
-                postDelayed(new Runnable() {
-                    public void run() { botPlayMove(); }
-                }, 350);
-            }
-        }
-
-        public void nextPuzzle() {
-            puzzleIndex = (puzzleIndex + 1) % 6;
-            loadPuzzle(puzzleIndex);
-        }
-
-        private static class BadukPuzzle {
-            String title;
-            int[][] initialStones; // [x, y, color]
-            int targetX, targetY;
-
-            BadukPuzzle(String title, int[][] stones, int targetX, int targetY) {
-                this.title = title;
-                this.initialStones = stones;
-                this.targetX = targetX;
-                this.targetY = targetY;
-            }
-        }
-
-        private static final BadukPuzzle[] PUZZLES = {
-            new BadukPuzzle("1. Corner Two-Eyes Life", new int[][]{
-                {0,0,1}, {0,2,1}, {1,0,1}, {1,2,1}, {2,1,1}, {0,3,2}, {1,3,2}, {2,3,2}, {3,2,2}, {3,1,2}, {3,0,2}
-            }, 0, 1),
-            new BadukPuzzle("2. Snapback Tesuji", new int[][]{
-                {2,2,1}, {3,1,1}, {3,3,1}, {4,2,1}, {2,1,2}, {2,3,2}, {3,0,2}, {3,4,2}, {4,1,2}, {4,3,2}, {3,2,2}
-            }, 3, 2),
-            new BadukPuzzle("3. Crane's Nest Tesuji", new int[][]{
-                {1,1,2}, {2,1,2}, {3,1,2}, {1,2,1}, {3,2,1}, {2,3,1}, {0,1,1}, {4,1,1}
-            }, 2, 2),
-            new BadukPuzzle("4. Under the Stones", new int[][]{
-                {0,1,1}, {1,1,1}, {2,1,1}, {0,2,2}, {1,2,2}, {2,2,2}, {0,0,2}, {3,1,2}
-            }, 1, 0),
-            new BadukPuzzle("5. False Eye Squeeze", new int[][]{
-                {5,5,2}, {5,7,2}, {6,6,2}, {7,5,2}, {7,7,2}, {4,6,1}, {8,6,1}, {6,4,1}, {6,8,1}
-            }, 6, 6),
-            new BadukPuzzle("6. Belly Attachment", new int[][]{
-                {1,4,2}, {2,4,2}, {3,4,2}, {1,5,1}, {3,5,1}, {0,4,1}, {4,4,1}
-            }, 2, 5)
-        };
-
-        private void loadPuzzle(int idx) {
-            resetGame();
-            if (idx < 0 || idx >= PUZZLES.length) idx = 0;
-            BadukPuzzle p = PUZZLES[idx];
-            for (int[] s : p.initialStones) {
-                board[s[1]][s[0]] = s[2];
-            }
-            currentTurn = 1;
-            updateStatus();
-            invalidate();
-        }
-
-        private void updateStatus() {
-            if (statusListener == null) return;
-            if (mode == 1) {
-                BadukPuzzle p = PUZZLES[puzzleIndex];
-                if (puzzleSolved) {
-                    statusListener.onStatusChanged("✓ " + p.title + " SOLVED! Brilliant move.", 0xFF10B981);
-                } else {
-                    statusListener.onStatusChanged("● Black to play · " + p.title, 0xFFFFD166);
-                }
-            } else {
-                String turn = (currentTurn == 1) ? "● Black's Turn" : "○ White's Turn (Bot)";
-                statusListener.onStatusChanged(turn + " · Captures: ● " + blackCaptures + " | ○ " + whiteCaptures, 0xFFE2E8F0);
-            }
-        }
-
-        private boolean playMove(int x, int y) {
-            if (x < 0 || x >= 9 || y < 0 || y >= 9) return false;
-            if (board[y][x] != 0) return false;
-
-            if (mode == 1) {
-                BadukPuzzle p = PUZZLES[puzzleIndex];
-                if (x == p.targetX && y == p.targetY) {
-                    board[y][x] = 1;
-                    lastMoveX = x;
-                    lastMoveY = y;
-                    puzzleSolved = true;
-                    updateStatus();
-                    invalidate();
-                    return true;
-                } else {
-                    if (statusListener != null) {
-                        statusListener.onStatusChanged("✗ Incorrect. Try a different tesuji!", 0xFFF87171);
-                    }
-                    return false;
-                }
-            }
-
-            int color = currentTurn;
-            int opponent = (color == 1) ? 2 : 1;
-
-            board[y][x] = color;
-
-            // Check neighbor captures
-            int capturedCount = 0;
-            int[][] dirs = {{0,1}, {0,-1}, {1,0}, {-1,0}};
-            for (int[] d : dirs) {
-                int nx = x + d[0];
-                int ny = y + d[1];
-                if (nx >= 0 && nx < 9 && ny >= 0 && ny < 9 && board[ny][nx] == opponent) {
-                    boolean[][] visited = new boolean[9][9];
-                    if (countGroupLiberties(nx, ny, opponent, visited) == 0) {
-                        capturedCount += removeGroup(nx, ny, opponent);
-                    }
-                }
-            }
-
-            // Suicide rule check
-            boolean[][] selfVisited = new boolean[9][9];
-            if (capturedCount == 0 && countGroupLiberties(x, y, color, selfVisited) == 0) {
-                board[y][x] = 0; // Revert suicide
-                return false;
-            }
-
-            if (color == 1) blackCaptures += capturedCount;
-            else whiteCaptures += capturedCount;
-
-            lastMoveX = x;
-            lastMoveY = y;
-            currentTurn = opponent;
-            updateStatus();
-            invalidate();
-
-            if (mode == 0 && currentTurn == 2) {
-                postDelayed(new Runnable() {
-                    public void run() { botPlayMove(); }
-                }, 380);
-            }
-            return true;
-        }
-
-        private int countGroupLiberties(int startX, int startY, int color, boolean[][] visited) {
-            java.util.List<Point> group = new java.util.ArrayList<>();
-            java.util.Set<Integer> liberties = new java.util.HashSet<>();
-            java.util.Queue<Point> q = new java.util.LinkedList<>();
-
-            q.add(new Point(startX, startY));
-            visited[startY][startX] = true;
-
-            int[][] dirs = {{0,1}, {0,-1}, {1,0}, {-1,0}};
-
-            while (!q.isEmpty()) {
-                Point p = q.poll();
-                group.add(p);
-
-                for (int[] d : dirs) {
-                    int nx = p.x + d[0];
-                    int ny = p.y + d[1];
-                    if (nx >= 0 && nx < 9 && ny >= 0 && ny < 9) {
-                        if (board[ny][nx] == 0) {
-                            liberties.add(ny * 9 + nx);
-                        } else if (board[ny][nx] == color && !visited[ny][nx]) {
-                            visited[ny][nx] = true;
-                            q.add(new Point(nx, ny));
-                        }
-                    }
-                }
-            }
-            return liberties.size();
-        }
-
-        private int removeGroup(int startX, int startY, int color) {
-            int count = 0;
-            java.util.Queue<Point> q = new java.util.LinkedList<>();
-            q.add(new Point(startX, startY));
-            board[startY][startX] = 0;
-            count++;
-
-            int[][] dirs = {{0,1}, {0,-1}, {1,0}, {-1,0}};
-            while (!q.isEmpty()) {
-                Point p = q.poll();
-                for (int[] d : dirs) {
-                    int nx = p.x + d[0];
-                    int ny = p.y + d[1];
-                    if (nx >= 0 && nx < 9 && ny >= 0 && ny < 9 && board[ny][nx] == color) {
-                        board[ny][nx] = 0;
-                        count++;
-                        q.add(new Point(nx, ny));
-                    }
-                }
-            }
-            return count;
-        }
-
-        private void botPlayMove() {
-            if (currentTurn != 2) return;
-
-            // 1. Defend own groups in Atari (1 liberty) if extension saves them
-            for (int y = 0; y < 9; y++) {
-                for (int x = 0; x < 9; x++) {
-                    if (board[y][x] == 2) {
-                        boolean[][] v = new boolean[9][9];
-                        if (countGroupLiberties(x, y, 2, v) == 1) {
-                            int[][] dirs = {{0,1}, {0,-1}, {1,0}, {-1,0}};
-                            for (int[] d : dirs) {
-                                int nx = x + d[0];
-                                int ny = y + d[1];
-                                if (nx >= 0 && nx < 9 && ny >= 0 && ny < 9 && board[ny][nx] == 0) {
-                                    board[ny][nx] = 2;
-                                    boolean[][] v2 = new boolean[9][9];
-                                    int libs = countGroupLiberties(nx, ny, 2, v2);
-                                    board[ny][nx] = 0;
-                                    if (libs >= 2) {
-                                        if (playMove(nx, ny)) return;
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-
-            // 2. Capture opponent groups in Atari (1 liberty)
-            for (int y = 0; y < 9; y++) {
-                for (int x = 0; x < 9; x++) {
-                    if (board[y][x] == 1) {
-                        boolean[][] v = new boolean[9][9];
-                        if (countGroupLiberties(x, y, 1, v) == 1) {
-                            int[][] dirs = {{0,1}, {0,-1}, {1,0}, {-1,0}};
-                            for (int[] d : dirs) {
-                                int nx = x + d[0];
-                                int ny = y + d[1];
-                                if (nx >= 0 && nx < 9 && ny >= 0 && ny < 9 && board[ny][nx] == 0) {
-                                    if (playMove(nx, ny)) return;
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-
-            // 3. MCTS & 3x3 Shape Evaluator
-            int bestX = -1, bestY = -1;
-            float bestScore = -99999f;
-            java.util.Random rng = new java.util.Random();
-
-            for (int y = 0; y < 9; y++) {
-                for (int x = 0; x < 9; x++) {
-                    if (board[y][x] != 0) continue;
-
-                    // Quick legal test
-                    board[y][x] = 2;
-                    boolean[][] vTest = new boolean[9][9];
-                    int testLibs = countGroupLiberties(x, y, 2, vTest);
-                    board[y][x] = 0;
-                    if (testLibs <= 1) continue; // Avoid self-atari
-
-                    float score = 0f;
-
-                    // Positional 3rd/4th line territory bonus
-                    int distEdgeX = Math.min(x, 8 - x);
-                    int distEdgeY = Math.min(y, 8 - y);
-                    if (distEdgeX == 2 && distEdgeY == 2) score += 45f; // Star points (3,3)
-                    else if (distEdgeX >= 2 && distEdgeY >= 2) score += 30f; // 3rd & 4th line
-                    else if (distEdgeX == 0 || distEdgeY == 0) score -= 20f; // Avoid 1st line crawl
-
-                    // Contact / Hane response to Black's last move
-                    if (lastMoveX >= 0) {
-                        int dx = Math.abs(x - lastMoveX);
-                        int dy = Math.abs(y - lastMoveY);
-                        if (dx <= 1 && dy <= 1 && (dx + dy > 0)) {
-                            score += 35f; // Active hane / contact engagement
-                        }
-                    }
-
-                    // Eye creation and connection score
-                    int friendlyNeighbors = 0;
-                    int[][] dirs = {{0,1}, {0,-1}, {1,0}, {-1,0}};
-                    for (int[] d : dirs) {
-                        int nx = x + d[0];
-                        int ny = y + d[1];
-                        if (nx >= 0 && nx < 9 && ny >= 0 && ny < 9 && board[ny][nx] == 2) {
-                            friendlyNeighbors++;
-                        }
-                    }
-                    score += friendlyNeighbors * 15f;
-                    score += testLibs * 8f;
-
-                    // Monte Carlo Playout Simulation (10 fast rollouts)
-                    for (int sim = 0; sim < 10; sim++) {
-                        score += (rng.nextFloat() * 10f);
-                    }
-
-                    if (score > bestScore) {
-                        bestScore = score;
-                        bestX = x;
-                        bestY = y;
-                    }
-                }
-            }
-
-            if (bestX != -1 && bestY != -1) {
-                if (playMove(bestX, bestY)) return;
-            }
-
-            passTurn();
-        }
-
-        @Override
-        public boolean onTouchEvent(MotionEvent event) {
-            if (event.getActionMasked() == MotionEvent.ACTION_DOWN) {
-                float w = getWidth();
-                float h = getHeight();
-                float pad = dpf(20f);
-                float size = Math.min(w, h) - pad * 2;
-                float startX = (w - size) / 2f;
-                float startY = (h - size) / 2f;
-                float cellSize = size / 8f;
-
-                float ex = event.getX();
-                float ey = event.getY();
-
-                int gx = Math.round((ex - startX) / cellSize);
-                int gy = Math.round((ey - startY) / cellSize);
-
-                if (gx >= 0 && gx < 9 && gy >= 0 && gy < 9) {
-                    playMove(gx, gy);
-                    return true;
-                }
-            }
-            return super.onTouchEvent(event);
-        }
-
-        @Override
-        protected void onDraw(Canvas canvas) {
-            super.onDraw(canvas);
-            float w = getWidth();
-            float h = getHeight();
-            if (w <= 0 || h <= 0) return;
-
-            boardRect.set(0, 0, w, h);
-            boardPaint.setShader(new LinearGradient(0, 0, w, h, 0xFF2D1B0D, 0xFF452B14, Shader.TileMode.CLAMP));
-            canvas.drawRoundRect(boardRect, dpf(16f), dpf(16f), boardPaint);
-
-            Paint goldBorder = new Paint(Paint.ANTI_ALIAS_FLAG);
-            goldBorder.setColor(0xFFEAB308);
-            goldBorder.setStyle(Paint.Style.STROKE);
-            goldBorder.setStrokeWidth(dpf(1.5f));
-            RectF innerRect = new RectF(dpf(2f), dpf(2f), w - dpf(2f), h - dpf(2f));
-            canvas.drawRoundRect(innerRect, dpf(14f), dpf(14f), goldBorder);
-
-            float pad = dpf(22f);
-            float size = Math.min(w, h) - pad * 2;
-            float startX = (w - size) / 2f;
-            float startY = (h - size) / 2f;
-            float cellSize = size / 8f;
-
-            gridPaint.setColor(0xFF8C5C33);
-            gridPaint.setStrokeWidth(dpf(1.5f));
-
-            // Grid lines
-            for (int i = 0; i < 9; i++) {
-                float py = startY + i * cellSize;
-                canvas.drawLine(startX, py, startX + size, py, gridPaint);
-                float px = startX + i * cellSize;
-                canvas.drawLine(px, startY, px, startY + size, gridPaint);
-
-                // Coordinate labels
-                textPaint.setColor(0xFFFDE047);
-                textPaint.setTextSize(dpf(9f));
-                String colName = String.valueOf((char) ('A' + (i >= 8 ? i + 1 : i)));
-                canvas.drawText(colName, px, startY - dpf(6f), textPaint);
-                canvas.drawText(String.valueOf(9 - i), startX - dpf(10f), py + dpf(3f), textPaint);
-            }
-
-            // Star points (Hoshi) at (2,2), (6,2), (4,4), (2,6), (6,6)
-            int[] hoshi = {2, 4, 6};
-            for (int hx : hoshi) {
-                for (int hy : hoshi) {
-                    float px = startX + hx * cellSize;
-                    float py = startY + hy * cellSize;
-                    canvas.drawCircle(px, py, dpf(4f), goldBorder);
-                    canvas.drawCircle(px, py, dpf(2.5f), starPointPaint);
-                }
-            }
-
-            // 3D Bi-convex Stones with Shadows
-            float stoneR = cellSize * 0.47f;
-            Paint shadowPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
-            shadowPaint.setColor(0x99000000);
-            shadowPaint.setStyle(Paint.Style.FILL);
-
-            Paint stone3dPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
-            stone3dPaint.setStyle(Paint.Style.FILL);
-
-            for (int y = 0; y < 9; y++) {
-                for (int x = 0; x < 9; x++) {
-                    int val = board[y][x];
-                    if (val == 0) continue;
-
-                    float cx = startX + x * cellSize;
-                    float cy = startY + y * cellSize;
-
-                    // Drop shadow
-                    canvas.drawCircle(cx + dpf(1.5f), cy + dpf(2.5f), stoneR, shadowPaint);
-
-                    if (val == 1) { // Black Slate Stone
-                        RadialGradient blackGrad = new RadialGradient(
-                            cx - stoneR * 0.35f, cy - stoneR * 0.35f, stoneR * 1.3f,
-                            new int[]{0xFF475569, 0xFF0F172A, 0xFF020617},
-                            null, Shader.TileMode.CLAMP
-                        );
-                        stone3dPaint.setShader(blackGrad);
-                        canvas.drawCircle(cx, cy, stoneR, stone3dPaint);
-                        canvas.drawCircle(cx - stoneR * 0.35f, cy - stoneR * 0.35f, stoneR * 0.26f, stoneHighlightPaint);
-                    } else if (val == 2) { // White Clamshell Stone
-                        RadialGradient whiteGrad = new RadialGradient(
-                            cx - stoneR * 0.35f, cy - stoneR * 0.35f, stoneR * 1.3f,
-                            new int[]{0xFFFFFFFF, 0xFFF1F5F9, 0xFF94A3B8},
-                            null, Shader.TileMode.CLAMP
-                        );
-                        stone3dPaint.setShader(whiteGrad);
-                        canvas.drawCircle(cx, cy, stoneR, stone3dPaint);
-                        canvas.drawCircle(cx, cy, stoneR, goldBorder);
-                    }
-
-                    if (x == lastMoveX && y == lastMoveY) {
-                        Paint pulsePaint = new Paint(Paint.ANTI_ALIAS_FLAG);
-                        pulsePaint.setColor(val == 1 ? 0xFFFFD166 : 0xFF00E5FF);
-                        pulsePaint.setStyle(Paint.Style.STROKE);
-                        pulsePaint.setStrokeWidth(dpf(2f));
-                        canvas.drawCircle(cx, cy, stoneR * 0.55f, pulsePaint);
-                    }
-                }
-            }
-        }
-    }
 
     // =========================================================================
     // ♟️ GRANDMASTER CHESS INTERACTIVE CANVAS VIEW & MINIMAX AI
