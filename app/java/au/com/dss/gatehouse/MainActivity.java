@@ -512,11 +512,13 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
                                 return;
                             }
                         }
-                        triggerSatelliteFlyover(null);
                     }
                 });
             }
         }
+
+        // Start ADS-B Sky Watch Geofence Alert Monitor
+        AdsbSkyRadarService.get(this).startMonitoring();
     }
 
     private void refreshFireRadar() {
@@ -3410,19 +3412,29 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
 
             LinearLayout r4 = new LinearLayout(this);
             r4.setOrientation(LinearLayout.HORIZONTAL);
+            r4.addView(buildCompactToolTile("🔭", "Sky Watch Radar", "ADS-B LIVE", 0xFFF59E0B, "Military, Rescue & Warbird alerts", new View.OnClickListener() {
+                public void onClick(View v) {
+                    hapticHeavyClick();
+                    showSkyWatchRadarDialog();
+                }
+            }));
             r4.addView(buildCompactToolTile("📡", "GNSS & Satellites", "12 SATS", colEmerald, "Polar satellite constellation fix", new View.OnClickListener() {
                 public void onClick(View v) {
                     hapticClick();
                     showGpsDialog();
                 }
             }));
-            r4.addView(buildCompactToolTile("✨", "Starlink / ISS", "RADAR PASS", 0xFF00E5FF, "Overhead celestial pass countdown", new View.OnClickListener() {
+            container.addView(r4);
+
+            LinearLayout r4b = new LinearLayout(this);
+            r4b.setOrientation(LinearLayout.HORIZONTAL);
+            r4b.addView(buildCompactToolTile("✨", "Starlink / ISS", "RADAR PASS", 0xFF00E5FF, "Overhead celestial pass countdown", new View.OnClickListener() {
                 public void onClick(View v) {
                     hapticHeavyClick();
                     showSatelliteRadarDialog();
                 }
             }));
-            container.addView(r4);
+            container.addView(r4b);
         }
 
         // 3. 🎮 RECREATION & BOARD GAMES ARCADE (8 GAMES)
@@ -8924,6 +8936,182 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
                 Toast.makeText(MainActivity.this, "✓ SOS Hot-mic broadcast completed", Toast.LENGTH_SHORT).show();
             }
         }, 10000);
+    }
+
+    private void showSkyWatchRadarDialog() {
+        hapticHeavyClick();
+        final LinearLayout box = dialogContainer("🔭 Sky Watch Airspace Radar", "ADS-B MILITARY & WARBIRD ALERTS", 0xFFF59E0B);
+
+        TextView info = new TextView(this);
+        info.setText("Real-time military transport, combat jet, rescue medevac & vintage warbird geofence above Hume Kingston Facility (-27.65°S, 153.12°E). Automated 'Look Up' alerts trigger on low overhead flyovers:");
+        info.setTextColor(colMuted);
+        info.setTextSize(11.5f);
+        info.setPadding(0, 0, 0, dp(8));
+        box.addView(info);
+
+        final SkyWatchRadarView radarView = new SkyWatchRadarView(this);
+        LinearLayout.LayoutParams rlp = new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT, dp(230));
+        rlp.bottomMargin = dp(8);
+        radarView.setLayoutParams(rlp);
+        box.addView(radarView);
+
+        // Telemetry target card
+        final LinearLayout detailCard = new LinearLayout(this);
+        detailCard.setOrientation(LinearLayout.VERTICAL);
+        detailCard.setBackground(rounded(colPanel2, dp(12)));
+        detailCard.setPadding(dp(12), dp(10), dp(12), dp(10));
+        LinearLayout.LayoutParams dclp = new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+        dclp.bottomMargin = dp(8);
+        detailCard.setLayoutParams(dclp);
+
+        final TextView targetTitle = new TextView(this);
+        targetTitle.setText("🔭 SCANNING HUME AIRSPACE...");
+        targetTitle.setTextColor(0xFFF59E0B);
+        targetTitle.setTextSize(12.5f);
+        targetTitle.setTypeface(Typeface.DEFAULT_BOLD);
+        detailCard.addView(targetTitle);
+
+        final TextView targetDetails = new TextView(this);
+        targetDetails.setText("Tap any aircraft blip on the radar scope for live telemetry.");
+        targetDetails.setTextColor(colPale);
+        targetDetails.setTextSize(11f);
+        targetDetails.setPadding(0, dp(3), 0, 0);
+        detailCard.addView(targetDetails);
+        box.addView(detailCard);
+
+        radarView.setOnAircraftSelectedListener(new SkyWatchRadarView.OnAircraftSelectedListener() {
+            @Override
+            public void onSelected(AdsbSkyRadarService.TrackedAircraft ac) {
+                targetTitle.setText(ac.category.label.toUpperCase(Locale.US) + " · " + ac.callsign);
+                targetTitle.setTextColor(ac.category.color);
+                String altStr = String.format(Locale.US, "%,d ft", ac.altitudeFt);
+                String infoStr = String.format(Locale.US,
+                    "Type: %s (%s)\nAlt: %s · Speed: %d kts · Trk: %d°\nRange: %.1f km (%.1f NM) · Bearing: %.0f° (%s)",
+                    ac.typeName, ac.hex, altStr, ac.speedKts, ac.headingDeg,
+                    ac.distanceKm, ac.distanceNm, ac.bearingDeg, AdsbSkyRadarService.getBearingCompassStr(ac.bearingDeg));
+                targetDetails.setText(infoStr);
+            }
+        });
+
+        // Radius Selector chips
+        LinearLayout radiusRow = new LinearLayout(this);
+        radiusRow.setOrientation(LinearLayout.HORIZONTAL);
+        radiusRow.setPadding(0, 0, 0, dp(8));
+
+        final double[] radii = {10.0, 25.0, 50.0};
+        final String[] radiusLabels = {"10 NM (Local)", "25 NM (Hume)", "50 NM (SE QLD)"};
+        final TextView[] radiusBtns = new TextView[3];
+
+        for (int i = 0; i < 3; i++) {
+            final int idx = i;
+            final double radVal = radii[i];
+            final TextView btn = actionButton(radiusLabels[i], radVal == 25.0 ? 0xFFF59E0B : colLine, radVal == 25.0 ? colAccentInk : colPale);
+            radiusBtns[i] = btn;
+            btn.setOnClickListener(new View.OnClickListener() {
+                public void onClick(View v) {
+                    hapticClick();
+                    AdsbSkyRadarService.get(MainActivity.this).setGeofenceRadiusNm(radVal);
+                    radarView.setMaxRadiusNm(radVal);
+                    for (int j = 0; j < 3; j++) {
+                        radiusBtns[j].setBackground(rounded(j == idx ? 0xFFF59E0B : colLine, dp(8)));
+                        radiusBtns[j].setTextColor(j == idx ? colAccentInk : colPale);
+                    }
+                    AdsbSkyRadarService.get(MainActivity.this).scanAirspaceAsync();
+                }
+            });
+            LinearLayout.LayoutParams blp = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
+            if (i > 0) blp.leftMargin = dp(4);
+            btn.setLayoutParams(blp);
+            radiusRow.addView(btn);
+        }
+        box.addView(radiusRow);
+
+        // Alert Toggle & Scan Row
+        LinearLayout ctrlRow = new LinearLayout(this);
+        ctrlRow.setOrientation(LinearLayout.HORIZONTAL);
+
+        final AdsbSkyRadarService service = AdsbSkyRadarService.get(this);
+        final TextView btnAlertToggle = actionButton(
+            service.isMonitoring() ? "🔔 Geofence: ACTIVE" : "🔕 Geofence: PAUSED",
+            service.isMonitoring() ? colEmerald : colLine,
+            service.isMonitoring() ? colAccentInk : colMuted
+        );
+        btnAlertToggle.setOnClickListener(new View.OnClickListener() {
+            public void onClick(View v) {
+                hapticHeavyClick();
+                if (service.isMonitoring()) {
+                    service.stopMonitoring();
+                    btnAlertToggle.setText("🔕 Geofence: PAUSED");
+                    btnAlertToggle.setBackground(rounded(colLine, dp(8)));
+                    btnAlertToggle.setTextColor(colMuted);
+                } else {
+                    service.startMonitoring();
+                    btnAlertToggle.setText("🔔 Geofence: ACTIVE");
+                    btnAlertToggle.setBackground(rounded(colEmerald, dp(8)));
+                    btnAlertToggle.setTextColor(colAccentInk);
+                }
+            }
+        });
+        LinearLayout.LayoutParams tglp = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
+        tglp.rightMargin = dp(4);
+        btnAlertToggle.setLayoutParams(tglp);
+        ctrlRow.addView(btnAlertToggle);
+
+        TextView btnScanNow = actionButton("⚡ Scan Airspace", 0xFFF59E0B, colAccentInk);
+        btnScanNow.setOnClickListener(new View.OnClickListener() {
+            public void onClick(View v) {
+                hapticHeavyClick();
+                service.scanAirspaceAsync();
+                Toast.makeText(MainActivity.this, "📡 Querying ADS-B receivers...", Toast.LENGTH_SHORT).show();
+            }
+        });
+        LinearLayout.LayoutParams sclp = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
+        sclp.leftMargin = dp(4);
+        btnScanNow.setLayoutParams(sclp);
+        ctrlRow.addView(btnScanNow);
+        box.addView(ctrlRow);
+
+        final Dialog dlg = createDialogSheet(box);
+
+        service.setCallback(new AdsbSkyRadarService.SkyWatchCallback() {
+            @Override
+            public void onAirspaceUpdated(final List<AdsbSkyRadarService.TrackedAircraft> aircraftList, final AdsbSkyRadarService.TrackedAircraft alertTarget) {
+                radarView.setAircraftList(aircraftList);
+                if (alertTarget != null) {
+                    targetTitle.setText(alertTarget.alertSummary);
+                    targetTitle.setTextColor(alertTarget.category.color);
+                    targetDetails.setText(String.format(Locale.US,
+                        "Type: %s · Alt: %,d ft · %.1f km %s @ %d kts",
+                        alertTarget.typeName, alertTarget.altitudeFt, alertTarget.distanceKm,
+                        AdsbSkyRadarService.getBearingCompassStr(alertTarget.bearingDeg), alertTarget.speedKts));
+                }
+            }
+
+            @Override
+            public void onError(String message) {
+                // Smooth background operation
+            }
+        });
+
+        // Trigger immediate scan on opening
+        service.scanAirspaceAsync();
+
+        TextView btnClose = actionButton("Close Sky Watch", colLine, colPale);
+        btnClose.setOnClickListener(new View.OnClickListener() {
+            public void onClick(View v) {
+                hapticClick();
+                dlg.dismiss();
+            }
+        });
+        LinearLayout.LayoutParams clp = new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+        clp.topMargin = dp(8);
+        btnClose.setLayoutParams(clp);
+        box.addView(btnClose);
+
+        dlg.show();
     }
 
     private void showSatelliteRadarDialog() {
