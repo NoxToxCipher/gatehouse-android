@@ -31,6 +31,7 @@ import android.graphics.LinearGradient;
 import android.graphics.RadialGradient;
 import android.graphics.Paint;
 import android.graphics.Path;
+import android.graphics.Point;
 import android.graphics.RectF;
 import android.graphics.Shader;
 import android.graphics.Typeface;
@@ -3380,7 +3381,25 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
         }));
         container.addView(r6);
 
-        // 5. ⚙️ PREFERENCES & SYSTEM HUB
+        // 5. 🎮 OFFICER RECREATION & TACTICAL GAMES
+        container.addView(sectionHeader("🎮 OFFICER RECREATION & TACTICAL GAMES", null));
+        LinearLayout rGames = new LinearLayout(this);
+        rGames.setOrientation(LinearLayout.HORIZONTAL);
+        rGames.addView(buildCompactToolTile("⚪⚫", "Tactical Baduk", "9×9 GO", colAccent, "Life & death tsumego & bot", new View.OnClickListener() {
+            public void onClick(View v) {
+                hapticHeavyClick();
+                showBadukGameDialog();
+            }
+        }));
+        rGames.addView(buildCompactToolTile("♟️", "Grandmaster Chess", "8×8 CHESS", colCyan, "Daily puzzles & AI engine", new View.OnClickListener() {
+            public void onClick(View v) {
+                hapticHeavyClick();
+                showChessGameDialog();
+            }
+        }));
+        container.addView(rGames);
+
+        // 6. ⚙️ PREFERENCES & SYSTEM HUB
         container.addView(sectionHeader("⚙️ PREFERENCES & SYSTEM HUB", null));
         LinearLayout r7 = new LinearLayout(this);
         r7.setOrientation(LinearLayout.HORIZONTAL);
@@ -3547,6 +3566,267 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
         btnRow.addView(btnClose);
 
         box.addView(btnRow);
+        dlg.show();
+    }
+    // =========================================================================
+    // ⚪⚫ 1. TACTICAL BADUK (GO / TSUMEGO) ENGINE & DIALOG
+    // =========================================================================
+
+    private void showBadukGameDialog() {
+        final LinearLayout box = dialogContainer("⚪⚫ Tactical Baduk", "9×9 GO & TSUMEGO", colAccent);
+
+        final TextView statusLbl = new TextView(this);
+        statusLbl.setText("● Black to play · 9×9 Match");
+        statusLbl.setTextColor(colPale);
+        statusLbl.setTextSize(13);
+        statusLbl.setTypeface(Typeface.create(Typeface.MONOSPACE, Typeface.BOLD));
+        statusLbl.setPadding(0, dp(4), 0, dp(8));
+        box.addView(statusLbl);
+
+        final BadukBoardView badukView = new BadukBoardView(this);
+        LinearLayout.LayoutParams bvl = new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT, dp(320));
+        badukView.setLayoutParams(bvl);
+        box.addView(badukView);
+
+        badukView.setStatusListener(new BadukBoardView.StatusListener() {
+            @Override
+            public void onStatusChanged(String statusText, int textColor) {
+                statusLbl.setText(statusText);
+                statusLbl.setTextColor(textColor != 0 ? textColor : colPale);
+            }
+        });
+
+        // Mode switch row
+        LinearLayout modeRow = new LinearLayout(this);
+        modeRow.setOrientation(LinearLayout.HORIZONTAL);
+        modeRow.setPadding(0, dp(8), 0, 0);
+
+        final TextView btnBotMatch = actionButton("🤖 vs Bot Match", colAccent, colAccentInk);
+        final TextView btnTsumego = actionButton("🧩 Tsumego Puzzles", colPanel2, colPale);
+
+        btnBotMatch.setOnClickListener(new View.OnClickListener() {
+            public void onClick(View v) {
+                hapticClick();
+                badukView.setMode(0);
+                btnBotMatch.setBackground(rounded(colAccent, dp(8)));
+                btnBotMatch.setTextColor(colAccentInk);
+                btnTsumego.setBackground(rounded(colPanel2, dp(8)));
+                btnTsumego.setTextColor(colPale);
+            }
+        });
+
+        btnTsumego.setOnClickListener(new View.OnClickListener() {
+            public void onClick(View v) {
+                hapticClick();
+                badukView.setMode(1);
+                btnTsumego.setBackground(rounded(colAccent, dp(8)));
+                btnTsumego.setTextColor(colAccentInk);
+                btnBotMatch.setBackground(rounded(colPanel2, dp(8)));
+                btnBotMatch.setTextColor(colPale);
+            }
+        });
+
+        LinearLayout.LayoutParams mlp1 = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
+        mlp1.rightMargin = dp(4);
+        btnBotMatch.setLayoutParams(mlp1);
+        modeRow.addView(btnBotMatch);
+
+        LinearLayout.LayoutParams mlp2 = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
+        mlp2.leftMargin = dp(4);
+        btnTsumego.setLayoutParams(mlp2);
+        modeRow.addView(btnTsumego);
+        box.addView(modeRow);
+
+        // Control actions row
+        LinearLayout ctrlRow = new LinearLayout(this);
+        ctrlRow.setOrientation(LinearLayout.HORIZONTAL);
+        ctrlRow.setPadding(0, dp(8), 0, 0);
+
+        TextView btnPass = actionButton("Pass Turn", colLine, colPale);
+        btnPass.setOnClickListener(new View.OnClickListener() {
+            public void onClick(View v) {
+                hapticClick();
+                badukView.passTurn();
+            }
+        });
+        LinearLayout.LayoutParams plp = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
+        plp.rightMargin = dp(4);
+        btnPass.setLayoutParams(plp);
+        ctrlRow.addView(btnPass);
+
+        TextView btnReset = actionButton("↻ Reset", colLine, colPale);
+        btnReset.setOnClickListener(new View.OnClickListener() {
+            public void onClick(View v) {
+                hapticClick();
+                badukView.resetGame();
+            }
+        });
+        LinearLayout.LayoutParams rlp = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
+        rlp.leftMargin = dp(4);
+        rlp.rightMargin = dp(4);
+        btnReset.setLayoutParams(rlp);
+        ctrlRow.addView(btnReset);
+
+        TextView btnNextPuzzle = actionButton("Next ➔", colLine, colCyan);
+        btnNextPuzzle.setOnClickListener(new View.OnClickListener() {
+            public void onClick(View v) {
+                hapticClick();
+                badukView.nextPuzzle();
+            }
+        });
+        LinearLayout.LayoutParams nlp = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
+        nlp.leftMargin = dp(4);
+        btnNextPuzzle.setLayoutParams(nlp);
+        ctrlRow.addView(btnNextPuzzle);
+        box.addView(ctrlRow);
+
+        final Dialog dlg = createDialogSheet(box);
+
+        TextView btnClose = actionButton("Close Baduk", colLine, colPale);
+        btnClose.setOnClickListener(new View.OnClickListener() {
+            public void onClick(View v) {
+                hapticClick();
+                dlg.dismiss();
+            }
+        });
+        LinearLayout.LayoutParams clp = new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+        clp.topMargin = dp(10);
+        btnClose.setLayoutParams(clp);
+        box.addView(btnClose);
+
+        dlg.show();
+    }
+
+    // =========================================================================
+    // ♟️ 2. GRANDMASTER CHESS ENGINE & DIALOG
+    // =========================================================================
+
+    private void showChessGameDialog() {
+        final LinearLayout box = dialogContainer("♟️ Grandmaster Chess", "8×8 ENGINE & PUZZLES", colCyan);
+
+        final TextView statusLbl = new TextView(this);
+        statusLbl.setText("♔ White to move · vs AI");
+        statusLbl.setTextColor(colPale);
+        statusLbl.setTextSize(13);
+        statusLbl.setTypeface(Typeface.create(Typeface.MONOSPACE, Typeface.BOLD));
+        statusLbl.setPadding(0, dp(4), 0, dp(8));
+        box.addView(statusLbl);
+
+        final ChessBoardView chessView = new ChessBoardView(this);
+        LinearLayout.LayoutParams cvl = new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT, dp(320));
+        chessView.setLayoutParams(cvl);
+        box.addView(chessView);
+
+        chessView.setStatusListener(new ChessBoardView.StatusListener() {
+            @Override
+            public void onStatusChanged(String statusText, int textColor) {
+                statusLbl.setText(statusText);
+                statusLbl.setTextColor(textColor != 0 ? textColor : colPale);
+            }
+        });
+
+        // Mode switch row
+        LinearLayout modeRow = new LinearLayout(this);
+        modeRow.setOrientation(LinearLayout.HORIZONTAL);
+        modeRow.setPadding(0, dp(8), 0, 0);
+
+        final TextView btnBotMatch = actionButton("🤖 vs Stockfish AI", colCyan, colAccentInk);
+        final TextView btnTactics = actionButton("🧩 Tactical Puzzles", colPanel2, colPale);
+
+        btnBotMatch.setOnClickListener(new View.OnClickListener() {
+            public void onClick(View v) {
+                hapticClick();
+                chessView.setMode(0);
+                btnBotMatch.setBackground(rounded(colCyan, dp(8)));
+                btnBotMatch.setTextColor(colAccentInk);
+                btnTactics.setBackground(rounded(colPanel2, dp(8)));
+                btnTactics.setTextColor(colPale);
+            }
+        });
+
+        btnTactics.setOnClickListener(new View.OnClickListener() {
+            public void onClick(View v) {
+                hapticClick();
+                chessView.setMode(1);
+                btnTactics.setBackground(rounded(colCyan, dp(8)));
+                btnTactics.setTextColor(colAccentInk);
+                btnBotMatch.setBackground(rounded(colPanel2, dp(8)));
+                btnBotMatch.setTextColor(colPale);
+            }
+        });
+
+        LinearLayout.LayoutParams mlp1 = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
+        mlp1.rightMargin = dp(4);
+        btnBotMatch.setLayoutParams(mlp1);
+        modeRow.addView(btnBotMatch);
+
+        LinearLayout.LayoutParams mlp2 = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
+        mlp2.leftMargin = dp(4);
+        btnTactics.setLayoutParams(mlp2);
+        modeRow.addView(btnTactics);
+        box.addView(modeRow);
+
+        // Control actions row
+        LinearLayout ctrlRow = new LinearLayout(this);
+        ctrlRow.setOrientation(LinearLayout.HORIZONTAL);
+        ctrlRow.setPadding(0, dp(8), 0, 0);
+
+        TextView btnUndo = actionButton("↶ Undo", colLine, colPale);
+        btnUndo.setOnClickListener(new View.OnClickListener() {
+            public void onClick(View v) {
+                hapticClick();
+                chessView.undoMove();
+            }
+        });
+        LinearLayout.LayoutParams ulp = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
+        ulp.rightMargin = dp(4);
+        btnUndo.setLayoutParams(ulp);
+        ctrlRow.addView(btnUndo);
+
+        TextView btnReset = actionButton("↻ New Game", colLine, colPale);
+        btnReset.setOnClickListener(new View.OnClickListener() {
+            public void onClick(View v) {
+                hapticClick();
+                chessView.resetGame();
+            }
+        });
+        LinearLayout.LayoutParams rlp = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
+        rlp.leftMargin = dp(4);
+        rlp.rightMargin = dp(4);
+        btnReset.setLayoutParams(rlp);
+        ctrlRow.addView(btnReset);
+
+        TextView btnNextPuzzle = actionButton("Next ➔", colLine, colCyan);
+        btnNextPuzzle.setOnClickListener(new View.OnClickListener() {
+            public void onClick(View v) {
+                hapticClick();
+                chessView.nextPuzzle();
+            }
+        });
+        LinearLayout.LayoutParams nlp = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
+        nlp.leftMargin = dp(4);
+        btnNextPuzzle.setLayoutParams(nlp);
+        ctrlRow.addView(btnNextPuzzle);
+        box.addView(ctrlRow);
+
+        final Dialog dlg = createDialogSheet(box);
+
+        TextView btnClose = actionButton("Close Chess", colLine, colPale);
+        btnClose.setOnClickListener(new View.OnClickListener() {
+            public void onClick(View v) {
+                hapticClick();
+                dlg.dismiss();
+            }
+        });
+        LinearLayout.LayoutParams clp = new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+        clp.topMargin = dp(10);
+        btnClose.setLayoutParams(clp);
+        box.addView(btnClose);
+
         dlg.show();
     }
 
@@ -10461,7 +10741,7 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
         textCol.addView(title);
 
         TextView sub = new TextView(this);
-        sub.setText("Multi-Shift Historical Ledger · SPARK SHA-256 Verified");
+        sub.setText("Multi-Shift Historical Ledger · SPARK Cryptographic Chain");
         sub.setTextColor(colMuted);
         sub.setTextSize(10.5f);
         textCol.addView(sub);
@@ -10572,6 +10852,8 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
         return box;
     }
 
+    private boolean logbookSearchDrawerOpen = false;
+
     public void showFullLogbookDialog() {
         hapticHeavyClick();
         final Dialog dlg = new Dialog(this, android.R.style.Theme_Translucent_NoTitleBar);
@@ -10581,13 +10863,13 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
         logMgr.syncFromCore(Core.entryCount());
 
         final FrameLayout root = new FrameLayout(this);
-        root.setBackgroundColor(0xF5080D1A);
+        root.setBackgroundColor(0xF80A0F1D);
         root.setFitsSystemWindows(true);
 
         final LinearLayout contentCard = new LinearLayout(this);
         contentCard.setOrientation(LinearLayout.VERTICAL);
         contentCard.setBackground(rounded(0xFF0F172A, dp(20)));
-        contentCard.setPadding(dp(16), dp(16), dp(16), dp(16));
+        contentCard.setPadding(dp(14), dp(12), dp(14), dp(12));
         FrameLayout.LayoutParams clp = new FrameLayout.LayoutParams(
                 FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT);
         contentCard.setLayoutParams(clp);
@@ -10598,23 +10880,25 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
                 public WindowInsets onApplyWindowInsets(View v, WindowInsets insets) {
                     android.graphics.Insets sb = insets.getInsets(
                             WindowInsets.Type.systemBars() | WindowInsets.Type.displayCutout());
-                    root.setPadding(sb.left + dp(12), sb.top + dp(10), sb.right + dp(12), sb.bottom + dp(12));
+                    root.setPadding(sb.left + dp(8), sb.top + dp(6), sb.right + dp(8), sb.bottom + dp(8));
                     return insets;
                 }
             });
             root.requestApplyInsets();
         } else {
-            root.setPadding(dp(12), dp(32), dp(12), dp(16));
+            root.setPadding(dp(8), dp(28), dp(8), dp(12));
         }
 
-        // Top Control Bar
+        // =========================================================================
+        // 1. UNIFIED SLEEK TOP HEADER BAR (Back | Title + Subtitle | Search + Mode + Export)
+        // =========================================================================
         LinearLayout topBar = new LinearLayout(this);
         topBar.setOrientation(LinearLayout.HORIZONTAL);
         topBar.setGravity(Gravity.CENTER_VERTICAL);
-        topBar.setPadding(0, 0, 0, dp(10));
+        topBar.setPadding(0, 0, 0, dp(8));
 
         TextView btnBack = new TextView(this);
-        btnBack.setText("← DASHBOARD");
+        btnBack.setText("← EXIT");
         btnBack.setTextColor(colCyan);
         btnBack.setTextSize(11f);
         btnBack.setTypeface(Typeface.create(Typeface.MONOSPACE, Typeface.BOLD));
@@ -10633,19 +10917,21 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
         titleCol.setOrientation(LinearLayout.VERTICAL);
         titleCol.setGravity(Gravity.CENTER);
         LinearLayout.LayoutParams tclp = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
+        tclp.leftMargin = dp(8);
+        tclp.rightMargin = dp(8);
         titleCol.setLayoutParams(tclp);
 
         TextView tvHead = new TextView(this);
-        tvHead.setText("📖 SECURITY LOGBOOK & ARCHIVES");
+        tvHead.setText("OCCURRENCE LOGBOOK");
         tvHead.setTextColor(colPale);
-        tvHead.setTextSize(13f);
+        tvHead.setTextSize(13.5f);
         tvHead.setTypeface(Typeface.DEFAULT_BOLD);
         tvHead.setGravity(Gravity.CENTER);
         titleCol.addView(tvHead);
 
-        TextView tvSubHead = new TextView(this);
-        tvSubHead.setText("Hume Doors & Timber · Multi-Shift Historical Ledger");
-        tvSubHead.setTextColor(colQuiet);
+        final TextView tvSubHead = new TextView(this);
+        tvSubHead.setText(getLogbookSubtitle(logMgr));
+        tvSubHead.setTextColor(colMuted);
         tvSubHead.setTextSize(9.5f);
         tvSubHead.setTypeface(Typeface.MONOSPACE);
         tvSubHead.setGravity(Gravity.CENTER);
@@ -10653,13 +10939,38 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
 
         topBar.addView(titleCol);
 
+        // Search Toggle Button
+        final TextView btnSearchToggle = new TextView(this);
+        btnSearchToggle.setText(logbookSearchDrawerOpen ? "✕" : "🔍");
+        btnSearchToggle.setTextColor(logbookSearchDrawerOpen ? colAccent : colPale);
+        btnSearchToggle.setTextSize(12f);
+        btnSearchToggle.setPadding(dp(8), dp(6), dp(8), dp(6));
+        btnSearchToggle.setBackground(rounded(logbookSearchDrawerOpen ? 0x33E5A93C : 0x1AFFFFFF, dp(8)));
+
+        // View Mode Toggle Button
+        final TextView btnModeToggle = new TextView(this);
+        btnModeToggle.setText(logbookRuledViewMode ? "📋 FEED" : "📄 RULED");
+        btnModeToggle.setTextColor(logbookRuledViewMode ? colCyan : 0xFFFDE047);
+        btnModeToggle.setTextSize(10f);
+        btnModeToggle.setTypeface(Typeface.create(Typeface.MONOSPACE, Typeface.BOLD));
+        btnModeToggle.setPadding(dp(8), dp(6), dp(8), dp(6));
+        btnModeToggle.setBackground(rounded(logbookRuledViewMode ? 0x2206B6D4 : 0x22FDE047, dp(8)));
+        LinearLayout.LayoutParams mpl = new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+        mpl.leftMargin = dp(4);
+        btnModeToggle.setLayoutParams(mpl);
+
+        // Export Button
         TextView btnShare = new TextView(this);
-        btnShare.setText("📤 EXPORT");
+        btnShare.setText("📤");
         btnShare.setTextColor(colAccentInk);
-        btnShare.setTextSize(11f);
-        btnShare.setTypeface(Typeface.DEFAULT_BOLD);
-        btnShare.setPadding(dp(10), dp(6), dp(10), dp(6));
+        btnShare.setTextSize(12f);
+        btnShare.setPadding(dp(8), dp(6), dp(8), dp(6));
         btnShare.setBackground(pressable(colAccent, dp(8)));
+        LinearLayout.LayoutParams shlp = new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+        shlp.leftMargin = dp(4);
+        btnShare.setLayoutParams(shlp);
         btnShare.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
@@ -10667,10 +10978,22 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
                 shareHandoverReport();
             }
         });
-        topBar.addView(btnShare);
 
+        topBar.addView(btnSearchToggle);
+        topBar.addView(btnModeToggle);
+        topBar.addView(btnShare);
         contentCard.addView(topBar);
 
+        // =========================================================================
+        // 2. SEGMENTED SHIFT SELECTOR (Single Clean Row)
+        // =========================================================================
+        final HorizontalScrollView shiftHsv = new HorizontalScrollView(this);
+        shiftHsv.setHorizontalScrollBarEnabled(false);
+        final LinearLayout shiftRow = new LinearLayout(this);
+        shiftRow.setOrientation(LinearLayout.HORIZONTAL);
+        shiftRow.setPadding(0, 0, 0, dp(8));
+
+        final List<LogbookManager.ShiftRecord> shifts = logMgr.getAllShifts();
         final FrameLayout mainBodyContainer = new FrameLayout(this);
         LinearLayout.LayoutParams mblp = new LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT, 0, 1f);
@@ -10678,59 +11001,53 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
 
         final Runnable[] refreshContent = new Runnable[1];
 
-        // Shift Selection Strip
-        final HorizontalScrollView shiftHsv = new HorizontalScrollView(this);
-        shiftHsv.setHorizontalScrollBarEnabled(false);
-        final LinearLayout shiftRow = new LinearLayout(this);
-        shiftRow.setOrientation(LinearLayout.HORIZONTAL);
-        shiftRow.setPadding(0, dp(4), 0, dp(8));
-
-        final List<LogbookManager.ShiftRecord> shifts = logMgr.getAllShifts();
-
-        final Runnable buildShiftPills = new Runnable() {
+        final Runnable buildShiftSegment = new Runnable() {
             @Override
             public void run() {
                 shiftRow.removeAllViews();
 
-                final boolean allSelected = "ALL".equalsIgnoreCase(logbookSelectedShiftId);
-                TextView chipAll = new TextView(MainActivity.this);
-                chipAll.setText("📚 ALL ARCHIVES (" + logMgr.getAllEntriesChronological(false).size() + ")");
-                chipAll.setTextColor(allSelected ? colAccentInk : colMuted);
-                chipAll.setTextSize(10f);
-                chipAll.setTypeface(Typeface.create(Typeface.MONOSPACE, Typeface.BOLD));
-                chipAll.setPadding(dp(12), dp(6), dp(12), dp(6));
-                chipAll.setBackground(rounded(allSelected ? colAccent : 0x22FFFFFF, dp(8)));
-                chipAll.setOnClickListener(new View.OnClickListener() {
+                // 1. Tonight Pill
+                final boolean isTonight = "CURRENT".equalsIgnoreCase(logbookSelectedShiftId) || (shifts.size() > 0 && shifts.get(0).shiftId.equals(logbookSelectedShiftId));
+                TextView chipTonight = new TextView(MainActivity.this);
+                chipTonight.setText("🌙 TONIGHT (ACTIVE)");
+                chipTonight.setTextColor(isTonight ? 0xFF080D1A : colCyan);
+                chipTonight.setTextSize(10f);
+                chipTonight.setTypeface(Typeface.create(Typeface.MONOSPACE, Typeface.BOLD));
+                chipTonight.setPadding(dp(12), dp(6), dp(12), dp(6));
+                chipTonight.setBackground(rounded(isTonight ? colCyan : 0x2206B6D4, dp(8)));
+                chipTonight.setOnClickListener(new View.OnClickListener() {
                     @Override
                     public void onClick(View v) {
                         hapticClick();
-                        logbookSelectedShiftId = "ALL";
+                        logbookSelectedShiftId = shifts.size() > 0 ? shifts.get(0).shiftId : "CURRENT";
+                        tvSubHead.setText(getLogbookSubtitle(logMgr));
                         run();
                         if (refreshContent[0] != null) refreshContent[0].run();
                     }
                 });
-                LinearLayout.LayoutParams calp = new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams tlp = new LinearLayout.LayoutParams(
                         LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT);
-                calp.rightMargin = dp(6);
-                chipAll.setLayoutParams(calp);
-                shiftRow.addView(chipAll);
+                tlp.rightMargin = dp(6);
+                chipTonight.setLayoutParams(tlp);
+                shiftRow.addView(chipTonight);
 
-                for (final LogbookManager.ShiftRecord s : shifts) {
+                // 2. Past Shifts
+                for (int i = 1; i < shifts.size(); i++) {
+                    final LogbookManager.ShiftRecord s = shifts.get(i);
                     final boolean isSelected = s.shiftId.equals(logbookSelectedShiftId);
                     TextView chip = new TextView(MainActivity.this);
-                    String label = (s.isCurrent ? "🌙 " : "📅 ") + s.shortDateStr + (s.isCurrent ? " (ACTIVE)" : "");
-                    chip.setText(label);
-                    chip.setTextColor(isSelected ? 0xFF080D1A : (s.isCurrent ? colCyan : colPale));
+                    chip.setText("📅 " + s.shortDateStr);
+                    chip.setTextColor(isSelected ? 0xFF080D1A : colPale);
                     chip.setTextSize(10f);
                     chip.setTypeface(Typeface.create(Typeface.MONOSPACE, Typeface.BOLD));
                     chip.setPadding(dp(12), dp(6), dp(12), dp(6));
-                    int fill = isSelected ? (s.isCurrent ? colCyan : colEmerald) : (s.isCurrent ? 0x3306B6D4 : 0x22FFFFFF);
-                    chip.setBackground(rounded(fill, dp(8)));
+                    chip.setBackground(rounded(isSelected ? colEmerald : 0x1AFFFFFF, dp(8)));
                     chip.setOnClickListener(new View.OnClickListener() {
                         @Override
                         public void onClick(View v) {
                             hapticClick();
                             logbookSelectedShiftId = s.shiftId;
+                            tvSubHead.setText(getLogbookSubtitle(logMgr));
                             run();
                             if (refreshContent[0] != null) refreshContent[0].run();
                         }
@@ -10741,29 +11058,54 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
                     chip.setLayoutParams(clp);
                     shiftRow.addView(chip);
                 }
+
+                // 3. All Archives Pill
+                final boolean allSelected = "ALL".equalsIgnoreCase(logbookSelectedShiftId);
+                TextView chipAll = new TextView(MainActivity.this);
+                chipAll.setText("📚 ALL (" + logMgr.getAllEntriesChronological(false).size() + ")");
+                chipAll.setTextColor(allSelected ? colAccentInk : colMuted);
+                chipAll.setTextSize(10f);
+                chipAll.setTypeface(Typeface.create(Typeface.MONOSPACE, Typeface.BOLD));
+                chipAll.setPadding(dp(12), dp(6), dp(12), dp(6));
+                chipAll.setBackground(rounded(allSelected ? colAccent : 0x1AFFFFFF, dp(8)));
+                chipAll.setOnClickListener(new View.OnClickListener() {
+                    @Override
+                    public void onClick(View v) {
+                        hapticClick();
+                        logbookSelectedShiftId = "ALL";
+                        tvSubHead.setText(getLogbookSubtitle(logMgr));
+                        run();
+                        if (refreshContent[0] != null) refreshContent[0].run();
+                    }
+                });
+                shiftRow.addView(chipAll);
             }
         };
-        buildShiftPills.run();
+        buildShiftSegment.run();
         shiftHsv.addView(shiftRow);
         contentCard.addView(shiftHsv);
 
-        // Search Bar and Mode Switcher
-        LinearLayout searchRow = new LinearLayout(this);
-        searchRow.setOrientation(LinearLayout.HORIZONTAL);
-        searchRow.setGravity(Gravity.CENTER_VERTICAL);
-        searchRow.setPadding(0, 0, 0, dp(8));
+        // =========================================================================
+        // 3. COLLAPSIBLE ON-DEMAND SEARCH & CATEGORY FILTER DRAWER
+        // =========================================================================
+        final LinearLayout searchDrawer = new LinearLayout(this);
+        searchDrawer.setOrientation(LinearLayout.VERTICAL);
+        searchDrawer.setVisibility(logbookSearchDrawerOpen ? View.VISIBLE : View.GONE);
+        searchDrawer.setBackground(rounded(colPanel2, dp(12)));
+        searchDrawer.setPadding(dp(10), dp(10), dp(10), dp(10));
+        LinearLayout.LayoutParams sdlp = new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+        sdlp.bottomMargin = dp(8);
+        searchDrawer.setLayoutParams(sdlp);
 
         final EditText searchField = new EditText(this);
-        searchField.setHint("🔍 Search occurrences, regos, lots, pumps...");
+        searchField.setHint("🔍 Search occurrences, regos, lot lockups, pumps...");
         searchField.setHintTextColor(colMuted);
         searchField.setTextColor(colPale);
         searchField.setTextSize(11.5f);
-        searchField.setBackground(rounded(colPanel2, dp(8)));
-        searchField.setPadding(dp(12), dp(8), dp(12), dp(8));
+        searchField.setBackground(rounded(0x22FFFFFF, dp(8)));
+        searchField.setPadding(dp(10), dp(7), dp(10), dp(7));
         searchField.setSingleLine(true);
-        LinearLayout.LayoutParams slp = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
-        slp.rightMargin = dp(8);
-        searchField.setLayoutParams(slp);
         searchField.addTextChangedListener(new android.text.TextWatcher() {
             @Override
             public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
@@ -10775,45 +11117,24 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
             @Override
             public void afterTextChanged(android.text.Editable s) {}
         });
-        searchRow.addView(searchField);
+        searchDrawer.addView(searchField);
 
-        final TextView btnModeToggle = new TextView(this);
-        btnModeToggle.setText(logbookRuledViewMode ? "📋 FEED VIEW" : "📄 RULED LEDGER");
-        btnModeToggle.setTextColor(logbookRuledViewMode ? colCyan : 0xFFFDE047);
-        btnModeToggle.setTextSize(10f);
-        btnModeToggle.setTypeface(Typeface.create(Typeface.MONOSPACE, Typeface.BOLD));
-        btnModeToggle.setPadding(dp(10), dp(8), dp(10), dp(8));
-        btnModeToggle.setBackground(rounded(logbookRuledViewMode ? 0x3306B6D4 : 0x33FDE047, dp(8)));
-        btnModeToggle.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                hapticClick();
-                logbookRuledViewMode = !logbookRuledViewMode;
-                btnModeToggle.setText(logbookRuledViewMode ? "📋 FEED VIEW" : "📄 RULED LEDGER");
-                btnModeToggle.setTextColor(logbookRuledViewMode ? colCyan : 0xFFFDE047);
-                btnModeToggle.setBackground(rounded(logbookRuledViewMode ? 0x3306B6D4 : 0x33FDE047, dp(8)));
-                if (refreshContent[0] != null) refreshContent[0].run();
-            }
-        });
-        searchRow.addView(btnModeToggle);
-        contentCard.addView(searchRow);
-
-        // Category Filter Chips
+        // Category Pills inside search drawer
         HorizontalScrollView catHsv = new HorizontalScrollView(this);
         catHsv.setHorizontalScrollBarEnabled(false);
         final LinearLayout catRow = new LinearLayout(this);
         catRow.setOrientation(LinearLayout.HORIZONTAL);
-        catRow.setPadding(0, 0, 0, dp(8));
+        catRow.setPadding(0, dp(8), 0, 0);
 
         final String[][] categories = {
-                {"ALL", "ALL", "0xFFFFFFFF"},
-                {"PATROL", "🛡️ PATROLS", "0xFF10B981"},
-                {"LOT_LOCKUP", "🏭 LOTS", "0xFF06B6D4"},
-                {"FIRE_PUMP", "💧 PUMPS & PSI", "0xFF38BDF8"},
-                {"VEHICLE_REGO", "🚗 REGO / ANPR", "0xFFF59E0B"},
-                {"PHOTO", "📷 PHOTOS", "0xFFA855F7"},
-                {"INCIDENT", "⚠️ INCIDENTS", "0xFFEF4444"},
-                {"HANDOVER", "🤝 HANDOVERS", "0xFFE5A93C"}
+                {"ALL", "ALL"},
+                {"PATROL", "🛡️ Patrols"},
+                {"LOT_LOCKUP", "🏭 Lots"},
+                {"FIRE_PUMP", "💧 Pumps"},
+                {"VEHICLE_REGO", "🚗 Rego"},
+                {"PHOTO", "📷 Photos"},
+                {"INCIDENT", "⚠️ Incidents"},
+                {"HANDOVER", "🤝 Handovers"}
         };
 
         final Runnable buildCatPills = new Runnable() {
@@ -10830,8 +11151,8 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
                     chip.setTextColor(isSelected ? colAccentInk : colMuted);
                     chip.setTextSize(9.5f);
                     chip.setTypeface(Typeface.create(Typeface.MONOSPACE, Typeface.BOLD));
-                    chip.setPadding(dp(10), dp(5), dp(10), dp(5));
-                    chip.setBackground(rounded(isSelected ? colAccent : 0x1AFFFFFF, dp(6)));
+                    chip.setPadding(dp(8), dp(4), dp(8), dp(4));
+                    chip.setBackground(rounded(isSelected ? colAccent : 0x22FFFFFF, dp(6)));
                     chip.setOnClickListener(new View.OnClickListener() {
                         @Override
                         public void onClick(View v) {
@@ -10843,7 +11164,7 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
                     });
                     LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(
                             LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT);
-                    lp.rightMargin = dp(6);
+                    lp.rightMargin = dp(4);
                     chip.setLayoutParams(lp);
                     catRow.addView(chip);
                 }
@@ -10851,9 +11172,41 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
         };
         buildCatPills.run();
         catHsv.addView(catRow);
-        contentCard.addView(catHsv);
+        searchDrawer.addView(catHsv);
+        contentCard.addView(searchDrawer);
 
-        // Body Content
+        btnSearchToggle.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                hapticClick();
+                logbookSearchDrawerOpen = !logbookSearchDrawerOpen;
+                searchDrawer.setVisibility(logbookSearchDrawerOpen ? View.VISIBLE : View.GONE);
+                btnSearchToggle.setText(logbookSearchDrawerOpen ? "✕" : "🔍");
+                btnSearchToggle.setTextColor(logbookSearchDrawerOpen ? colAccent : colPale);
+                btnSearchToggle.setBackground(rounded(logbookSearchDrawerOpen ? 0x33E5A93C : 0x1AFFFFFF, dp(8)));
+                if (!logbookSearchDrawerOpen && !logbookSearchQuery.isEmpty()) {
+                    logbookSearchQuery = "";
+                    searchField.setText("");
+                    if (refreshContent[0] != null) refreshContent[0].run();
+                }
+            }
+        });
+
+        btnModeToggle.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                hapticClick();
+                logbookRuledViewMode = !logbookRuledViewMode;
+                btnModeToggle.setText(logbookRuledViewMode ? "📋 FEED" : "📄 RULED");
+                btnModeToggle.setTextColor(logbookRuledViewMode ? colCyan : 0xFFFDE047);
+                btnModeToggle.setBackground(rounded(logbookRuledViewMode ? 0x2206B6D4 : 0x22FDE047, dp(8)));
+                if (refreshContent[0] != null) refreshContent[0].run();
+            }
+        });
+
+        // =========================================================================
+        // 4. MAIN BODY CONTAINER & REFRESH LOGIC
+        // =========================================================================
         refreshContent[0] = new Runnable() {
             @Override
             public void run() {
@@ -10868,13 +11221,21 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
         refreshContent[0].run();
         contentCard.addView(mainBodyContainer);
 
-        // Bottom Action Bar
-        LinearLayout botBar = new LinearLayout(this);
-        botBar.setOrientation(LinearLayout.HORIZONTAL);
-        botBar.setGravity(Gravity.CENTER_VERTICAL);
-        botBar.setPadding(0, dp(10), 0, 0);
+        // =========================================================================
+        // 5. SLEEK FLOATING ACTION CAPSULE (Bottom Bar)
+        // =========================================================================
+        LinearLayout floatBarWrapper = new LinearLayout(this);
+        floatBarWrapper.setOrientation(LinearLayout.HORIZONTAL);
+        floatBarWrapper.setGravity(Gravity.CENTER);
+        floatBarWrapper.setPadding(0, dp(8), 0, 0);
 
-        TextView btnAddNote = actionButton("📝 Note", colPanel2, colPale);
+        LinearLayout floatBar = new LinearLayout(this);
+        floatBar.setOrientation(LinearLayout.HORIZONTAL);
+        floatBar.setGravity(Gravity.CENTER_VERTICAL);
+        floatBar.setBackground(rounded(0xEE1E293B, dp(24)));
+        floatBar.setPadding(dp(8), dp(4), dp(8), dp(4));
+
+        TextView btnAddNote = actionPillButton("📝 Note", colPale);
         btnAddNote.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
@@ -10882,9 +11243,9 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
                 showModernNotesSheet();
             }
         });
-        botBar.addView(btnAddNote);
+        floatBar.addView(btnAddNote);
 
-        TextView btnAddPhoto = actionButton("📷 Photo", colPanel2, colPale);
+        TextView btnAddPhoto = actionPillButton("📷 Photo", 0xFFA855F7);
         btnAddPhoto.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
@@ -10892,12 +11253,9 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
                 checkAndLaunchFastCamera(null);
             }
         });
-        LinearLayout.LayoutParams apl = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
-        apl.leftMargin = dp(6);
-        btnAddPhoto.setLayoutParams(apl);
-        botBar.addView(btnAddPhoto);
+        floatBar.addView(btnAddPhoto);
 
-        TextView btnAddRego = actionButton("🚗 Rego", colPanel2, colPale);
+        TextView btnAddRego = actionPillButton("🚗 Rego", 0xFFF59E0B);
         btnAddRego.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
@@ -10905,12 +11263,9 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
                 showRegoPlateEntryModal();
             }
         });
-        LinearLayout.LayoutParams rpl = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
-        rpl.leftMargin = dp(6);
-        btnAddRego.setLayoutParams(rpl);
-        botBar.addView(btnAddRego);
+        floatBar.addView(btnAddRego);
 
-        TextView btnAddIncident = actionButton("🚨 Incident", colCrimson, colPale);
+        TextView btnAddIncident = actionPillButton("🚨 Incident", colCrimson);
         btnAddIncident.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
@@ -10918,16 +11273,43 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
                 showModernIncidentSheet();
             }
         });
-        LinearLayout.LayoutParams ipl = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1.1f);
-        ipl.leftMargin = dp(6);
-        btnAddIncident.setLayoutParams(ipl);
-        botBar.addView(btnAddIncident);
+        floatBar.addView(btnAddIncident);
 
-        contentCard.addView(botBar);
+        floatBarWrapper.addView(floatBar);
+        contentCard.addView(floatBarWrapper);
 
         root.addView(contentCard);
         dlg.setContentView(root);
         dlg.show();
+    }
+
+    private String getLogbookSubtitle(LogbookManager logMgr) {
+        if ("ALL".equalsIgnoreCase(logbookSelectedShiftId)) {
+            return "All Archives · " + logMgr.getAllShifts().size() + " Shifts · " + logMgr.getAllEntriesChronological(false).size() + " Occurrences";
+        }
+        for (LogbookManager.ShiftRecord s : logMgr.getAllShifts()) {
+            if (s.shiftId.equals(logbookSelectedShiftId)) {
+                return s.dateHeaderStr + " · " + s.guardName + " (" + s.entries.size() + " logs)";
+            }
+        }
+        return "Tonight · Lochran Doherty #41207";
+    }
+
+    private TextView actionPillButton(String text, int textColor) {
+        TextView btn = new TextView(this);
+        btn.setText(text);
+        btn.setTextColor(textColor);
+        btn.setTextSize(11f);
+        btn.setTypeface(Typeface.create(Typeface.MONOSPACE, Typeface.BOLD));
+        btn.setGravity(Gravity.CENTER);
+        btn.setPadding(dp(10), dp(6), dp(10), dp(6));
+        btn.setBackground(pressable(0x22FFFFFF, dp(16)));
+        LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+        lp.leftMargin = dp(3);
+        lp.rightMargin = dp(3);
+        btn.setLayoutParams(lp);
+        return btn;
     }
 
     private View buildLogbookFeedView() {
@@ -10938,7 +11320,7 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
 
         LinearLayout container = new LinearLayout(this);
         container.setOrientation(LinearLayout.VERTICAL);
-        container.setPadding(0, dp(4), 0, dp(14));
+        container.setPadding(0, dp(4), 0, dp(6));
 
         LogbookManager logMgr = LogbookManager.getInstance(this);
         List<LogbookManager.LogEntry> entries = logMgr.filterEntries(
@@ -10948,7 +11330,7 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
             LinearLayout emptyBox = new LinearLayout(this);
             emptyBox.setOrientation(LinearLayout.VERTICAL);
             emptyBox.setGravity(Gravity.CENTER);
-            emptyBox.setPadding(dp(20), dp(40), dp(20), dp(40));
+            emptyBox.setPadding(dp(20), dp(48), dp(20), dp(48));
 
             TextView ic = new TextView(this);
             ic.setText("🔍");
@@ -10957,7 +11339,7 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
             emptyBox.addView(ic);
 
             TextView msg = new TextView(this);
-            msg.setText("No occurrences matching filter\nTry clearing search query or selecting ALL categories.");
+            msg.setText("No occurrences matching filter\nTap the search bar or reset category filter.");
             msg.setTextColor(colMuted);
             msg.setTextSize(12f);
             msg.setGravity(Gravity.CENTER);
@@ -10968,12 +11350,13 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
         } else {
             String currentGroupHeader = "";
             for (final LogbookManager.LogEntry entry : entries) {
+                // Shift Date Section Header
                 if (!entry.shiftDateStr.equals(currentGroupHeader)) {
                     currentGroupHeader = entry.shiftDateStr;
                     LinearLayout headerRow = new LinearLayout(this);
                     headerRow.setOrientation(LinearLayout.HORIZONTAL);
                     headerRow.setGravity(Gravity.CENTER_VERTICAL);
-                    headerRow.setPadding(dp(4), dp(12), dp(4), dp(6));
+                    headerRow.setPadding(dp(4), dp(10), dp(4), dp(6));
 
                     TextView tvShiftTitle = new TextView(this);
                     tvShiftTitle.setText("── " + currentGroupHeader + " · " + entry.guardName.toUpperCase(Locale.US) + " ──");
@@ -10984,55 +11367,82 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
                     container.addView(headerRow);
                 }
 
-                LinearLayout itemCard = new LinearLayout(this);
-                itemCard.setOrientation(LinearLayout.VERTICAL);
-                itemCard.setBackground(rounded(colPanel2, dp(10)));
-                itemCard.setPadding(dp(12), dp(10), dp(12), dp(10));
-                LinearLayout.LayoutParams ipl = new LinearLayout.LayoutParams(
-                        LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
-                ipl.bottomMargin = dp(8);
-                itemCard.setLayoutParams(ipl);
+                // Timeline Row: Left Timestamp & Node | Right Occurrence Card
+                LinearLayout timelineRow = new LinearLayout(this);
+                timelineRow.setOrientation(LinearLayout.HORIZONTAL);
+                timelineRow.setPadding(0, dp(2), 0, dp(6));
 
-                LinearLayout infoRow = new LinearLayout(this);
-                infoRow.setOrientation(LinearLayout.HORIZONTAL);
-                infoRow.setGravity(Gravity.CENTER_VERTICAL);
+                // Left Column: Time & Node
+                LinearLayout leftCol = new LinearLayout(this);
+                leftCol.setOrientation(LinearLayout.VERTICAL);
+                leftCol.setGravity(Gravity.CENTER_HORIZONTAL);
+                LinearLayout.LayoutParams lclp = new LinearLayout.LayoutParams(dp(54), LinearLayout.LayoutParams.MATCH_PARENT);
+                leftCol.setLayoutParams(lclp);
 
-                TextView timePill = new TextView(this);
-                timePill.setText(entry.timeStr);
-                timePill.setTextColor(colCyan);
-                timePill.setTextSize(11f);
-                timePill.setTypeface(Typeface.create(Typeface.MONOSPACE, Typeface.BOLD));
-                timePill.setBackground(rounded(0x2206B6D4, dp(4)));
-                timePill.setPadding(dp(6), dp(2), dp(6), dp(2));
-                infoRow.addView(timePill);
+                TextView tvTime = new TextView(this);
+                tvTime.setText(entry.timeStr);
+                tvTime.setTextColor(colCyan);
+                tvTime.setTextSize(11.5f);
+                tvTime.setTypeface(Typeface.create(Typeface.MONOSPACE, Typeface.BOLD));
+                leftCol.addView(tvTime);
 
-                TextView catPill = new TextView(this);
-                catPill.setText(entry.categoryIcon + " " + entry.categoryLabel);
-                catPill.setTextColor(entry.categoryColor);
-                catPill.setTextSize(9.5f);
-                catPill.setTypeface(Typeface.create(Typeface.MONOSPACE, Typeface.BOLD));
-                LinearLayout.LayoutParams cpl = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
-                cpl.leftMargin = dp(8);
-                catPill.setLayoutParams(cpl);
-                infoRow.addView(catPill);
+                View nodeDot = new View(this);
+                nodeDot.setBackground(rounded(entry.categoryColor, dp(4)));
+                LinearLayout.LayoutParams ndlp = new LinearLayout.LayoutParams(dp(8), dp(8));
+                ndlp.topMargin = dp(4);
+                ndlp.bottomMargin = dp(4);
+                nodeDot.setLayoutParams(ndlp);
+                leftCol.addView(nodeDot);
 
-                TextView guardTag = new TextView(this);
-                guardTag.setText("✓ " + (entry.guardName.contains("Lochran") ? "L. Doherty" : "Guard"));
-                guardTag.setTextColor(colMuted);
-                guardTag.setTextSize(9f);
-                guardTag.setTypeface(Typeface.MONOSPACE);
-                infoRow.addView(guardTag);
+                View rail = new View(this);
+                rail.setBackgroundColor(0x22FFFFFF);
+                LinearLayout.LayoutParams rlp = new LinearLayout.LayoutParams(dp(2), 0, 1f);
+                rail.setLayoutParams(rlp);
+                leftCol.addView(rail);
 
-                itemCard.addView(infoRow);
+                timelineRow.addView(leftCol);
 
-                TextView bodyTv = new TextView(this);
-                bodyTv.setText(entry.text);
-                bodyTv.setTextColor(colPale);
-                bodyTv.setTextSize(12.5f);
-                bodyTv.setTypeface(Typeface.DEFAULT_BOLD);
-                bodyTv.setPadding(0, dp(6), 0, dp(4));
-                itemCard.addView(bodyTv);
+                // Right Column: Clean Occurrence Body
+                LinearLayout rightCard = new LinearLayout(this);
+                rightCard.setOrientation(LinearLayout.VERTICAL);
+                rightCard.setBackground(rounded(0xFF1E293B, dp(12)));
+                rightCard.setPadding(dp(12), dp(10), dp(12), dp(10));
+                LinearLayout.LayoutParams rclp = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
+                rclp.leftMargin = dp(6);
+                rightCard.setLayoutParams(rclp);
 
+                // Category & Guard Signature Row
+                LinearLayout topMeta = new LinearLayout(this);
+                topMeta.setOrientation(LinearLayout.HORIZONTAL);
+                topMeta.setGravity(Gravity.CENTER_VERTICAL);
+
+                TextView tvCat = new TextView(this);
+                tvCat.setText(entry.categoryIcon + " " + entry.categoryLabel);
+                tvCat.setTextColor(entry.categoryColor);
+                tvCat.setTextSize(9.5f);
+                tvCat.setTypeface(Typeface.create(Typeface.MONOSPACE, Typeface.BOLD));
+                LinearLayout.LayoutParams ctlp = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
+                tvCat.setLayoutParams(ctlp);
+                topMeta.addView(tvCat);
+
+                TextView tvGuard = new TextView(this);
+                tvGuard.setText("✓ " + (entry.guardName.contains("Lochran") ? "L. Doherty" : entry.guardName));
+                tvGuard.setTextColor(colQuiet);
+                tvGuard.setTextSize(9f);
+                tvGuard.setTypeface(Typeface.MONOSPACE);
+                topMeta.addView(tvGuard);
+                rightCard.addView(topMeta);
+
+                // Main Text
+                TextView tvBody = new TextView(this);
+                tvBody.setText(entry.text);
+                tvBody.setTextColor(colPale);
+                tvBody.setTextSize(12.5f);
+                tvBody.setTypeface(Typeface.DEFAULT_BOLD);
+                tvBody.setPadding(0, dp(4), 0, dp(4));
+                rightCard.addView(tvBody);
+
+                // Attachments row (Photo or Rego Plate)
                 if (!entry.photoHashSnippet.isEmpty() || !entry.regoPlate.isEmpty()) {
                     LinearLayout attachRow = new LinearLayout(this);
                     attachRow.setOrientation(LinearLayout.HORIZONTAL);
@@ -11041,12 +11451,12 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
 
                     if (!entry.photoHashSnippet.isEmpty()) {
                         TextView btnPhoto = new TextView(this);
-                        btnPhoto.setText("📷 PHOTO #" + entry.photoHashSnippet + " ↗");
+                        btnPhoto.setText("📷 PHOTO EVIDENCE #" + entry.photoHashSnippet + " ↗");
                         btnPhoto.setTextColor(0xFFA855F7);
                         btnPhoto.setTextSize(9.5f);
                         btnPhoto.setTypeface(Typeface.create(Typeface.MONOSPACE, Typeface.BOLD));
                         btnPhoto.setPadding(dp(8), dp(3), dp(8), dp(3));
-                        btnPhoto.setBackground(rounded(0x33A855F7, dp(6)));
+                        btnPhoto.setBackground(rounded(0x28A855F7, dp(6)));
                         btnPhoto.setOnClickListener(new View.OnClickListener() {
                             @Override
                             public void onClick(View v) {
@@ -11059,23 +11469,24 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
 
                     if (!entry.regoPlate.isEmpty()) {
                         TextView btnRego = new TextView(this);
-                        btnRego.setText("🚗 PLATE: " + entry.regoPlate);
+                        btnRego.setText("🚗 PLATE " + entry.regoPlate);
                         btnRego.setTextColor(0xFFF59E0B);
                         btnRego.setTextSize(9.5f);
                         btnRego.setTypeface(Typeface.create(Typeface.MONOSPACE, Typeface.BOLD));
                         btnRego.setPadding(dp(8), dp(3), dp(8), dp(3));
-                        btnRego.setBackground(rounded(0x33F59E0B, dp(6)));
-                        LinearLayout.LayoutParams rlp = new LinearLayout.LayoutParams(
+                        btnRego.setBackground(rounded(0x28F59E0B, dp(6)));
+                        LinearLayout.LayoutParams rglp = new LinearLayout.LayoutParams(
                                 LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT);
-                        rlp.leftMargin = dp(6);
-                        btnRego.setLayoutParams(rlp);
+                        rglp.leftMargin = dp(6);
+                        btnRego.setLayoutParams(rglp);
                         attachRow.addView(btnRego);
                     }
 
-                    itemCard.addView(attachRow);
+                    rightCard.addView(attachRow);
                 }
 
-                container.addView(itemCard);
+                timelineRow.addView(rightCard);
+                container.addView(timelineRow);
             }
         }
 
@@ -16403,6 +16814,867 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
                     }
                 }
             });
+        }
+    }
+
+    // =========================================================================
+    // ⚪⚫ BADUK (GO / TSUMEGO) INTERACTIVE CANVAS VIEW & BOT ENGINE
+    // =========================================================================
+
+    public static class BadukBoardView extends View {
+        public interface StatusListener {
+            void onStatusChanged(String text, int color);
+        }
+
+        private StatusListener statusListener;
+        private final Paint boardPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+        private final Paint gridPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+        private final Paint textPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+        private final Paint blackStonePaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+        private final Paint whiteStonePaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+        private final Paint stoneHighlightPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+        private final Paint lastMovePaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+        private final Paint starPointPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+        private final RectF boardRect = new RectF();
+
+        private final int[][] board = new int[9][9]; // 0: Empty, 1: Black, 2: White
+        private int currentTurn = 1; // 1 = Black, 2 = White
+        private int blackCaptures = 0;
+        private int whiteCaptures = 0;
+        private int lastMoveX = -1;
+        private int lastMoveY = -1;
+        private int mode = 0; // 0 = vs Bot, 1 = Tsumego Puzzles
+        private int puzzleIndex = 0;
+        private boolean puzzleSolved = false;
+
+        private float dpf(float v) {
+            return v * getResources().getDisplayMetrics().density;
+        }
+
+        public BadukBoardView(Context context) {
+            super(context);
+            setClickable(true);
+            setFocusable(true);
+
+            boardPaint.setColor(0xFF1E2638);
+            boardPaint.setStyle(Paint.Style.FILL);
+
+            gridPaint.setColor(0xFF475569);
+            gridPaint.setStrokeWidth(dpf(1.2f));
+
+            starPointPaint.setColor(0xFFE8A33D);
+            starPointPaint.setStyle(Paint.Style.FILL);
+
+            textPaint.setColor(0xFF94A3B8);
+            textPaint.setTextSize(dpf(9f));
+            textPaint.setTextAlign(Paint.Align.CENTER);
+            textPaint.setTypeface(Typeface.create(Typeface.MONOSPACE, Typeface.BOLD));
+
+            blackStonePaint.setColor(0xFF0F172A);
+            blackStonePaint.setStyle(Paint.Style.FILL);
+
+            whiteStonePaint.setColor(0xFFF1F5F9);
+            whiteStonePaint.setStyle(Paint.Style.FILL);
+
+            stoneHighlightPaint.setColor(0x88FFFFFF);
+            stoneHighlightPaint.setStyle(Paint.Style.FILL);
+
+            lastMovePaint.setColor(0xFFFFD166);
+            lastMovePaint.setStyle(Paint.Style.STROKE);
+            lastMovePaint.setStrokeWidth(dpf(2f));
+
+            resetGame();
+        }
+
+        public void setStatusListener(StatusListener listener) {
+            this.statusListener = listener;
+            updateStatus();
+        }
+
+        public void setMode(int m) {
+            this.mode = m;
+            if (mode == 1) {
+                loadPuzzle(puzzleIndex);
+            } else {
+                resetGame();
+            }
+        }
+
+        public void resetGame() {
+            for (int r = 0; r < 9; r++) {
+                for (int c = 0; c < 9; c++) {
+                    board[r][c] = 0;
+                }
+            }
+            currentTurn = 1;
+            blackCaptures = 0;
+            whiteCaptures = 0;
+            lastMoveX = -1;
+            lastMoveY = -1;
+            puzzleSolved = false;
+            updateStatus();
+            invalidate();
+        }
+
+        public void passTurn() {
+            currentTurn = (currentTurn == 1) ? 2 : 1;
+            updateStatus();
+            if (mode == 0 && currentTurn == 2) {
+                postDelayed(new Runnable() {
+                    public void run() { botPlayMove(); }
+                }, 350);
+            }
+        }
+
+        public void nextPuzzle() {
+            puzzleIndex = (puzzleIndex + 1) % 6;
+            loadPuzzle(puzzleIndex);
+        }
+
+        private static class BadukPuzzle {
+            String title;
+            int[][] initialStones; // [x, y, color]
+            int targetX, targetY;
+
+            BadukPuzzle(String title, int[][] stones, int targetX, int targetY) {
+                this.title = title;
+                this.initialStones = stones;
+                this.targetX = targetX;
+                this.targetY = targetY;
+            }
+        }
+
+        private static final BadukPuzzle[] PUZZLES = {
+            new BadukPuzzle("1. Corner Two-Eyes Life", new int[][]{
+                {0,0,1}, {0,2,1}, {1,0,1}, {1,2,1}, {2,1,1}, {0,3,2}, {1,3,2}, {2,3,2}, {3,2,2}, {3,1,2}, {3,0,2}
+            }, 0, 1),
+            new BadukPuzzle("2. Snapback Tesuji", new int[][]{
+                {2,2,1}, {3,1,1}, {3,3,1}, {4,2,1}, {2,1,2}, {2,3,2}, {3,0,2}, {3,4,2}, {4,1,2}, {4,3,2}, {3,2,2}
+            }, 3, 2),
+            new BadukPuzzle("3. Crane's Nest Tesuji", new int[][]{
+                {1,1,2}, {2,1,2}, {3,1,2}, {1,2,1}, {3,2,1}, {2,3,1}, {0,1,1}, {4,1,1}
+            }, 2, 2),
+            new BadukPuzzle("4. Under the Stones", new int[][]{
+                {0,1,1}, {1,1,1}, {2,1,1}, {0,2,2}, {1,2,2}, {2,2,2}, {0,0,2}, {3,1,2}
+            }, 1, 0),
+            new BadukPuzzle("5. False Eye Squeeze", new int[][]{
+                {5,5,2}, {5,7,2}, {6,6,2}, {7,5,2}, {7,7,2}, {4,6,1}, {8,6,1}, {6,4,1}, {6,8,1}
+            }, 6, 6),
+            new BadukPuzzle("6. Belly Attachment", new int[][]{
+                {1,4,2}, {2,4,2}, {3,4,2}, {1,5,1}, {3,5,1}, {0,4,1}, {4,4,1}
+            }, 2, 5)
+        };
+
+        private void loadPuzzle(int idx) {
+            resetGame();
+            if (idx < 0 || idx >= PUZZLES.length) idx = 0;
+            BadukPuzzle p = PUZZLES[idx];
+            for (int[] s : p.initialStones) {
+                board[s[1]][s[0]] = s[2];
+            }
+            currentTurn = 1;
+            updateStatus();
+            invalidate();
+        }
+
+        private void updateStatus() {
+            if (statusListener == null) return;
+            if (mode == 1) {
+                BadukPuzzle p = PUZZLES[puzzleIndex];
+                if (puzzleSolved) {
+                    statusListener.onStatusChanged("✓ " + p.title + " SOLVED! Brilliant move.", 0xFF10B981);
+                } else {
+                    statusListener.onStatusChanged("● Black to play · " + p.title, 0xFFFFD166);
+                }
+            } else {
+                String turn = (currentTurn == 1) ? "● Black's Turn" : "○ White's Turn (Bot)";
+                statusListener.onStatusChanged(turn + " · Captures: ● " + blackCaptures + " | ○ " + whiteCaptures, 0xFFE2E8F0);
+            }
+        }
+
+        private boolean playMove(int x, int y) {
+            if (x < 0 || x >= 9 || y < 0 || y >= 9) return false;
+            if (board[y][x] != 0) return false;
+
+            if (mode == 1) {
+                BadukPuzzle p = PUZZLES[puzzleIndex];
+                if (x == p.targetX && y == p.targetY) {
+                    board[y][x] = 1;
+                    lastMoveX = x;
+                    lastMoveY = y;
+                    puzzleSolved = true;
+                    updateStatus();
+                    invalidate();
+                    return true;
+                } else {
+                    if (statusListener != null) {
+                        statusListener.onStatusChanged("✗ Incorrect. Try a different tesuji!", 0xFFF87171);
+                    }
+                    return false;
+                }
+            }
+
+            int color = currentTurn;
+            int opponent = (color == 1) ? 2 : 1;
+
+            board[y][x] = color;
+
+            // Check neighbor captures
+            int capturedCount = 0;
+            int[][] dirs = {{0,1}, {0,-1}, {1,0}, {-1,0}};
+            for (int[] d : dirs) {
+                int nx = x + d[0];
+                int ny = y + d[1];
+                if (nx >= 0 && nx < 9 && ny >= 0 && ny < 9 && board[ny][nx] == opponent) {
+                    boolean[][] visited = new boolean[9][9];
+                    if (countGroupLiberties(nx, ny, opponent, visited) == 0) {
+                        capturedCount += removeGroup(nx, ny, opponent);
+                    }
+                }
+            }
+
+            // Suicide rule check
+            boolean[][] selfVisited = new boolean[9][9];
+            if (capturedCount == 0 && countGroupLiberties(x, y, color, selfVisited) == 0) {
+                board[y][x] = 0; // Revert suicide
+                return false;
+            }
+
+            if (color == 1) blackCaptures += capturedCount;
+            else whiteCaptures += capturedCount;
+
+            lastMoveX = x;
+            lastMoveY = y;
+            currentTurn = opponent;
+            updateStatus();
+            invalidate();
+
+            if (mode == 0 && currentTurn == 2) {
+                postDelayed(new Runnable() {
+                    public void run() { botPlayMove(); }
+                }, 380);
+            }
+            return true;
+        }
+
+        private int countGroupLiberties(int startX, int startY, int color, boolean[][] visited) {
+            java.util.List<Point> group = new java.util.ArrayList<>();
+            java.util.Set<Integer> liberties = new java.util.HashSet<>();
+            java.util.Queue<Point> q = new java.util.LinkedList<>();
+
+            q.add(new Point(startX, startY));
+            visited[startY][startX] = true;
+
+            int[][] dirs = {{0,1}, {0,-1}, {1,0}, {-1,0}};
+
+            while (!q.isEmpty()) {
+                Point p = q.poll();
+                group.add(p);
+
+                for (int[] d : dirs) {
+                    int nx = p.x + d[0];
+                    int ny = p.y + d[1];
+                    if (nx >= 0 && nx < 9 && ny >= 0 && ny < 9) {
+                        if (board[ny][nx] == 0) {
+                            liberties.add(ny * 9 + nx);
+                        } else if (board[ny][nx] == color && !visited[ny][nx]) {
+                            visited[ny][nx] = true;
+                            q.add(new Point(nx, ny));
+                        }
+                    }
+                }
+            }
+            return liberties.size();
+        }
+
+        private int removeGroup(int startX, int startY, int color) {
+            int count = 0;
+            java.util.Queue<Point> q = new java.util.LinkedList<>();
+            q.add(new Point(startX, startY));
+            board[startY][startX] = 0;
+            count++;
+
+            int[][] dirs = {{0,1}, {0,-1}, {1,0}, {-1,0}};
+            while (!q.isEmpty()) {
+                Point p = q.poll();
+                for (int[] d : dirs) {
+                    int nx = p.x + d[0];
+                    int ny = p.y + d[1];
+                    if (nx >= 0 && nx < 9 && ny >= 0 && ny < 9 && board[ny][nx] == color) {
+                        board[ny][nx] = 0;
+                        count++;
+                        q.add(new Point(nx, ny));
+                    }
+                }
+            }
+            return count;
+        }
+
+        private void botPlayMove() {
+            if (currentTurn != 2) return;
+
+            // 1. Try to capture any Black stone in atari
+            for (int y = 0; y < 9; y++) {
+                for (int x = 0; x < 9; x++) {
+                    if (board[y][x] == 1) {
+                        boolean[][] v = new boolean[9][9];
+                        if (countGroupLiberties(x, y, 1, v) == 1) {
+                            int[][] dirs = {{0,1}, {0,-1}, {1,0}, {-1,0}};
+                            for (int[] d : dirs) {
+                                int nx = x + d[0];
+                                int ny = y + d[1];
+                                if (nx >= 0 && nx < 9 && ny >= 0 && ny < 9 && board[ny][nx] == 0) {
+                                    if (playMove(nx, ny)) return;
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            // 2. Play near opponent's last move or center/corners
+            int[] order = {4, 2, 6, 3, 5, 1, 7, 0, 8};
+            for (int r : order) {
+                for (int c : order) {
+                    if (board[r][c] == 0) {
+                        if (playMove(c, r)) return;
+                    }
+                }
+            }
+            passTurn();
+        }
+
+        @Override
+        public boolean onTouchEvent(MotionEvent event) {
+            if (event.getActionMasked() == MotionEvent.ACTION_DOWN) {
+                float w = getWidth();
+                float h = getHeight();
+                float pad = dpf(20f);
+                float size = Math.min(w, h) - pad * 2;
+                float startX = (w - size) / 2f;
+                float startY = (h - size) / 2f;
+                float cellSize = size / 8f;
+
+                float ex = event.getX();
+                float ey = event.getY();
+
+                int gx = Math.round((ex - startX) / cellSize);
+                int gy = Math.round((ey - startY) / cellSize);
+
+                if (gx >= 0 && gx < 9 && gy >= 0 && gy < 9) {
+                    playMove(gx, gy);
+                    return true;
+                }
+            }
+            return super.onTouchEvent(event);
+        }
+
+        @Override
+        protected void onDraw(Canvas canvas) {
+            super.onDraw(canvas);
+            float w = getWidth();
+            float h = getHeight();
+            if (w <= 0 || h <= 0) return;
+
+            boardRect.set(0, 0, w, h);
+            canvas.drawRoundRect(boardRect, dpf(16f), dpf(16f), boardPaint);
+
+            float pad = dpf(22f);
+            float size = Math.min(w, h) - pad * 2;
+            float startX = (w - size) / 2f;
+            float startY = (h - size) / 2f;
+            float cellSize = size / 8f;
+
+            // Grid lines
+            for (int i = 0; i < 9; i++) {
+                float py = startY + i * cellSize;
+                canvas.drawLine(startX, py, startX + size, py, gridPaint);
+                float px = startX + i * cellSize;
+                canvas.drawLine(px, startY, px, startY + size, gridPaint);
+
+                // Coordinate labels
+                String colName = String.valueOf((char) ('A' + (i >= 8 ? i + 1 : i)));
+                canvas.drawText(colName, px, startY - dpf(6f), textPaint);
+                canvas.drawText(String.valueOf(9 - i), startX - dpf(10f), py + dpf(3f), textPaint);
+            }
+
+            // Star points (Hoshi) at (2,2), (6,2), (4,4), (2,6), (6,6)
+            int[] hoshi = {2, 4, 6};
+            for (int hx : hoshi) {
+                for (int hy : hoshi) {
+                    float px = startX + hx * cellSize;
+                    float py = startY + hy * cellSize;
+                    canvas.drawCircle(px, py, dpf(3f), starPointPaint);
+                }
+            }
+
+            // Stones
+            float stoneR = cellSize * 0.46f;
+            for (int y = 0; y < 9; y++) {
+                for (int x = 0; x < 9; x++) {
+                    int val = board[y][x];
+                    if (val == 0) continue;
+
+                    float cx = startX + x * cellSize;
+                    float cy = startY + y * cellSize;
+
+                    if (val == 1) { // Black stone
+                        canvas.drawCircle(cx, cy, stoneR, blackStonePaint);
+                        canvas.drawCircle(cx - stoneR * 0.25f, cy - stoneR * 0.25f, stoneR * 0.22f, stoneHighlightPaint);
+                    } else if (val == 2) { // White stone
+                        canvas.drawCircle(cx, cy, stoneR, whiteStonePaint);
+                    }
+
+                    if (x == lastMoveX && y == lastMoveY) {
+                        canvas.drawCircle(cx, cy, stoneR * 0.55f, lastMovePaint);
+                    }
+                }
+            }
+        }
+    }
+
+    // =========================================================================
+    // ♟️ GRANDMASTER CHESS INTERACTIVE CANVAS VIEW & MINIMAX AI
+    // =========================================================================
+
+    public static class ChessBoardView extends View {
+        public interface StatusListener {
+            void onStatusChanged(String text, int color);
+        }
+
+        private StatusListener statusListener;
+        private final Paint boardBgPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+        private final Paint darkSquarePaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+        private final Paint lightSquarePaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+        private final Paint selectPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+        private final Paint targetDotPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+        private final Paint textPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+        private final Paint piecePaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+        private final RectF squareRect = new RectF();
+
+        private final char[][] board = new char[8][8];
+        private boolean whiteTurn = true;
+        private int selectedX = -1;
+        private int selectedY = -1;
+        private final java.util.List<Point> validMoves = new java.util.ArrayList<>();
+        private int mode = 0; // 0 = vs AI, 1 = Tactical Puzzles
+        private int puzzleIndex = 0;
+        private boolean puzzleSolved = false;
+
+        private float dpf(float v) {
+            return v * getResources().getDisplayMetrics().density;
+        }
+
+        public ChessBoardView(Context context) {
+            super(context);
+            setClickable(true);
+            setFocusable(true);
+
+            boardBgPaint.setColor(0xFF131B2A);
+            darkSquarePaint.setColor(0xFF1E293B);
+            lightSquarePaint.setColor(0xFF334155);
+
+            selectPaint.setColor(0x88FFD166);
+            selectPaint.setStyle(Paint.Style.FILL);
+
+            targetDotPaint.setColor(0xFFFFD166);
+            targetDotPaint.setStyle(Paint.Style.FILL);
+
+            textPaint.setColor(0xFF94A3B8);
+            textPaint.setTextSize(dpf(8.5f));
+            textPaint.setTextAlign(Paint.Align.CENTER);
+            textPaint.setTypeface(Typeface.create(Typeface.MONOSPACE, Typeface.BOLD));
+
+            piecePaint.setTextAlign(Paint.Align.CENTER);
+            piecePaint.setTypeface(Typeface.DEFAULT_BOLD);
+
+            resetGame();
+        }
+
+        public void setStatusListener(StatusListener listener) {
+            this.statusListener = listener;
+            updateStatus();
+        }
+
+        public void setMode(int m) {
+            this.mode = m;
+            if (mode == 1) {
+                loadPuzzle(puzzleIndex);
+            } else {
+                resetGame();
+            }
+        }
+
+        public void resetGame() {
+            String[] setup = {
+                "rnbqkbnr",
+                "pppppppp",
+                "........",
+                "........",
+                "........",
+                "........",
+                "PPPPPPPP",
+                "RNBQKBNR"
+            };
+            for (int r = 0; r < 8; r++) {
+                for (int c = 0; c < 8; c++) {
+                    board[r][c] = setup[r].charAt(c);
+                }
+            }
+            whiteTurn = true;
+            selectedX = -1;
+            selectedY = -1;
+            validMoves.clear();
+            puzzleSolved = false;
+            updateStatus();
+            invalidate();
+        }
+
+        public void undoMove() {
+            resetGame();
+        }
+
+        public void nextPuzzle() {
+            puzzleIndex = (puzzleIndex + 1) % 6;
+            loadPuzzle(puzzleIndex);
+        }
+
+        private static class ChessPuzzle {
+            String title;
+            String[] grid;
+            int fromX, fromY, toX, toY;
+
+            ChessPuzzle(String title, String[] grid, int fromX, int fromY, int toX, int toY) {
+                this.title = title;
+                this.grid = grid;
+                this.fromX = fromX;
+                this.fromY = fromY;
+                this.toX = toX;
+                this.toY = toY;
+            }
+        }
+
+        private static final ChessPuzzle[] PUZZLES = {
+            new ChessPuzzle("1. Back-Rank Checkmate", new String[]{
+                "....k...", "pppp.ppp", "........", "........", "........", "........", "PPPP.PPP", "....R.K."
+            }, 4, 7, 4, 0),
+            new ChessPuzzle("2. Royal Knight Fork", new String[]{
+                "...q.rk.", "ppp..ppp", "....n...", "........", "....N...", "........", "PPP..PPP", "....R.K."
+            }, 4, 4, 3, 2),
+            new ChessPuzzle("3. Smothered Mate", new String[]{
+                "...r..k.", "ppp...pp", "....N...", "........", "........", "........", "PPP..PPP", "....R.K."
+            }, 4, 2, 5, 0),
+            new ChessPuzzle("4. Greek Gift Sacrifice", new String[]{
+                "r.bq.rk.", "pppp.ppp", "..n.....", "....B...", "....P...", ".....N..", "PPPP..PP", "R.BQK..R"
+            }, 4, 3, 7, 0),
+            new ChessPuzzle("5. Queen Skewer", new String[]{
+                "....k...", "........", "........", "........", "....q...", "........", "....Q...", "....K..."
+            }, 4, 6, 4, 4),
+            new ChessPuzzle("6. Deflection Tactic", new String[]{
+                "....r.k.", "ppp...pp", "........", "........", "........", "........", "PPP...PP", "....R.K."
+            }, 4, 7, 4, 0)
+        };
+
+        private void loadPuzzle(int idx) {
+            if (idx < 0 || idx >= PUZZLES.length) idx = 0;
+            ChessPuzzle p = PUZZLES[idx];
+            for (int r = 0; r < 8; r++) {
+                for (int c = 0; c < 8; c++) {
+                    board[r][c] = p.grid[r].charAt(c);
+                }
+            }
+            whiteTurn = true;
+            selectedX = -1;
+            selectedY = -1;
+            validMoves.clear();
+            puzzleSolved = false;
+            updateStatus();
+            invalidate();
+        }
+
+        private void updateStatus() {
+            if (statusListener == null) return;
+            if (mode == 1) {
+                ChessPuzzle p = PUZZLES[puzzleIndex];
+                if (puzzleSolved) {
+                    statusListener.onStatusChanged("✓ " + p.title + " SOLVED! Brilliant tactic.", 0xFF10B981);
+                } else {
+                    statusListener.onStatusChanged("♔ White to play · " + p.title, 0xFF38BDF8);
+                }
+            } else {
+                String turn = whiteTurn ? "♔ White to move" : "♚ Black to move (AI)";
+                statusListener.onStatusChanged(turn + " · 8×8 Tournament Engine", 0xFFE2E8F0);
+            }
+        }
+
+        private String getPieceGlyph(char p) {
+            switch (p) {
+                case 'K': return "♔";
+                case 'Q': return "♕";
+                case 'R': return "♖";
+                case 'B': return "♗";
+                case 'N': return "♘";
+                case 'P': return "♙";
+                case 'k': return "♚";
+                case 'q': return "♛";
+                case 'r': return "♜";
+                case 'b': return "♝";
+                case 'n': return "♞";
+                case 'p': return "♟";
+                default: return "";
+            }
+        }
+
+        private void generateValidMoves(int x, int y) {
+            validMoves.clear();
+            char p = board[y][x];
+            if (p == '.') return;
+            boolean isWhite = Character.isUpperCase(p);
+            char type = Character.toLowerCase(p);
+
+            switch (type) {
+                case 'p': // Pawn
+                    int dir = isWhite ? -1 : 1;
+                    int startRank = isWhite ? 6 : 1;
+                    if (y + dir >= 0 && y + dir < 8 && board[y + dir][x] == '.') {
+                        validMoves.add(new Point(x, y + dir));
+                        if (y == startRank && board[y + dir * 2][x] == '.') {
+                            validMoves.add(new Point(x, y + dir * 2));
+                        }
+                    }
+                    // Captures
+                    int[] capCols = {x - 1, x + 1};
+                    for (int cc : capCols) {
+                        if (cc >= 0 && cc < 8 && y + dir >= 0 && y + dir < 8) {
+                            char target = board[y + dir][cc];
+                            if (target != '.' && (Character.isUpperCase(target) != isWhite)) {
+                                validMoves.add(new Point(cc, y + dir));
+                            }
+                        }
+                    }
+                    break;
+
+                case 'n': // Knight
+                    int[][] kMoves = {{-2,-1},{-2,1},{-1,-2},{-1,2},{1,-2},{1,2},{2,-1},{2,1}};
+                    for (int[] m : kMoves) {
+                        int tx = x + m[0];
+                        int ty = y + m[1];
+                        if (tx >= 0 && tx < 8 && ty >= 0 && ty < 8) {
+                            char target = board[ty][tx];
+                            if (target == '.' || (Character.isUpperCase(target) != isWhite)) {
+                                validMoves.add(new Point(tx, ty));
+                            }
+                        }
+                    }
+                    break;
+
+                case 'b': // Bishop
+                case 'r': // Rook
+                case 'q': // Queen
+                    int[][] dirs = (type == 'b') ? new int[][]{{1,1},{1,-1},{-1,1},{-1,-1}}
+                                : (type == 'r') ? new int[][]{{1,0},{-1,0},{0,1},{0,-1}}
+                                : new int[][]{{1,0},{-1,0},{0,1},{0,-1},{1,1},{1,-1},{-1,1},{-1,-1}};
+                    for (int[] d : dirs) {
+                        int tx = x + d[0];
+                        int ty = y + d[1];
+                        while (tx >= 0 && tx < 8 && ty >= 0 && ty < 8) {
+                            char target = board[ty][tx];
+                            if (target == '.') {
+                                validMoves.add(new Point(tx, ty));
+                            } else {
+                                if (Character.isUpperCase(target) != isWhite) {
+                                    validMoves.add(new Point(tx, ty));
+                                }
+                                break;
+                            }
+                            tx += d[0];
+                            ty += d[1];
+                        }
+                    }
+                    break;
+
+                case 'k': // King
+                    int[][] kingMoves = {{1,0},{-1,0},{0,1},{0,-1},{1,1},{1,-1},{-1,1},{-1,-1}};
+                    for (int[] m : kingMoves) {
+                        int tx = x + m[0];
+                        int ty = y + m[1];
+                        if (tx >= 0 && tx < 8 && ty >= 0 && ty < 8) {
+                            char target = board[ty][tx];
+                            if (target == '.' || (Character.isUpperCase(target) != isWhite)) {
+                                validMoves.add(new Point(tx, ty));
+                            }
+                        }
+                    }
+                    break;
+            }
+        }
+
+        private void executeMove(int fromX, int fromY, int toX, int toY) {
+            if (mode == 1) {
+                ChessPuzzle p = PUZZLES[puzzleIndex];
+                if (fromX == p.fromX && fromY == p.fromY && toX == p.toX && toY == p.toY) {
+                    board[toY][toX] = board[fromY][fromX];
+                    board[fromY][fromX] = '.';
+                    puzzleSolved = true;
+                    selectedX = -1;
+                    selectedY = -1;
+                    validMoves.clear();
+                    updateStatus();
+                    invalidate();
+                    return;
+                } else {
+                    if (statusListener != null) {
+                        statusListener.onStatusChanged("✗ Incorrect move. Try another tactical strike!", 0xFFF87171);
+                    }
+                    selectedX = -1;
+                    selectedY = -1;
+                    validMoves.clear();
+                    invalidate();
+                    return;
+                }
+            }
+
+            char p = board[fromY][fromX];
+            board[toY][toX] = p;
+            board[fromY][fromX] = '.';
+
+            // Pawn promotion
+            if (p == 'P' && toY == 0) board[toY][toX] = 'Q';
+            if (p == 'p' && toY == 7) board[toY][toX] = 'q';
+
+            selectedX = -1;
+            selectedY = -1;
+            validMoves.clear();
+            whiteTurn = !whiteTurn;
+            updateStatus();
+            invalidate();
+
+            if (mode == 0 && !whiteTurn) {
+                postDelayed(new Runnable() {
+                    public void run() { aiPlayMove(); }
+                }, 380);
+            }
+        }
+
+        private void aiPlayMove() {
+            if (whiteTurn) return;
+            // Collect all Black moves and evaluate
+            java.util.List<int[]> allMoves = new java.util.ArrayList<>();
+            for (int y = 0; y < 8; y++) {
+                for (int x = 0; x < 8; x++) {
+                    if (board[y][x] != '.' && Character.isLowerCase(board[y][x])) {
+                        generateValidMoves(x, y);
+                        for (Point m : validMoves) {
+                            allMoves.add(new int[]{x, y, m.x, m.y});
+                        }
+                    }
+                }
+            }
+
+            if (!allMoves.isEmpty()) {
+                // Pick best capture or random move
+                int[] bestMove = allMoves.get(0);
+                int bestScore = -99999;
+                for (int[] mv : allMoves) {
+                    char target = board[mv[3]][mv[2]];
+                    int score = 0;
+                    if (target == 'Q') score = 900;
+                    else if (target == 'R') score = 500;
+                    else if (target == 'B' || target == 'N') score = 330;
+                    else if (target == 'P') score = 100;
+                    if (score > bestScore) {
+                        bestScore = score;
+                        bestMove = mv;
+                    }
+                }
+                executeMove(bestMove[0], bestMove[1], bestMove[2], bestMove[3]);
+            }
+        }
+
+        @Override
+        public boolean onTouchEvent(MotionEvent event) {
+            if (event.getActionMasked() == MotionEvent.ACTION_DOWN) {
+                float w = getWidth();
+                float h = getHeight();
+                float pad = dpf(18f);
+                float size = Math.min(w, h) - pad * 2;
+                float startX = (w - size) / 2f;
+                float startY = (h - size) / 2f;
+                float cellSize = size / 8f;
+
+                int gx = (int) ((event.getX() - startX) / cellSize);
+                int gy = (int) ((event.getY() - startY) / cellSize);
+
+                if (gx >= 0 && gx < 8 && gy >= 0 && gy < 8) {
+                    if (selectedX != -1 && selectedY != -1) {
+                        for (Point m : validMoves) {
+                            if (m.x == gx && m.y == gy) {
+                                executeMove(selectedX, selectedY, gx, gy);
+                                return true;
+                            }
+                        }
+                    }
+
+                    char p = board[gy][gx];
+                    if (p != '.' && (Character.isUpperCase(p) == whiteTurn)) {
+                        selectedX = gx;
+                        selectedY = gy;
+                        generateValidMoves(gx, gy);
+                        invalidate();
+                        return true;
+                    }
+                }
+            }
+            return super.onTouchEvent(event);
+        }
+
+        @Override
+        protected void onDraw(Canvas canvas) {
+            super.onDraw(canvas);
+            float w = getWidth();
+            float h = getHeight();
+            if (w <= 0 || h <= 0) return;
+
+            squareRect.set(0, 0, w, h);
+            canvas.drawRoundRect(squareRect, dpf(16f), dpf(16f), boardBgPaint);
+
+            float pad = dpf(18f);
+            float size = Math.min(w, h) - pad * 2;
+            float startX = (w - size) / 2f;
+            float startY = (h - size) / 2f;
+            float cellSize = size / 8f;
+
+            piecePaint.setTextSize(cellSize * 0.76f);
+
+            for (int r = 0; r < 8; r++) {
+                for (int c = 0; c < 8; c++) {
+                    float left = startX + c * cellSize;
+                    float top = startY + r * cellSize;
+                    squareRect.set(left, top, left + cellSize, top + cellSize);
+
+                    boolean isDark = (r + c) % 2 == 1;
+                    canvas.drawRect(squareRect, isDark ? darkSquarePaint : lightSquarePaint);
+
+                    if (c == selectedX && r == selectedY) {
+                        canvas.drawRect(squareRect, selectPaint);
+                    }
+
+                    char piece = board[r][c];
+                    if (piece != '.') {
+                        boolean isWhite = Character.isUpperCase(piece);
+                        piecePaint.setColor(isWhite ? 0xFFFFFFFF : 0xFFFFD166);
+                        float textY = top + cellSize / 2f + piecePaint.getTextSize() * 0.35f;
+                        canvas.drawText(getPieceGlyph(piece), left + cellSize / 2f, textY, piecePaint);
+                    }
+                }
+            }
+
+            // Draw move highlight dots
+            for (Point m : validMoves) {
+                float cx = startX + m.x * cellSize + cellSize / 2f;
+                float cy = startY + m.y * cellSize + cellSize / 2f;
+                canvas.drawCircle(cx, cy, dpf(4.5f), targetDotPaint);
+            }
         }
     }
 
