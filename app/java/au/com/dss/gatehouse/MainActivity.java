@@ -3795,6 +3795,34 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
     // 🧪 HIGH-FIDELITY TESTER FEEDBACK & BUG REPORT SYSTEM (CRAKE PARITY)
     // =========================================================================
 
+    public String getActiveGuardOnShiftName() {
+        Calendar cal = Calendar.getInstance();
+        int dayOfWeek = cal.get(Calendar.DAY_OF_WEEK); // 1 = Sun, 2 = Mon, 3 = Tue, 4 = Wed, 5 = Thu, 6 = Fri, 7 = Sat
+        int hour = cal.get(Calendar.HOUR_OF_DAY);
+
+        // Night shift 18:00 - 06:00: hours 00:00 - 05:59 belong to previous day's evening shift
+        int shiftDay = (hour < 6) ? ((dayOfWeek == Calendar.SUNDAY) ? Calendar.SATURDAY : (dayOfWeek - 1)) : dayOfWeek;
+
+        switch (shiftDay) {
+            case Calendar.MONDAY:
+                return "Lochran Doherty";
+            case Calendar.TUESDAY:
+                return "Brian Rush";
+            case Calendar.WEDNESDAY:
+                return "Jon Naylor";
+            case Calendar.THURSDAY:
+                return "Claren";
+            case Calendar.FRIDAY:
+                return "Chris Ireton";
+            case Calendar.SATURDAY:
+                return "Lochran Doherty";
+            case Calendar.SUNDAY:
+                return "Ken";
+            default:
+                return "Lochran Doherty";
+        }
+    }
+
     private String resolveDefaultDeviceTesterName() {
         String model = (Build.MODEL != null ? Build.MODEL : "").toLowerCase(Locale.US);
         String product = (Build.PRODUCT != null ? Build.PRODUCT : "").toLowerCase(Locale.US);
@@ -3802,14 +3830,16 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
         String brand = (Build.BRAND != null ? Build.BRAND : "").toLowerCase(Locale.US);
         String manufacturer = (Build.MANUFACTURER != null ? Build.MANUFACTURER : "").toLowerCase(Locale.US);
 
-        // 1. Motorola moto e13 -> Doherty Security Services Hut Phone #1
+        String guard = getActiveGuardOnShiftName();
+
+        // 1. Motorola moto e13 -> Guard on Shift (Hut Phone #1)
         if (model.contains("moto e13") || model.contains("e13") || product.contains("sabahl") || device.contains("sabahl") || brand.contains("motorola")) {
-            return "Doherty Security Services Hut Phone #1";
+            return guard + " (Hut Phone #1)";
         }
 
-        // 2. Samsung Galaxy A20 -> Doherty Security Services Hut Phone #2
+        // 2. Samsung Galaxy A20 -> Guard on Shift (Hut Phone #2)
         if (model.contains("sm-a20") || model.contains("a20") || product.contains("a20") || device.contains("a20") || (brand.contains("samsung") && model.contains("a20"))) {
-            return "Doherty Security Services Hut Phone #2";
+            return guard + " (Hut Phone #2)";
         }
 
         // 3. Xiaomi or Primary Controller -> Overlord
@@ -3820,7 +3850,7 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
         String defaultName = resolveDefaultDeviceTesterName();
         SharedPreferences sp = getSharedPreferences("gatehouse_prefs", Context.MODE_PRIVATE);
         String saved = sp.getString("pref_tester_identity_name", null);
-        if (saved == null || (saved.equals("Overlord") && !defaultName.equals("Overlord"))) {
+        if (saved == null || (saved.equals("Overlord") && !defaultName.equals("Overlord")) || saved.startsWith("Doherty Security Services Hut Phone")) {
             sp.edit().putString("pref_tester_identity_name", defaultName).apply();
             return defaultName;
         }
@@ -3859,13 +3889,13 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
         box.addView(title);
 
         TextView desc = new TextView(this);
-        desc.setText("Select or enter the device profile for this duty phone. All bug reports and field suggestions will be tagged with this profile.");
+        desc.setText("Select or enter the guard profile for this duty phone. All bug reports and field suggestions will be attributed to this guard.");
         desc.setTextColor(0xFF94A3B8);
         desc.setTextSize(11.5f);
         desc.setPadding(0, dp(4), 0, dp(10));
         box.addView(desc);
 
-        final EditText etName = modernInputField("e.g. Doherty Security Services Hut Phone #1...");
+        final EditText etName = modernInputField("e.g. Brian Rush (Hut Phone #1)...");
         etName.setText(getTesterIdentityName());
         etName.setSelection(etName.getText().length());
         box.addView(etName);
@@ -3876,54 +3906,59 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
         presetCol.setPadding(0, dp(10), 0, dp(8));
 
         TextView presetHeader = new TextView(this);
-        presetHeader.setText("QUICK PROFILE SELECT");
+        presetHeader.setText("ROSTERED GUARDS & HUT PROFILES");
         presetHeader.setTextColor(colQuiet);
         presetHeader.setTextSize(9f);
         presetHeader.setTypeface(Typeface.MONOSPACE);
         presetHeader.setPadding(0, 0, 0, dp(5));
         presetCol.addView(presetHeader);
 
+        final String currentGuard = getActiveGuardOnShiftName();
         final String[][] presets = {
-            {"📱 Hut Phone #1 (moto e13)", "Doherty Security Services Hut Phone #1"},
-            {"📱 Hut Phone #2 (Samsung A20)", "Doherty Security Services Hut Phone #2"},
-            {"👑 Overlord", "Overlord"},
-            {"🛡️ Kingston Patrol Guard", "Kingston Patrol Guard"}
+            {"👤 " + currentGuard + " (Hut #1)", currentGuard + " (Hut Phone #1)"},
+            {"👤 " + currentGuard + " (Hut #2)", currentGuard + " (Hut Phone #2)"},
+            {"📱 Brian Rush (Tue)", "Brian Rush (Hut Phone #1)"},
+            {"📱 Jon Naylor (Wed)", "Jon Naylor (Hut Phone #1)"},
+            {"📱 Claren (Thu)", "Claren (Hut Phone #1)"},
+            {"📱 Chris Ireton (Fri)", "Chris Ireton (Hut Phone #1)"},
+            {"👑 Overlord (Lochran)", "Overlord"},
+            {"🛡️ Kingston Guard", "Kingston Patrol Guard"}
         };
 
-        LinearLayout presetRow1 = new LinearLayout(this);
-        presetRow1.setOrientation(LinearLayout.HORIZONTAL);
-        presetRow1.setPadding(0, 0, 0, dp(5));
+        for (int row = 0; row < presets.length; row += 2) {
+            LinearLayout pRow = new LinearLayout(this);
+            pRow.setOrientation(LinearLayout.HORIZONTAL);
+            pRow.setPadding(0, 0, 0, dp(4));
 
-        LinearLayout presetRow2 = new LinearLayout(this);
-        presetRow2.setOrientation(LinearLayout.HORIZONTAL);
-
-        for (int i = 0; i < presets.length; i++) {
-            final String label = presets[i][0];
-            final String val = presets[i][1];
-            TextView chip = new TextView(this);
-            chip.setText(label);
-            chip.setTextColor(colCyan);
-            chip.setTextSize(10f);
-            chip.setTypeface(Typeface.DEFAULT_BOLD);
-            chip.setPadding(dp(8), dp(5), dp(8), dp(5));
-            chip.setBackground(rounded(0x2200E5FF, dp(6)));
-            LinearLayout.LayoutParams clp = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
-            if (i % 2 == 0) clp.rightMargin = dp(4);
-            else clp.leftMargin = dp(4);
-            chip.setLayoutParams(clp);
-            chip.setGravity(Gravity.CENTER);
-            chip.setOnClickListener(new View.OnClickListener() {
-                public void onClick(View v) {
-                    hapticClick();
-                    etName.setText(val);
-                    etName.setSelection(val.length());
+            for (int col = 0; col < 2; col++) {
+                int idx = row + col;
+                if (idx < presets.length) {
+                    final String label = presets[idx][0];
+                    final String val = presets[idx][1];
+                    TextView chip = new TextView(this);
+                    chip.setText(label);
+                    chip.setTextColor(colCyan);
+                    chip.setTextSize(10f);
+                    chip.setTypeface(Typeface.DEFAULT_BOLD);
+                    chip.setPadding(dp(6), dp(5), dp(6), dp(5));
+                    chip.setBackground(rounded(0x2200E5FF, dp(6)));
+                    LinearLayout.LayoutParams clp = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
+                    if (col == 0) clp.rightMargin = dp(4);
+                    else clp.leftMargin = dp(4);
+                    chip.setLayoutParams(clp);
+                    chip.setGravity(Gravity.CENTER);
+                    chip.setOnClickListener(new View.OnClickListener() {
+                        public void onClick(View v) {
+                            hapticClick();
+                            etName.setText(val);
+                            etName.setSelection(val.length());
+                        }
+                    });
+                    pRow.addView(chip);
                 }
-            });
-            if (i < 2) presetRow1.addView(chip);
-            else presetRow2.addView(chip);
+            }
+            presetCol.addView(pRow);
         }
-        presetCol.addView(presetRow1);
-        presetCol.addView(presetRow2);
         box.addView(presetCol);
 
         LinearLayout btnRow = new LinearLayout(this);
@@ -7094,7 +7129,7 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
         rowOfficer.setGravity(Gravity.CENTER_VERTICAL);
 
         TextView who = new TextView(this);
-        who.setText("Officer Lochran Doherty");
+        who.setText("Officer " + getActiveGuardOnShiftName());
         who.setTextColor(colPale);
         who.setTextSize(14);
         who.setTypeface(Typeface.DEFAULT_BOLD);
