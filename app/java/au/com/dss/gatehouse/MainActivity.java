@@ -387,8 +387,7 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
         switch (currentTab) {
             case 0: return scrollPatrol;
             case 1: return scrollContacts;
-            case 2: return scrollHandbook;
-            case 3: return scrollTools;
+            case 2: return scrollTools;
             default: return scrollPatrol;
         }
     }
@@ -1159,7 +1158,6 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
         };
         scrollPatrol.setOnScrollChangeListener(scrollListener);
         scrollContacts.setOnScrollChangeListener(scrollListener);
-        scrollHandbook.setOnScrollChangeListener(scrollListener);
         scrollTools.setOnScrollChangeListener(scrollListener);
 
         screenLayout.addView(tabPagerFrame);
@@ -16342,13 +16340,6 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
                 }
                 break;
             case 2:
-                if (scrollHandbook != null) {
-                    scrollHandbook.removeAllViews();
-                    scrollHandbook.addView(buildRosterView());
-                    scrollHandbook.setBackgroundColor(colBg);
-                }
-                break;
-            case 3:
                 if (scrollTools != null) {
                     scrollTools.removeAllViews();
                     toolsContent = buildToolsTab();
