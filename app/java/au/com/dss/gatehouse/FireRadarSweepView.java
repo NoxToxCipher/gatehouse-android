@@ -136,8 +136,10 @@ public class FireRadarSweepView extends View {
     @Override
     protected void onAttachedToWindow() {
         super.onAttachedToWindow();
-        if (sweepAnimator != null && !sweepAnimator.isRunning()) sweepAnimator.start();
-        if (pulseAnimator != null && !pulseAnimator.isRunning()) pulseAnimator.start();
+        if (getVisibility() == View.VISIBLE && getWindowVisibility() == View.VISIBLE) {
+            if (sweepAnimator != null && !sweepAnimator.isRunning()) sweepAnimator.start();
+            if (pulseAnimator != null && !pulseAnimator.isRunning()) pulseAnimator.start();
+        }
     }
 
     @Override
@@ -145,6 +147,30 @@ public class FireRadarSweepView extends View {
         super.onDetachedFromWindow();
         if (sweepAnimator != null) sweepAnimator.cancel();
         if (pulseAnimator != null) pulseAnimator.cancel();
+    }
+
+    @Override
+    protected void onWindowVisibilityChanged(int visibility) {
+        super.onWindowVisibilityChanged(visibility);
+        if (visibility == View.VISIBLE && getVisibility() == View.VISIBLE) {
+            if (sweepAnimator != null && !sweepAnimator.isRunning()) sweepAnimator.start();
+            if (pulseAnimator != null && !pulseAnimator.isRunning()) pulseAnimator.start();
+        } else {
+            if (sweepAnimator != null && sweepAnimator.isRunning()) sweepAnimator.cancel();
+            if (pulseAnimator != null && pulseAnimator.isRunning()) pulseAnimator.cancel();
+        }
+    }
+
+    @Override
+    protected void onVisibilityChanged(View changedView, int visibility) {
+        super.onVisibilityChanged(changedView, visibility);
+        if (visibility == View.VISIBLE && getWindowVisibility() == View.VISIBLE) {
+            if (sweepAnimator != null && !sweepAnimator.isRunning()) sweepAnimator.start();
+            if (pulseAnimator != null && !pulseAnimator.isRunning()) pulseAnimator.start();
+        } else {
+            if (sweepAnimator != null && sweepAnimator.isRunning()) sweepAnimator.cancel();
+            if (pulseAnimator != null && pulseAnimator.isRunning()) pulseAnimator.cancel();
+        }
     }
 
     public void setSnapshot(FireRadarManager.FireRadarSnapshot snapshot) {
