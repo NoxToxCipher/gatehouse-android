@@ -1011,16 +1011,7 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
         // 1. ⚡ Real-Time Diagnostics Strip
         screenLayout.addView(buildDiagnosticsStrip());
 
-        // 2. 📱 3-Tab Fluid Animated Sliding Tab Bar
-        animatedTabBar = new FluidAnimatedTabBarView(this);
-        LinearLayout.LayoutParams abl = new LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT, dp(42));
-        abl.topMargin = dp(2);
-        abl.bottomMargin = dp(4);
-        animatedTabBar.setLayoutParams(abl);
-        screenLayout.addView(animatedTabBar);
-
-        // 3. 🎛️ 3-PAGE SYNCHRONIZED HORIZONTAL PAGER CONTAINER
+        // 2. 🎛️ 3-PAGE SYNCHRONIZED HORIZONTAL PAGER CONTAINER
         tabPagerFrame = new FrameLayout(this) {
             @Override
             public boolean onInterceptTouchEvent(MotionEvent ev) {
@@ -1102,7 +1093,7 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
 
         root = new LinearLayout(this);
         root.setOrientation(LinearLayout.VERTICAL);
-        root.setPadding(0, 0, 0, dp(56));
+        root.setPadding(0, 0, 0, dp(24));
 
         patrolContent = buildPatrolTab();
         root.addView(patrolContent);
@@ -1161,6 +1152,15 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
         scrollTools.setOnScrollChangeListener(scrollListener);
 
         screenLayout.addView(tabPagerFrame);
+
+        // 3. 📱 Floating Obsidian Island Dock (Bottom Navigation)
+        animatedTabBar = new FluidAnimatedTabBarView(this);
+        LinearLayout.LayoutParams abl = new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT, dp(56));
+        abl.setMargins(dp(14), dp(2), dp(14), dp(8));
+        animatedTabBar.setLayoutParams(abl);
+        screenLayout.addView(animatedTabBar);
+
         mainSurfaceContainer.addView(screenLayout);
 
         rootFrame.addView(mainSurfaceContainer);
@@ -7452,11 +7452,9 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
         });
         topRow.addView(brand);
 
-        TextView btnSettings = new TextView(this);
-        btnSettings.setText("⚙️");
-        btnSettings.setTextSize(14);
-        btnSettings.setPadding(dp(6), dp(2), dp(6), dp(2));
-        btnSettings.setBackground(rounded(colPanel2, dp(6)));
+        VectorGearButton btnSettings = new VectorGearButton(this);
+        LinearLayout.LayoutParams glp = new LinearLayout.LayoutParams(dp(28), dp(28));
+        btnSettings.setLayoutParams(glp);
         btnSettings.setOnClickListener(new View.OnClickListener() {
             public void onClick(View v) {
                 hapticClick();
@@ -15618,11 +15616,85 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
     }
 
     // =========================================================================
-    // 📱 FLUID ANIMATED TAB BAR VIEW
+    // ⚙️ PRECISION 2D VECTOR GEAR SETTINGS BUTTON
+    // =========================================================================
+
+    class VectorGearButton extends View {
+        private final Paint gearPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+        private final Paint bgPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+        private final RectF bgRect = new RectF();
+        private final Path gearPath = new Path();
+
+        public VectorGearButton(Context context) {
+            super(context);
+            setClickable(true);
+            setFocusable(true);
+            gearPaint.setStyle(Paint.Style.STROKE);
+            gearPaint.setStrokeWidth(dpf(1.6f));
+            gearPaint.setStrokeCap(Paint.Cap.ROUND);
+            gearPaint.setStrokeJoin(Paint.Join.ROUND);
+            bgPaint.setStyle(Paint.Style.FILL);
+        }
+
+        private float dpf(float v) {
+            return v * getResources().getDisplayMetrics().density;
+        }
+
+        @Override
+        protected void onDraw(Canvas canvas) {
+            super.onDraw(canvas);
+            int w = getWidth();
+            int h = getHeight();
+            if (w <= 0 || h <= 0) return;
+
+            bgRect.set(0, 0, w, h);
+            bgPaint.setColor(colPanel2);
+            canvas.drawRoundRect(bgRect, dpf(10f), dpf(10f), bgPaint);
+
+            gearPaint.setColor(colAccent);
+            float cx = w / 2f;
+            float cy = h / 2f;
+            float rOuter = dpf(8f);
+            float rInner = dpf(5.8f);
+            float rHole = dpf(2.8f);
+
+            canvas.drawCircle(cx, cy, rHole, gearPaint);
+
+            gearPath.reset();
+            int teeth = 6;
+            for (int i = 0; i < teeth; i++) {
+                double a1 = (i * 60.0 - 15) * Math.PI / 180.0;
+                double a2 = (i * 60.0 - 8) * Math.PI / 180.0;
+                double a3 = (i * 60.0 + 8) * Math.PI / 180.0;
+                double a4 = (i * 60.0 + 15) * Math.PI / 180.0;
+
+                float x1 = (float) (cx + rInner * Math.cos(a1));
+                float y1 = (float) (cy + rInner * Math.sin(a1));
+                float x2 = (float) (cx + rOuter * Math.cos(a2));
+                float y2 = (float) (cy + rOuter * Math.sin(a2));
+                float x3 = (float) (cx + rOuter * Math.cos(a3));
+                float y3 = (float) (cy + rOuter * Math.sin(a3));
+                float x4 = (float) (cx + rInner * Math.cos(a4));
+                float y4 = (float) (cy + rInner * Math.sin(a4));
+
+                if (i == 0) gearPath.moveTo(x1, y1);
+                else gearPath.lineTo(x1, y1);
+                gearPath.lineTo(x2, y2);
+                gearPath.lineTo(x3, y3);
+                gearPath.lineTo(x4, y4);
+            }
+            gearPath.close();
+            canvas.drawPath(gearPath, gearPaint);
+        }
+    }
+
+    // =========================================================================
+    // 📱 FLUID ANIMATED FLOATING BOTTOM TAB BAR VIEW
     // =========================================================================
 
     class FluidAnimatedTabBarView extends View {
         private final Paint bgPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+        private final Paint borderPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
         private final Paint indicatorPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
         private final Paint indicatorGlowPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
         private final Paint textPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
@@ -15648,11 +15720,13 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
             setClickable(true);
             setFocusable(true);
             bgPaint.setStyle(Paint.Style.FILL);
+            borderPaint.setStyle(Paint.Style.STROKE);
+            borderPaint.setStrokeWidth(dpf(1f));
             indicatorPaint.setStyle(Paint.Style.FILL);
             indicatorGlowPaint.setStyle(Paint.Style.STROKE);
             indicatorGlowPaint.setStrokeWidth(dpf(1.5f));
-            textPaint.setTextAlign(Paint.Align.LEFT);
-            textPaint.setTypeface(Typeface.DEFAULT_BOLD);
+            textPaint.setTextAlign(Paint.Align.CENTER);
+            textPaint.setTypeface(Typeface.create(Typeface.MONOSPACE, Typeface.BOLD));
 
             iconPaint.setStyle(Paint.Style.STROKE);
             iconPaint.setStrokeCap(Paint.Cap.ROUND);
@@ -15732,7 +15806,7 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
 
         private void drawTabVectorIcon(Canvas canvas, int tabIndex, float cx, float cy, float size, int color) {
             iconPaint.setColor(color);
-            iconPaint.setStrokeWidth(dpf(1.5f));
+            iconPaint.setStrokeWidth(dpf(1.6f));
             iconFillPaint.setColor(color);
 
             switch (tabIndex) {
@@ -15798,17 +15872,20 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
 
             bgRect.set(0, 0, w, h);
             bgPaint.setColor(colPanel);
-            canvas.drawRoundRect(bgRect, dp(14), dp(14), bgPaint);
+            canvas.drawRoundRect(bgRect, dpf(22f), dpf(22f), bgPaint);
+
+            borderPaint.setColor(colLineSubtle);
+            canvas.drawRoundRect(bgRect, dpf(22f), dpf(22f), borderPaint);
 
             float segW = w / 3f;
-            float indPad = dp(3);
+            float indPad = dp(4);
             float indX = indicatorFloat * segW + indPad;
             float indW = segW - indPad * 2;
 
             indRect.set(indX, indPad, indX + indW, h - indPad);
 
             indicatorPaint.setColor(colAccent);
-            canvas.drawRoundRect(indRect, dp(11), dp(11), indicatorPaint);
+            canvas.drawRoundRect(indRect, dpf(18f), dpf(18f), indicatorPaint);
 
             if (isTabScrubbing) {
                 indicatorGlowPaint.setColor(colAccent);
@@ -15819,11 +15896,10 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
                 indicatorGlowPaint.setAlpha(255);
                 indicatorGlowPaint.setStrokeWidth(dpf(1.5f));
             }
-            canvas.drawRoundRect(indRect, dp(11), dp(11), indicatorGlowPaint);
+            canvas.drawRoundRect(indRect, dpf(18f), dpf(18f), indicatorGlowPaint);
 
-            textPaint.setTextSize(dpf(11f));
-            float iconSize = dpf(14f);
-            float gap = dpf(6f);
+            textPaint.setTextSize(dpf(9.5f));
+            float iconSize = dpf(17f);
 
             for (int i = 0; i < 3; i++) {
                 float segCenterX = i * segW + segW / 2f;
@@ -15837,20 +15913,13 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
                 }
 
                 String label = tabTitles[i];
-                float textW = textPaint.measureText(label);
-                float totalW = iconSize + gap + textW;
+                float iconCenterY = h / 2f - dpf(6f);
+                float textY = h / 2f + dpf(16f);
 
-                float startX = segCenterX - totalW / 2f;
-                float iconCenterX = startX + iconSize / 2f;
-                float iconCenterY = h / 2f;
-
-                float textX = startX + iconSize + gap;
-                float textY = h / 2f + dpf(4f);
-
-                drawTabVectorIcon(canvas, i, iconCenterX, iconCenterY, iconSize, itemColor);
+                drawTabVectorIcon(canvas, i, segCenterX, iconCenterY, iconSize, itemColor);
 
                 textPaint.setColor(itemColor);
-                canvas.drawText(label, textX, textY, textPaint);
+                canvas.drawText(label, segCenterX, textY, textPaint);
             }
         }
     }
