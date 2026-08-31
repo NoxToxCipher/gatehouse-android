@@ -3643,22 +3643,6 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
         desc.setTextSize(10.5f);
         tile.addView(desc);
 
-        rippleTile.setOnTouchListener(new View.OnTouchListener() {
-            @Override
-            public boolean onTouch(View v, MotionEvent event) {
-                switch (event.getActionMasked()) {
-                    case MotionEvent.ACTION_DOWN:
-                        v.animate().scaleX(0.94f).scaleY(0.94f).setDuration(80).start();
-                        break;
-                    case MotionEvent.ACTION_UP:
-                    case MotionEvent.ACTION_CANCEL:
-                        v.animate().scaleX(1.0f).scaleY(1.0f).setDuration(160).setInterpolator(new OvershootInterpolator(1.2f)).start();
-                        break;
-                }
-                return false;
-            }
-        });
-
         rippleTile.setOnClickListener(new View.OnClickListener() {
             public void onClick(View v) {
                 hapticClick();
@@ -9192,9 +9176,9 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
         private static class RippleWave {
             float x, y;
             float maxRadius;
-            float alpha = 0.45f;
+            float alpha = 0.16f;
             long startTime;
-            long duration = 650; // ms
+            long duration = 240; // ms
         }
 
         private final List<RippleWave> waves = new ArrayList<>();
@@ -9235,10 +9219,10 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
 
         private void init() {
             ripplePaint.setStyle(Paint.Style.STROKE);
-            ripplePaint.setStrokeWidth(getResources().getDisplayMetrics().density * 2.2f);
+            ripplePaint.setStrokeWidth(getResources().getDisplayMetrics().density * 1.5f);
             glowPaint.setStyle(Paint.Style.FILL);
             borderSheenPaint.setStyle(Paint.Style.STROKE);
-            borderSheenPaint.setStrokeWidth(getResources().getDisplayMetrics().density * 1.5f);
+            borderSheenPaint.setStrokeWidth(getResources().getDisplayMetrics().density * 1.0f);
         }
 
         public void addRipple(float x, float y) {
@@ -9250,35 +9234,20 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
             float wH = getHeight();
             float dx = Math.max(x, wW - x);
             float dy = Math.max(y, wH - y);
-            w.maxRadius = (float) Math.hypot(dx, dy) * 1.15f;
-            if (w.maxRadius < 60f) w.maxRadius = 350f;
+            w.maxRadius = (float) Math.hypot(dx, dy) * 1.0f;
+            if (w.maxRadius < 50f) w.maxRadius = 200f;
             waves.add(w);
-            if (waves.size() > 10) waves.remove(0);
+            if (waves.size() > 5) waves.remove(0);
             postInvalidateOnAnimation();
         }
 
         @Override
         public boolean dispatchTouchEvent(MotionEvent ev) {
-            float x = ev.getX();
-            float y = ev.getY();
-            long now = SystemClock.uptimeMillis();
-
-            switch (ev.getActionMasked()) {
-                case MotionEvent.ACTION_DOWN:
-                    lastTouchX = x;
-                    lastTouchY = y;
-                    lastSpawnMs = now;
-                    addRipple(x, y);
-                    break;
-                case MotionEvent.ACTION_MOVE:
-                    float dist = (float) Math.hypot(x - lastTouchX, y - lastTouchY);
-                    if (dist > (16f * getResources().getDisplayMetrics().density) && (now - lastSpawnMs) > 60) {
-                        lastTouchX = x;
-                        lastTouchY = y;
-                        lastSpawnMs = now;
-                        addRipple(x, y);
-                    }
-                    break;
+            if (ev.getActionMasked() == MotionEvent.ACTION_DOWN) {
+                lastTouchX = ev.getX();
+                lastTouchY = ev.getY();
+                lastSpawnMs = SystemClock.uptimeMillis();
+                addRipple(lastTouchX, lastTouchY);
             }
             return super.dispatchTouchEvent(ev);
         }
