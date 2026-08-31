@@ -10,6 +10,7 @@ import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.pm.PackageInfo;
 import android.content.pm.PackageManager;
+import android.graphics.BitmapFactory;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Handler;
@@ -229,12 +230,19 @@ public final class AutoUpdateManager {
                 nb = new android.app.Notification.Builder(context);
             }
 
+            int iconShield = context.getResources().getIdentifier("ic_shield_gold", "drawable", context.getPackageName());
+            if (iconShield == 0) iconShield = context.getApplicationInfo().icon;
+
             String shaShort = newSha.length() > 8 ? newSha.substring(0, 8) : newSha;
             nb.setContentTitle("⚡ GateHouse OTA Update Ready")
               .setContentText("Tap to install new build (SHA " + shaShort + ") · All shift data preserved")
-              .setSmallIcon(android.R.drawable.stat_sys_download_done)
+              .setSmallIcon(iconShield)
               .setContentIntent(pi)
               .setAutoCancel(true);
+
+            try {
+                nb.setLargeIcon(BitmapFactory.decodeResource(context.getResources(), context.getApplicationInfo().icon));
+            } catch (Throwable ignored) {}
 
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
                 nb.setColor(0xFFF59E0B);

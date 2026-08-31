@@ -8,6 +8,7 @@ import android.app.PendingIntent;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
+import android.graphics.BitmapFactory;
 import android.os.Build;
 import android.util.Log;
 
@@ -566,8 +567,8 @@ public class SatelliteTrackerManager {
                     ? String.format(Locale.US, "Look %s → Peak %.0f° at %s. %d luminous satellites in tight train.", pass.startAzCompass, pass.maxEl, pass.getPeakTimeString(), pass.trainSatCount)
                     : String.format(Locale.US, "Look %s → Peak %.0f° %s at %s. %s", pass.startAzCompass, pass.maxEl, pass.maxAzCompass, pass.getPeakTimeString(), pass.getBrightnessDescription());
 
-            int icon = context.getResources().getIdentifier("ic_stat_duty", "drawable", context.getPackageName());
-            if (icon == 0) icon = android.R.drawable.stat_notify_more;
+            int icon = context.getResources().getIdentifier("ic_shield_gold", "drawable", context.getPackageName());
+            if (icon == 0) icon = context.getApplicationInfo().icon;
 
             String bigText = (pass.isStarlinkTrain ? "✨ STARLINK SATELLITE TRAIN PASS OVERHEAD\n" : ("🛰️ " + pass.satName + " VISUAL PASS\n")) +
                     "━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n" +
@@ -587,6 +588,10 @@ public class SatelliteTrackerManager {
                     .setAutoCancel(true)
                     .setContentIntent(pi)
                     .setPriority(Notification.PRIORITY_MAX);
+
+            try {
+                b.setLargeIcon(BitmapFactory.decodeResource(context.getResources(), context.getApplicationInfo().icon));
+            } catch (Throwable ignored) {}
 
             int notifId = 8000 + Math.abs(pass.satId % 1000);
             nm.notify(notifId, b.build());

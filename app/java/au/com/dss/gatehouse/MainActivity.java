@@ -1155,14 +1155,6 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
         screenLayout.addView(tabPagerFrame);
         mainSurfaceContainer.addView(screenLayout);
 
-        // 📖 FULL-PAGE LOGBOOK FOLIO OVERLAY (Flipboard 3D Flip from Bottom)
-        fullPageFolioOverlay = new FrameLayout(this);
-        fullPageFolioOverlay.setVisibility(View.GONE);
-        FrameLayout.LayoutParams folp = new FrameLayout.LayoutParams(
-                FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT);
-        fullPageFolioOverlay.setLayoutParams(folp);
-        mainSurfaceContainer.addView(fullPageFolioOverlay);
-
         rootFrame.addView(mainSurfaceContainer);
 
         // 🦜 7. SUN CONURE FLIGHT OVERLAY
@@ -9578,6 +9570,11 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
     }
 
     private boolean isCarbonCopyMode = false;
+    private Dialog activeLogbookDialog = null;
+    private String logbookSelectedShiftId = "ALL";
+    private String logbookSelectedCategory = "ALL";
+    private String logbookSearchQuery = "";
+    private boolean logbookRuledViewMode = false;
 
     private String getFormattedShiftDateHeader() {
         SimpleDateFormat sdf = new SimpleDateFormat("EEEE d'TH' MMMM, yyyy", Locale.US);
@@ -9588,6 +9585,45 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
                 .replace("31TH", "31ST");
     }
 
+    private void showRegoPlateEntryModal() {
+        final LinearLayout box = dialogContainer("🚗 Record Vehicle Movement", "MANUAL PLATE & ANPR", colAccent);
+        box.addView(formSectionLabel("QUEENSLAND REGISTRATION PLATE"));
+        final EditText plateField = modernInputField("e.g. 834-XYZ or 123-AB4");
+        plateField.setTextSize(20f);
+        plateField.setTypeface(Typeface.MONOSPACE, Typeface.BOLD);
+        plateField.setAllCaps(true);
+        box.addView(plateField);
+
+        box.addView(formSectionLabel("VEHICLE TYPE & MOVEMENT"));
+        final String[] types = {"Contractor B-Double", "Timber Delivery", "Maintenance Van", "Forklift Service", "Visitor / Client"};
+        final String[] selectedType = {types[0]};
+        box.addView(buildChipGroup(types, selectedType, true, colAccent));
+
+        final Dialog dlg = createDialogSheet(box);
+        TextView btnCancel = actionButton("Cancel", colLine, colMuted);
+        btnCancel.setOnClickListener(new View.OnClickListener() {
+            public void onClick(View v) {
+                hapticClick();
+                dlg.dismiss();
+            }
+        });
+
+        TextView btnCommit = actionButton("✓ Record Rego", colAccent, 0xFF1E1B4B);
+        btnCommit.setOnClickListener(new View.OnClickListener() {
+            public void onClick(View v) {
+                hapticSealThud();
+                registerActivity();
+                String plate = PlateRecognizerApi.formatAustralianPlate(plateField.getText().toString().trim());
+                if (plate.isEmpty()) plate = "834-XYZ";
+                String line = "[REGO: " + plate + "] " + selectedType[0] + " logged at Gate A";
+                note(Core.TOPIC_SITE_ACCESS, line);
+                dlg.dismiss();
+            }
+        });
+        box.addView(actionButtonRow(btnCancel, btnCommit));
+        dlg.show();
+    }
+
     private LinearLayout buildLogbookEntranceCard() {
         LinearLayout card = new LinearLayout(this);
         card.setOrientation(LinearLayout.VERTICAL);
@@ -9596,17 +9632,18 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
         LinearLayout.LayoutParams clp = new LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
         clp.topMargin = dp(14);
-        clp.bottomMargin = dp(22);
+        clp.bottomMargin = dp(18);
         card.setLayoutParams(clp);
 
+        // Header Row: Title, Subtitle, Badge
         LinearLayout top = new LinearLayout(this);
         top.setOrientation(LinearLayout.HORIZONTAL);
         top.setGravity(Gravity.CENTER_VERTICAL);
 
         TextView icon = new TextView(this);
         icon.setText("📖");
-        icon.setTextSize(18);
-        icon.setPadding(0, 0, dp(8), 0);
+        icon.setTextSize(20);
+        icon.setPadding(0, 0, dp(10), 0);
         top.addView(icon);
 
         LinearLayout textCol = new LinearLayout(this);
@@ -9615,615 +9652,687 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
         textCol.setLayoutParams(tclp);
 
         TextView title = new TextView(this);
-        title.setText("TONIGHT'S SECURITY RECORD");
+        title.setText("SITE SECURITY OCCURRENCE LOGBOOK");
         title.setTextColor(colPale);
         title.setTextSize(13.5f);
         title.setTypeface(Typeface.DEFAULT_BOLD);
         textCol.addView(title);
 
         TextView sub = new TextView(this);
-        sub.setText("Official full-page ledger · Canary carbon paper duplicate");
+        sub.setText("Multi-Shift Historical Ledger · SPARK SHA-256 Verified");
         sub.setTextColor(colMuted);
         sub.setTextSize(10.5f);
         textCol.addView(sub);
         top.addView(textCol);
 
         TextView badge = new TextView(this);
-        badge.setText("PAGE 28 ◹");
+        badge.setText("4 SHIFTS ◹");
         badge.setTextColor(colAccent);
-        badge.setTextSize(10.5f);
+        badge.setTextSize(10f);
         badge.setTypeface(Typeface.create(Typeface.MONOSPACE, Typeface.BOLD));
         badge.setPadding(dp(8), dp(4), dp(8), dp(4));
         badge.setBackground(rounded(colPanel2, dp(6)));
         top.addView(badge);
         card.addView(top);
 
-        // Curled Peel Prompt Button
-        TextView btnPeel = new TextView(this);
-        btnPeel.setText("🟡 TAP TO OPEN FULL-PAGE LOGBOOK ▴");
-        btnPeel.setTextColor(colAccentInk);
-        btnPeel.setTextSize(11f);
-        btnPeel.setTypeface(Typeface.create(Typeface.MONOSPACE, Typeface.BOLD));
-        btnPeel.setGravity(Gravity.CENTER);
-        btnPeel.setPadding(dp(14), dp(10), dp(14), dp(10));
-        btnPeel.setBackground(pressable(colAccent, dp(10)));
-        LinearLayout.LayoutParams blp = new LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
-        blp.topMargin = dp(12);
-        btnPeel.setLayoutParams(blp);
-        btnPeel.setOnClickListener(new View.OnClickListener() {
+        // Stat Row: Live Shift Metrics & Historical Depth
+        LinearLayout statRow = new LinearLayout(this);
+        statRow.setOrientation(LinearLayout.HORIZONTAL);
+        statRow.setGravity(Gravity.CENTER_VERTICAL);
+        statRow.setPadding(0, dp(10), 0, dp(12));
+
+        LogbookManager logMgr = LogbookManager.getInstance(this);
+        int totalShifts = logMgr.getAllShifts().size();
+        int tonightCount = Core.entryCount();
+
+        statRow.addView(buildMiniBadge("🌙 TONIGHT", tonightCount + " LOGS", colCyan));
+        statRow.addView(buildMiniBadge("📚 ARCHIVES", (totalShifts - 1) + " PAST SHIFTS", colEmerald));
+        statRow.addView(buildMiniBadge("🔒 INTEGRITY", "CRYPTOGRAPHIC", colAccent));
+        card.addView(statRow);
+
+        // Main Action Buttons
+        LinearLayout btnRow = new LinearLayout(this);
+        btnRow.setOrientation(LinearLayout.HORIZONTAL);
+
+        TextView btnOpen = new TextView(this);
+        btnOpen.setText("📖 OPEN FULL LOGBOOK & ARCHIVES");
+        btnOpen.setTextColor(colAccentInk);
+        btnOpen.setTextSize(11.5f);
+        btnOpen.setTypeface(Typeface.create(Typeface.MONOSPACE, Typeface.BOLD));
+        btnOpen.setGravity(Gravity.CENTER);
+        btnOpen.setPadding(dp(14), dp(11), dp(14), dp(11));
+        btnOpen.setBackground(pressable(colAccent, dp(10)));
+        LinearLayout.LayoutParams blp = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1.4f);
+        btnOpen.setLayoutParams(blp);
+        btnOpen.setOnClickListener(new View.OnClickListener() {
             public void onClick(View v) {
                 hapticHeavyClick();
-                openFullPageFolio(true);
+                showFullLogbookDialog();
             }
         });
-        card.addView(btnPeel);
+        btnRow.addView(btnOpen);
+
+        TextView btnQuickNote = new TextView(this);
+        btnQuickNote.setText("📝 + NOTE");
+        btnQuickNote.setTextColor(colPale);
+        btnQuickNote.setTextSize(11f);
+        btnQuickNote.setTypeface(Typeface.DEFAULT_BOLD);
+        btnQuickNote.setGravity(Gravity.CENTER);
+        btnQuickNote.setPadding(dp(12), dp(11), dp(12), dp(11));
+        btnQuickNote.setBackground(pressable(colPanel2, dp(10)));
+        LinearLayout.LayoutParams qlp = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 0.7f);
+        qlp.leftMargin = dp(8);
+        btnQuickNote.setLayoutParams(qlp);
+        btnQuickNote.setOnClickListener(new View.OnClickListener() {
+            public void onClick(View v) {
+                hapticClick();
+                showModernNotesSheet();
+            }
+        });
+        btnRow.addView(btnQuickNote);
+
+        card.addView(btnRow);
 
         card.setOnClickListener(new View.OnClickListener() {
             public void onClick(View v) {
                 hapticHeavyClick();
-                openFullPageFolio(true);
+                showFullLogbookDialog();
             }
         });
 
         return card;
     }
 
-    public void openFullPageFolio(boolean animate) {
-        if (fullPageFolioOverlay == null) return;
-        isFullPageFolioOpen = true;
+    private View buildMiniBadge(String label, String value, int accentCol) {
+        LinearLayout box = new LinearLayout(this);
+        box.setOrientation(LinearLayout.VERTICAL);
+        box.setGravity(Gravity.CENTER);
+        box.setPadding(dp(6), dp(4), dp(6), dp(4));
+        box.setBackground(rounded(0x18FFFFFF, dp(6)));
+        LinearLayout.LayoutParams blp = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
+        blp.rightMargin = dp(4);
+        box.setLayoutParams(blp);
+
+        TextView tvLbl = new TextView(this);
+        tvLbl.setText(label);
+        tvLbl.setTextColor(colMuted);
+        tvLbl.setTextSize(8f);
+        tvLbl.setTypeface(Typeface.create(Typeface.MONOSPACE, Typeface.BOLD));
+        box.addView(tvLbl);
+
+        TextView tvVal = new TextView(this);
+        tvVal.setText(value);
+        tvVal.setTextColor(accentCol);
+        tvVal.setTextSize(10f);
+        tvVal.setTypeface(Typeface.create(Typeface.MONOSPACE, Typeface.BOLD));
+        box.addView(tvVal);
+
+        return box;
+    }
+
+    public void showFullLogbookDialog() {
         hapticHeavyClick();
-        renderFullPageFolio();
-        fullPageFolioOverlay.setVisibility(View.VISIBLE);
+        final Dialog dlg = new Dialog(this, android.R.style.Theme_Translucent_NoTitleBar);
+        activeLogbookDialog = dlg;
 
-        if (animate) {
-            float h = fullPageFolioOverlay.getHeight() > 0 ? fullPageFolioOverlay.getHeight() : getResources().getDisplayMetrics().heightPixels;
-            fullPageFolioOverlay.setCameraDistance(dp(16000));
-            fullPageFolioOverlay.setPivotX(fullPageFolioOverlay.getWidth() / 2f);
-            fullPageFolioOverlay.setPivotY(h); // Pivot at the bottom like Flipboard!
-            fullPageFolioOverlay.setRotationX(90f);
-            fullPageFolioOverlay.setAlpha(0.2f);
-            fullPageFolioOverlay.animate()
-                    .rotationX(0f)
-                    .alpha(1f)
-                    .setDuration(360)
-                    .setInterpolator(new DecelerateInterpolator(1.4f))
-                    .start();
-        } else {
-            fullPageFolioOverlay.setRotationX(0f);
-            fullPageFolioOverlay.setAlpha(1f);
-        }
-    }
+        final LogbookManager logMgr = LogbookManager.getInstance(this);
+        logMgr.syncFromCore(Core.entryCount());
 
-    public void closeFullPageFolio(boolean animate) {
-        if (fullPageFolioOverlay == null || !isFullPageFolioOpen) return;
-        isFullPageFolioOpen = false;
-        hapticClick();
+        final FrameLayout root = new FrameLayout(this);
+        root.setBackgroundColor(0xF5080D1A);
+        root.setFitsSystemWindows(true);
 
-        if (animate) {
-            float h = fullPageFolioOverlay.getHeight() > 0 ? fullPageFolioOverlay.getHeight() : getResources().getDisplayMetrics().heightPixels;
-            fullPageFolioOverlay.setCameraDistance(dp(16000));
-            fullPageFolioOverlay.setPivotX(fullPageFolioOverlay.getWidth() / 2f);
-            fullPageFolioOverlay.setPivotY(h);
-            fullPageFolioOverlay.animate()
-                    .rotationX(90f)
-                    .alpha(0f)
-                    .setDuration(280)
-                    .setInterpolator(new DecelerateInterpolator(1.4f))
-                    .withEndAction(new Runnable() {
-                        public void run() {
-                            fullPageFolioOverlay.setVisibility(View.GONE);
-                            fullPageFolioOverlay.setRotationX(0f);
-                        }
-                    })
-                    .start();
-        } else {
-            fullPageFolioOverlay.setVisibility(View.GONE);
-        }
-    }
+        final LinearLayout contentCard = new LinearLayout(this);
+        contentCard.setOrientation(LinearLayout.VERTICAL);
+        contentCard.setBackground(rounded(0xFF0F172A, dp(20)));
+        contentCard.setPadding(dp(16), dp(16), dp(16), dp(16));
+        FrameLayout.LayoutParams clp = new FrameLayout.LayoutParams(
+                FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT);
+        contentCard.setLayoutParams(clp);
 
-    public void flipFullPageCarbonMode() {
-        if (fullPageFolioOverlay == null || !isFullPageFolioOpen) return;
-        hapticHeavyClick();
-        isCarbonCopyMode = !isCarbonCopyMode;
-
-        float h = fullPageFolioOverlay.getHeight() > 0 ? fullPageFolioOverlay.getHeight() : getResources().getDisplayMetrics().heightPixels;
-        fullPageFolioOverlay.setCameraDistance(dp(16000));
-        fullPageFolioOverlay.setPivotX(fullPageFolioOverlay.getWidth() / 2f);
-        fullPageFolioOverlay.setPivotY(h); // Fold up from bottom
-
-        fullPageFolioOverlay.animate()
-                .rotationX(-90f)
-                .scaleX(0.96f)
-                .scaleY(0.96f)
-                .setDuration(180)
-                .withEndAction(new Runnable() {
-                    public void run() {
-                        renderFullPageFolio();
-                        fullPageFolioOverlay.setRotationX(90f);
-                        fullPageFolioOverlay.animate()
-                                .rotationX(0f)
-                                .scaleX(1f)
-                                .scaleY(1f)
-                                .setDuration(240)
-                                .setInterpolator(new OvershootInterpolator(1.08f))
-                                .start();
-                    }
-                })
-                .start();
-    }
-
-    // =========================================================================
-    // =========================================================================
-    // 📖 AUTHENTIC INTERACTIVE RIGHT-TO-LEFT PAGE TURN FOLIO LAYOUT
-    // =========================================================================
-
-    class AuthenticPageCurlFolioLayout extends FrameLayout {
-        private float curlX = -1f;
-        private float curlY = -1f;
-        private boolean isCurling = false;
-        private float startTouchX = 0f, startTouchY = 0f;
-        private ValueAnimator curlAnimator;
-
-        private final Path topVisiblePath = new Path();
-        private final Path curlFlapPath = new Path();
-        private final Path shadowPath = new Path();
-        private final Paint flapPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
-        private final Paint shadowPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
-        private final Paint ridgeHighlightPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
-        private final Paint dogEarPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
-        private final Paint dogEarHintPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
-
-        public View underneathView;
-        public View topView;
-
-        private float dpf(float v) {
-            return v * getResources().getDisplayMetrics().density;
-        }
-
-        public AuthenticPageCurlFolioLayout(Context context) {
-            super(context);
-            setWillNotDraw(false);
-            flapPaint.setStyle(Paint.Style.FILL);
-            shadowPaint.setStyle(Paint.Style.FILL);
-            ridgeHighlightPaint.setStyle(Paint.Style.FILL);
-            dogEarPaint.setStyle(Paint.Style.FILL);
-            dogEarHintPaint.setTypeface(Typeface.create(Typeface.MONOSPACE, Typeface.BOLD));
-        }
-
-        public void setPages(View under, View top) {
-            this.underneathView = under;
-            this.topView = top;
-            removeAllViews();
-            if (underneathView != null) addView(underneathView);
-            if (topView != null) addView(topView);
-            isCurling = false;
-            curlX = -1f;
-            curlY = -1f;
-            invalidate();
-        }
-
-        public void triggerPageCurlAnimation(final boolean toCarbon) {
-            if (curlAnimator != null && curlAnimator.isRunning()) curlAnimator.cancel();
-            final float w = getWidth() > 0 ? getWidth() : getResources().getDisplayMetrics().widthPixels;
-            final float h = getHeight() > 0 ? getHeight() : getResources().getDisplayMetrics().heightPixels;
-
-            isCurling = true;
-            final float startX = toCarbon ? w : 0f;
-            final float targetX = toCarbon ? -w * 0.35f : w * 1.35f;
-
-            curlAnimator = ValueAnimator.ofFloat(0f, 1f);
-            curlAnimator.setDuration(360);
-            curlAnimator.setInterpolator(new DecelerateInterpolator(1.2f));
-            curlAnimator.addUpdateListener(new ValueAnimator.AnimatorUpdateListener() {
-                public void onAnimationUpdate(ValueAnimator va) {
-                    float p = (Float) va.getAnimatedValue();
-                    curlX = startX + (targetX - startX) * p;
-                    curlY = h * 0.5f;
-                    calculateCurlGeometry(curlX, curlY, w, h);
-                    invalidate();
-                }
-            });
-            curlAnimator.addListener(new AnimatorListenerAdapter() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            root.setOnApplyWindowInsetsListener(new View.OnApplyWindowInsetsListener() {
                 @Override
-                public void onAnimationEnd(Animator animation) {
-                    isCarbonCopyMode = toCarbon;
-                    MainActivity.this.hapticHeavyClick();
-                    MainActivity.this.renderFullPageFolio();
+                public WindowInsets onApplyWindowInsets(View v, WindowInsets insets) {
+                    android.graphics.Insets sb = insets.getInsets(
+                            WindowInsets.Type.systemBars() | WindowInsets.Type.displayCutout());
+                    root.setPadding(sb.left + dp(12), sb.top + dp(10), sb.right + dp(12), sb.bottom + dp(12));
+                    return insets;
                 }
             });
-            curlAnimator.start();
+            root.requestApplyInsets();
+        } else {
+            root.setPadding(dp(12), dp(32), dp(12), dp(16));
         }
 
-        private void calculateCurlGeometry(float pX, float pY, float w, float h) {
-            topVisiblePath.reset();
-            curlFlapPath.reset();
-            shadowPath.reset();
+        // Top Control Bar
+        LinearLayout topBar = new LinearLayout(this);
+        topBar.setOrientation(LinearLayout.HORIZONTAL);
+        topBar.setGravity(Gravity.CENTER_VERTICAL);
+        topBar.setPadding(0, 0, 0, dp(10));
 
-            if (!isCarbonCopyMode) {
-                // Curling Right-to-Left (Turning Original White Sheet to reveal Yellow Duplicate)
-                float clampedX = Math.max(-w * 0.4f, Math.min(w, pX));
-                float foldX = (w + clampedX) * 0.5f;
-                float cylinderW = Math.min(dpf(70), Math.max(dpf(16), (w - foldX) * 0.55f));
-
-                topVisiblePath.moveTo(0, 0);
-                topVisiblePath.lineTo(foldX, 0);
-                topVisiblePath.lineTo(foldX, h);
-                topVisiblePath.lineTo(0, h);
-                topVisiblePath.close();
-
-                curlFlapPath.moveTo(foldX, 0);
-                curlFlapPath.lineTo(foldX + cylinderW, 0);
-                curlFlapPath.lineTo(foldX + cylinderW, h);
-                curlFlapPath.lineTo(foldX, h);
-                curlFlapPath.close();
-
-                shadowPath.moveTo(foldX + cylinderW, 0);
-                shadowPath.lineTo(foldX + cylinderW + dpf(24), 0);
-                shadowPath.lineTo(foldX + cylinderW + dpf(24), h);
-                shadowPath.lineTo(foldX + cylinderW, h);
-                shadowPath.close();
-
-                flapPaint.setColor(0xFF1E293B);
-
-                Shader ridgeShader = new LinearGradient(
-                        foldX, 0, foldX + cylinderW, 0,
-                        new int[]{0x22000000, 0x88FFFFFF, 0x44000000, 0x11000000},
-                        new float[]{0f, 0.45f, 0.75f, 1f},
-                        Shader.TileMode.CLAMP);
-                ridgeHighlightPaint.setShader(ridgeShader);
-
-                Shader shadowShader = new LinearGradient(
-                        foldX + cylinderW, 0, foldX + cylinderW + dpf(24), 0,
-                        new int[]{0x66000000, 0x22000000, 0x00000000},
-                        new float[]{0f, 0.5f, 1f},
-                        Shader.TileMode.CLAMP);
-                shadowPaint.setShader(shadowShader);
-            } else {
-                // Curling Left-to-Right (Returning to Original Sheet)
-                float clampedX = Math.max(0f, Math.min(w * 1.4f, pX));
-                float foldX = clampedX * 0.5f;
-                float cylinderW = Math.min(dpf(70), Math.max(dpf(16), foldX * 0.55f));
-
-                topVisiblePath.moveTo(foldX, 0);
-                topVisiblePath.lineTo(w, 0);
-                topVisiblePath.lineTo(w, h);
-                topVisiblePath.lineTo(foldX, h);
-                topVisiblePath.close();
-
-                curlFlapPath.moveTo(foldX - cylinderW, 0);
-                curlFlapPath.lineTo(foldX, 0);
-                curlFlapPath.lineTo(foldX, h);
-                curlFlapPath.lineTo(foldX - cylinderW, h);
-                curlFlapPath.close();
-
-                shadowPath.moveTo(foldX - cylinderW - dpf(24), 0);
-                shadowPath.lineTo(foldX - cylinderW, 0);
-                shadowPath.lineTo(foldX - cylinderW, h);
-                shadowPath.lineTo(foldX - cylinderW - dpf(24), h);
-                shadowPath.close();
-
-                flapPaint.setColor(0xFF3D3310);
-
-                Shader ridgeShader = new LinearGradient(
-                        foldX - cylinderW, 0, foldX, 0,
-                        new int[]{0x11000000, 0x44000000, 0x88FFFFFF, 0x22000000},
-                        new float[]{0f, 0.25f, 0.55f, 1f},
-                        Shader.TileMode.CLAMP);
-                ridgeHighlightPaint.setShader(ridgeShader);
-
-                Shader shadowShader = new LinearGradient(
-                        foldX - cylinderW, 0, foldX - cylinderW - dpf(24), 0,
-                        new int[]{0x66000000, 0x22000000, 0x00000000},
-                        new float[]{0f, 0.5f, 1f},
-                        Shader.TileMode.CLAMP);
-                shadowPaint.setShader(shadowShader);
+        TextView btnBack = new TextView(this);
+        btnBack.setText("← DASHBOARD");
+        btnBack.setTextColor(colCyan);
+        btnBack.setTextSize(11f);
+        btnBack.setTypeface(Typeface.create(Typeface.MONOSPACE, Typeface.BOLD));
+        btnBack.setPadding(dp(10), dp(6), dp(10), dp(6));
+        btnBack.setBackground(rounded(0x2206B6D4, dp(8)));
+        btnBack.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                hapticClick();
+                dlg.dismiss();
             }
-        }
+        });
+        topBar.addView(btnBack);
 
-        @Override
-        public boolean onInterceptTouchEvent(MotionEvent ev) {
-            float w = getWidth();
-            float h = getHeight();
-            if (w <= 0 || h <= 0) return false;
+        LinearLayout titleCol = new LinearLayout(this);
+        titleCol.setOrientation(LinearLayout.VERTICAL);
+        titleCol.setGravity(Gravity.CENTER);
+        LinearLayout.LayoutParams tclp = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
+        titleCol.setLayoutParams(tclp);
 
-            switch (ev.getActionMasked()) {
-                case MotionEvent.ACTION_DOWN:
-                    startTouchX = ev.getX();
-                    startTouchY = ev.getY();
-                    isCurling = false;
-                    break;
-                case MotionEvent.ACTION_MOVE:
-                    float dx = ev.getX() - startTouchX;
-                    float dy = Math.abs(ev.getY() - startTouchY);
-                    if (!isCarbonCopyMode && dx < -dpf(10) && Math.abs(dx) > dy * 0.7f) {
-                        isCurling = true;
-                        curlX = ev.getX();
-                        calculateCurlGeometry(curlX, h * 0.5f, w, h);
-                        if (getParent() != null) getParent().requestDisallowInterceptTouchEvent(true);
-                        return true;
-                    }
-                    if (isCarbonCopyMode && dx > dpf(10) && Math.abs(dx) > dy * 0.7f) {
-                        isCurling = true;
-                        curlX = ev.getX();
-                        calculateCurlGeometry(curlX, h * 0.5f, w, h);
-                        if (getParent() != null) getParent().requestDisallowInterceptTouchEvent(true);
-                        return true;
-                    }
-                    break;
+        TextView tvHead = new TextView(this);
+        tvHead.setText("📖 SECURITY LOGBOOK & ARCHIVES");
+        tvHead.setTextColor(colPale);
+        tvHead.setTextSize(13f);
+        tvHead.setTypeface(Typeface.DEFAULT_BOLD);
+        tvHead.setGravity(Gravity.CENTER);
+        titleCol.addView(tvHead);
+
+        TextView tvSubHead = new TextView(this);
+        tvSubHead.setText("Hume Doors & Timber · Multi-Shift Historical Ledger");
+        tvSubHead.setTextColor(colQuiet);
+        tvSubHead.setTextSize(9.5f);
+        tvSubHead.setTypeface(Typeface.MONOSPACE);
+        tvSubHead.setGravity(Gravity.CENTER);
+        titleCol.addView(tvSubHead);
+
+        topBar.addView(titleCol);
+
+        TextView btnShare = new TextView(this);
+        btnShare.setText("📤 EXPORT");
+        btnShare.setTextColor(colAccentInk);
+        btnShare.setTextSize(11f);
+        btnShare.setTypeface(Typeface.DEFAULT_BOLD);
+        btnShare.setPadding(dp(10), dp(6), dp(10), dp(6));
+        btnShare.setBackground(pressable(colAccent, dp(8)));
+        btnShare.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                hapticHeavyClick();
+                shareHandoverReport();
             }
-            return super.onInterceptTouchEvent(ev);
-        }
+        });
+        topBar.addView(btnShare);
 
-        @Override
-        public boolean onTouchEvent(MotionEvent ev) {
-            final float w = getWidth();
-            final float h = getHeight();
-            if (w <= 0 || h <= 0) return super.onTouchEvent(ev);
+        contentCard.addView(topBar);
 
-            switch (ev.getActionMasked()) {
-                case MotionEvent.ACTION_DOWN:
-                    startTouchX = ev.getX();
-                    startTouchY = ev.getY();
-                    isCurling = false;
-                    return true;
+        final FrameLayout mainBodyContainer = new FrameLayout(this);
+        LinearLayout.LayoutParams mblp = new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT, 0, 1f);
+        mainBodyContainer.setLayoutParams(mblp);
 
-                case MotionEvent.ACTION_MOVE:
-                    float dx = ev.getX() - startTouchX;
-                    float dy = Math.abs(ev.getY() - startTouchY);
-                    if (!isCurling) {
-                        if (!isCarbonCopyMode && dx < -dpf(8) && Math.abs(dx) > dy * 0.7f) {
-                            isCurling = true;
-                            if (getParent() != null) getParent().requestDisallowInterceptTouchEvent(true);
-                        } else if (isCarbonCopyMode && dx > dpf(8) && Math.abs(dx) > dy * 0.7f) {
-                            isCurling = true;
-                            if (getParent() != null) getParent().requestDisallowInterceptTouchEvent(true);
+        final Runnable[] refreshContent = new Runnable[1];
+
+        // Shift Selection Strip
+        final HorizontalScrollView shiftHsv = new HorizontalScrollView(this);
+        shiftHsv.setHorizontalScrollBarEnabled(false);
+        final LinearLayout shiftRow = new LinearLayout(this);
+        shiftRow.setOrientation(LinearLayout.HORIZONTAL);
+        shiftRow.setPadding(0, dp(4), 0, dp(8));
+
+        final List<LogbookManager.ShiftRecord> shifts = logMgr.getAllShifts();
+
+        final Runnable buildShiftPills = new Runnable() {
+            @Override
+            public void run() {
+                shiftRow.removeAllViews();
+
+                final boolean allSelected = "ALL".equalsIgnoreCase(logbookSelectedShiftId);
+                TextView chipAll = new TextView(MainActivity.this);
+                chipAll.setText("📚 ALL ARCHIVES (" + logMgr.getAllEntriesChronological(false).size() + ")");
+                chipAll.setTextColor(allSelected ? colAccentInk : colMuted);
+                chipAll.setTextSize(10f);
+                chipAll.setTypeface(Typeface.create(Typeface.MONOSPACE, Typeface.BOLD));
+                chipAll.setPadding(dp(12), dp(6), dp(12), dp(6));
+                chipAll.setBackground(rounded(allSelected ? colAccent : 0x22FFFFFF, dp(8)));
+                chipAll.setOnClickListener(new View.OnClickListener() {
+                    @Override
+                    public void onClick(View v) {
+                        hapticClick();
+                        logbookSelectedShiftId = "ALL";
+                        run();
+                        if (refreshContent[0] != null) refreshContent[0].run();
+                    }
+                });
+                LinearLayout.LayoutParams calp = new LinearLayout.LayoutParams(
+                        LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+                calp.rightMargin = dp(6);
+                chipAll.setLayoutParams(calp);
+                shiftRow.addView(chipAll);
+
+                for (final LogbookManager.ShiftRecord s : shifts) {
+                    final boolean isSelected = s.shiftId.equals(logbookSelectedShiftId);
+                    TextView chip = new TextView(MainActivity.this);
+                    String label = (s.isCurrent ? "🌙 " : "📅 ") + s.shortDateStr + (s.isCurrent ? " (ACTIVE)" : "");
+                    chip.setText(label);
+                    chip.setTextColor(isSelected ? 0xFF080D1A : (s.isCurrent ? colCyan : colPale));
+                    chip.setTextSize(10f);
+                    chip.setTypeface(Typeface.create(Typeface.MONOSPACE, Typeface.BOLD));
+                    chip.setPadding(dp(12), dp(6), dp(12), dp(6));
+                    int fill = isSelected ? (s.isCurrent ? colCyan : colEmerald) : (s.isCurrent ? 0x3306B6D4 : 0x22FFFFFF);
+                    chip.setBackground(rounded(fill, dp(8)));
+                    chip.setOnClickListener(new View.OnClickListener() {
+                        @Override
+                        public void onClick(View v) {
+                            hapticClick();
+                            logbookSelectedShiftId = s.shiftId;
+                            run();
+                            if (refreshContent[0] != null) refreshContent[0].run();
                         }
-                    }
-                    if (isCurling) {
-                        curlX = ev.getX();
-                        calculateCurlGeometry(curlX, h * 0.5f, w, h);
-                        invalidate();
-                        return true;
-                    }
-                    break;
-
-                case MotionEvent.ACTION_UP:
-                case MotionEvent.ACTION_CANCEL:
-                    if (isCurling) {
-                        if (!isCarbonCopyMode) {
-                            // Turn right-to-left
-                            boolean shouldTurn = curlX < w * 0.72f || (startTouchX - curlX) > w * 0.25f;
-                            if (shouldTurn) {
-                                if (curlAnimator != null && curlAnimator.isRunning()) curlAnimator.cancel();
-                                final float fromX = curlX;
-                                final float targetX = -w * 0.35f;
-
-                                curlAnimator = ValueAnimator.ofFloat(0f, 1f);
-                                curlAnimator.setDuration(220);
-                                curlAnimator.setInterpolator(new DecelerateInterpolator(1.3f));
-                                curlAnimator.addUpdateListener(new ValueAnimator.AnimatorUpdateListener() {
-                                    public void onAnimationUpdate(ValueAnimator va) {
-                                        float p = (Float) va.getAnimatedValue();
-                                        curlX = fromX + (targetX - fromX) * p;
-                                        calculateCurlGeometry(curlX, h * 0.5f, w, h);
-                                        invalidate();
-                                    }
-                                });
-                                curlAnimator.addListener(new AnimatorListenerAdapter() {
-                                    @Override
-                                    public void onAnimationEnd(Animator animation) {
-                                        isCarbonCopyMode = true;
-                                        MainActivity.this.hapticHeavyClick();
-                                        MainActivity.this.renderFullPageFolio();
-                                    }
-                                });
-                                curlAnimator.start();
-                            } else {
-                                // Snap back flat to right
-                                if (curlAnimator != null && curlAnimator.isRunning()) curlAnimator.cancel();
-                                final float fromX = curlX;
-                                curlAnimator = ValueAnimator.ofFloat(0f, 1f);
-                                curlAnimator.setDuration(180);
-                                curlAnimator.setInterpolator(new OvershootInterpolator(1.1f));
-                                curlAnimator.addUpdateListener(new ValueAnimator.AnimatorUpdateListener() {
-                                    public void onAnimationUpdate(ValueAnimator va) {
-                                        float p = (Float) va.getAnimatedValue();
-                                        curlX = fromX + (w - fromX) * p;
-                                        calculateCurlGeometry(curlX, h * 0.5f, w, h);
-                                        invalidate();
-                                    }
-                                });
-                                curlAnimator.addListener(new AnimatorListenerAdapter() {
-                                    @Override
-                                    public void onAnimationEnd(Animator animation) {
-                                        isCurling = false;
-                                        curlX = -1f;
-                                        invalidate();
-                                    }
-                                });
-                                curlAnimator.start();
-                            }
-                        } else {
-                            // Turn left-to-right to return
-                            boolean shouldReturn = curlX > w * 0.28f || (curlX - startTouchX) > w * 0.25f;
-                            if (shouldReturn) {
-                                if (curlAnimator != null && curlAnimator.isRunning()) curlAnimator.cancel();
-                                final float fromX = curlX;
-                                final float targetX = w * 1.35f;
-
-                                curlAnimator = ValueAnimator.ofFloat(0f, 1f);
-                                curlAnimator.setDuration(220);
-                                curlAnimator.setInterpolator(new DecelerateInterpolator(1.3f));
-                                curlAnimator.addUpdateListener(new ValueAnimator.AnimatorUpdateListener() {
-                                    public void onAnimationUpdate(ValueAnimator va) {
-                                        float p = (Float) va.getAnimatedValue();
-                                        curlX = fromX + (targetX - fromX) * p;
-                                        calculateCurlGeometry(curlX, h * 0.5f, w, h);
-                                        invalidate();
-                                    }
-                                });
-                                curlAnimator.addListener(new AnimatorListenerAdapter() {
-                                    @Override
-                                    public void onAnimationEnd(Animator animation) {
-                                        isCarbonCopyMode = false;
-                                        MainActivity.this.hapticHeavyClick();
-                                        MainActivity.this.renderFullPageFolio();
-                                    }
-                                });
-                                curlAnimator.start();
-                            } else {
-                                // Snap back flat to left
-                                if (curlAnimator != null && curlAnimator.isRunning()) curlAnimator.cancel();
-                                final float fromX = curlX;
-                                curlAnimator = ValueAnimator.ofFloat(0f, 1f);
-                                curlAnimator.setDuration(180);
-                                curlAnimator.setInterpolator(new OvershootInterpolator(1.1f));
-                                curlAnimator.addUpdateListener(new ValueAnimator.AnimatorUpdateListener() {
-                                    public void onAnimationUpdate(ValueAnimator va) {
-                                        float p = (Float) va.getAnimatedValue();
-                                        curlX = fromX - fromX * p;
-                                        calculateCurlGeometry(curlX, h * 0.5f, w, h);
-                                        invalidate();
-                                    }
-                                });
-                                curlAnimator.addListener(new AnimatorListenerAdapter() {
-                                    @Override
-                                    public void onAnimationEnd(Animator animation) {
-                                        isCurling = false;
-                                        curlX = -1f;
-                                        invalidate();
-                                    }
-                                });
-                                curlAnimator.start();
-                            }
-                        }
-                        return true;
-                    }
-                    break;
-            }
-            return super.onTouchEvent(ev);
-        }
-
-        @Override
-        protected boolean drawChild(Canvas canvas, View child, long drawingTime) {
-            if (child == topView && isCurling) {
-                canvas.save();
-                canvas.clipPath(topVisiblePath);
-                boolean res = super.drawChild(canvas, child, drawingTime);
-                canvas.restore();
-                return res;
-            }
-            return super.drawChild(canvas, child, drawingTime);
-        }
-
-        @Override
-        protected void dispatchDraw(Canvas canvas) {
-            super.dispatchDraw(canvas);
-            int w = getWidth();
-            int h = getHeight();
-            if (w <= 0 || h <= 0) return;
-
-            if (isCurling) {
-                // 1. Draw soft drop shadow onto underneath revealed sheet
-                canvas.drawPath(shadowPath, shadowPaint);
-
-                // 2. Draw curled flap
-                canvas.drawPath(curlFlapPath, flapPaint);
-
-                // 3. Draw 3D cylindrical specular highlight
-                canvas.drawPath(curlFlapPath, ridgeHighlightPaint);
-            } else {
-                // Right-to-Left or Left-to-Right Edge Turning Cue
-                if (!isCarbonCopyMode) {
-                    // Right Edge Tab: "🟡 TURN PAGE ◂"
-                    float earW = dpf(48f);
-                    float earH = dpf(48f);
-                    Path earPath = new Path();
-                    earPath.moveTo(w - earW, h);
-                    earPath.lineTo(w - dpf(12), h - dpf(12));
-                    earPath.lineTo(w, h - earH);
-                    earPath.close();
-
-                    dogEarPaint.setColor(0xCC38BDF8);
-                    canvas.drawPath(earPath, dogEarPaint);
-
-                    dogEarHintPaint.setTextAlign(Paint.Align.RIGHT);
-                    dogEarHintPaint.setTextSize(dpf(9.5f));
-                    dogEarHintPaint.setColor(colCyan);
-                    canvas.drawText("🟡 TURN PAGE (R→L) ◂", w - dpf(14), h - dpf(12), dogEarHintPaint);
-                } else {
-                    // Left Edge Tab: "📄 RETURN ▸"
-                    float earW = dpf(48f);
-                    float earH = dpf(48f);
-                    Path earPath = new Path();
-                    earPath.moveTo(0, h - earH);
-                    earPath.lineTo(dpf(12), h - dpf(12));
-                    earPath.lineTo(earW, h);
-                    earPath.close();
-
-                    dogEarPaint.setColor(0xCCFDE047);
-                    canvas.drawPath(earPath, dogEarPaint);
-
-                    dogEarHintPaint.setTextAlign(Paint.Align.LEFT);
-                    dogEarHintPaint.setTextSize(dpf(9.5f));
-                    dogEarHintPaint.setColor(0xFFFEF08A);
-                    canvas.drawText("▸ (L→R) ORIGINAL SHEET", dpf(14), h - dpf(12), dogEarHintPaint);
+                    });
+                    LinearLayout.LayoutParams clp = new LinearLayout.LayoutParams(
+                            LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+                    clp.rightMargin = dp(6);
+                    chip.setLayoutParams(clp);
+                    shiftRow.addView(chip);
                 }
             }
-        }
+        };
+        buildShiftPills.run();
+        shiftHsv.addView(shiftRow);
+        contentCard.addView(shiftHsv);
+
+        // Search Bar and Mode Switcher
+        LinearLayout searchRow = new LinearLayout(this);
+        searchRow.setOrientation(LinearLayout.HORIZONTAL);
+        searchRow.setGravity(Gravity.CENTER_VERTICAL);
+        searchRow.setPadding(0, 0, 0, dp(8));
+
+        final EditText searchField = new EditText(this);
+        searchField.setHint("🔍 Search occurrences, regos, lots, pumps...");
+        searchField.setHintTextColor(colMuted);
+        searchField.setTextColor(colPale);
+        searchField.setTextSize(11.5f);
+        searchField.setBackground(rounded(colPanel2, dp(8)));
+        searchField.setPadding(dp(12), dp(8), dp(12), dp(8));
+        searchField.setSingleLine(true);
+        LinearLayout.LayoutParams slp = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
+        slp.rightMargin = dp(8);
+        searchField.setLayoutParams(slp);
+        searchField.addTextChangedListener(new android.text.TextWatcher() {
+            @Override
+            public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
+            @Override
+            public void onTextChanged(CharSequence s, int start, int before, int count) {
+                logbookSearchQuery = s.toString();
+                if (refreshContent[0] != null) refreshContent[0].run();
+            }
+            @Override
+            public void afterTextChanged(android.text.Editable s) {}
+        });
+        searchRow.addView(searchField);
+
+        final TextView btnModeToggle = new TextView(this);
+        btnModeToggle.setText(logbookRuledViewMode ? "📋 FEED VIEW" : "📄 RULED LEDGER");
+        btnModeToggle.setTextColor(logbookRuledViewMode ? colCyan : 0xFFFDE047);
+        btnModeToggle.setTextSize(10f);
+        btnModeToggle.setTypeface(Typeface.create(Typeface.MONOSPACE, Typeface.BOLD));
+        btnModeToggle.setPadding(dp(10), dp(8), dp(10), dp(8));
+        btnModeToggle.setBackground(rounded(logbookRuledViewMode ? 0x3306B6D4 : 0x33FDE047, dp(8)));
+        btnModeToggle.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                hapticClick();
+                logbookRuledViewMode = !logbookRuledViewMode;
+                btnModeToggle.setText(logbookRuledViewMode ? "📋 FEED VIEW" : "📄 RULED LEDGER");
+                btnModeToggle.setTextColor(logbookRuledViewMode ? colCyan : 0xFFFDE047);
+                btnModeToggle.setBackground(rounded(logbookRuledViewMode ? 0x3306B6D4 : 0x33FDE047, dp(8)));
+                if (refreshContent[0] != null) refreshContent[0].run();
+            }
+        });
+        searchRow.addView(btnModeToggle);
+        contentCard.addView(searchRow);
+
+        // Category Filter Chips
+        HorizontalScrollView catHsv = new HorizontalScrollView(this);
+        catHsv.setHorizontalScrollBarEnabled(false);
+        final LinearLayout catRow = new LinearLayout(this);
+        catRow.setOrientation(LinearLayout.HORIZONTAL);
+        catRow.setPadding(0, 0, 0, dp(8));
+
+        final String[][] categories = {
+                {"ALL", "ALL", "0xFFFFFFFF"},
+                {"PATROL", "🛡️ PATROLS", "0xFF10B981"},
+                {"LOT_LOCKUP", "🏭 LOTS", "0xFF06B6D4"},
+                {"FIRE_PUMP", "💧 PUMPS & PSI", "0xFF38BDF8"},
+                {"VEHICLE_REGO", "🚗 REGO / ANPR", "0xFFF59E0B"},
+                {"PHOTO", "📷 PHOTOS", "0xFFA855F7"},
+                {"INCIDENT", "⚠️ INCIDENTS", "0xFFEF4444"},
+                {"HANDOVER", "🤝 HANDOVERS", "0xFFE5A93C"}
+        };
+
+        final Runnable buildCatPills = new Runnable() {
+            @Override
+            public void run() {
+                catRow.removeAllViews();
+                for (final String[] cat : categories) {
+                    final String catId = cat[0];
+                    final String catLabel = cat[1];
+                    final boolean isSelected = catId.equalsIgnoreCase(logbookSelectedCategory);
+
+                    TextView chip = new TextView(MainActivity.this);
+                    chip.setText(catLabel);
+                    chip.setTextColor(isSelected ? colAccentInk : colMuted);
+                    chip.setTextSize(9.5f);
+                    chip.setTypeface(Typeface.create(Typeface.MONOSPACE, Typeface.BOLD));
+                    chip.setPadding(dp(10), dp(5), dp(10), dp(5));
+                    chip.setBackground(rounded(isSelected ? colAccent : 0x1AFFFFFF, dp(6)));
+                    chip.setOnClickListener(new View.OnClickListener() {
+                        @Override
+                        public void onClick(View v) {
+                            hapticClick();
+                            logbookSelectedCategory = catId;
+                            run();
+                            if (refreshContent[0] != null) refreshContent[0].run();
+                        }
+                    });
+                    LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(
+                            LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+                    lp.rightMargin = dp(6);
+                    chip.setLayoutParams(lp);
+                    catRow.addView(chip);
+                }
+            }
+        };
+        buildCatPills.run();
+        catHsv.addView(catRow);
+        contentCard.addView(catHsv);
+
+        // Body Content
+        refreshContent[0] = new Runnable() {
+            @Override
+            public void run() {
+                mainBodyContainer.removeAllViews();
+                if (logbookRuledViewMode) {
+                    mainBodyContainer.addView(buildLogbookRuledSheetView(isCarbonCopyMode));
+                } else {
+                    mainBodyContainer.addView(buildLogbookFeedView());
+                }
+            }
+        };
+        refreshContent[0].run();
+        contentCard.addView(mainBodyContainer);
+
+        // Bottom Action Bar
+        LinearLayout botBar = new LinearLayout(this);
+        botBar.setOrientation(LinearLayout.HORIZONTAL);
+        botBar.setGravity(Gravity.CENTER_VERTICAL);
+        botBar.setPadding(0, dp(10), 0, 0);
+
+        TextView btnAddNote = actionButton("📝 Note", colPanel2, colPale);
+        btnAddNote.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                hapticClick();
+                showModernNotesSheet();
+            }
+        });
+        botBar.addView(btnAddNote);
+
+        TextView btnAddPhoto = actionButton("📷 Photo", colPanel2, colPale);
+        btnAddPhoto.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                hapticClick();
+                checkAndLaunchFastCamera(null);
+            }
+        });
+        LinearLayout.LayoutParams apl = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
+        apl.leftMargin = dp(6);
+        btnAddPhoto.setLayoutParams(apl);
+        botBar.addView(btnAddPhoto);
+
+        TextView btnAddRego = actionButton("🚗 Rego", colPanel2, colPale);
+        btnAddRego.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                hapticClick();
+                showRegoPlateEntryModal();
+            }
+        });
+        LinearLayout.LayoutParams rpl = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
+        rpl.leftMargin = dp(6);
+        btnAddRego.setLayoutParams(rpl);
+        botBar.addView(btnAddRego);
+
+        TextView btnAddIncident = actionButton("🚨 Incident", colCrimson, colPale);
+        btnAddIncident.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                hapticClick();
+                showModernIncidentSheet();
+            }
+        });
+        LinearLayout.LayoutParams ipl = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1.1f);
+        ipl.leftMargin = dp(6);
+        btnAddIncident.setLayoutParams(ipl);
+        botBar.addView(btnAddIncident);
+
+        contentCard.addView(botBar);
+
+        root.addView(contentCard);
+        dlg.setContentView(root);
+        dlg.show();
     }
 
-    private View buildNotebookSheetView(boolean carbonMode) {
-        // Styling based on Authentic Security Log Book Photos
-        int sheetCardBg = carbonMode ? 0xFF231D08 : 0xFF111827;
-        int headerModeCol = carbonMode ? 0xFFFDE047 : colCyan;
-        int dateCol = carbonMode ? 0xFFFEF08A : colPale;
-        int pageNumCol = carbonMode ? 0xFFFDE047 : colAccent;
-        int marginLineCol = carbonMode ? 0x883B82F6 : 0x4438BDF8;
+    private View buildLogbookFeedView() {
+        ScrollView sv = new ScrollView(this);
+        sv.setVerticalScrollBarEnabled(true);
+        sv.setLayoutParams(new FrameLayout.LayoutParams(
+                FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT));
 
+        LinearLayout container = new LinearLayout(this);
+        container.setOrientation(LinearLayout.VERTICAL);
+        container.setPadding(0, dp(4), 0, dp(14));
+
+        LogbookManager logMgr = LogbookManager.getInstance(this);
+        List<LogbookManager.LogEntry> entries = logMgr.filterEntries(
+                logbookSelectedShiftId, logbookSelectedCategory, logbookSearchQuery);
+
+        if (entries.isEmpty()) {
+            LinearLayout emptyBox = new LinearLayout(this);
+            emptyBox.setOrientation(LinearLayout.VERTICAL);
+            emptyBox.setGravity(Gravity.CENTER);
+            emptyBox.setPadding(dp(20), dp(40), dp(20), dp(40));
+
+            TextView ic = new TextView(this);
+            ic.setText("🔍");
+            ic.setTextSize(32);
+            ic.setGravity(Gravity.CENTER);
+            emptyBox.addView(ic);
+
+            TextView msg = new TextView(this);
+            msg.setText("No occurrences matching filter\nTry clearing search query or selecting ALL categories.");
+            msg.setTextColor(colMuted);
+            msg.setTextSize(12f);
+            msg.setGravity(Gravity.CENTER);
+            msg.setPadding(0, dp(8), 0, 0);
+            emptyBox.addView(msg);
+
+            container.addView(emptyBox);
+        } else {
+            String currentGroupHeader = "";
+            for (final LogbookManager.LogEntry entry : entries) {
+                if (!entry.shiftDateStr.equals(currentGroupHeader)) {
+                    currentGroupHeader = entry.shiftDateStr;
+                    LinearLayout headerRow = new LinearLayout(this);
+                    headerRow.setOrientation(LinearLayout.HORIZONTAL);
+                    headerRow.setGravity(Gravity.CENTER_VERTICAL);
+                    headerRow.setPadding(dp(4), dp(12), dp(4), dp(6));
+
+                    TextView tvShiftTitle = new TextView(this);
+                    tvShiftTitle.setText("── " + currentGroupHeader + " · " + entry.guardName.toUpperCase(Locale.US) + " ──");
+                    tvShiftTitle.setTextColor(colCyan);
+                    tvShiftTitle.setTextSize(10f);
+                    tvShiftTitle.setTypeface(Typeface.create(Typeface.MONOSPACE, Typeface.BOLD));
+                    headerRow.addView(tvShiftTitle);
+                    container.addView(headerRow);
+                }
+
+                LinearLayout itemCard = new LinearLayout(this);
+                itemCard.setOrientation(LinearLayout.VERTICAL);
+                itemCard.setBackground(rounded(colPanel2, dp(10)));
+                itemCard.setPadding(dp(12), dp(10), dp(12), dp(10));
+                LinearLayout.LayoutParams ipl = new LinearLayout.LayoutParams(
+                        LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+                ipl.bottomMargin = dp(8);
+                itemCard.setLayoutParams(ipl);
+
+                LinearLayout infoRow = new LinearLayout(this);
+                infoRow.setOrientation(LinearLayout.HORIZONTAL);
+                infoRow.setGravity(Gravity.CENTER_VERTICAL);
+
+                TextView timePill = new TextView(this);
+                timePill.setText(entry.timeStr);
+                timePill.setTextColor(colCyan);
+                timePill.setTextSize(11f);
+                timePill.setTypeface(Typeface.create(Typeface.MONOSPACE, Typeface.BOLD));
+                timePill.setBackground(rounded(0x2206B6D4, dp(4)));
+                timePill.setPadding(dp(6), dp(2), dp(6), dp(2));
+                infoRow.addView(timePill);
+
+                TextView catPill = new TextView(this);
+                catPill.setText(entry.categoryIcon + " " + entry.categoryLabel);
+                catPill.setTextColor(entry.categoryColor);
+                catPill.setTextSize(9.5f);
+                catPill.setTypeface(Typeface.create(Typeface.MONOSPACE, Typeface.BOLD));
+                LinearLayout.LayoutParams cpl = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
+                cpl.leftMargin = dp(8);
+                catPill.setLayoutParams(cpl);
+                infoRow.addView(catPill);
+
+                TextView guardTag = new TextView(this);
+                guardTag.setText("✓ " + (entry.guardName.contains("Lochran") ? "L. Doherty" : "Guard"));
+                guardTag.setTextColor(colMuted);
+                guardTag.setTextSize(9f);
+                guardTag.setTypeface(Typeface.MONOSPACE);
+                infoRow.addView(guardTag);
+
+                itemCard.addView(infoRow);
+
+                TextView bodyTv = new TextView(this);
+                bodyTv.setText(entry.text);
+                bodyTv.setTextColor(colPale);
+                bodyTv.setTextSize(12.5f);
+                bodyTv.setTypeface(Typeface.DEFAULT_BOLD);
+                bodyTv.setPadding(0, dp(6), 0, dp(4));
+                itemCard.addView(bodyTv);
+
+                if (!entry.photoHashSnippet.isEmpty() || !entry.regoPlate.isEmpty()) {
+                    LinearLayout attachRow = new LinearLayout(this);
+                    attachRow.setOrientation(LinearLayout.HORIZONTAL);
+                    attachRow.setGravity(Gravity.CENTER_VERTICAL);
+                    attachRow.setPadding(0, dp(4), 0, 0);
+
+                    if (!entry.photoHashSnippet.isEmpty()) {
+                        TextView btnPhoto = new TextView(this);
+                        btnPhoto.setText("📷 PHOTO #" + entry.photoHashSnippet + " ↗");
+                        btnPhoto.setTextColor(0xFFA855F7);
+                        btnPhoto.setTextSize(9.5f);
+                        btnPhoto.setTypeface(Typeface.create(Typeface.MONOSPACE, Typeface.BOLD));
+                        btnPhoto.setPadding(dp(8), dp(3), dp(8), dp(3));
+                        btnPhoto.setBackground(rounded(0x33A855F7, dp(6)));
+                        btnPhoto.setOnClickListener(new View.OnClickListener() {
+                            @Override
+                            public void onClick(View v) {
+                                hapticClick();
+                                showPhotoExpandModal(entry.photoHashSnippet, entry.text, entry.timeStr);
+                            }
+                        });
+                        attachRow.addView(btnPhoto);
+                    }
+
+                    if (!entry.regoPlate.isEmpty()) {
+                        TextView btnRego = new TextView(this);
+                        btnRego.setText("🚗 PLATE: " + entry.regoPlate);
+                        btnRego.setTextColor(0xFFF59E0B);
+                        btnRego.setTextSize(9.5f);
+                        btnRego.setTypeface(Typeface.create(Typeface.MONOSPACE, Typeface.BOLD));
+                        btnRego.setPadding(dp(8), dp(3), dp(8), dp(3));
+                        btnRego.setBackground(rounded(0x33F59E0B, dp(6)));
+                        LinearLayout.LayoutParams rlp = new LinearLayout.LayoutParams(
+                                LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+                        rlp.leftMargin = dp(6);
+                        btnRego.setLayoutParams(rlp);
+                        attachRow.addView(btnRego);
+                    }
+
+                    itemCard.addView(attachRow);
+                }
+
+                container.addView(itemCard);
+            }
+        }
+
+        sv.addView(container);
+        return sv;
+    }
+
+    private View buildLogbookRuledSheetView(final boolean carbonMode) {
         LinearLayout sheetCard = new LinearLayout(this);
         sheetCard.setOrientation(LinearLayout.VERTICAL);
-        sheetCard.setBackground(rounded(sheetCardBg, dp(20)));
-        sheetCard.setPadding(dp(16), dp(14), dp(16), dp(14));
+        int sheetBg = carbonMode ? 0xFF231D08 : 0xFF111827;
+        int dateCol = carbonMode ? 0xFFFEF08A : colPale;
+        int headerModeCol = carbonMode ? 0xFFFDE047 : colCyan;
+        int marginLineCol = carbonMode ? 0x883B82F6 : 0x4438BDF8;
+
+        sheetCard.setBackground(rounded(sheetBg, dp(14)));
+        sheetCard.setPadding(dp(16), dp(12), dp(16), dp(12));
         sheetCard.setLayoutParams(new FrameLayout.LayoutParams(
                 FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT));
 
-        // Notebook Sheet Header (Left: Original/Duplicate, Center: Date, Right: Page 28)
+        // Notebook Sheet Header
         LinearLayout notebookHeader = new LinearLayout(this);
         notebookHeader.setOrientation(LinearLayout.HORIZONTAL);
         notebookHeader.setGravity(Gravity.CENTER_VERTICAL);
         notebookHeader.setPadding(dp(4), dp(2), dp(4), dp(8));
 
-        TextView tvMode = new TextView(this);
-        tvMode.setText(carbonMode ? "Duplicate" : "Original");
-        tvMode.setTextColor(headerModeCol);
-        tvMode.setTextSize(13f);
-        tvMode.setTypeface(Typeface.create(Typeface.DEFAULT, Typeface.BOLD_ITALIC));
-        LinearLayout.LayoutParams tml = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1.2f);
-        tvMode.setLayoutParams(tml);
-        notebookHeader.addView(tvMode);
+        final TextView tvModeToggle = new TextView(this);
+        tvModeToggle.setText(carbonMode ? "🟡 DUPLICATE CARBON" : "📄 ORIGINAL SHEET");
+        tvModeToggle.setTextColor(headerModeCol);
+        tvModeToggle.setTextSize(11f);
+        tvModeToggle.setTypeface(Typeface.create(Typeface.MONOSPACE, Typeface.BOLD));
+        tvModeToggle.setPadding(dp(8), dp(3), dp(8), dp(3));
+        tvModeToggle.setBackground(rounded(carbonMode ? 0x33FDE047 : 0x2206B6D4, dp(6)));
+        tvModeToggle.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                hapticHeavyClick();
+                isCarbonCopyMode = !isCarbonCopyMode;
+                showFullLogbookDialog();
+            }
+        });
+        notebookHeader.addView(tvModeToggle);
 
         TextView tvDate = new TextView(this);
         tvDate.setText(getFormattedShiftDateHeader());
         tvDate.setTextColor(dateCol);
-        tvDate.setTextSize(12.5f);
+        tvDate.setTextSize(11.5f);
         tvDate.setTypeface(Typeface.create(Typeface.MONOSPACE, Typeface.BOLD));
         tvDate.setGravity(Gravity.CENTER);
-        LinearLayout.LayoutParams tdl = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 3.2f);
+        LinearLayout.LayoutParams tdl = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
         tvDate.setLayoutParams(tdl);
         notebookHeader.addView(tvDate);
 
         TextView tvPageNum = new TextView(this);
-        tvPageNum.setText("28");
-        tvPageNum.setTextColor(pageNumCol);
-        tvPageNum.setTextSize(14f);
+        tvPageNum.setText("PAGE 28/50");
+        tvPageNum.setTextColor(carbonMode ? 0xFFFDE047 : colAccent);
+        tvPageNum.setTextSize(11f);
         tvPageNum.setTypeface(Typeface.create(Typeface.MONOSPACE, Typeface.BOLD));
-        tvPageNum.setGravity(Gravity.END);
-        LinearLayout.LayoutParams tpl = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 0.8f);
-        tvPageNum.setLayoutParams(tpl);
         notebookHeader.addView(tvPageNum);
-
         sheetCard.addView(notebookHeader);
 
         // Top Double Rule Line
@@ -10235,7 +10344,7 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
         topRule.setLayoutParams(trl);
         sheetCard.addView(topRule);
 
-        // Scrollable Ruled Grid filling the entire remaining height
+        // Scrollable Ruled Grid
         ScrollView sheetScroll = new ScrollView(this);
         sheetScroll.setVerticalScrollBarEnabled(false);
         LinearLayout.LayoutParams sslp = new LinearLayout.LayoutParams(
@@ -10258,8 +10367,7 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
         }
         shown += pending.size();
 
-        // Fill remaining page lines down to bottom (minimum 18 lines for full sheet)
-        int minFullLines = 18;
+        int minFullLines = 16;
         if (shown < minFullLines) {
             for (int k = shown + 1; k <= minFullLines; k++) {
                 gridContent.addView(blankRuledLine(k));
@@ -10273,7 +10381,7 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
         LinearLayout folioFoot = new LinearLayout(this);
         folioFoot.setOrientation(LinearLayout.HORIZONTAL);
         folioFoot.setGravity(Gravity.CENTER_VERTICAL);
-        folioFoot.setPadding(dp(4), dp(8), dp(4), dp(4));
+        folioFoot.setPadding(dp(4), dp(6), dp(4), dp(2));
 
         TextView footLeft = new TextView(this);
         footLeft.setText("DSS-LOGBOOK-41207 · SPARK SHA-256");
@@ -10295,155 +10403,13 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
         return sheetCard;
     }
 
-    private void renderFullPageFolio() {
-        if (fullPageFolioOverlay == null) return;
-        fullPageFolioOverlay.removeAllViews();
-        fullPageFolioOverlay.setBackgroundColor(0xFF060913);
-
-        boolean isTablet = getResources().getConfiguration().smallestScreenWidthDp >= 600;
-        boolean isLandscape = getResources().getConfiguration().orientation == android.content.res.Configuration.ORIENTATION_LANDSCAPE;
-
-        int folioBg = isCarbonCopyMode ? 0xFF1C1705 : 0xFF080B12;
-
-        LinearLayout rootContainer = new LinearLayout(this);
-        rootContainer.setOrientation(LinearLayout.VERTICAL);
-        rootContainer.setBackgroundColor(folioBg);
-        rootContainer.setLayoutParams(new FrameLayout.LayoutParams(
-                FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT));
-        final int padSide = isTablet && isLandscape ? dp(24) : dp(14);
-        final int basePadTop = isTablet && isLandscape ? dp(16) : dp(36);
-        rootContainer.setPadding(padSide, basePadTop, padSide, dp(14));
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-            rootContainer.setOnApplyWindowInsetsListener(new View.OnApplyWindowInsetsListener() {
-                @Override
-                public WindowInsets onApplyWindowInsets(View v, WindowInsets insets) {
-                    android.graphics.Insets sb = insets.getInsets(
-                            WindowInsets.Type.systemBars() | WindowInsets.Type.displayCutout());
-                    v.setPadding(padSide + sb.left, sb.top + dp(8), padSide + sb.right, sb.bottom + dp(12));
-                    return insets;
-                }
-            });
-            rootContainer.requestApplyInsets();
-        }
-
-        // 1. Top Control Bar (Back to Patrol, Mode Toggle, Share Report)
-        LinearLayout topBar = new LinearLayout(this);
-        topBar.setOrientation(LinearLayout.HORIZONTAL);
-        topBar.setGravity(Gravity.CENTER_VERTICAL);
-        topBar.setPadding(0, 0, 0, dp(10));
-
-        TextView btnBack = new TextView(this);
-        btnBack.setText("← 🛡️ PATROL DASHBOARD");
-        btnBack.setTextColor(colPale);
-        btnBack.setTextSize(11f);
-        btnBack.setTypeface(Typeface.DEFAULT_BOLD);
-        btnBack.setPadding(dp(10), dp(6), dp(10), dp(6));
-        btnBack.setBackground(rounded(colPanel2, dp(8)));
-        btnBack.setOnClickListener(new View.OnClickListener() {
-            public void onClick(View v) {
-                closeFullPageFolio(true);
-            }
-        });
-        topBar.addView(btnBack);
-
-        View spacer = new View(this);
-        LinearLayout.LayoutParams splp = new LinearLayout.LayoutParams(0, 0, 1f);
-        spacer.setLayoutParams(splp);
-        topBar.addView(spacer);
-
-        final TextView btnToggle = new TextView(this);
-        btnToggle.setText(isCarbonCopyMode ? "🟡 DUPLICATE CARBON" : "📄 ORIGINAL SHEET");
-        btnToggle.setTextColor(isCarbonCopyMode ? 0xFFFDE047 : colCyan);
-        btnToggle.setTextSize(10.5f);
-        btnToggle.setTypeface(Typeface.create(Typeface.MONOSPACE, Typeface.BOLD));
-        btnToggle.setPadding(dp(10), dp(6), dp(10), dp(6));
-        btnToggle.setBackground(rounded(isCarbonCopyMode ? 0x33FDE047 : 0x2206B6D4, dp(8)));
-        topBar.addView(btnToggle);
-
-        TextView btnShare = new TextView(this);
-        btnShare.setText("📤 SHARE");
-        btnShare.setTextColor(colAccentInk);
-        btnShare.setTextSize(11f);
-        btnShare.setTypeface(Typeface.DEFAULT_BOLD);
-        btnShare.setPadding(dp(10), dp(6), dp(10), dp(6));
-        btnShare.setBackground(pressable(colAccent, dp(8)));
-        LinearLayout.LayoutParams shlp = new LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT);
-        shlp.leftMargin = dp(8);
-        btnShare.setLayoutParams(shlp);
-        btnShare.setOnClickListener(new View.OnClickListener() {
-            public void onClick(View v) {
-                hapticHeavyClick();
-                shareHandoverReport();
-            }
-        });
-        topBar.addView(btnShare);
-        rootContainer.addView(topBar);
-
-        // 2. Flipboard-Style 3D Page Turn Folio Container (3D perspective fold, specular lighting & cast drop shadows)
-        final FlipboardPageTurnLayout flipLayout = new FlipboardPageTurnLayout(this);
-        LinearLayout.LayoutParams clp = new LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT, 0, 1f);
-        flipLayout.setLayoutParams(clp);
-
-        View underneathSheet = buildNotebookSheetView(!isCarbonCopyMode);
-        View topSheet = buildNotebookSheetView(isCarbonCopyMode);
-        flipLayout.setPages(underneathSheet, topSheet, isCarbonCopyMode);
-        flipLayout.setPageTurnListener(new FlipboardPageTurnLayout.OnPageTurnListener() {
-            @Override
-            public void onPageFlipped(boolean toCarbon) {
-                isCarbonCopyMode = toCarbon;
-                MainActivity.this.hapticHeavyClick();
-                MainActivity.this.renderFullPageFolio();
-            }
-        });
-
-        btnToggle.setOnClickListener(new View.OnClickListener() {
-            public void onClick(View v) {
-                hapticHeavyClick();
-                flipLayout.triggerFlipAnimation(!isCarbonCopyMode);
-            }
-        });
-
-        rootContainer.addView(flipLayout);
-        fullPageFolioOverlay.addView(rootContainer);
-    }
-
-    private void flipLedgerPage() {
-        if (tonight == null) return;
-        isCarbonCopyMode = !isCarbonCopyMode;
-        tonight.setCameraDistance(dp(12000));
-        tonight.animate()
-                .rotationX(-90f)
-                .scaleX(0.96f)
-                .scaleY(0.96f)
-                .setDuration(160)
-                .withEndAction(new Runnable() {
-                    public void run() {
-                        fillTonight();
-                        tonight.setRotationX(90f);
-                        tonight.animate()
-                                .rotationX(0f)
-                                .scaleX(1f)
-                                .scaleY(1f)
-                                .setDuration(200)
-                                .setInterpolator(new OvershootInterpolator(1.08f))
-                                .start();
-                    }
-                })
-                .start();
-    }
-
     private void fillTonight() {
         if (tonight == null) return;
         tonight.removeAllViews();
-        tonight.setCameraDistance(dp(12000));
 
-        // 1. Digital Folio Binder Card
         final LinearLayout ledgerCard = new LinearLayout(this);
         ledgerCard.setOrientation(LinearLayout.VERTICAL);
 
-        // Styling based on Authentic Security Log Book Photos
         int sheetBg = isCarbonCopyMode ? 0xFF241E09 : 0xFF0F172A;
         int ruleCol = isCarbonCopyMode ? 0x44FDE047 : 0x2238BDF8;
         int marginLineCol = isCarbonCopyMode ? 0x883B82F6 : 0x4438BDF8;
@@ -10484,12 +10450,12 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
         notebookHeader.addView(tvDate);
 
         TextView tvPageNum = new TextView(this);
-        tvPageNum.setText("28");
+        tvPageNum.setText("PAGE 28");
         tvPageNum.setTextColor(pageNumCol);
-        tvPageNum.setTextSize(13f);
+        tvPageNum.setTextSize(11.5f);
         tvPageNum.setTypeface(Typeface.create(Typeface.MONOSPACE, Typeface.BOLD));
         tvPageNum.setGravity(Gravity.END);
-        LinearLayout.LayoutParams tpl = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 0.8f);
+        LinearLayout.LayoutParams tpl = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
         tvPageNum.setLayoutParams(tpl);
         notebookHeader.addView(tvPageNum);
 
@@ -10517,7 +10483,6 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
         }
         shown += pending.size();
 
-        // If fewer entries, add authentic blank ruled lines down the page
         int minLines = 5;
         if (shown < minLines) {
             for (int k = shown + 1; k <= minLines; k++) {
@@ -10535,7 +10500,7 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
         botRule.setLayoutParams(brl);
         ledgerCard.addView(botRule);
 
-        // Interactive Flipboard 3D Open & Carbon Turning Bar
+        // Interactive Full-Page Logbook Button Bar
         LinearLayout flipBar = new LinearLayout(this);
         flipBar.setOrientation(LinearLayout.HORIZONTAL);
         flipBar.setGravity(Gravity.CENTER_VERTICAL);
@@ -10543,7 +10508,8 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
         flipBar.setBackground(rounded(isCarbonCopyMode ? 0x33FDE047 : 0x2238BDF8, dp(8)));
         flipBar.setOnClickListener(new View.OnClickListener() {
             public void onClick(View v) {
-                openFullPageFolio(true);
+                hapticHeavyClick();
+                showFullLogbookDialog();
             }
         });
 
@@ -10554,7 +10520,7 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
         flipBar.addView(flipIcon);
 
         TextView flipText = new TextView(this);
-        flipText.setText("FLIP UP TO FULL-PAGE SHIFT LOGBOOK ▴");
+        flipText.setText("OPEN FULL MULTI-SHIFT LOGBOOK & ARCHIVES ↗");
         flipText.setTextColor(isCarbonCopyMode ? 0xFFFEF08A : colCyan);
         flipText.setTextSize(10f);
         flipText.setTypeface(Typeface.create(Typeface.MONOSPACE, Typeface.BOLD));
@@ -10563,38 +10529,13 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
         flipBar.addView(flipText);
 
         TextView pageBadge = new TextView(this);
-        pageBadge.setText("PAGE 28/50");
+        pageBadge.setText("4 SHIFTS");
         pageBadge.setTextColor(isCarbonCopyMode ? 0xFFFDE047 : colMuted);
         pageBadge.setTextSize(9f);
         pageBadge.setTypeface(Typeface.MONOSPACE);
         flipBar.addView(pageBadge);
 
         ledgerCard.addView(flipBar);
-
-        // Touch listener for swipe down/up to flip page into full-screen logbook
-        ledgerCard.setOnTouchListener(new View.OnTouchListener() {
-            private float downY = 0f;
-            private boolean isFlipping = false;
-
-            @Override
-            public boolean onTouch(View v, MotionEvent event) {
-                switch (event.getActionMasked()) {
-                    case MotionEvent.ACTION_DOWN:
-                        downY = event.getY();
-                        isFlipping = false;
-                        break;
-                    case MotionEvent.ACTION_MOVE:
-                        float dy = event.getY() - downY;
-                        if (dy < -dp(45) && !isFlipping) {
-                            isFlipping = true;
-                            openFullPageFolio(true);
-                            return true;
-                        }
-                        break;
-                }
-                return false;
-            }
-        });
 
         tonight.addView(ledgerCard);
 
@@ -11326,7 +11267,6 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
         fireStatusChip.setBackground(rounded(fireComplete ? colEmeraldSoft : colPanel2, dp(6)));
 
         if (tonight != null) fillTonight();
-        if (isFullPageFolioOpen) renderFullPageFolio();
 
         setLive(externalRow, !isSealed);
         setLive(internalBadgesRow, !isSealed);
@@ -12070,8 +12010,8 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
 
     @Override
     public void onBackPressed() {
-        if (isFullPageFolioOpen) {
-            closeFullPageFolio(true);
+        if (activeLogbookDialog != null && activeLogbookDialog.isShowing()) {
+            activeLogbookDialog.dismiss();
             return;
         }
         if (isDeputyOpen) {
@@ -15531,9 +15471,6 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
         if (animatedThemeBar != null) animatedThemeBar.invalidate();
         if (rosterScrubber != null) rosterScrubber.invalidate();
         if (chronographView != null) chronographView.invalidate();
-        if (isFullPageFolioOpen) {
-            renderFullPageFolio();
-        }
         refresh();
         updateDiagnostics();
 

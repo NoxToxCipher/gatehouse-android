@@ -5,6 +5,7 @@ import android.app.NotificationChannel;
 import android.app.NotificationManager;
 import android.app.PendingIntent;
 import android.app.Service;
+import android.graphics.BitmapFactory;
 import android.content.Context;
 import android.content.Intent;
 import android.os.Build;
@@ -109,14 +110,18 @@ public class PttRadioService extends Service implements PttRadioEngine.PttListen
             builder.setPriority(Notification.PRIORITY_LOW);
         }
 
-        int iconShield = getResources().getIdentifier("ic_stat_duty", "drawable", getPackageName());
-        if (iconShield == 0) iconShield = android.R.drawable.ic_btn_speak_now;
+        int iconShield = getResources().getIdentifier("ic_shield_gold", "drawable", getPackageName());
+        if (iconShield == 0) iconShield = getApplicationInfo().icon;
 
         builder.setSmallIcon(iconShield)
                 .setContentTitle("🛡️ DSS Push-to-Talk Radio")
                 .setContentText(statusText)
                 .setContentIntent(pi)
                 .setOngoing(true);
+
+        try {
+            builder.setLargeIcon(BitmapFactory.decodeResource(getResources(), getApplicationInfo().icon));
+        } catch (Throwable ignored) {}
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
             builder.setColor(0xFFE5A93C); // DSS Gold
