@@ -1,5 +1,8 @@
 package au.com.dss.gatehouse;
 
+import android.animation.Animator;
+import android.animation.AnimatorListenerAdapter;
+import android.animation.ValueAnimator;
 import android.content.Context;
 import android.graphics.Canvas;
 import android.graphics.LinearGradient;
@@ -8,12 +11,15 @@ import android.graphics.RadialGradient;
 import android.graphics.RectF;
 import android.graphics.Shader;
 import android.graphics.Typeface;
+import android.view.HapticFeedbackConstants;
 import android.view.MotionEvent;
 import android.view.View;
+import android.view.animation.BounceInterpolator;
 
 /**
  * ConnectFourGameView — Classic 7x6 Connect 4 Grid.
  * High-fidelity Arcade Blue Acrylic Frame with 3D Glossy Tokens,
+ * Smooth Gravity Falling Animations with Physics Bounce,
  * Recessed Slots, Glowing Victory Connect Lines, and Minimax AI.
  */
 public class ConnectFourGameView extends View {
@@ -38,6 +44,14 @@ public class ConnectFourGameView extends View {
     private boolean playerTurn = true;
     private boolean gameOver = false;
     private int winR1 = -1, winC1 = -1, winR2 = -1, winC2 = -1;
+
+    // Gravity Drop Animation State
+    private boolean isDropping = false;
+    private int droppingCol = -1;
+    private int droppingTargetRow = -1;
+    private int droppingColor = 0;
+    private float droppingProgress = 0f; // 0.0 at top to 1.0 at target row
+    private ValueAnimator dropAnimator;
 
     private float dpf(float v) {
         return v * getResources().getDisplayMetrics().density;
@@ -82,18 +96,22 @@ public class ConnectFourGameView extends View {
     }
 
     public void resetGame() {
+        if (dropAnimator != null && dropAnimator.isRunning()) {
+            dropAnimator.cancel();
+        }
         for (int r = 0; r < 6; r++) {
             for (int c = 0; c < 7; c++) grid[r][c] = 0;
         }
         playerTurn = true;
         gameOver = false;
+        isDropping = false;
         winR1 = -1;
         updateStatus();
         invalidate();
     }
 
-    public boolean dropDisc(int col) {
-        if (col < 0 || col >= 7 || gameOver) return false;
+    public boolean dropDisc(final int col) {
+        if (col < 0 || col >= 7 || gameOver || isDropping) return false;
 
         int targetRow = -1;
         for (int r = 5; r >= 0; r--) {
@@ -104,40 +122,76 @@ public class ConnectFourGameView extends View {
         }
         if (targetRow == -1) return false;
 
-        int color = playerTurn ? 1 : 2;
-        grid[targetRow][col] = color;
+        final int color = playerTurn ? 1 : 2;
+        final int finalTargetRow = targetRow;
 
-        if (checkWin(targetRow, col, color)) {
-            gameOver = true;
-            if (statusListener != null) {
-                if (playerTurn) {
-                    statusListener.onStatusChanged("🏆 4-IN-A-ROW VICTORY! Strategic alignment.", 0xFF10B981);
-                } else {
-                    statusListener.onStatusChanged("💀 BOT WINS! Connect Four Master.", 0xFFEF4444);
+        isDropping = true;
+        droppingCol = col;
+        droppingTargetRow = finalTargetRow;
+        droppingColor = color;
+        droppingProgress = 0f;
+
+        // Calculate duration based on distance fallen (longer drop = slightly longer duration)
+        long duration = 240 + finalTargetRow * 50;
+
+        if (dropAnimator != null && dropAnimator.isRunning()) {
+            dropAnimator.cancel();
+        }
+
+        dropAnimator = ValueAnimator.ofFloat(0f, 1f);
+        dropAnimator.setDuration(duration);
+        dropAnimator.setInterpolator(new BounceInterpolator());
+        dropAnimator.addUpdateListener(new ValueAnimator.AnimatorUpdateListener() {
+            @Override
+            public void onAnimationUpdate(ValueAnimator animation) {
+                droppingProgress = (float) animation.getAnimatedValue();
+                invalidate();
+            }
+        });
+        dropAnimator.addListener(new AnimatorListenerAdapter() {
+            @Override
+            public void onAnimationEnd(Animator animation) {
+                grid[finalTargetRow][col] = color;
+                isDropping = false;
+
+                try {
+                    performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP);
+                } catch (Exception ignored) {}
+
+                if (checkWin(finalTargetRow, col, color)) {
+                    gameOver = true;
+                    if (statusListener != null) {
+                        if (playerTurn) {
+                            statusListener.onStatusChanged("🏆 4-IN-A-ROW VICTORY! Strategic alignment.", 0xFF10B981);
+                        } else {
+                            statusListener.onStatusChanged("💀 BOT WINS! Connect Four Master.", 0xFFEF4444);
+                        }
+                    }
+                    invalidate();
+                    return;
+                }
+
+                if (isBoardFull()) {
+                    gameOver = true;
+                    if (statusListener != null) {
+                        statusListener.onStatusChanged("🤝 DRAW! Full grid stalemate.", 0xFFFFD166);
+                    }
+                    invalidate();
+                    return;
+                }
+
+                playerTurn = !playerTurn;
+                updateStatus();
+                invalidate();
+
+                if (!gameOver && !playerTurn) {
+                    postDelayed(new Runnable() {
+                        public void run() { botExecuteMove(); }
+                    }, 350);
                 }
             }
-            invalidate();
-            return true;
-        }
-
-        if (isBoardFull()) {
-            gameOver = true;
-            if (statusListener != null) {
-                statusListener.onStatusChanged("🤝 DRAW! Full grid stalemate.", 0xFFFFD166);
-            }
-            invalidate();
-            return true;
-        }
-
-        playerTurn = !playerTurn;
-        updateStatus();
-        invalidate();
-
-        if (!gameOver && !playerTurn) {
-            postDelayed(new Runnable() {
-                public void run() { botExecuteMove(); }
-            }, 380);
-        }
+        });
+        dropAnimator.start();
         return true;
     }
 
@@ -187,7 +241,7 @@ public class ConnectFourGameView extends View {
     }
 
     private void botExecuteMove() {
-        if (playerTurn || gameOver) return;
+        if (playerTurn || gameOver || isDropping) return;
 
         for (int c = 0; c < 7; c++) {
             int row = getDropRow(c);
@@ -239,7 +293,7 @@ public class ConnectFourGameView extends View {
 
     @Override
     public boolean onTouchEvent(MotionEvent event) {
-        if (gameOver) return false;
+        if (gameOver || isDropping) return false;
         if (event.getActionMasked() == MotionEvent.ACTION_DOWN && playerTurn) {
             float w = getWidth();
             float pad = dpf(10f);
@@ -273,6 +327,7 @@ public class ConnectFourGameView extends View {
         float rowH = (h - dpf(16f)) / 6f;
         float holeR = Math.min(colW, rowH) * 0.40f;
 
+        // Draw slots and placed tokens
         for (int r = 0; r < 6; r++) {
             for (int c = 0; c < 7; c++) {
                 float cx = pad + c * colW + colW / 2f;
@@ -285,6 +340,16 @@ public class ConnectFourGameView extends View {
                 if (val == 1) draw3DToken(canvas, cx, cy, holeR * 0.92f, true);
                 else if (val == 2) draw3DToken(canvas, cx, cy, holeR * 0.92f, false);
             }
+        }
+
+        // Draw falling disc animation in flight
+        if (isDropping && droppingCol >= 0 && droppingTargetRow >= 0) {
+            float cx = pad + droppingCol * colW + colW / 2f;
+            float topY = dpf(8f) - rowH;
+            float targetY = dpf(8f) + droppingTargetRow * rowH + rowH / 2f;
+            float currentY = topY + (targetY - topY) * droppingProgress;
+
+            draw3DToken(canvas, cx, currentY, holeR * 0.92f, droppingColor == 1);
         }
 
         // Draw Winning Glowing Line
