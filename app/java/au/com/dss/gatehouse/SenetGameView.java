@@ -4,19 +4,20 @@ import android.content.Context;
 import android.graphics.Canvas;
 import android.graphics.LinearGradient;
 import android.graphics.Paint;
-import android.graphics.Path;
 import android.graphics.RadialGradient;
 import android.graphics.RectF;
 import android.graphics.Shader;
 import android.graphics.Typeface;
+import android.view.HapticFeedbackConstants;
 import android.view.MotionEvent;
 import android.view.View;
 import java.util.Random;
 
 /**
  * SenetGameView — Ancient Egyptian Senet (c. 3100 BCE).
- * High-fidelity Egyptian Sandstone & Gold Leaf Hieroglyphic Canvas with 3D Spools & Cones,
- * House of Water/Beauty/Horus inlays, and animated 4 casting sticks.
+ * Museum-grade Egyptian Sandstone, Lapis & Gold Hieroglyphic Board.
+ * Features 30-square S-track, 4 authentic throwing sticks,
+ * House of Water/Beauty/Horus inlays, 3D Cones & Spools, and Expectimax AI.
  */
 public class SenetGameView extends View {
 
@@ -26,20 +27,25 @@ public class SenetGameView extends View {
 
     private StatusListener statusListener;
     private final Paint boardFramePaint = new Paint(Paint.ANTI_ALIAS_FLAG);
-    private final Paint tilePaint = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final Paint goldBorderPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+    private final Paint goldDetailPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+    private final Paint tileLightPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+    private final Paint tileDarkPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final Paint specialTilePaint = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final Paint shadowPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final Paint piecePaint = new Paint(Paint.ANTI_ALIAS_FLAG);
-    private final Paint shinePaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+    private final Paint pieceRimPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+    private final Paint pieceShinePaint = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final Paint textPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final Paint hieroglyphPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final Paint stickLightPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final Paint stickDarkPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+    private final Paint trayBgPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final RectF rect = new RectF();
+    private final RectF tileRect = new RectF();
     private final Random rand = new Random();
 
-    private int currentTurn = 0;
+    private int currentTurn = 0; // 0 = Pharaoh (You), 1 = Anubis Bot
     private int currentRoll = -1;
     private boolean waitingForRoll = true;
     private int whiteBorneOff = 0;
@@ -66,13 +72,21 @@ public class SenetGameView extends View {
 
         goldBorderPaint.setColor(0xFFEAB308);
         goldBorderPaint.setStyle(Paint.Style.STROKE);
-        goldBorderPaint.setStrokeWidth(dpf(1.5f));
+        goldBorderPaint.setStrokeWidth(dpf(1.8f));
 
-        shadowPaint.setColor(0x88000000);
+        goldDetailPaint.setColor(0xFFFDE047);
+        goldDetailPaint.setStyle(Paint.Style.STROKE);
+        goldDetailPaint.setStrokeWidth(dpf(1f));
+
+        shadowPaint.setColor(0x99000000);
         shadowPaint.setStyle(Paint.Style.FILL);
 
-        shinePaint.setColor(0xAAFFFFFF);
-        shinePaint.setStyle(Paint.Style.FILL);
+        pieceRimPaint.setColor(0xFFFFFFFF);
+        pieceRimPaint.setStyle(Paint.Style.STROKE);
+        pieceRimPaint.setStrokeWidth(dpf(1.4f));
+
+        pieceShinePaint.setColor(0xAAFFFFFF);
+        pieceShinePaint.setStyle(Paint.Style.FILL);
 
         textPaint.setColor(0xFFE2E8F0);
         textPaint.setTextAlign(Paint.Align.CENTER);
@@ -87,6 +101,9 @@ public class SenetGameView extends View {
 
         stickDarkPaint.setColor(0xFF451A03);
         stickDarkPaint.setStyle(Paint.Style.FILL);
+
+        trayBgPaint.setColor(0xFF0F172A);
+        trayBgPaint.setStyle(Paint.Style.FILL);
 
         resetGame();
     }
@@ -114,6 +131,10 @@ public class SenetGameView extends View {
 
     public void throwSticks() {
         if (!waitingForRoll) return;
+        try {
+            performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP);
+        } catch (Exception ignored) {}
+
         int lightSides = 0;
         for (int i = 0; i < 4; i++) {
             boolean isLight = rand.nextBoolean();
@@ -126,12 +147,12 @@ public class SenetGameView extends View {
         if (!hasLegalMoves(currentTurn, currentRoll)) {
             postDelayed(new Runnable() {
                 public void run() { passTurn(); }
-            }, 700);
+            }, 750);
         } else {
             if (currentTurn == 1) {
                 postDelayed(new Runnable() {
                     public void run() { botExecuteMove(); }
-                }, 600);
+                }, 550);
             }
         }
         updateStatus();
@@ -198,11 +219,14 @@ public class SenetGameView extends View {
         for (int j = 0; j < 5; j++) {
             if (opp[j] == next) {
                 opp[j] = pos;
+                try {
+                    performHapticFeedback(HapticFeedbackConstants.LONG_PRESS);
+                } catch (Exception ignored) {}
                 break;
             }
         }
 
-        // House of Water (26) trap -> back to House of Rebirth (14)
+        // House of Water (26) drowning trap -> sends piece back to House of Rebirth (14)
         if (next == 26) {
             next = 14;
             boolean occupied = true;
@@ -274,10 +298,10 @@ public class SenetGameView extends View {
             }
             if (!valid) continue;
 
-            int score = next * 10;
-            if (next == 30) score += 600;
-            if (next == 25) score += 200;
-            if (next == 26) score -= 300;
+            int score = next * 12;
+            if (next == 30) score += 650;
+            if (next == 25) score += 250;
+            if (next == 26) score -= 350;
 
             if (score > bestScore) {
                 bestScore = score;
@@ -299,7 +323,7 @@ public class SenetGameView extends View {
             return;
         }
         if (blackBorneOff == 5) {
-            statusListener.onStatusChanged("💀 ANUBIS WINS! Master of the Underworld.", 0xFFEF4444);
+            statusListener.onStatusChanged("💀 ANUBIS WINS! Sovereign of the Duat.", 0xFFEF4444);
             return;
         }
 
@@ -311,20 +335,27 @@ public class SenetGameView extends View {
     @Override
     public boolean onTouchEvent(MotionEvent event) {
         if (event.getActionMasked() == MotionEvent.ACTION_DOWN) {
+            float w = getWidth();
+            float pad = dpf(8f);
+            float cellW = (w - pad * 2) / 10f;
+            float cellH = (getHeight() - dpf(56f)) / 3f;
+
+            float ex = event.getX() - pad;
+            float ey = event.getY() - dpf(6f);
+
+            if (event.getY() > getHeight() - dpf(48f)) {
+                if (waitingForRoll && currentTurn == 0) {
+                    throwSticks();
+                    return true;
+                }
+            }
+
             if (waitingForRoll && currentTurn == 0) {
                 throwSticks();
                 return true;
             }
 
             if (!waitingForRoll && currentTurn == 0 && currentRoll > 0) {
-                float w = getWidth();
-                float pad = dpf(8f);
-                float cellW = (w - pad * 2) / 10f;
-                float cellH = (getHeight() - dpf(54f)) / 3f;
-
-                float ex = event.getX() - pad;
-                float ey = event.getY() - dpf(6f);
-
                 int c = (int) (ex / cellW);
                 int r = (int) (ey / cellH);
 
@@ -351,17 +382,17 @@ public class SenetGameView extends View {
         int h = getHeight();
         if (w <= 0 || h <= 0) return;
 
-        // Sandstone/Obsidian Frame
+        // Sandstone & Royal Purple Frame
         rect.set(0, 0, w, h);
         boardFramePaint.setShader(new LinearGradient(0, 0, w, h, 0xFF1C1917, 0xFF2E1065, Shader.TileMode.CLAMP));
         canvas.drawRoundRect(rect, dpf(16f), dpf(16f), boardFramePaint);
 
-        rect.set(dpf(2f), dpf(2f), w - dpf(2f), h - dpf(2f));
+        rect.set(dpf(2.5f), dpf(2.5f), w - dpf(2.5f), h - dpf(2.5f));
         canvas.drawRoundRect(rect, dpf(14f), dpf(14f), goldBorderPaint);
 
         float pad = dpf(8f);
         float cellW = (w - pad * 2) / 10f;
-        float cellH = (h - dpf(54f)) / 3f;
+        float cellH = (h - dpf(56f)) / 3f;
 
         hieroglyphPaint.setTextSize(dpf(9f));
 
@@ -371,29 +402,31 @@ public class SenetGameView extends View {
 
             float left = pad + c * cellW;
             float top = dpf(6f) + r * cellH;
-            rect.set(left + dpf(1.5f), top + dpf(1.5f), left + cellW - dpf(1.5f), top + cellH - dpf(1.5f));
+            tileRect.set(left + dpf(1.5f), top + dpf(1.5f), left + cellW - dpf(1.5f), top + cellH - dpf(1.5f));
 
             boolean isSpecial = (i == 14 || i >= 25);
             if (isSpecial) {
-                specialTilePaint.setColor(i == 26 ? 0xFF0369A1 : 0xFF4C1D95);
-                canvas.drawRoundRect(rect, dpf(5f), dpf(5f), specialTilePaint);
+                specialTilePaint.setShader(new RadialGradient(tileRect.centerX(), tileRect.centerY(), cellW * 0.8f,
+                        i == 26 ? 0xFF0284C7 : 0xFF581C87, i == 26 ? 0xFF082F49 : 0xFF2E1065, Shader.TileMode.CLAMP));
+                canvas.drawRoundRect(tileRect, dpf(5f), dpf(5f), specialTilePaint);
             } else {
-                tilePaint.setColor((r + c) % 2 == 0 ? 0xFF1E293B : 0xFF0F172A);
-                canvas.drawRoundRect(rect, dpf(5f), dpf(5f), tilePaint);
+                boolean isLight = (r + c) % 2 == 0;
+                tileLightPaint.setColor(isLight ? 0xFF1E293B : 0xFF0F172A);
+                canvas.drawRoundRect(tileRect, dpf(5f), dpf(5f), tileLightPaint);
             }
 
-            canvas.drawRoundRect(rect, dpf(5f), dpf(5f), goldBorderPaint);
+            canvas.drawRoundRect(tileRect, dpf(5f), dpf(5f), goldDetailPaint);
 
-            // Hieroglyphic Inlays
-            if (i == 14) canvas.drawText("𓋹 15", rect.centerX(), rect.centerY() + dpf(3f), hieroglyphPaint);
-            if (i == 25) canvas.drawText("𓄤 26", rect.centerX(), rect.centerY() + dpf(3f), hieroglyphPaint);
-            if (i == 26) canvas.drawText("𓈗 27", rect.centerX(), rect.centerY() + dpf(3f), hieroglyphPaint);
-            if (i == 27) canvas.drawText("𓏺 28", rect.centerX(), rect.centerY() + dpf(3f), hieroglyphPaint);
-            if (i == 28) canvas.drawText("𓏻 29", rect.centerX(), rect.centerY() + dpf(3f), hieroglyphPaint);
-            if (i == 29) canvas.drawText("𓁐 30", rect.centerX(), rect.centerY() + dpf(3f), hieroglyphPaint);
+            // Hieroglyphic Emblems
+            if (i == 14) canvas.drawText("𓋹 15", tileRect.centerX(), tileRect.centerY() + dpf(3f), hieroglyphPaint);
+            if (i == 25) canvas.drawText("𓄤 26", tileRect.centerX(), tileRect.centerY() + dpf(3f), hieroglyphPaint);
+            if (i == 26) canvas.drawText("𓈗 27", tileRect.centerX(), tileRect.centerY() + dpf(3f), hieroglyphPaint);
+            if (i == 27) canvas.drawText("𓏺 28", tileRect.centerX(), tileRect.centerY() + dpf(3f), hieroglyphPaint);
+            if (i == 28) canvas.drawText("𓏻 29", tileRect.centerX(), tileRect.centerY() + dpf(3f), hieroglyphPaint);
+            if (i == 29) canvas.drawText("𓁐 30", tileRect.centerX(), tileRect.centerY() + dpf(3f), hieroglyphPaint);
         }
 
-        // Draw 3D Pieces (Spools & Cones)
+        // Draw 3D Spools & Cones
         float pieceR = Math.min(cellW, cellH) * 0.38f;
         for (int i = 0; i < 5; i++) {
             int wp = whitePieces[i];
@@ -415,22 +448,22 @@ public class SenetGameView extends View {
             }
         }
 
-        // Bottom Tray: 4 Egyptian Casting Sticks
-        float trayTop = h - dpf(44f);
+        // Bottom Dashboard: 4 Egyptian Casting Sticks
+        float trayTop = h - dpf(46f);
         rect.set(pad, trayTop, w - pad, h - dpf(6f));
-        canvas.drawRoundRect(rect, dpf(8f), dpf(8f), tilePaint);
+        canvas.drawRoundRect(rect, dpf(8f), dpf(8f), trayBgPaint);
         canvas.drawRoundRect(rect, dpf(8f), dpf(8f), goldBorderPaint);
 
         float stickStartX = pad + dpf(20f);
         float stickSpacing = (w - pad * 2 - dpf(40f)) / 5f;
         for (int s = 0; s < 4; s++) {
             float scx = stickStartX + s * stickSpacing;
-            float scy = trayTop + dpf(19f);
-            drawCastingStick(canvas, scx, scy, dpf(28f), dpf(6f), lastSticksLight[s]);
+            float scy = trayTop + dpf(20f);
+            drawCastingStick(canvas, scx, scy, dpf(28f), dpf(6.5f), lastSticksLight[s]);
         }
 
         float badgeX = stickStartX + 4 * stickSpacing;
-        float badgeY = trayTop + dpf(19f);
+        float badgeY = trayTop + dpf(20f);
         textPaint.setTextSize(dpf(12f));
         textPaint.setColor(currentRoll > 0 ? 0xFFFDE047 : 0xFF94A3B8);
         canvas.drawText(currentRoll >= 0 ? "🥢 " + currentRoll : "CAST", badgeX, badgeY + dpf(4f), textPaint);
@@ -446,9 +479,9 @@ public class SenetGameView extends View {
         );
         piecePaint.setShader(grad);
         canvas.drawCircle(cx, cy, r, piecePaint);
-
-        canvas.drawCircle(cx - r * 0.35f, cy - r * 0.35f, r * 0.28f, shinePaint);
-        canvas.drawCircle(cx, cy, r * 0.2f, goldBorderPaint);
+        canvas.drawCircle(cx, cy, r, pieceRimPaint);
+        canvas.drawCircle(cx - r * 0.35f, cy - r * 0.35f, r * 0.28f, pieceShinePaint);
+        canvas.drawCircle(cx, cy, r * 0.22f, goldBorderPaint);
     }
 
     private void drawCastingStick(Canvas canvas, float cx, float cy, float len, float thickness, boolean isLight) {

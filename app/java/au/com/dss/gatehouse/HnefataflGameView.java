@@ -9,6 +9,7 @@ import android.graphics.RadialGradient;
 import android.graphics.RectF;
 import android.graphics.Shader;
 import android.graphics.Typeface;
+import android.view.HapticFeedbackConstants;
 import android.view.MotionEvent;
 import android.view.View;
 import java.util.ArrayList;
@@ -16,7 +17,7 @@ import java.util.List;
 
 /**
  * HnefataflGameView — Norse Viking Chess (11x11 Board).
- * High-fidelity Norse Slate & Runic Gold Canvas with 3D Shield Bosses,
+ * Museum-grade Norse Slate & Runic Gold Canvas with 3D Shield Bosses,
  * Corner Fortresses, Royal King's Throne, and Custodial Minimax AI.
  */
 public class HnefataflGameView extends View {
@@ -40,6 +41,7 @@ public class HnefataflGameView extends View {
     private final Paint targetDotPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final Paint runeTextPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final RectF rect = new RectF();
+    private final RectF tileRect = new RectF();
 
     private final char[][] board = new char[11][11];
     private boolean defendersTurn = true;
@@ -59,14 +61,14 @@ public class HnefataflGameView extends View {
 
         goldBorderPaint.setColor(0xFFEAB308);
         goldBorderPaint.setStyle(Paint.Style.STROKE);
-        goldBorderPaint.setStrokeWidth(dpf(1.5f));
+        goldBorderPaint.setStrokeWidth(dpf(1.8f));
 
-        shadowPaint.setColor(0x88000000);
+        shadowPaint.setColor(0x99000000);
         shadowPaint.setStyle(Paint.Style.FILL);
 
         pieceRimPaint.setColor(0xFFE2E8F0);
         pieceRimPaint.setStyle(Paint.Style.STROKE);
-        pieceRimPaint.setStrokeWidth(dpf(1.5f));
+        pieceRimPaint.setStrokeWidth(dpf(1.4f));
 
         pieceShinePaint.setColor(0xAAFFFFFF);
         pieceShinePaint.setStyle(Paint.Style.FILL);
@@ -154,10 +156,14 @@ public class HnefataflGameView extends View {
         board[toY][toX] = p;
         board[fromY][fromX] = '.';
 
+        try {
+            performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP);
+        } catch (Exception ignored) {}
+
         if (p == 'K' && ((toX == 0 || toX == 10) && (toY == 0 || toY == 10))) {
             gameOver = true;
             if (statusListener != null) {
-                statusListener.onStatusChanged("🏆 NORSE VICTORY! King reached the sanctuary fort.", 0xFF10B981);
+                statusListener.onStatusChanged("🏆 NORSE VICTORY! King reached sanctuary fort.", 0xFF10B981);
             }
             selectedX = -1;
             selectedY = -1;
@@ -219,6 +225,9 @@ public class HnefataflGameView extends View {
 
                     if (farMatches) {
                         board[midY][midX] = '.';
+                        try {
+                            performHapticFeedback(HapticFeedbackConstants.LONG_PRESS);
+                        } catch (Exception ignored) {}
                     }
                 }
             }
@@ -335,7 +344,7 @@ public class HnefataflGameView extends View {
         boardBgPaint.setShader(new LinearGradient(0, 0, w, h, 0xFF0B0F19, 0xFF1E1B4B, Shader.TileMode.CLAMP));
         canvas.drawRoundRect(rect, dpf(16f), dpf(16f), boardBgPaint);
 
-        rect.set(dpf(2f), dpf(2f), w - dpf(2f), h - dpf(2f));
+        rect.set(dpf(2.5f), dpf(2.5f), w - dpf(2.5f), h - dpf(2.5f));
         canvas.drawRoundRect(rect, dpf(14f), dpf(14f), goldBorderPaint);
 
         float pad = dpf(8f);
@@ -349,31 +358,31 @@ public class HnefataflGameView extends View {
             for (int c = 0; c < 11; c++) {
                 float left = startX + c * cellSize;
                 float top = startY + r * cellSize;
-                rect.set(left + dpf(1f), top + dpf(1f), left + cellSize - dpf(1f), top + cellSize - dpf(1f));
+                tileRect.set(left + dpf(1f), top + dpf(1f), left + cellSize - dpf(1f), top + cellSize - dpf(1f));
 
                 boolean isCorner = (c == 0 || c == 10) && (r == 0 || r == 10);
                 boolean isThrone = (c == 5 && r == 5);
 
                 if (isCorner) {
                     cornerPaint.setColor(0xFF78350F);
-                    canvas.drawRect(rect, cornerPaint);
-                    canvas.drawRect(rect, goldBorderPaint);
+                    canvas.drawRect(tileRect, cornerPaint);
+                    canvas.drawRect(tileRect, goldBorderPaint);
                     runeTextPaint.setTextSize(cellSize * 0.6f);
-                    canvas.drawText("ᚠ", rect.centerX(), rect.centerY() + cellSize * 0.22f, runeTextPaint);
+                    canvas.drawText("ᚠ", tileRect.centerX(), tileRect.centerY() + cellSize * 0.22f, runeTextPaint);
                 } else if (isThrone) {
                     thronePaint.setColor(0xFF831843);
-                    canvas.drawRect(rect, thronePaint);
-                    canvas.drawRect(rect, goldBorderPaint);
+                    canvas.drawRect(tileRect, thronePaint);
+                    canvas.drawRect(tileRect, goldBorderPaint);
                     runeTextPaint.setTextSize(cellSize * 0.6f);
-                    canvas.drawText("ᛟ", rect.centerX(), rect.centerY() + cellSize * 0.22f, runeTextPaint);
+                    canvas.drawText("ᛟ", tileRect.centerX(), tileRect.centerY() + cellSize * 0.22f, runeTextPaint);
                 } else {
                     boolean isDark = (r + c) % 2 == 1;
                     squareDarkPaint.setColor(isDark ? 0xFF0F172A : 0xFF1E293B);
-                    canvas.drawRect(rect, squareDarkPaint);
+                    canvas.drawRect(tileRect, squareDarkPaint);
                 }
 
                 if (c == selectedX && r == selectedY) {
-                    canvas.drawRect(rect, selectGlowPaint);
+                    canvas.drawRect(tileRect, selectGlowPaint);
                 }
 
                 char p = board[r][c];
@@ -386,7 +395,6 @@ public class HnefataflGameView extends View {
             }
         }
 
-        // Draw Valid Move Target Glowing Dots
         for (Point m : validMoves) {
             float cx = startX + m.x * cellSize + cellSize / 2f;
             float cy = startY + m.y * cellSize + cellSize / 2f;
@@ -407,7 +415,6 @@ public class HnefataflGameView extends View {
         canvas.drawCircle(cx, cy, r, piecePaint);
         canvas.drawCircle(cx, cy, r, pieceRimPaint);
 
-        // Center Iron Boss
         canvas.drawCircle(cx, cy, r * 0.35f, pieceRimPaint);
         canvas.drawCircle(cx - r * 0.1f, cy - r * 0.1f, r * 0.15f, pieceShinePaint);
     }

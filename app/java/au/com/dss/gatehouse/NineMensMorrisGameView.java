@@ -9,6 +9,7 @@ import android.graphics.RadialGradient;
 import android.graphics.RectF;
 import android.graphics.Shader;
 import android.graphics.Typeface;
+import android.view.HapticFeedbackConstants;
 import android.view.MotionEvent;
 import android.view.View;
 import java.util.ArrayList;
@@ -16,8 +17,8 @@ import java.util.List;
 
 /**
  * NineMensMorrisGameView — Ancient Nine Men's Morris (Mill / Merels, c. 1400 BCE).
- * High-fidelity Cyber-Obsidian & Gold Conduit Canvas with 3D Spheres,
- * 3 Concentric Squares, Pulsing Mill indicators, and Minimax AI.
+ * Museum-grade Cyber-Obsidian & Gold Conduit Canvas with 3D Crystal Spheres,
+ * 3 Concentric Squares, Pulsing Mill Indicators, and Minimax AI.
  */
 public class NineMensMorrisGameView extends View {
 
@@ -29,6 +30,7 @@ public class NineMensMorrisGameView extends View {
     private final Paint boardBgPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final Paint goldBorderPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final Paint conduitPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+    private final Paint conduitGlowPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final Paint nodePaint = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final Paint shadowPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final Paint piecePaint = new Paint(Paint.ANTI_ALIAS_FLAG);
@@ -86,25 +88,28 @@ public class NineMensMorrisGameView extends View {
 
         goldBorderPaint.setColor(0xFFEAB308);
         goldBorderPaint.setStyle(Paint.Style.STROKE);
-        goldBorderPaint.setStrokeWidth(dpf(1.5f));
+        goldBorderPaint.setStrokeWidth(dpf(1.8f));
 
         conduitPaint.setColor(0xFF38BDF8);
-        conduitPaint.setStrokeWidth(dpf(2.5f));
+        conduitPaint.setStrokeWidth(dpf(2.8f));
+
+        conduitGlowPaint.setColor(0x3338BDF8);
+        conduitGlowPaint.setStrokeWidth(dpf(6f));
 
         nodePaint.setColor(0xFF1E293B);
         nodePaint.setStyle(Paint.Style.FILL);
 
-        shadowPaint.setColor(0x88000000);
+        shadowPaint.setColor(0x99000000);
         shadowPaint.setStyle(Paint.Style.FILL);
 
         pieceRimPaint.setColor(0xFFE2E8F0);
         pieceRimPaint.setStyle(Paint.Style.STROKE);
-        pieceRimPaint.setStrokeWidth(dpf(1.2f));
+        pieceRimPaint.setStrokeWidth(dpf(1.4f));
 
         shinePaint.setColor(0xAAFFFFFF);
         shinePaint.setStyle(Paint.Style.FILL);
 
-        selectGlowPaint.setColor(0x66FFD166);
+        selectGlowPaint.setColor(0x88FFD166);
         selectGlowPaint.setStyle(Paint.Style.FILL);
 
         millGlowPaint.setColor(0x8810B981);
@@ -155,8 +160,15 @@ public class NineMensMorrisGameView extends View {
         if (whiteTurn) whiteUnplaced--;
         else blackUnplaced--;
 
+        try {
+            performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP);
+        } catch (Exception ignored) {}
+
         if (isMill(idx, color)) {
             mustRemoveOpponent = true;
+            try {
+                performHapticFeedback(HapticFeedbackConstants.LONG_PRESS);
+            } catch (Exception ignored) {}
         } else {
             endTurn();
         }
@@ -182,8 +194,15 @@ public class NineMensMorrisGameView extends View {
         board[fromIdx] = 0;
         selectedIndex = -1;
 
+        try {
+            performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP);
+        } catch (Exception ignored) {}
+
         if (isMill(toIdx, color)) {
             mustRemoveOpponent = true;
+            try {
+                performHapticFeedback(HapticFeedbackConstants.LONG_PRESS);
+            } catch (Exception ignored) {}
         } else {
             endTurn();
         }
@@ -208,6 +227,10 @@ public class NineMensMorrisGameView extends View {
         board[idx] = 0;
         if (whiteTurn) blackAlive--;
         else whiteAlive--;
+
+        try {
+            performHapticFeedback(HapticFeedbackConstants.LONG_PRESS);
+        } catch (Exception ignored) {}
 
         mustRemoveOpponent = false;
 
@@ -305,9 +328,9 @@ public class NineMensMorrisGameView extends View {
         if (event.getActionMasked() == MotionEvent.ACTION_DOWN && whiteTurn) {
             float w = getWidth();
             float h = getHeight();
-            float size = Math.min(w, h - dpf(30f));
+            float size = Math.min(w, h - dpf(28f));
             float startX = (w - size) / 2f;
-            float startY = (h - dpf(30f) - size) / 2f + dpf(10f);
+            float startY = (h - dpf(28f) - size) / 2f + dpf(8f);
 
             float ex = event.getX();
             float ey = event.getY();
@@ -359,14 +382,14 @@ public class NineMensMorrisGameView extends View {
         boardBgPaint.setShader(new LinearGradient(0, 0, w, h, 0xFF090D16, 0xFF1E293B, Shader.TileMode.CLAMP));
         canvas.drawRoundRect(rect, dpf(16f), dpf(16f), boardBgPaint);
 
-        rect.set(dpf(2f), dpf(2f), w - dpf(2f), h - dpf(2f));
+        rect.set(dpf(2.5f), dpf(2.5f), w - dpf(2.5f), h - dpf(2.5f));
         canvas.drawRoundRect(rect, dpf(14f), dpf(14f), goldBorderPaint);
 
-        float size = Math.min(w, h - dpf(30f));
+        float size = Math.min(w, h - dpf(28f));
         float startX = (w - size) / 2f;
-        float startY = (h - dpf(30f) - size) / 2f + dpf(10f);
+        float startY = (h - dpf(28f) - size) / 2f + dpf(8f);
 
-        // Draw 3 Concentric Conduit Squares
+        // Draw 3 Concentric Conduit Squares with Glow
         for (int sq = 0; sq < 3; sq++) {
             int offset = sq * 8;
             for (int i = 0; i < 8; i++) {
@@ -375,6 +398,7 @@ public class NineMensMorrisGameView extends View {
                 float y1 = startY + NODES[offset + i][1] * size;
                 float x2 = startX + NODES[next][0] * size;
                 float y2 = startY + NODES[next][1] * size;
+                canvas.drawLine(x1, y1, x2, y2, conduitGlowPaint);
                 canvas.drawLine(x1, y1, x2, y2, conduitPaint);
             }
         }
@@ -386,6 +410,7 @@ public class NineMensMorrisGameView extends View {
             float y1 = startY + NODES[c[0]][1] * size;
             float x2 = startX + NODES[c[1]][0] * size;
             float y2 = startY + NODES[c[1]][1] * size;
+            canvas.drawLine(x1, y1, x2, y2, conduitGlowPaint);
             canvas.drawLine(x1, y1, x2, y2, conduitPaint);
         }
 
