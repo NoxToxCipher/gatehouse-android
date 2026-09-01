@@ -3733,6 +3733,12 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
                     showSatelliteRadarDialog();
                 }
             }));
+            r4b.addView(buildCompactToolTile("⛽", "Fuel Radar", "OOM 168.9¢", 0xFFF59E0B, "3 Nearest: OOM 0.8km, 7-Eleven, Ampol", new View.OnClickListener() {
+                public void onClick(View v) {
+                    hapticHeavyClick();
+                    showFuelPriceDialog();
+                }
+            }));
             container.addView(r4b);
         }
 
@@ -5783,6 +5789,182 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
 
         box.addView(btnRow);
         dlg.show();
+    }
+
+    private void showFuelPriceDialog() {
+        final LinearLayout box = dialogContainer("⛽ Fuel Price Radar", "3 CLOSEST STATIONS", 0xFFF59E0B);
+        final FuelPriceManager fpm = FuelPriceManager.getInstance(this);
+
+        // Guard Favorite Callout Banner
+        LinearLayout bannerCard = new LinearLayout(this);
+        bannerCard.setOrientation(LinearLayout.VERTICAL);
+        bannerCard.setBackground(rounded(0xFF1E293B, dp(12)));
+        bannerCard.setPadding(dp(14), dp(12), dp(14), dp(12));
+        LinearLayout.LayoutParams bclp = new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+        bclp.bottomMargin = dp(12);
+        bannerCard.setLayoutParams(bclp);
+
+        TextView favTitle = new TextView(this);
+        favTitle.setText("⭐ GUARD FAVOURITE: OOM ENERGY KINGSTON");
+        favTitle.setTextColor(0xFFFFD166);
+        favTitle.setTextSize(12);
+        favTitle.setTypeface(Typeface.create(Typeface.MONOSPACE, Typeface.BOLD));
+        bannerCard.addView(favTitle);
+
+        TextView favDesc = new TextView(this);
+        favDesc.setText("📍 122 Kingston Rd (0.8km) · Lowest fuel price on the route home. Dispatches heads-up alert 30 min before shift finish.");
+        favDesc.setTextColor(colPale);
+        favDesc.setTextSize(12);
+        favDesc.setPadding(0, dp(4), 0, 0);
+        bannerCard.addView(favDesc);
+        box.addView(bannerCard);
+
+        // Station Cards Container
+        final LinearLayout stationsContainer = new LinearLayout(this);
+        stationsContainer.setOrientation(LinearLayout.VERTICAL);
+        box.addView(stationsContainer);
+
+        Runnable populateStations = new Runnable() {
+            public void run() {
+                stationsContainer.removeAllViews();
+                List<FuelPriceManager.FuelStation> list = fpm.getStations();
+                for (FuelPriceManager.FuelStation s : list) {
+                    LinearLayout sCard = new LinearLayout(MainActivity.this);
+                    sCard.setOrientation(LinearLayout.VERTICAL);
+                    sCard.setBackground(rounded(colPanel, dp(12)));
+                    sCard.setPadding(dp(14), dp(12), dp(14), dp(12));
+                    LinearLayout.LayoutParams slp = new LinearLayout.LayoutParams(
+                            LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+                    slp.bottomMargin = dp(10);
+                    sCard.setLayoutParams(slp);
+
+                    // Top Header Row (Name + Distance + Favorite Pill)
+                    LinearLayout hRow = new LinearLayout(MainActivity.this);
+                    hRow.setOrientation(LinearLayout.HORIZONTAL);
+                    hRow.setGravity(Gravity.CENTER_VERTICAL);
+
+                    TextView nameTxt = new TextView(MainActivity.this);
+                    nameTxt.setText((s.isGuardFavorite ? "⭐ " : "⛽ ") + s.name);
+                    nameTxt.setTextColor(s.isGuardFavorite ? 0xFFFFD166 : colCyan);
+                    nameTxt.setTextSize(14);
+                    nameTxt.setTypeface(Typeface.DEFAULT_BOLD);
+                    LinearLayout.LayoutParams nlp = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
+                    nameTxt.setLayoutParams(nlp);
+                    hRow.addView(nameTxt);
+
+                    TextView distPill = new TextView(MainActivity.this);
+                    distPill.setText(String.format(Locale.US, "%.1f km", s.distanceKm));
+                    distPill.setTextColor(colPale);
+                    distPill.setTextSize(10);
+                    distPill.setTypeface(Typeface.MONOSPACE);
+                    distPill.setPadding(dp(6), dp(2), dp(6), dp(2));
+                    distPill.setBackground(rounded(colPanel2, dp(6)));
+                    hRow.addView(distPill);
+                    sCard.addView(hRow);
+
+                    TextView addrTxt = new TextView(MainActivity.this);
+                    addrTxt.setText(s.address);
+                    addrTxt.setTextColor(colMuted);
+                    addrTxt.setTextSize(11);
+                    addrTxt.setPadding(0, dp(2), 0, dp(8));
+                    sCard.addView(addrTxt);
+
+                    // Fuel Price Grid (ULP 91, P98, Diesel, E10)
+                    LinearLayout pGrid = new LinearLayout(MainActivity.this);
+                    pGrid.setOrientation(LinearLayout.HORIZONTAL);
+
+                    pGrid.addView(buildFuelPriceChip("ULP 91", s.priceUlp91, s.isGuardFavorite ? 0xFF10B981 : 0xFF38BDF8));
+                    pGrid.addView(buildFuelPriceChip("P98", s.priceP98, colPale));
+                    pGrid.addView(buildFuelPriceChip("Diesel", s.priceDiesel, 0xFFFFD166));
+                    pGrid.addView(buildFuelPriceChip("E10", s.priceE10, colMuted));
+
+                    sCard.addView(pGrid);
+                    stationsContainer.addView(sCard);
+                }
+            }
+        };
+
+        populateStations.run();
+
+        final Dialog dlg = createDialogSheet(box);
+
+        LinearLayout btnRow = new LinearLayout(this);
+        btnRow.setOrientation(LinearLayout.HORIZONTAL);
+        btnRow.setPadding(0, dp(10), 0, 0);
+
+        TextView btnRefresh = actionButton("↻ Refresh Prices", 0xFFF59E0B, colAccentInk);
+        btnRefresh.setOnClickListener(new View.OnClickListener() {
+            public void onClick(View v) {
+                hapticHeavyClick();
+                fpm.refreshPrices(new FuelPriceManager.FuelCallback() {
+                    @Override
+                    public void onPricesUpdated(List<FuelPriceManager.FuelStation> stations) {
+                        runOnUiThread(new Runnable() {
+                            public void run() {
+                                Toast.makeText(MainActivity.this, "✓ Live QLD fuel prices updated", Toast.LENGTH_SHORT).show();
+                            }
+                        });
+                    }
+                });
+            }
+        });
+        btnRow.addView(btnRefresh);
+
+        TextView btnTestNotif = actionButton("🔔 Test Alert", colPanel2, colCyan);
+        btnTestNotif.setOnClickListener(new View.OnClickListener() {
+            public void onClick(View v) {
+                hapticClick();
+                fpm.postShiftEndFuelNotification(30);
+                Toast.makeText(MainActivity.this, "✓ Shift-end fuel notification dispatched", Toast.LENGTH_SHORT).show();
+            }
+        });
+        LinearLayout.LayoutParams tlp = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
+        tlp.leftMargin = dp(6);
+        btnTestNotif.setLayoutParams(tlp);
+        btnRow.addView(btnTestNotif);
+
+        TextView btnClose = actionButton("Close", colLine, colPale);
+        btnClose.setOnClickListener(new View.OnClickListener() {
+            public void onClick(View v) {
+                hapticClick();
+                dlg.dismiss();
+            }
+        });
+        LinearLayout.LayoutParams clp = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 0.8f);
+        clp.leftMargin = dp(6);
+        btnClose.setLayoutParams(clp);
+        btnRow.addView(btnClose);
+
+        box.addView(btnRow);
+        dlg.show();
+    }
+
+    private LinearLayout buildFuelPriceChip(String fuelType, double priceCents, int color) {
+        LinearLayout chip = new LinearLayout(this);
+        chip.setOrientation(LinearLayout.VERTICAL);
+        chip.setGravity(Gravity.CENTER);
+        chip.setBackground(rounded(0xFF0F172A, dp(8)));
+        chip.setPadding(dp(6), dp(6), dp(6), dp(6));
+        LinearLayout.LayoutParams clp = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
+        clp.rightMargin = dp(4);
+        chip.setLayoutParams(clp);
+
+        TextView typeTxt = new TextView(this);
+        typeTxt.setText(fuelType);
+        typeTxt.setTextColor(colMuted);
+        typeTxt.setTextSize(10);
+        typeTxt.setTypeface(Typeface.create(Typeface.MONOSPACE, Typeface.BOLD));
+        chip.addView(typeTxt);
+
+        TextView priceTxt = new TextView(this);
+        priceTxt.setText(String.format(Locale.US, "%.1f¢", priceCents));
+        priceTxt.setTextColor(color);
+        priceTxt.setTextSize(12);
+        priceTxt.setTypeface(Typeface.create(Typeface.MONOSPACE, Typeface.BOLD));
+        chip.addView(priceTxt);
+
+        return chip;
     }
 
     private void showGpsDialog() {

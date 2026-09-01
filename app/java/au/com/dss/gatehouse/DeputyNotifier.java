@@ -133,11 +133,22 @@ public class DeputyNotifier {
                 try {
                     checkAndNotifyRosterChanges(context, result.weekShifts);
                     check12HourShiftReminders(context, result.weekShifts);
+                    checkShiftEndFuelReminders(context, result.weekShifts);
                 } catch (Exception e) {
                     Log.e(TAG, "Error processing notifications: " + e.getMessage(), e);
                 }
             }
         });
+    }
+
+    private static void checkShiftEndFuelReminders(Context context, List<DeputyApi.DeputyShift> shifts) {
+        if (shifts == null) return;
+        FuelPriceManager fpm = FuelPriceManager.getInstance(context);
+        for (DeputyApi.DeputyShift s : shifts) {
+            if (s.endTs > 0) {
+                fpm.evaluateShiftEndFuelAlert(s.endTs, String.valueOf(s.id));
+            }
+        }
     }
 
     // =========================================================================
