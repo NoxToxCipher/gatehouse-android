@@ -1476,26 +1476,56 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
     // =========================================================================
 
     private class DetailedCompassView extends View {
-        private final Paint bezelPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+        private final Paint chassisPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+        private final Paint bezelRingPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+        private final Paint dialBgPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
         private final Paint tickPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
         private final Paint textPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
-        private final Paint needleNorth = new Paint(Paint.ANTI_ALIAS_FLAG);
-        private final Paint needleSouth = new Paint(Paint.ANTI_ALIAS_FLAG);
-        private final Paint centerHub = new Paint(Paint.ANTI_ALIAS_FLAG);
-        private final Path pathN = new Path();
-        private final Path pathS = new Path();
+        private final Paint roseLightPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+        private final Paint roseDarkPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+        private final Paint needleNorthLight = new Paint(Paint.ANTI_ALIAS_FLAG);
+        private final Paint needleNorthDark = new Paint(Paint.ANTI_ALIAS_FLAG);
+        private final Paint needleSouthLight = new Paint(Paint.ANTI_ALIAS_FLAG);
+        private final Paint needleSouthDark = new Paint(Paint.ANTI_ALIAS_FLAG);
+        private final Paint centerHubPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+        private final Paint shadowPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+        private final Paint glassGlarePaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+        private final Paint levelerPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+        private final Path path = new Path();
+        private final Path path2 = new Path();
+        private final android.graphics.Camera camera3D = new android.graphics.Camera();
+        private final android.graphics.Matrix matrix3D = new android.graphics.Matrix();
 
         public DetailedCompassView(Context context) {
             super(context);
-            bezelPaint.setStyle(Paint.Style.STROKE);
-            bezelPaint.setStrokeWidth(dp(2));
-            tickPaint.setStyle(Paint.Style.STROKE);
-            tickPaint.setStrokeCap(Paint.Cap.ROUND);
+            shadowPaint.setColor(0x99000000);
+            shadowPaint.setStyle(Paint.Style.FILL);
+
+            needleNorthLight.setColor(0xFFEF4444);
+            needleNorthLight.setStyle(Paint.Style.FILL);
+            needleNorthDark.setColor(0xFF991B1B);
+            needleNorthDark.setStyle(Paint.Style.FILL);
+
+            needleSouthLight.setColor(0xFFF8FAFC);
+            needleSouthLight.setStyle(Paint.Style.FILL);
+            needleSouthDark.setColor(0xFF64748B);
+            needleSouthDark.setStyle(Paint.Style.FILL);
+
+            roseLightPaint.setColor(0x66FDE047);
+            roseLightPaint.setStyle(Paint.Style.FILL);
+            roseDarkPaint.setColor(0x33CA8A04);
+            roseDarkPaint.setStyle(Paint.Style.FILL);
+
             textPaint.setTextAlign(Paint.Align.CENTER);
             textPaint.setTypeface(Typeface.create(Typeface.MONOSPACE, Typeface.BOLD));
-            needleNorth.setStyle(Paint.Style.FILL);
-            needleSouth.setStyle(Paint.Style.FILL);
-            centerHub.setStyle(Paint.Style.FILL);
+
+            levelerPaint.setStyle(Paint.Style.STROKE);
+            levelerPaint.setColor(0x5538BDF8);
+            levelerPaint.setStrokeWidth(dpf(1f));
+        }
+
+        private float dpf(float v) {
+            return v * getResources().getDisplayMetrics().density;
         }
 
         @Override
@@ -1507,23 +1537,81 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
 
             float cx = w / 2f;
             float cy = h / 2f;
-            float r = Math.min(w, h) / 2f - dp(12);
+            float r = Math.min(w, h) / 2f - dpf(10f);
 
-            bezelPaint.setColor(colLineSubtle);
-            canvas.drawCircle(cx, cy, r, bezelPaint);
-            bezelPaint.setColor(colLine);
-            canvas.drawCircle(cx, cy, r - dp(10), bezelPaint);
+            // 1. 3D DEVICE GYROSCOPE PERSPECTIVE TRANSFORM (BlackBerry 10 Parallax Effect)
+            float tiltRoll = Math.max(-20f, Math.min(20f, lastAccel[0] * 2.0f));
+            float tiltPitch = Math.max(-20f, Math.min(20f, (lastAccel[1] - 4.5f) * 2.0f));
 
+            canvas.save();
+            camera3D.save();
+            camera3D.rotateX(-tiltPitch);
+            camera3D.rotateY(-tiltRoll);
+            camera3D.getMatrix(matrix3D);
+            camera3D.restore();
+            matrix3D.preTranslate(-cx, -cy);
+            matrix3D.postTranslate(cx, cy);
+            canvas.concat(matrix3D);
+
+            // 2. 3D CHASSIS DROP SHADOW & GIMBAL CASING
+            float shadowOffX = -tiltRoll * 0.35f;
+            float shadowOffY = tiltPitch * 0.35f + dpf(3.5f);
+            canvas.drawCircle(cx + shadowOffX, cy + shadowOffY, r, shadowPaint);
+
+            // Machined Titanium Outer Rim
+            RadialGradient rimGrad = new RadialGradient(
+                cx - r * 0.3f, cy - r * 0.3f, r * 1.3f,
+                new int[]{0xFF475569, 0xFF1E293B, 0xFF0F172A},
+                null, Shader.TileMode.CLAMP
+            );
+            chassisPaint.setShader(rimGrad);
+            chassisPaint.setStyle(Paint.Style.FILL);
+            canvas.drawCircle(cx, cy, r, chassisPaint);
+
+            // Precision Chamfered Brass Accent Ring
+            bezelRingPaint.setStyle(Paint.Style.STROKE);
+            bezelRingPaint.setStrokeWidth(dpf(2f));
+            bezelRingPaint.setColor(0xFFEAB308);
+            canvas.drawCircle(cx, cy, r - dpf(2f), bezelRingPaint);
+
+            // 4 Machined Hex Stud Screws at 0, 90, 180, 270
+            Paint screwPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+            screwPaint.setColor(0xFF94A3B8);
+            screwPaint.setStyle(Paint.Style.FILL);
+            for (int a = 0; a < 360; a += 90) {
+                double rad = Math.toRadians(a);
+                float sx = (float) (cx + Math.cos(rad) * (r - dpf(5f)));
+                float sy = (float) (cy + Math.sin(rad) * (r - dpf(5f)));
+                canvas.drawCircle(sx, sy, dpf(2f), screwPaint);
+            }
+
+            // 3. INNER OBSIDIAN DIAL BED
+            float dialR = r - dpf(10f);
+            RadialGradient dialGrad = new RadialGradient(
+                cx, cy, dialR,
+                new int[]{0xFF1E293B, 0xFF0F172A, 0xFF050811},
+                null, Shader.TileMode.CLAMP
+            );
+            dialBgPaint.setShader(dialGrad);
+            dialBgPaint.setStyle(Paint.Style.FILL);
+            canvas.drawCircle(cx, cy, dialR, dialBgPaint);
+
+            // 4. ROTATING 3D COMPASS ROSE & AZIMUTH CALIBRATION DIAL
             canvas.save();
             canvas.rotate(-currentAzimuth, cx, cy);
 
+            // 8-Point Faceted Compass Rose Star
+            drawCompassRose(canvas, cx, cy, dialR * 0.65f);
+
+            // Degree Ticks & Labels
             for (int deg = 0; deg < 360; deg += 5) {
                 double rad = Math.toRadians(deg - 90);
                 boolean isCardinal = (deg % 90 == 0);
-                boolean isMajor = (deg % 30 == 0);
+                boolean isSemiCardinal = (deg % 45 == 0 && !isCardinal);
+                boolean isMajor = (deg % 15 == 0 && !isCardinal && !isSemiCardinal);
 
-                float len = isCardinal ? dp(10) : (isMajor ? dp(6) : dp(3));
-                float rOuter = r - dp(10);
+                float len = isCardinal ? dpf(11f) : (isSemiCardinal ? dpf(8f) : (isMajor ? dpf(5f) : dpf(2.5f)));
+                float rOuter = dialR - dpf(2f);
                 float rInner = rOuter - len;
 
                 float x1 = (float) (cx + Math.cos(rad) * rOuter);
@@ -1531,54 +1619,168 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
                 float x2 = (float) (cx + Math.cos(rad) * rInner);
                 float y2 = (float) (cy + Math.sin(rad) * rInner);
 
-                tickPaint.setColor(isCardinal ? (deg == 0 ? colCrimson : colAccent) : colQuiet);
-                tickPaint.setStrokeWidth(isCardinal ? dp(2) : dp(1));
+                tickPaint.setStyle(Paint.Style.STROKE);
+                tickPaint.setStrokeCap(Paint.Cap.ROUND);
+                tickPaint.setStrokeWidth(isCardinal ? dpf(2.2f) : (isSemiCardinal ? dpf(1.6f) : dpf(1f)));
+                tickPaint.setColor(deg == 0 ? 0xFFEF4444 : (isCardinal ? 0xFF38BDF8 : (isSemiCardinal ? 0xFFFFD166 : 0xFF475569)));
                 canvas.drawLine(x1, y1, x2, y2, tickPaint);
 
-                if (isCardinal || isMajor) {
-                    float rText = rInner - dp(9);
+                if (isCardinal || isSemiCardinal || (deg % 30 == 0)) {
+                    float rText = rInner - dpf(10f);
                     float tx = (float) (cx + Math.cos(rad) * rText);
-                    float ty = (float) (cy + Math.sin(rad) * rText) + dp(3);
+                    float ty = (float) (cy + Math.sin(rad) * rText) + dpf(3.5f);
 
                     String label;
                     if (deg == 0) label = "N";
+                    else if (deg == 45) label = "NE";
                     else if (deg == 90) label = "E";
+                    else if (deg == 135) label = "SE";
                     else if (deg == 180) label = "S";
+                    else if (deg == 225) label = "SW";
                     else if (deg == 270) label = "W";
-                    else label = String.valueOf(deg);
+                    else if (deg == 315) label = "NW";
+                    else label = String.valueOf(deg) + "°";
 
-                    textPaint.setColor(deg == 0 ? colCrimson : (isCardinal ? colPale : colMuted));
-                    textPaint.setTextSize(isCardinal ? dp(10) : dp(8));
+                    textPaint.setTextSize(isCardinal ? dpf(11.5f) : (isSemiCardinal ? dpf(9.5f) : dpf(8f)));
+                    textPaint.setColor(deg == 0 ? 0xFFEF4444 : (isCardinal ? 0xFFFFFFFF : (isSemiCardinal ? 0xFFFFD166 : 0xFF94A3B8)));
                     canvas.drawText(label, tx, ty, textPaint);
                 }
             }
             canvas.restore();
 
-            float nLen = r - dp(26);
-            float nWidth = dp(7);
+            // 5. 3D FLOATING FACETED DIAMOND NEEDLE
+            float nLen = dialR - dpf(22f);
+            float nWidth = dpf(8.5f);
 
-            pathN.reset();
-            pathN.moveTo(cx, cy - nLen);
-            pathN.lineTo(cx + nWidth, cy);
-            pathN.lineTo(cx, cy - dp(4));
-            pathN.lineTo(cx - nWidth, cy);
-            pathN.close();
-            needleNorth.setColor(colCrimson);
-            canvas.drawPath(pathN, needleNorth);
+            // 3D Needle Drop Shadow on Dial
+            canvas.save();
+            canvas.translate(shadowOffX * 0.6f, shadowOffY * 0.6f);
+            path.reset();
+            path.moveTo(cx, cy - nLen);
+            path.lineTo(cx + nWidth, cy);
+            path.lineTo(cx, cy + nLen);
+            path.lineTo(cx - nWidth, cy);
+            path.close();
+            canvas.drawPath(path, shadowPaint);
+            canvas.restore();
 
-            pathS.reset();
-            pathS.moveTo(cx, cy + nLen);
-            pathS.lineTo(cx + nWidth, cy);
-            pathS.lineTo(cx, cy + dp(4));
-            pathS.lineTo(cx - nWidth, cy);
-            pathS.close();
-            needleSouth.setColor(colPale);
-            canvas.drawPath(pathS, needleSouth);
+            // North Blade Light Facet (Left)
+            path.reset();
+            path.moveTo(cx, cy - nLen);
+            path.lineTo(cx - nWidth, cy);
+            path.lineTo(cx, cy - dpf(3f));
+            path.close();
+            canvas.drawPath(path, needleNorthLight);
 
-            centerHub.setColor(colBg);
-            canvas.drawCircle(cx, cy, dp(6), centerHub);
-            centerHub.setColor(colAccent);
-            canvas.drawCircle(cx, cy, dp(3), centerHub);
+            // North Blade Dark Facet (Right)
+            path.reset();
+            path.moveTo(cx, cy - nLen);
+            path.lineTo(cx + nWidth, cy);
+            path.lineTo(cx, cy - dpf(3f));
+            path.close();
+            canvas.drawPath(path, needleNorthDark);
+
+            // South Blade Light Facet (Left)
+            path.reset();
+            path.moveTo(cx, cy + nLen);
+            path.lineTo(cx - nWidth, cy);
+            path.lineTo(cx, cy + dpf(3f));
+            path.close();
+            canvas.drawPath(path, needleSouthLight);
+
+            // South Blade Dark Facet (Right)
+            path.reset();
+            path.moveTo(cx, cy + nLen);
+            path.lineTo(cx + nWidth, cy);
+            path.lineTo(cx, cy + dpf(3f));
+            path.close();
+            canvas.drawPath(path, needleSouthDark);
+
+            // Center Brass Jewel Hub & Ruby Cabochon
+            RadialGradient hubGrad = new RadialGradient(
+                cx - dpf(2f), cy - dpf(2f), dpf(10f),
+                new int[]{0xFFFEF08A, 0xFFEAB308, 0xFF713F12},
+                null, Shader.TileMode.CLAMP
+            );
+            centerHubPaint.setShader(hubGrad);
+            centerHubPaint.setStyle(Paint.Style.FILL);
+            canvas.drawCircle(cx, cy, dpf(7.5f), centerHubPaint);
+
+            RadialGradient rubyGrad = new RadialGradient(
+                cx - dpf(1f), cy - dpf(1f), dpf(5f),
+                new int[]{0xFFFCA5A5, 0xFFDC2626, 0xFF7F1D1D},
+                null, Shader.TileMode.CLAMP
+            );
+            centerHubPaint.setShader(rubyGrad);
+            canvas.drawCircle(cx, cy, dpf(4f), centerHubPaint);
+
+            // 6. CENTER SPIRIT LEVEL CROSSHAIR & BUBBLE
+            float levelX = cx - tiltRoll * 1.0f;
+            float levelY = cy + tiltPitch * 1.0f;
+            canvas.drawCircle(cx, cy, dpf(14f), levelerPaint);
+            canvas.drawLine(cx - dpf(18f), cy, cx + dpf(18f), cy, levelerPaint);
+            canvas.drawLine(cx, cy - dpf(18f), cx, cy + dpf(18f), levelerPaint);
+
+            Paint bubblePaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+            bubblePaint.setColor(0x8838BDF8);
+            bubblePaint.setStyle(Paint.Style.FILL);
+            canvas.drawCircle(levelX, levelY, dpf(3.5f), bubblePaint);
+
+            // 7. 3D CURVED SAPPHIRE GLASS LENS WITH DYNAMIC SPECULAR HIGHLIGHT (BB10 Look)
+            float glareX = cx - tiltRoll * 1.5f;
+            float glareY = cy - r * 0.45f + tiltPitch * 1.5f;
+            LinearGradient glareGrad = new LinearGradient(
+                glareX, glareY - dialR * 0.45f, glareX, glareY + dialR * 0.45f,
+                new int[]{0x55FFFFFF, 0x1AFFFFFF, 0x00FFFFFF},
+                new float[]{0f, 0.4f, 1f},
+                Shader.TileMode.CLAMP
+            );
+            glassGlarePaint.setShader(glareGrad);
+            glassGlarePaint.setStyle(Paint.Style.FILL);
+            RectF glareOval = new RectF(cx - dialR * 0.8f, cy - dialR * 0.85f, cx + dialR * 0.8f, cy + dialR * 0.1f);
+            canvas.drawOval(glareOval, glassGlarePaint);
+
+            canvas.restore();
+        }
+
+        private void drawCompassRose(Canvas canvas, float cx, float cy, float radius) {
+            float rMajor = radius;
+            float rMinor = radius * 0.65f;
+            float rBase = radius * 0.22f;
+
+            // 8-Point Compass Rose
+            for (int i = 0; i < 8; i++) {
+                double angle = i * Math.PI / 4.0;
+                double angleLeft = angle - Math.PI / 8.0;
+                double angleRight = angle + Math.PI / 8.0;
+
+                float rTip = (i % 2 == 0) ? rMajor : rMinor;
+
+                float tipX = (float) (cx + Math.cos(angle - Math.PI / 2.0) * rTip);
+                float tipY = (float) (cy + Math.sin(angle - Math.PI / 2.0) * rTip);
+
+                float leftX = (float) (cx + Math.cos(angleLeft - Math.PI / 2.0) * rBase);
+                float leftY = (float) (cy + Math.sin(angleLeft - Math.PI / 2.0) * rBase);
+
+                float rightX = (float) (cx + Math.cos(angleRight - Math.PI / 2.0) * rBase);
+                float rightY = (float) (cy + Math.sin(angleRight - Math.PI / 2.0) * rBase);
+
+                // Left light facet
+                path.reset();
+                path.moveTo(cx, cy);
+                path.lineTo(tipX, tipY);
+                path.lineTo(leftX, leftY);
+                path.close();
+                canvas.drawPath(path, (i == 0) ? needleNorthLight : roseLightPaint);
+
+                // Right dark facet
+                path2.reset();
+                path2.moveTo(cx, cy);
+                path2.lineTo(tipX, tipY);
+                path2.lineTo(rightX, rightY);
+                path2.close();
+                canvas.drawPath(path2, (i == 0) ? needleNorthDark : roseDarkPaint);
+            }
         }
     }
 
@@ -3119,7 +3321,7 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
         DetailedCompassView compassView = new DetailedCompassView(this);
         activeCompassView = compassView;
         LinearLayout.LayoutParams cpl = new LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT, dp(170));
+                LinearLayout.LayoutParams.MATCH_PARENT, dp(200));
         cpl.bottomMargin = dp(10);
         compassView.setLayoutParams(cpl);
         card.addView(compassView);
