@@ -63,14 +63,23 @@ public class BadukGameView extends View {
     private int lastMoveY = -1;
     private int consecutivePasses = 0;
     private boolean gameOver = false;
-
     private int mode = 0; // 0 = vs AI, 1 = Tsumego Puzzles, 2 = 2-Player Pass & Play
     private int puzzleIndex = 0;
     private boolean puzzleSolved = false;
     private boolean showTerritory = false;
+    private int difficultyTier = 1; // 0 = Apprentice (1-kyu), 1 = Master (3-dan), 2 = Grandmaster (9-dan)
     private int hintX = -1;
     private int hintY = -1;
     private final Paint hintPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+
+    public void setDifficultyTier(int tier) {
+        this.difficultyTier = Math.max(0, Math.min(2, tier));
+        updateStatus();
+    }
+
+    public int getDifficultyTier() {
+        return difficultyTier;
+    }
 
     private float dpf(float v) {
         return v * getResources().getDisplayMetrics().density;
@@ -629,13 +638,15 @@ public class BadukGameView extends View {
             }
         });
 
-        int numTop = Math.min(candidates.size(), 6);
+        int rollouts = (difficultyTier == 0) ? 6 : (difficultyTier == 1 ? 25 : 50);
+        int depth = (difficultyTier == 0) ? 6 : (difficultyTier == 1 ? 12 : 18);
+        int numTop = Math.min(candidates.size(), (difficultyTier == 0 ? 3 : (difficultyTier == 1 ? 6 : 10)));
         CandidateMove bestMove = candidates.get(0);
         float bestTotalScore = -999999f;
 
         for (int i = 0; i < numTop; i++) {
             CandidateMove c = candidates.get(i);
-            float winRate = runMonteCarloRollouts(c.x, c.y, 25, 12);
+            float winRate = runMonteCarloRollouts(c.x, c.y, rollouts, depth);
             float totalScore = c.shapeScore * 0.45f + winRate * 55f;
             if (totalScore > bestTotalScore) {
                 bestTotalScore = totalScore;

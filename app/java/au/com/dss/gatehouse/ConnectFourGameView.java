@@ -437,7 +437,7 @@ public class ConnectFourGameView extends View {
             draw3DToken(canvas, cx, currentY, holeR * 0.92f, droppingColor == 1);
         }
 
-        // Draw Winning Glowing Laser Line
+        // Draw Winning Glowing Laser Line & Victory Sparkler Stars
         if (gameOver && winR1 != -1 && winR2 != -1) {
             float x1 = pad + winC1 * colW + colW / 2f;
             float y1 = dpf(8f) + winR1 * rowH + rowH / 2f;
@@ -445,6 +445,45 @@ public class ConnectFourGameView extends View {
             float y2 = dpf(8f) + winR2 * rowH + rowH / 2f;
             canvas.drawLine(x1, y1, x2, y2, winGlowPaint);
             canvas.drawLine(x1, y1, x2, y2, winLinePaint);
+
+            drawVictorySparkles(canvas, pad, colW, rowH, holeR);
+        }
+    }
+
+    private void drawVictorySparkles(Canvas canvas, float pad, float colW, float rowH, float holeR) {
+        int dr = Integer.compare(winR2, winR1);
+        int dc = Integer.compare(winC2, winC1);
+        int curR = winR1;
+        int curC = winC1;
+
+        Paint sparkGlow = new Paint(Paint.ANTI_ALIAS_FLAG);
+        sparkGlow.setColor(0x88FFD166);
+        sparkGlow.setStyle(Paint.Style.STROKE);
+        sparkGlow.setStrokeWidth(dpf(3f));
+
+        Paint sparkCore = new Paint(Paint.ANTI_ALIAS_FLAG);
+        sparkCore.setColor(0xFFFFFFFF);
+        sparkCore.setStyle(Paint.Style.FILL);
+
+        Paint rayPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+        rayPaint.setColor(0xFFFFD166);
+        rayPaint.setStrokeWidth(dpf(1.8f));
+
+        for (int i = 0; i < 4; i++) {
+            float cx = pad + curC * colW + colW / 2f;
+            float cy = dpf(8f) + curR * rowH + rowH / 2f;
+
+            // Halo Ring
+            canvas.drawCircle(cx, cy, holeR * 1.15f, sparkGlow);
+
+            // 4-Pointed Sparkle Star
+            float starLen = holeR * 0.45f;
+            canvas.drawLine(cx - starLen, cy, cx + starLen, cy, rayPaint);
+            canvas.drawLine(cx, cy - starLen, cx, cy + starLen, rayPaint);
+            canvas.drawCircle(cx, cy, dpf(2.5f), sparkCore);
+
+            curR += dr;
+            curC += dc;
         }
     }
 
