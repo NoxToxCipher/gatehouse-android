@@ -364,7 +364,11 @@ public class ConnectFourGameView extends View {
     @Override
     public boolean onTouchEvent(MotionEvent event) {
         if (gameOver || isDropping) return false;
-        if (event.getActionMasked() == MotionEvent.ACTION_DOWN && playerTurn) {
+        int action = event.getActionMasked();
+        if (action == MotionEvent.ACTION_DOWN || action == MotionEvent.ACTION_MOVE) {
+            if (getParent() != null) getParent().requestDisallowInterceptTouchEvent(true);
+        }
+        if (action == MotionEvent.ACTION_DOWN && playerTurn) {
             float w = getWidth();
             float pad = dpf(10f);
             float colW = (w - pad * 2) / 7f;

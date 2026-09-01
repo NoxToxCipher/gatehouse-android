@@ -618,7 +618,11 @@ public class ChessGameView extends View {
     @Override
     public boolean onTouchEvent(MotionEvent event) {
         if (gameOver) return false;
-        if (event.getActionMasked() == MotionEvent.ACTION_DOWN) {
+        int action = event.getActionMasked();
+        if (action == MotionEvent.ACTION_DOWN || action == MotionEvent.ACTION_MOVE) {
+            if (getParent() != null) getParent().requestDisallowInterceptTouchEvent(true);
+        }
+        if (action == MotionEvent.ACTION_DOWN) {
             float w = getWidth();
             float h = getHeight();
             float margin = dpf(14f);

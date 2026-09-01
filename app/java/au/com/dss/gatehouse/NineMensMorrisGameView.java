@@ -414,7 +414,11 @@ public class NineMensMorrisGameView extends View {
     @Override
     public boolean onTouchEvent(MotionEvent event) {
         if (gameOver) return false;
-        if (event.getActionMasked() == MotionEvent.ACTION_DOWN && whiteTurn) {
+        int action = event.getActionMasked();
+        if (action == MotionEvent.ACTION_DOWN || action == MotionEvent.ACTION_MOVE) {
+            if (getParent() != null) getParent().requestDisallowInterceptTouchEvent(true);
+        }
+        if (action == MotionEvent.ACTION_DOWN && whiteTurn) {
             float w = getWidth();
             float h = getHeight();
             float size = Math.min(w, h - dpf(32f));

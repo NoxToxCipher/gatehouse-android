@@ -4798,9 +4798,13 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
         final TextView statusLbl = new TextView(this);
         statusLbl.setText("● Black's Turn · 9×9 Match");
         statusLbl.setTextColor(colPale);
-        statusLbl.setTextSize(13);
+        statusLbl.setTextSize(12.5f);
         statusLbl.setTypeface(Typeface.create(Typeface.MONOSPACE, Typeface.BOLD));
-        statusLbl.setPadding(0, dp(4), 0, dp(6));
+        statusLbl.setSingleLine(true);
+        statusLbl.setEllipsize(android.text.TextUtils.TruncateAt.END);
+        statusLbl.setHeight(dp(26));
+        statusLbl.setGravity(Gravity.CENTER_VERTICAL);
+        statusLbl.setPadding(0, dp(2), 0, dp(4));
         box.addView(statusLbl);
 
         final BadukGameView badukView = new BadukGameView(this);
@@ -5028,9 +5032,13 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
         final TextView statusLbl = new TextView(this);
         statusLbl.setText("♔ White to move · vs AI");
         statusLbl.setTextColor(colPale);
-        statusLbl.setTextSize(13);
+        statusLbl.setTextSize(12.5f);
         statusLbl.setTypeface(Typeface.create(Typeface.MONOSPACE, Typeface.BOLD));
-        statusLbl.setPadding(0, dp(4), 0, dp(8));
+        statusLbl.setSingleLine(true);
+        statusLbl.setEllipsize(android.text.TextUtils.TruncateAt.END);
+        statusLbl.setHeight(dp(26));
+        statusLbl.setGravity(Gravity.CENTER_VERTICAL);
+        statusLbl.setPadding(0, dp(2), 0, dp(4));
         box.addView(statusLbl);
 
         final ChessGameView chessView = new ChessGameView(this);
@@ -5176,9 +5184,13 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
         final TextView statusLbl = new TextView(this);
         statusLbl.setText("🟡 Your Turn · Tap to Roll 4-Sided Dice");
         statusLbl.setTextColor(colPale);
-        statusLbl.setTextSize(13);
+        statusLbl.setTextSize(12.5f);
         statusLbl.setTypeface(Typeface.create(Typeface.MONOSPACE, Typeface.BOLD));
-        statusLbl.setPadding(0, dp(4), 0, dp(8));
+        statusLbl.setSingleLine(true);
+        statusLbl.setEllipsize(android.text.TextUtils.TruncateAt.END);
+        statusLbl.setHeight(dp(26));
+        statusLbl.setGravity(Gravity.CENTER_VERTICAL);
+        statusLbl.setPadding(0, dp(2), 0, dp(4));
         box.addView(statusLbl);
 
         final RoyalUrGameView urView = new RoyalUrGameView(this);
@@ -5281,9 +5293,13 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
         final TextView statusLbl = new TextView(this);
         statusLbl.setText("🟡 Pharaoh (You) · Tap to Cast 4 Sticks");
         statusLbl.setTextColor(colPale);
-        statusLbl.setTextSize(13);
+        statusLbl.setTextSize(12.5f);
         statusLbl.setTypeface(Typeface.create(Typeface.MONOSPACE, Typeface.BOLD));
-        statusLbl.setPadding(0, dp(4), 0, dp(8));
+        statusLbl.setSingleLine(true);
+        statusLbl.setEllipsize(android.text.TextUtils.TruncateAt.END);
+        statusLbl.setHeight(dp(26));
+        statusLbl.setGravity(Gravity.CENTER_VERTICAL);
+        statusLbl.setPadding(0, dp(2), 0, dp(4));
         box.addView(statusLbl);
 
         final SenetGameView senetView = new SenetGameView(this);
@@ -5386,9 +5402,13 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
         final TextView statusLbl = new TextView(this);
         statusLbl.setText("🟡 King & Norse Defenders · Defend center");
         statusLbl.setTextColor(colPale);
-        statusLbl.setTextSize(13);
+        statusLbl.setTextSize(12.5f);
         statusLbl.setTypeface(Typeface.create(Typeface.MONOSPACE, Typeface.BOLD));
-        statusLbl.setPadding(0, dp(4), 0, dp(8));
+        statusLbl.setSingleLine(true);
+        statusLbl.setEllipsize(android.text.TextUtils.TruncateAt.END);
+        statusLbl.setHeight(dp(26));
+        statusLbl.setGravity(Gravity.CENTER_VERTICAL);
+        statusLbl.setPadding(0, dp(2), 0, dp(4));
         box.addView(statusLbl);
 
         final HnefataflGameView taflView = new HnefataflGameView(this);
@@ -5478,9 +5498,13 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
         final TextView statusLbl = new TextView(this);
         statusLbl.setText("🟡 Your Turn (Gold) · Tap to Roll");
         statusLbl.setTextColor(colPale);
-        statusLbl.setTextSize(13);
+        statusLbl.setTextSize(12.5f);
         statusLbl.setTypeface(Typeface.create(Typeface.MONOSPACE, Typeface.BOLD));
-        statusLbl.setPadding(0, dp(4), 0, dp(8));
+        statusLbl.setSingleLine(true);
+        statusLbl.setEllipsize(android.text.TextUtils.TruncateAt.END);
+        statusLbl.setHeight(dp(26));
+        statusLbl.setGravity(Gravity.CENTER_VERTICAL);
+        statusLbl.setPadding(0, dp(2), 0, dp(4));
         box.addView(statusLbl);
 
         final BackgammonGameView bgView = new BackgammonGameView(this);
@@ -5583,9 +5607,13 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
         final TextView statusLbl = new TextView(this);
         statusLbl.setText("🟡 Your Turn · Placing pieces");
         statusLbl.setTextColor(colPale);
-        statusLbl.setTextSize(13);
+        statusLbl.setTextSize(12.5f);
         statusLbl.setTypeface(Typeface.create(Typeface.MONOSPACE, Typeface.BOLD));
-        statusLbl.setPadding(0, dp(4), 0, dp(8));
+        statusLbl.setSingleLine(true);
+        statusLbl.setEllipsize(android.text.TextUtils.TruncateAt.END);
+        statusLbl.setHeight(dp(26));
+        statusLbl.setGravity(Gravity.CENTER_VERTICAL);
+        statusLbl.setPadding(0, dp(2), 0, dp(4));
         box.addView(statusLbl);
 
         final NineMensMorrisGameView nmmView = new NineMensMorrisGameView(this);
@@ -5675,9 +5703,13 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
         final TextView statusLbl = new TextView(this);
         statusLbl.setText("🔴 Your Turn (Red) · Tap column to drop");
         statusLbl.setTextColor(0xFFEF4444);
-        statusLbl.setTextSize(13);
+        statusLbl.setTextSize(12.5f);
         statusLbl.setTypeface(Typeface.create(Typeface.MONOSPACE, Typeface.BOLD));
-        statusLbl.setPadding(0, dp(4), 0, dp(8));
+        statusLbl.setSingleLine(true);
+        statusLbl.setEllipsize(android.text.TextUtils.TruncateAt.END);
+        statusLbl.setHeight(dp(26));
+        statusLbl.setGravity(Gravity.CENTER_VERTICAL);
+        statusLbl.setPadding(0, dp(2), 0, dp(4));
         box.addView(statusLbl);
 
         final ConnectFourGameView c4View = new ConnectFourGameView(this);
@@ -12148,7 +12180,7 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
                     if (targetContentView instanceof ScrollView) {
                         isAtTop = ((ScrollView) targetContentView).getScrollY() <= 0;
                     }
-                    if (isAtTop && dy > touchSlop) {
+                    if (isAtTop && dy > touchSlop * 2.5f) {
                         isDragging = true;
                         if (getParent() != null) getParent().requestDisallowInterceptTouchEvent(true);
                         return true;
