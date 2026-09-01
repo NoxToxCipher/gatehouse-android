@@ -15172,12 +15172,20 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
         // =========================================================================
         // 1. UNIFIED SLEEK TOP HEADER BAR
         // =========================================================================
+        // =========================================================================
+        // 1. UNIFIED SLEEK TOP HEADER BAR (2-Row Balanced Layout)
+        // =========================================================================
         final Runnable[] refreshContent = new Runnable[1];
 
-        LinearLayout topBar = new LinearLayout(this);
-        topBar.setOrientation(LinearLayout.HORIZONTAL);
-        topBar.setGravity(Gravity.CENTER_VERTICAL);
-        topBar.setPadding(0, 0, 0, dp(6));
+        LinearLayout headerContainer = new LinearLayout(this);
+        headerContainer.setOrientation(LinearLayout.VERTICAL);
+        headerContainer.setPadding(0, 0, 0, dp(4));
+
+        // Row 1: Executive Title Row
+        LinearLayout row1 = new LinearLayout(this);
+        row1.setOrientation(LinearLayout.HORIZONTAL);
+        row1.setGravity(Gravity.CENTER_VERTICAL);
+        row1.setPadding(0, 0, 0, dp(4));
 
         TextView btnBack = new TextView(this);
         btnBack.setText("← EXIT");
@@ -15193,20 +15201,20 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
                 dlg.dismiss();
             }
         });
-        topBar.addView(btnBack);
+        row1.addView(btnBack);
 
         LinearLayout titleCol = new LinearLayout(this);
         titleCol.setOrientation(LinearLayout.VERTICAL);
         titleCol.setGravity(Gravity.CENTER);
         LinearLayout.LayoutParams tclp = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
-        tclp.leftMargin = dp(8);
-        tclp.rightMargin = dp(8);
+        tclp.leftMargin = dp(6);
+        tclp.rightMargin = dp(6);
         titleCol.setLayoutParams(tclp);
 
         TextView tvHead = new TextView(this);
         tvHead.setText("OCCURRENCE LOGBOOK");
         tvHead.setTextColor(colPale);
-        tvHead.setTextSize(13.5f);
+        tvHead.setTextSize(13f);
         tvHead.setTypeface(Typeface.DEFAULT_BOLD);
         tvHead.setGravity(Gravity.CENTER);
         titleCol.addView(tvHead);
@@ -15214,12 +15222,37 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
         final TextView tvSubHead = new TextView(this);
         tvSubHead.setText(getLogbookSubtitle(logMgr));
         tvSubHead.setTextColor(colMuted);
-        tvSubHead.setTextSize(9.5f);
+        tvSubHead.setTextSize(9f);
         tvSubHead.setTypeface(Typeface.MONOSPACE);
         tvSubHead.setGravity(Gravity.CENTER);
         titleCol.addView(tvSubHead);
 
-        topBar.addView(titleCol);
+        row1.addView(titleCol);
+
+        final TextView btnFullscreen = new TextView(this);
+        btnFullscreen.setText(logbookIsFullscreen ? "❐ COMPACT" : "⛶ EXPAND");
+        btnFullscreen.setTextColor(colPale);
+        btnFullscreen.setTextSize(9.5f);
+        btnFullscreen.setTypeface(Typeface.create(Typeface.MONOSPACE, Typeface.BOLD));
+        btnFullscreen.setPadding(dp(8), dp(6), dp(8), dp(6));
+        btnFullscreen.setBackground(rounded(0x1AFFFFFF, dp(6)));
+        btnFullscreen.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                hapticClick();
+                logbookIsFullscreen = !logbookIsFullscreen;
+                showFullLogbookDialog();
+            }
+        });
+        row1.addView(btnFullscreen);
+
+        headerContainer.addView(row1);
+
+        // Row 2: Action Bar Quick Pills
+        LinearLayout row2 = new LinearLayout(this);
+        row2.setOrientation(LinearLayout.HORIZONTAL);
+        row2.setGravity(Gravity.CENTER_VERTICAL);
+        row2.setPadding(0, 0, 0, dp(4));
 
         final TextView btnViewMode = new TextView(this);
         btnViewMode.setText(logbookRuledViewMode ? "📖 LEDGER" : "📜 FEED");
@@ -15227,12 +15260,12 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
         btnViewMode.setTextSize(9.5f);
         btnViewMode.setTypeface(Typeface.create(Typeface.MONOSPACE, Typeface.BOLD));
         btnViewMode.setPadding(dp(8), dp(4), dp(8), dp(4));
+        btnViewMode.setGravity(Gravity.CENTER);
         btnViewMode.setBackground(rounded(logbookRuledViewMode ? 0x33FDE047 : 0x2206B6D4, dp(6)));
-        LinearLayout.LayoutParams vmlp = new LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+        LinearLayout.LayoutParams vmlp = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
         vmlp.rightMargin = dp(4);
         btnViewMode.setLayoutParams(vmlp);
-        topBar.addView(btnViewMode);
+        row2.addView(btnViewMode);
 
         final TextView btnExport = new TextView(this);
         btnExport.setText("📄 EXPORT");
@@ -15240,9 +15273,9 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
         btnExport.setTextSize(9.5f);
         btnExport.setTypeface(Typeface.create(Typeface.MONOSPACE, Typeface.BOLD));
         btnExport.setPadding(dp(8), dp(4), dp(8), dp(4));
+        btnExport.setGravity(Gravity.CENTER);
         btnExport.setBackground(rounded(0x2238BDF8, dp(6)));
-        LinearLayout.LayoutParams exlp = new LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+        LinearLayout.LayoutParams exlp = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
         exlp.rightMargin = dp(4);
         btnExport.setLayoutParams(exlp);
         final LogbookManager logMgrFinal = logMgr;
@@ -15253,7 +15286,7 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
                 exportCurrentShiftStatement(logMgrFinal);
             }
         });
-        topBar.addView(btnExport);
+        row2.addView(btnExport);
 
         final TextView btnSealShift = new TextView(this);
         btnSealShift.setText("✍️ SEAL");
@@ -15261,9 +15294,9 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
         btnSealShift.setTextSize(9.5f);
         btnSealShift.setTypeface(Typeface.create(Typeface.MONOSPACE, Typeface.BOLD));
         btnSealShift.setPadding(dp(8), dp(4), dp(8), dp(4));
+        btnSealShift.setGravity(Gravity.CENTER);
         btnSealShift.setBackground(rounded(0x2810B981, dp(6)));
-        LinearLayout.LayoutParams sslp = new LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+        LinearLayout.LayoutParams sslp = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
         sslp.rightMargin = dp(4);
         btnSealShift.setLayoutParams(sslp);
         btnSealShift.setOnClickListener(new View.OnClickListener() {
@@ -15273,38 +15306,22 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
                 showShiftSealHandoverDialog(logMgrFinal, refreshContent[0]);
             }
         });
-        topBar.addView(btnSealShift);
-
-        final TextView btnFullscreen = new TextView(this);
-        btnFullscreen.setText(logbookIsFullscreen ? "❐ COMPACT" : "⛶ EXPAND");
-        btnFullscreen.setTextColor(colPale);
-        btnFullscreen.setTextSize(9.5f);
-        btnFullscreen.setTypeface(Typeface.create(Typeface.MONOSPACE, Typeface.BOLD));
-        btnFullscreen.setPadding(dp(8), dp(4), dp(8), dp(4));
-        btnFullscreen.setBackground(rounded(0x1AFFFFFF, dp(6)));
-        LinearLayout.LayoutParams fslp = new LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT);
-        fslp.rightMargin = dp(4);
-        btnFullscreen.setLayoutParams(fslp);
-        btnFullscreen.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                hapticClick();
-                logbookIsFullscreen = !logbookIsFullscreen;
-                showFullLogbookDialog();
-            }
-        });
-        topBar.addView(btnFullscreen);
+        row2.addView(btnSealShift);
 
         TextView btnRefresh = new TextView(this);
-        btnRefresh.setText("↻");
+        btnRefresh.setText("↻ SYNC");
         btnRefresh.setTextColor(colPale);
-        btnRefresh.setTextSize(14f);
+        btnRefresh.setTextSize(9.5f);
+        btnRefresh.setTypeface(Typeface.create(Typeface.MONOSPACE, Typeface.BOLD));
         btnRefresh.setPadding(dp(8), dp(4), dp(8), dp(4));
-        btnRefresh.setBackground(rounded(0x1AFFFFFF, dp(8)));
-        topBar.addView(btnRefresh);
+        btnRefresh.setGravity(Gravity.CENTER);
+        btnRefresh.setBackground(rounded(0x1AFFFFFF, dp(6)));
+        LinearLayout.LayoutParams rflp = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
+        btnRefresh.setLayoutParams(rflp);
+        row2.addView(btnRefresh);
 
-        contentCard.addView(topBar);
+        headerContainer.addView(row2);
+        contentCard.addView(headerContainer);
 
         // =========================================================================
         // 2. LIVE OFFICER SHIFT COMMAND CARD
@@ -15851,7 +15868,15 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
 
         root.addView(contentCard);
         dlg.setContentView(root);
+        if (dlg.getWindow() != null) {
+            dlg.getWindow().setLayout(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT);
+            dlg.getWindow().setBackgroundDrawable(new android.graphics.drawable.ColorDrawable(0x00000000));
+        }
         dlg.show();
+        if (dlg.getWindow() != null) {
+            dlg.getWindow().setLayout(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT);
+            dlg.getWindow().setBackgroundDrawable(new android.graphics.drawable.ColorDrawable(0x00000000));
+        }
     }
 
     private String getLogbookSubtitle(LogbookManager logMgr) {
