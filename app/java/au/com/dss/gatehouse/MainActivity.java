@@ -3708,6 +3708,304 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
         dlg.show();
     }
     // =========================================================================
+    // 📖 UNIVERSAL BOARD GAME RULES & STRATEGY GUIDES
+    // =========================================================================
+
+    private void showGameRulesGuideDialog(String gameTitle, String historyOrigin, String objective, String[] rules, String[] proTips, int accentColor) {
+        hapticHeavyClick();
+        final LinearLayout box = dialogContainer("📖 " + gameTitle, "RULES & STRATEGY GUIDE", accentColor);
+
+        // 1. Heritage Origin Card
+        LinearLayout originCard = new LinearLayout(this);
+        originCard.setOrientation(LinearLayout.VERTICAL);
+        originCard.setBackground(rounded(colPanel2, dp(12)));
+        originCard.setPadding(dp(12), dp(10), dp(12), dp(10));
+        LinearLayout.LayoutParams oclp = new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+        oclp.bottomMargin = dp(8);
+        originCard.setLayoutParams(oclp);
+
+        TextView origHdr = new TextView(this);
+        origHdr.setText("📜 HISTORICAL HERITAGE");
+        origHdr.setTextColor(accentColor);
+        origHdr.setTextSize(10.5f);
+        origHdr.setTypeface(Typeface.DEFAULT_BOLD);
+        origHdr.setLetterSpacing(0.08f);
+        originCard.addView(origHdr);
+
+        TextView origTxt = new TextView(this);
+        origTxt.setText(historyOrigin);
+        origTxt.setTextColor(colPale);
+        origTxt.setTextSize(11.5f);
+        origTxt.setPadding(0, dp(3), 0, 0);
+        originCard.addView(origTxt);
+        box.addView(originCard);
+
+        // 2. Win Objective Card
+        LinearLayout objCard = new LinearLayout(this);
+        objCard.setOrientation(LinearLayout.VERTICAL);
+        objCard.setBackground(rounded(colPanel2, dp(12)));
+        objCard.setPadding(dp(12), dp(10), dp(12), dp(10));
+        LinearLayout.LayoutParams objlp = new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+        objlp.bottomMargin = dp(8);
+        objCard.setLayoutParams(objlp);
+
+        TextView objHdr = new TextView(this);
+        objHdr.setText("🎯 OBJECTIVE & WIN CONDITION");
+        objHdr.setTextColor(colEmerald);
+        objHdr.setTextSize(10.5f);
+        objHdr.setTypeface(Typeface.DEFAULT_BOLD);
+        objHdr.setLetterSpacing(0.08f);
+        objCard.addView(objHdr);
+
+        TextView objTxt = new TextView(this);
+        objTxt.setText(objective);
+        objTxt.setTextColor(colPale);
+        objTxt.setTextSize(11.5f);
+        objTxt.setPadding(0, dp(3), 0, 0);
+        objCard.addView(objTxt);
+        box.addView(objCard);
+
+        // 3. Step-by-Step Rules
+        LinearLayout rulesCard = new LinearLayout(this);
+        rulesCard.setOrientation(LinearLayout.VERTICAL);
+        rulesCard.setBackground(rounded(colPanel2, dp(12)));
+        rulesCard.setPadding(dp(12), dp(10), dp(12), dp(10));
+        LinearLayout.LayoutParams rlp = new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+        rlp.bottomMargin = dp(8);
+        rulesCard.setLayoutParams(rlp);
+
+        TextView rulesHdr = new TextView(this);
+        rulesHdr.setText("📖 HOW TO PLAY & CORE RULES");
+        rulesHdr.setTextColor(accentColor);
+        rulesHdr.setTextSize(10.5f);
+        rulesHdr.setTypeface(Typeface.DEFAULT_BOLD);
+        rulesHdr.setLetterSpacing(0.08f);
+        rulesCard.addView(rulesHdr);
+
+        for (int i = 0; i < rules.length; i++) {
+            TextView rItem = new TextView(this);
+            rItem.setText((i + 1) + ". " + rules[i]);
+            rItem.setTextColor(colPale);
+            rItem.setTextSize(11f);
+            rItem.setPadding(0, dp(3), 0, dp(2));
+            rulesCard.addView(rItem);
+        }
+        box.addView(rulesCard);
+
+        // 4. Strategy Tips
+        if (proTips != null && proTips.length > 0) {
+            LinearLayout tipCard = new LinearLayout(this);
+            tipCard.setOrientation(LinearLayout.VERTICAL);
+            tipCard.setBackground(rounded(colPanel2, dp(12)));
+            tipCard.setPadding(dp(12), dp(10), dp(12), dp(10));
+            LinearLayout.LayoutParams tlp = new LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+            tlp.bottomMargin = dp(8);
+            tipCard.setLayoutParams(tlp);
+
+            TextView tipHdr = new TextView(this);
+            tipHdr.setText("💡 STRATEGY & MASTERY TIPS");
+            tipHdr.setTextColor(0xFFFFD166);
+            tipHdr.setTextSize(10.5f);
+            tipHdr.setTypeface(Typeface.DEFAULT_BOLD);
+            tipHdr.setLetterSpacing(0.08f);
+            tipCard.addView(tipHdr);
+
+            for (String tip : proTips) {
+                TextView tItem = new TextView(this);
+                tItem.setText("★ " + tip);
+                tItem.setTextColor(colPale);
+                tItem.setTextSize(11f);
+                tItem.setPadding(0, dp(3), 0, dp(2));
+                tipCard.addView(tItem);
+            }
+            box.addView(tipCard);
+        }
+
+        final Dialog dlg = createDialogSheet(box);
+
+        TextView btnGotIt = actionButton("✓ Understood · Return to Game", accentColor, colAccentInk);
+        btnGotIt.setOnClickListener(new View.OnClickListener() {
+            public void onClick(View v) {
+                hapticClick();
+                dlg.dismiss();
+            }
+        });
+        LinearLayout.LayoutParams clp = new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+        clp.topMargin = dp(4);
+        btnGotIt.setLayoutParams(clp);
+        box.addView(btnGotIt);
+
+        dlg.show();
+    }
+
+    private void showBadukRulesDialog() {
+        showGameRulesGuideDialog(
+            "Baduk (Go / Weiqi)",
+            "Originated in Ancient China over 4,500 years ago (~2500 BCE). Considered the oldest continuously played board game in human civilization and one of the four essential arts of the ancient scholar.",
+            "Surround and control more empty territory (intersections) on the board and capture more opponent stones than your rival.",
+            new String[]{
+                "Black plays first, placing stones on the grid intersections (9×9, 13×13, or 19×19). Placed stones never move.",
+                "Stones remain alive as long as they have at least one adjacent open intersection connected along grid lines ('Liberty').",
+                "When all liberties of a stone or group are completely occupied by opponent stones, the group is captured and removed.",
+                "Ko Rule: You cannot play a move that recreates the exact previous full-board position.",
+                "Suicide Rule: You cannot place a stone where it has zero liberties, unless that move simultaneously captures the enclosing stones.",
+                "Two Eyes Principle: Any group that encloses two separate internal liberties (eyes) is unconditionally immortal and can never be captured."
+            },
+            new String[]{
+                "Corners First: Corners require the fewest stones to enclose territory, followed by sides, with the center being hardest to secure.",
+                "Maintain Liberty Counts: Always ensure your extending chains have 3 or more liberties before engaging in combat.",
+                "Life and Death (Tsumego): Practice recognizing vital shape points to form two eyes or destroy enemy eye potential."
+            },
+            colAccent
+        );
+    }
+
+    private void showChessRulesDialog() {
+        showGameRulesGuideDialog(
+            "Grandmaster Chess",
+            "Evolved from the 6th-century Indian game Chaturanga and Persian Shatranj. Standardized in 15th-century Europe into the premier intellectual sport of international grandmasters.",
+            "Checkmate the opponent's King by trapping it under direct attack with zero legal escape moves.",
+            new String[]{
+                "White moves first. Pawns advance 1 square (or 2 on initial move) and capture diagonally. Knights leap in an 'L' shape (2+1).",
+                "Bishops glide diagonally; Rooks move horizontally and vertically; Queens move any distance in all 8 directions.",
+                "Kings move 1 square in any direction. When under attack ('Check'), you must escape, block, or capture the attacker.",
+                "Checkmate ends the match in immediate victory. If a player has no legal moves and is not in check, it is a Stalemate (Draw).",
+                "Special moves include Castling (King + Rook safety swap), En Passant (pawn capture on passing rank), and Pawn Promotion (reaching the 8th rank)."
+            },
+            new String[]{
+                "Control the Center: Dominate squares d4, d5, e4, and e5 to maximize piece mobility.",
+                "Develop Pieces Early: Bring Knights and Bishops out before launching aggressive queen attacks.",
+                "King Safety: Castle early into a protected corner shelter behind a solid pawn shield."
+            },
+            colCyan
+        );
+    }
+
+    private void showRoyalUrRulesDialog() {
+        showGameRulesGuideDialog(
+            "Royal Game of Ur",
+            "Discovered by Sir Leonard Woolley in the Royal Cemetery at Ur (Sumer, Mesopotamia) dating to 2600 BCE. Historical rules were deciphered from an ancient Babylonian cuneiform tablet.",
+            "Race all 7 of your playing pieces along the combat track and safely bear them off the board before your opponent.",
+            new String[]{
+                "Roll the 4 tetrahedral pyramid dice each turn (marked tips yield 0 to 4 steps). Rolling 0 passes the turn.",
+                "Move pieces onto your home row (squares 1–4), down the contested central combat corridor (squares 5–12), and out through your exit lane (squares 13–14).",
+                "Combat Captures: Landing on an opponent checker in the shared middle lane knocks it off the board back to their reserve pool.",
+                "Rosette Sanctuaries: 5-pointed floral rosette tiles are safe zones (cannot be captured) and award an immediate EXTRA DICE ROLL!",
+                "Bearing Off: Pieces must exit the board with an exact die count matching the distance past the final tile."
+            },
+            new String[]{
+                "Anchor Rosettes: Staging pieces on Rosette tiles protects them while unlocking bonus rolls.",
+                "Ambush Traps: Hold reserve pieces ready to strike opponent checkers when they enter the shared central corridor."
+            },
+            colAccent
+        );
+    }
+
+    private void showSenetRulesDialog() {
+        showGameRulesGuideDialog(
+            "Egyptian Senet",
+            "Played in Predynastic Egypt from 3100 BCE across 3,000 years. Found in the royal tombs of Pharaoh Tutankhamun and Queen Nefertari as a sacred journey of the soul through the underworld.",
+            "Guide all 5 of your pawns through the 30-square S-shaped track and successfully usher them into eternity.",
+            new String[]{
+                "Cast 4 two-sided casting sticks to determine movement (1 to 5 steps). Casting 1, 4, or 5 grants a bonus cast!",
+                "Pawns navigate from Square 1–10 (top row), 11–20 (middle row right-to-left), and 21–30 (bottom row left-to-right).",
+                "Swapping Attack: Landing on an isolated enemy pawn swaps positions with it.",
+                "Defensive Formations: 2 adjacent friendly pawns protect each other. 3 adjacent friendly pawns create an impassable blockade!",
+                "Hazard Squares: Square 26 (House of Beauty - mandatory stop), Square 27 (Water of Chaos - resets pawn back to Square 15), Squares 28 & 29 (require exact casting counts to escape)."
+            },
+            new String[]{
+                "March in Pairs: Keep pawns in tandem pairs to prevent opponent swap-attacks.",
+                "Master the House of Beauty: Secure Square 26 early to launch safe crossings over the Water of Chaos."
+            },
+            0xFFFDE047
+        );
+    }
+
+    private void showHnefataflRulesDialog() {
+        showGameRulesGuideDialog(
+            "Viking Hnefatafl (King's Table)",
+            "The famous asymmetrical strategy board game of the Norse Vikings (~400–1000 CE). Played across Scandinavia and Celtic Britain before the introduction of chess.",
+            "Defenders (Gold) must escort the Swedish King ('K') safely to any of the 4 corner sanctuary forts. Attackers (Red) must encircle and capture the King.",
+            new String[]{
+                "All warriors move any distance orthogonally through empty squares (like Chess Rooks).",
+                "Only the King may occupy the center Throne ('Konakis') or the 4 corner sanctuary forts.",
+                "Custodial Capture: Sandwich an enemy warrior between 2 of your pieces horizontally or vertically to eliminate them.",
+                "Corner forts and the empty center throne act as hostile anvils for custodial captures.",
+                "Capturing the King: The King requires a 4-sided total encirclement (or 3 attackers if pinned against the throne or board edge)."
+            },
+            new String[]{
+                "Defender Strategy: Open diagonal corridors and sacrifice defenders to clear high-speed transit routes to the corner forts.",
+                "Attacker Strategy: Form a tightening perimeter net around the center and avoid leaving gaps in the outer shield wall."
+            },
+            colCrimson
+        );
+    }
+
+    private void showBackgammonRulesDialog() {
+        showGameRulesGuideDialog(
+            "Classic Backgammon",
+            "One of the oldest two-player board games in existence, with roots in ancient Roman Tables and Persian Nard over 5,000 years ago.",
+            "Move all 15 checkers into your home board quadrant and bear them all off before your opponent.",
+            new String[]{
+                "White moves counter-clockwise (points 24 down to 1); Black moves clockwise (points 1 up to 24).",
+                "Roll two 6-sided dice each turn. Rolling doubles allows you to play the number 4 times!",
+                "Checkers may land on open points, points you occupy, or points with exactly 1 opponent checker ('Blot').",
+                "Hitting a Blot: Landing on a single enemy checker sends it to the central Bar. The opponent MUST re-enter from the bar before making other moves.",
+                "Bearing Off: Once all 15 checkers are inside your home quadrant (points 1–6), remove checkers corresponding to rolled dice."
+            },
+            new String[]{
+                "Build Primes: Occupy 6 consecutive points in a row to create an inescapable blockade for trapped enemy checkers.",
+                "Safety First: Avoid leaving exposed single blots within direct 1–6 pip range of opponent checkers."
+            },
+            colEmerald
+        );
+    }
+
+    private void showNineMensMorrisRulesDialog() {
+        showGameRulesGuideDialog(
+            "Nine Men's Morris (Mills / Merels)",
+            "Dating back to the Roman Empire and Ancient Egypt (~1400 BCE), carved into the temple stones at Kurna and widely played throughout medieval Europe.",
+            "Reduce the opponent to fewer than 3 pieces or block all their pieces so they have zero legal moves.",
+            new String[]{
+                "Phase 1 (Placing): Players take turns placing their 9 pieces on empty intersection nodes across the 3 concentric squares.",
+                "Phase 2 (Moving): Players slide 1 piece along connecting lines to an adjacent empty node.",
+                "Phase 3 (Flying): When a player is down to only 3 pieces, their pieces can 'fly' (jump) to any open node on the board!",
+                "Forming a Mill: Lining up 3 friendly pieces in a straight line forms a 'Mill', allowing you to capture and remove 1 enemy piece.",
+                "Sanctuary Rule: You cannot remove a piece that is part of an active opponent mill unless all their pieces are in mills."
+            },
+            new String[]{
+                "Double Mill: Set up two 3-in-a-row lines that share a pivot piece, allowing you to complete a mill every turn by sliding back and forth.",
+                "Corner Traps: Lock opponent pieces into corners during the placement phase to limit their mobility in Phase 2."
+            },
+            colCyan
+        );
+    }
+
+    private void showConnectFourRulesDialog() {
+        showGameRulesGuideDialog(
+            "Connect 4 (Gravity Solver)",
+            "Modern vertical alignment classic published in 1974 and mathematically solved in 1988, combining vertical gravity physics with pattern recognition.",
+            "Be the first player to form a continuous horizontal, vertical, or diagonal line of 4 colored discs.",
+            new String[]{
+                "Played on a vertical 7-column by 6-row grid.",
+                "Players take turns selecting a column; the disc drops under gravity to the lowest unoccupied slot in that column.",
+                "The first player to connect 4 of their tokens in an unbroken straight line (horizontal, vertical, or diagonal) wins immediately.",
+                "If all 42 slots are filled without any 4-in-a-row line, the match ends in a draw."
+            },
+            new String[]{
+                "Center Column Control: Column 4 belongs to the highest number of possible 4-in-a-row winning combinations.",
+                "Double Threats (Fork Traps): Build positions where you create two simultaneous 4-in-a-row threats that the opponent cannot block in a single turn."
+            },
+            0xFFF59E0B
+        );
+    }
+
+    // =========================================================================
     // ⚪⚫ 1. BADUK (GO / TSUMEGO) ENGINE & DIALOG
     // =========================================================================
 
@@ -3874,18 +4172,35 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
 
         final Dialog dlg = createDialogSheet(box);
 
-        TextView btnClose = actionButton("Close Baduk", colLine, colPale);
+        LinearLayout bottomRow = new LinearLayout(this);
+        bottomRow.setOrientation(LinearLayout.HORIZONTAL);
+        bottomRow.setPadding(0, dp(8), 0, 0);
+
+        TextView btnRules = actionButton("📖 Rules & How-To", colPanel2, colAccent);
+        btnRules.setOnClickListener(new View.OnClickListener() {
+            public void onClick(View v) {
+                hapticClick();
+                showBadukRulesDialog();
+            }
+        });
+        LinearLayout.LayoutParams rblp = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1.2f);
+        rblp.rightMargin = dp(4);
+        btnRules.setLayoutParams(rblp);
+        bottomRow.addView(btnRules);
+
+        TextView btnClose = actionButton("Close", colLine, colPale);
         btnClose.setOnClickListener(new View.OnClickListener() {
             public void onClick(View v) {
                 hapticClick();
                 dlg.dismiss();
             }
         });
-        LinearLayout.LayoutParams clp = new LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
-        clp.topMargin = dp(8);
-        btnClose.setLayoutParams(clp);
-        box.addView(btnClose);
+        LinearLayout.LayoutParams cblp = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 0.8f);
+        cblp.leftMargin = dp(4);
+        btnClose.setLayoutParams(cblp);
+        bottomRow.addView(btnClose);
+
+        box.addView(bottomRow);
 
         dlg.show();
     }
@@ -4005,18 +4320,35 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
 
         final Dialog dlg = createDialogSheet(box);
 
-        TextView btnClose = actionButton("Close Chess", colLine, colPale);
+        LinearLayout bottomRow = new LinearLayout(this);
+        bottomRow.setOrientation(LinearLayout.HORIZONTAL);
+        bottomRow.setPadding(0, dp(8), 0, 0);
+
+        TextView btnRules = actionButton("📖 Rules & How-To", colPanel2, colCyan);
+        btnRules.setOnClickListener(new View.OnClickListener() {
+            public void onClick(View v) {
+                hapticClick();
+                showChessRulesDialog();
+            }
+        });
+        LinearLayout.LayoutParams rblp = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1.2f);
+        rblp.rightMargin = dp(4);
+        btnRules.setLayoutParams(rblp);
+        bottomRow.addView(btnRules);
+
+        TextView btnClose = actionButton("Close", colLine, colPale);
         btnClose.setOnClickListener(new View.OnClickListener() {
             public void onClick(View v) {
                 hapticClick();
                 dlg.dismiss();
             }
         });
-        LinearLayout.LayoutParams clp = new LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
-        clp.topMargin = dp(10);
-        btnClose.setLayoutParams(clp);
-        box.addView(btnClose);
+        LinearLayout.LayoutParams cblp = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 0.8f);
+        cblp.leftMargin = dp(4);
+        btnClose.setLayoutParams(cblp);
+        bottomRow.addView(btnClose);
+
+        box.addView(bottomRow);
 
         dlg.show();
     }
@@ -4080,18 +4412,36 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
         box.addView(ctrlRow);
 
         final Dialog dlg = createDialogSheet(box);
-        TextView btnClose = actionButton("Close Ur", colLine, colPale);
+
+        LinearLayout bottomRow = new LinearLayout(this);
+        bottomRow.setOrientation(LinearLayout.HORIZONTAL);
+        bottomRow.setPadding(0, dp(8), 0, 0);
+
+        TextView btnRules = actionButton("📖 Rules & How-To", colPanel2, colAccent);
+        btnRules.setOnClickListener(new View.OnClickListener() {
+            public void onClick(View v) {
+                hapticClick();
+                showRoyalUrRulesDialog();
+            }
+        });
+        LinearLayout.LayoutParams rblp = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1.2f);
+        rblp.rightMargin = dp(4);
+        btnRules.setLayoutParams(rblp);
+        bottomRow.addView(btnRules);
+
+        TextView btnClose = actionButton("Close", colLine, colPale);
         btnClose.setOnClickListener(new View.OnClickListener() {
             public void onClick(View v) {
                 hapticClick();
                 dlg.dismiss();
             }
         });
-        LinearLayout.LayoutParams clp = new LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
-        clp.topMargin = dp(10);
-        btnClose.setLayoutParams(clp);
-        box.addView(btnClose);
+        LinearLayout.LayoutParams cblp = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 0.8f);
+        cblp.leftMargin = dp(4);
+        btnClose.setLayoutParams(cblp);
+        bottomRow.addView(btnClose);
+
+        box.addView(bottomRow);
         dlg.show();
     }
 
@@ -4154,18 +4504,36 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
         box.addView(ctrlRow);
 
         final Dialog dlg = createDialogSheet(box);
-        TextView btnClose = actionButton("Close Senet", colLine, colPale);
+
+        LinearLayout bottomRow = new LinearLayout(this);
+        bottomRow.setOrientation(LinearLayout.HORIZONTAL);
+        bottomRow.setPadding(0, dp(8), 0, 0);
+
+        TextView btnRules = actionButton("📖 Rules & How-To", colPanel2, 0xFFFDE047);
+        btnRules.setOnClickListener(new View.OnClickListener() {
+            public void onClick(View v) {
+                hapticClick();
+                showSenetRulesDialog();
+            }
+        });
+        LinearLayout.LayoutParams rblp = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1.2f);
+        rblp.rightMargin = dp(4);
+        btnRules.setLayoutParams(rblp);
+        bottomRow.addView(btnRules);
+
+        TextView btnClose = actionButton("Close", colLine, colPale);
         btnClose.setOnClickListener(new View.OnClickListener() {
             public void onClick(View v) {
                 hapticClick();
                 dlg.dismiss();
             }
         });
-        LinearLayout.LayoutParams clp = new LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
-        clp.topMargin = dp(10);
-        btnClose.setLayoutParams(clp);
-        box.addView(btnClose);
+        LinearLayout.LayoutParams cblp = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 0.8f);
+        cblp.leftMargin = dp(4);
+        btnClose.setLayoutParams(cblp);
+        bottomRow.addView(btnClose);
+
+        box.addView(bottomRow);
         dlg.show();
     }
 
@@ -4228,18 +4596,36 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
         box.addView(ctrlRow);
 
         final Dialog dlg = createDialogSheet(box);
-        TextView btnClose = actionButton("Close Hnefatafl", colLine, colPale);
+
+        LinearLayout bottomRow = new LinearLayout(this);
+        bottomRow.setOrientation(LinearLayout.HORIZONTAL);
+        bottomRow.setPadding(0, dp(8), 0, 0);
+
+        TextView btnRules = actionButton("📖 Rules & How-To", colPanel2, colCrimson);
+        btnRules.setOnClickListener(new View.OnClickListener() {
+            public void onClick(View v) {
+                hapticClick();
+                showHnefataflRulesDialog();
+            }
+        });
+        LinearLayout.LayoutParams rblp = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1.2f);
+        rblp.rightMargin = dp(4);
+        btnRules.setLayoutParams(rblp);
+        bottomRow.addView(btnRules);
+
+        TextView btnClose = actionButton("Close", colLine, colPale);
         btnClose.setOnClickListener(new View.OnClickListener() {
             public void onClick(View v) {
                 hapticClick();
                 dlg.dismiss();
             }
         });
-        LinearLayout.LayoutParams clp = new LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
-        clp.topMargin = dp(10);
-        btnClose.setLayoutParams(clp);
-        box.addView(btnClose);
+        LinearLayout.LayoutParams cblp = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 0.8f);
+        cblp.leftMargin = dp(4);
+        btnClose.setLayoutParams(cblp);
+        bottomRow.addView(btnClose);
+
+        box.addView(bottomRow);
         dlg.show();
     }
 
@@ -4315,18 +4701,36 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
         box.addView(ctrlRow);
 
         final Dialog dlg = createDialogSheet(box);
-        TextView btnClose = actionButton("Close Backgammon", colLine, colPale);
+
+        LinearLayout bottomRow = new LinearLayout(this);
+        bottomRow.setOrientation(LinearLayout.HORIZONTAL);
+        bottomRow.setPadding(0, dp(8), 0, 0);
+
+        TextView btnRules = actionButton("📖 Rules & How-To", colPanel2, colEmerald);
+        btnRules.setOnClickListener(new View.OnClickListener() {
+            public void onClick(View v) {
+                hapticClick();
+                showBackgammonRulesDialog();
+            }
+        });
+        LinearLayout.LayoutParams rblp = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1.2f);
+        rblp.rightMargin = dp(4);
+        btnRules.setLayoutParams(rblp);
+        bottomRow.addView(btnRules);
+
+        TextView btnClose = actionButton("Close", colLine, colPale);
         btnClose.setOnClickListener(new View.OnClickListener() {
             public void onClick(View v) {
                 hapticClick();
                 dlg.dismiss();
             }
         });
-        LinearLayout.LayoutParams clp = new LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
-        clp.topMargin = dp(10);
-        btnClose.setLayoutParams(clp);
-        box.addView(btnClose);
+        LinearLayout.LayoutParams cblp = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 0.8f);
+        cblp.leftMargin = dp(4);
+        btnClose.setLayoutParams(cblp);
+        bottomRow.addView(btnClose);
+
+        box.addView(bottomRow);
         dlg.show();
     }
 
@@ -4389,18 +4793,36 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
         box.addView(ctrlRow);
 
         final Dialog dlg = createDialogSheet(box);
-        TextView btnClose = actionButton("Close Morris", colLine, colPale);
+
+        LinearLayout bottomRow = new LinearLayout(this);
+        bottomRow.setOrientation(LinearLayout.HORIZONTAL);
+        bottomRow.setPadding(0, dp(8), 0, 0);
+
+        TextView btnRules = actionButton("📖 Rules & How-To", colPanel2, colCyan);
+        btnRules.setOnClickListener(new View.OnClickListener() {
+            public void onClick(View v) {
+                hapticClick();
+                showNineMensMorrisRulesDialog();
+            }
+        });
+        LinearLayout.LayoutParams rblp = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1.2f);
+        rblp.rightMargin = dp(4);
+        btnRules.setLayoutParams(rblp);
+        bottomRow.addView(btnRules);
+
+        TextView btnClose = actionButton("Close", colLine, colPale);
         btnClose.setOnClickListener(new View.OnClickListener() {
             public void onClick(View v) {
                 hapticClick();
                 dlg.dismiss();
             }
         });
-        LinearLayout.LayoutParams clp = new LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
-        clp.topMargin = dp(10);
-        btnClose.setLayoutParams(clp);
-        box.addView(btnClose);
+        LinearLayout.LayoutParams cblp = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 0.8f);
+        cblp.leftMargin = dp(4);
+        btnClose.setLayoutParams(cblp);
+        bottomRow.addView(btnClose);
+
+        box.addView(bottomRow);
         dlg.show();
     }
 
@@ -4463,18 +4885,36 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
         box.addView(ctrlRow);
 
         final Dialog dlg = createDialogSheet(box);
-        TextView btnClose = actionButton("Close Connect 4", colLine, colPale);
+
+        LinearLayout bottomRow = new LinearLayout(this);
+        bottomRow.setOrientation(LinearLayout.HORIZONTAL);
+        bottomRow.setPadding(0, dp(8), 0, 0);
+
+        TextView btnRules = actionButton("📖 Rules & How-To", colPanel2, 0xFFF59E0B);
+        btnRules.setOnClickListener(new View.OnClickListener() {
+            public void onClick(View v) {
+                hapticClick();
+                showConnectFourRulesDialog();
+            }
+        });
+        LinearLayout.LayoutParams rblp = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1.2f);
+        rblp.rightMargin = dp(4);
+        btnRules.setLayoutParams(rblp);
+        bottomRow.addView(btnRules);
+
+        TextView btnClose = actionButton("Close", colLine, colPale);
         btnClose.setOnClickListener(new View.OnClickListener() {
             public void onClick(View v) {
                 hapticClick();
                 dlg.dismiss();
             }
         });
-        LinearLayout.LayoutParams clp = new LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
-        clp.topMargin = dp(10);
-        btnClose.setLayoutParams(clp);
-        box.addView(btnClose);
+        LinearLayout.LayoutParams cblp = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 0.8f);
+        cblp.leftMargin = dp(4);
+        btnClose.setLayoutParams(cblp);
+        bottomRow.addView(btnClose);
+
+        box.addView(bottomRow);
         dlg.show();
     }
 
