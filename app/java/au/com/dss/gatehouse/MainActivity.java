@@ -16141,6 +16141,29 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
                 tvCat.setLayoutParams(ctlp);
                 topMeta.addView(tvCat);
 
+                long deltaMs = System.currentTimeMillis() - entry.timestampMs;
+                String deltaStr;
+                if (deltaMs < 60000L) {
+                    deltaStr = "Just now";
+                } else if (deltaMs < 3600000L) {
+                    deltaStr = (deltaMs / 60000L) + "m ago";
+                } else if (deltaMs < 86400000L) {
+                    deltaStr = (deltaMs / 3600000L) + "h ago";
+                } else {
+                    deltaStr = (deltaMs / 86400000L) + "d ago";
+                }
+
+                TextView tvDelta = new TextView(this);
+                tvDelta.setText("⏱️ " + deltaStr);
+                tvDelta.setTextColor(0xFF94A3B8);
+                tvDelta.setTextSize(8.5f);
+                tvDelta.setTypeface(Typeface.MONOSPACE);
+                LinearLayout.LayoutParams dlp = new LinearLayout.LayoutParams(
+                        LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+                dlp.rightMargin = dp(6);
+                tvDelta.setLayoutParams(dlp);
+                topMeta.addView(tvDelta);
+
                 TextView tvGuard = new TextView(this);
                 tvGuard.setText("✓ " + (entry.guardName.contains("Lochran") ? "L. Doherty" : entry.guardName));
                 tvGuard.setTextColor(colQuiet);
@@ -16426,14 +16449,92 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
     }
 
     private void exportCurrentShiftStatement(LogbookManager logMgr) {
+        showExportFormatSheet(logMgr);
+    }
+
+    private void showExportFormatSheet(final LogbookManager logMgr) {
         if (logMgr == null) return;
-        List<LogbookManager.LogEntry> entries = logMgr.filterEntries(
-                logbookSelectedShiftId, logbookSelectedCategory, logbookSearchQuery);
+        final List<LogbookManager.LogEntry> entries = logMgr.filterEntries(
+                logbookSelectedShiftId, logbookSelectedCategory, logbookSearchQuery, logbookSelectedTimeBucket);
         if (entries.isEmpty()) {
             Toast.makeText(this, "No occurrences to export", Toast.LENGTH_SHORT).show();
             return;
         }
 
+        final LinearLayout box = dialogContainer("📄 Export Shift Statement", "CHOOSE FORMAT", colCyan);
+
+        TextView tvSub = new TextView(this);
+        tvSub.setText(entries.size() + " occurrences ready for export · Duty Officer L. Doherty #41207");
+        tvSub.setTextColor(0xFF94A3B8);
+        tvSub.setTextSize(10f);
+        tvSub.setTypeface(Typeface.MONOSPACE);
+        tvSub.setPadding(0, 0, 0, dp(10));
+        box.addView(tvSub);
+
+        final Dialog dlg = createDialogSheet(box);
+
+        TextView btnOpt1 = actionButton("📋 Formatted Plain Text (Email / SMS)", colLine, colPale);
+        btnOpt1.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                hapticHeavyClick();
+                dlg.dismiss();
+                performExportPlainText(logMgr, entries);
+            }
+        });
+        box.addView(btnOpt1);
+
+        TextView btnOpt2 = actionButton("📑 Forensic Markdown Audit (Supervisor / Day Crew)", colLine, 0xFF38BDF8);
+        LinearLayout.LayoutParams o2lp = new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+        o2lp.topMargin = dp(8);
+        btnOpt2.setLayoutParams(o2lp);
+        btnOpt2.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                hapticHeavyClick();
+                dlg.dismiss();
+                performExportMarkdown(logMgr, entries);
+            }
+        });
+        box.addView(btnOpt2);
+
+        TextView btnOpt3 = actionButton("⚖️ QLD Security Legal Statement (Police / Insurance)", colLine, 0xFFFDE047);
+        LinearLayout.LayoutParams o3lp = new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+        o3lp.topMargin = dp(8);
+        btnOpt3.setLayoutParams(o3lp);
+        btnOpt3.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                hapticSealThud();
+                dlg.dismiss();
+                performExportLegalStatement(logMgr, entries);
+            }
+        });
+        box.addView(btnOpt3);
+
+        dlg.show();
+    }
+
+    private void shareStatement(String title, String statement) {
+        android.content.ClipboardManager cm = (android.content.ClipboardManager) getSystemService(android.content.Context.CLIPBOARD_SERVICE);
+        if (cm != null) {
+            cm.setPrimaryClip(android.content.ClipData.newPlainText(title, statement));
+        }
+        try {
+            android.content.Intent sendIntent = new android.content.Intent();
+            sendIntent.setAction(android.content.Intent.ACTION_SEND);
+            sendIntent.putExtra(android.content.Intent.EXTRA_TEXT, statement);
+            sendIntent.putExtra(android.content.Intent.EXTRA_SUBJECT, title);
+            sendIntent.setType("text/plain");
+            startActivity(android.content.Intent.createChooser(sendIntent, title));
+        } catch (Exception e) {
+            Toast.makeText(this, "📋 " + title + " copied to clipboard!", Toast.LENGTH_SHORT).show();
+        }
+    }
+
+    private void performExportPlainText(LogbookManager logMgr, List<LogbookManager.LogEntry> entries) {
         StringBuilder sb = new StringBuilder();
         sb.append("========================================\n");
         sb.append("   DSS SECURITY SHIFT LOGBOOK REPORT    \n");
@@ -16455,23 +16556,57 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
         sb.append("========================================\n");
         sb.append("       STATUS: VERIFIED & SEALED        \n");
         sb.append("========================================\n");
+        shareStatement("DSS Security Shift Logbook Report", sb.toString());
+    }
 
-        String statement = sb.toString();
-        android.content.ClipboardManager cm = (android.content.ClipboardManager) getSystemService(android.content.Context.CLIPBOARD_SERVICE);
-        if (cm != null) {
-            cm.setPrimaryClip(android.content.ClipData.newPlainText("DSS Shift Report", statement));
+    private void performExportMarkdown(LogbookManager logMgr, List<LogbookManager.LogEntry> entries) {
+        StringBuilder sb = new StringBuilder();
+        sb.append("# 🛡️ DSS Security Shift Forensic Audit Report\n\n");
+        sb.append("**Shift**: ").append(getLogbookSubtitle(logMgr)).append("  \n");
+        sb.append("**Duty Officer**: Lochran Doherty (`QLD LIC #41207`)  \n");
+        sb.append("**Timestamp**: `").append(new java.text.SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.US).format(new java.util.Date())).append("`  \n");
+        sb.append("**Total Verified Entries**: ").append(entries.size()).append("\n\n");
+        sb.append("| Time | Category | Officer | Occurrence Details |\n");
+        sb.append("| :--- | :--- | :--- | :--- |\n");
+
+        for (LogbookManager.LogEntry e : entries) {
+            String details = e.text.replace("|", "/");
+            if (!e.regoPlate.isEmpty()) details += " `[REGO: " + e.regoPlate + "]`";
+            if (!e.photoHashSnippet.isEmpty()) details += " `[IMG: #" + e.photoHashSnippet + "]`";
+            sb.append("| `").append(e.timeStr).append("` | ")
+                    .append(e.categoryLabel).append(" | ")
+                    .append(e.guardName).append(" | ")
+                    .append(details).append(" |\n");
+        }
+        sb.append("\n---\n*Cryptographically sealed by SPARK SHA256 Core Engine*\n");
+        shareStatement("DSS Forensic Markdown Audit", sb.toString());
+    }
+
+    private void performExportLegalStatement(LogbookManager logMgr, List<LogbookManager.LogEntry> entries) {
+        StringBuilder sb = new StringBuilder();
+        sb.append("STATUTORY OCCURRENCE RECORD & LEGAL ATTESTATION\n");
+        sb.append("Under Security Providers Act 1993 (Queensland)\n");
+        sb.append("====================================================\n");
+        sb.append("LOCATION: Kingston Rd Gatehouse & Facility Perimeter\n");
+        sb.append("OPERATOR: Lochran Doherty\n");
+        sb.append("LICENCE NUMBER: 41207 (Class 1 Security Provider)\n");
+        sb.append("DATE/TIME GENERATED: ").append(new java.text.SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.US).format(new java.util.Date())).append(" AEST\n");
+        sb.append("RECORD COUNT: ").append(entries.size()).append(" verified entries\n");
+        sb.append("====================================================\n\n");
+
+        for (int i = 0; i < entries.size(); i++) {
+            LogbookManager.LogEntry e = entries.get(i);
+            sb.append(String.format(Locale.US, "[ITEM %02d] %s AEST - %s\n", i + 1, e.timeStr, e.categoryLabel));
+            sb.append("DETAILS: ").append(e.text).append("\n");
+            if (!e.regoPlate.isEmpty()) sb.append("VEHICLE IDENTIFIER: ").append(e.regoPlate).append("\n");
+            if (!e.photoHashSnippet.isEmpty()) sb.append("DIGITAL EVIDENCE HASH: #").append(e.photoHashSnippet).append("\n");
+            sb.append("RECORDING OFFICER: ").append(e.guardName).append(" (LIC #41207)\n\n");
         }
 
-        try {
-            android.content.Intent sendIntent = new android.content.Intent();
-            sendIntent.setAction(android.content.Intent.ACTION_SEND);
-            sendIntent.putExtra(android.content.Intent.EXTRA_TEXT, statement);
-            sendIntent.putExtra(android.content.Intent.EXTRA_SUBJECT, "DSS Security Shift Logbook Report");
-            sendIntent.setType("text/plain");
-            startActivity(android.content.Intent.createChooser(sendIntent, "Share Shift Logbook Report"));
-        } catch (Exception e) {
-            Toast.makeText(this, "📋 Shift report copied to clipboard!", Toast.LENGTH_SHORT).show();
-        }
+        sb.append("ATTESTATION STATEMENT:\n");
+        sb.append("I, Lochran Doherty, certify that the above occurrences represent a true and accurate record of all activities, patrol inspections, and security observations observed during my assigned shift.\n");
+        sb.append("SIGNATURE SEAL: [SEALED ELECTRONICALLY VIA DSS SPARK ENGINE #41207]\n");
+        shareStatement("DSS Statutory Security Legal Statement", sb.toString());
     }
 
     private void showOfficerCredentialModal() {
