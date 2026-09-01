@@ -15623,7 +15623,11 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
     }
 
     private View buildLogbookFeedView() {
-        ScrollView sv = new ScrollView(this);
+        FrameLayout rootFrame = new FrameLayout(this);
+        rootFrame.setLayoutParams(new FrameLayout.LayoutParams(
+                FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT));
+
+        final ScrollView sv = new ScrollView(this);
         sv.setVerticalScrollBarEnabled(true);
         sv.setLayoutParams(new FrameLayout.LayoutParams(
                 FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT));
@@ -15841,7 +15845,35 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
         }
 
         sv.addView(container);
-        return sv;
+        rootFrame.addView(sv);
+
+        // Floating Jump to Latest Button
+        if (entries.size() > 5) {
+            final TextView btnJump = new TextView(this);
+            btnJump.setText("⬇ LATEST");
+            btnJump.setTextColor(0xFF0F172A);
+            btnJump.setTextSize(9.5f);
+            btnJump.setTypeface(Typeface.create(Typeface.MONOSPACE, Typeface.BOLD));
+            btnJump.setPadding(dp(10), dp(5), dp(10), dp(5));
+            btnJump.setBackground(rounded(colCyan, dp(14)));
+            btnJump.setElevation(dp(6));
+            FrameLayout.LayoutParams jlp = new FrameLayout.LayoutParams(
+                    FrameLayout.LayoutParams.WRAP_CONTENT, FrameLayout.LayoutParams.WRAP_CONTENT);
+            jlp.gravity = Gravity.BOTTOM | Gravity.END;
+            jlp.bottomMargin = dp(8);
+            jlp.rightMargin = dp(8);
+            btnJump.setLayoutParams(jlp);
+            btnJump.setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View v) {
+                    hapticClick();
+                    sv.fullScroll(ScrollView.FOCUS_DOWN);
+                }
+            });
+            rootFrame.addView(btnJump);
+        }
+
+        return rootFrame;
     }
 
     private void showLogEntryDetailSheet(final LogbookManager.LogEntry entry) {
@@ -16141,6 +16173,33 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
 
         sheetScroll.addView(gridContent);
         sheetCard.addView(sheetScroll);
+
+        // Official Forensic Stamp Plaque
+        LinearLayout stampPlaque = new LinearLayout(this);
+        stampPlaque.setOrientation(LinearLayout.VERTICAL);
+        stampPlaque.setGravity(Gravity.CENTER);
+        android.graphics.drawable.GradientDrawable stBg = new android.graphics.drawable.GradientDrawable(
+                android.graphics.drawable.GradientDrawable.Orientation.TL_BR,
+                carbonMode ? new int[]{0x33FDE047, 0x11231D08} : new int[]{0x22EF4444, 0x11111827}
+        );
+        stBg.setCornerRadius(dp(8));
+        stBg.setStroke(dp(1), carbonMode ? 0x66FDE047 : 0x44EF4444);
+        stampPlaque.setBackground(stBg);
+        stampPlaque.setPadding(dp(10), dp(6), dp(10), dp(6));
+        LinearLayout.LayoutParams stlp = new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+        stlp.topMargin = dp(6);
+        stlp.bottomMargin = dp(4);
+        stampPlaque.setLayoutParams(stlp);
+
+        TextView tvStamp = new TextView(this);
+        tvStamp.setText(carbonMode ? "★ CANARY CARBON DUPLICATE · SEALED ON SITE ★" : "★ DSS SECURITY OFFICIAL FOLIO · QLD LIC #41207 · VERIFIED ★");
+        tvStamp.setTextColor(carbonMode ? 0xFFFDE047 : 0xFFF87171);
+        tvStamp.setTextSize(9.5f);
+        tvStamp.setTypeface(Typeface.create(Typeface.MONOSPACE, Typeface.BOLD));
+        tvStamp.setGravity(Gravity.CENTER);
+        stampPlaque.addView(tvStamp);
+        sheetCard.addView(stampPlaque);
 
         // Bottom Seal & SPARK Attestation Line
         LinearLayout folioFoot = new LinearLayout(this);
