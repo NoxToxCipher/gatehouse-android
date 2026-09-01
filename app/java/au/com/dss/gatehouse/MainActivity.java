@@ -3921,16 +3921,24 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
 
     private View buildCompactToolTile(String iconGlyph, String titleStr, String badgeStr, int badgeCol, String descStr, final View.OnClickListener onClick) {
         final int glowCol = (badgeCol != 0 ? badgeCol : colCyan);
-        final RippleCardFrameLayout rippleTile = new RippleCardFrameLayout(this, 16f, glowCol);
-        rippleTile.setBackground(rounded(0xFF131B2B, dp(16)));
+        final RippleCardFrameLayout rippleTile = new RippleCardFrameLayout(this, 18f, glowCol);
+
+        android.graphics.drawable.GradientDrawable cardBg = new android.graphics.drawable.GradientDrawable(
+            android.graphics.drawable.GradientDrawable.Orientation.TOP_BOTTOM,
+            new int[]{0xFF161E2E, 0xFF0E1422}
+        );
+        cardBg.setCornerRadius(dp(18));
+        cardBg.setStroke(dp(1), 0x28000000 | (glowCol & 0x00FFFFFF));
+        rippleTile.setBackground(cardBg);
+
         LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.MATCH_PARENT, 1f);
         lp.setMargins(dp(5), dp(5), dp(5), dp(5));
         rippleTile.setLayoutParams(lp);
 
         final LinearLayout tile = new LinearLayout(this);
         tile.setOrientation(LinearLayout.VERTICAL);
-        tile.setPadding(dp(14), dp(14), dp(14), dp(14));
-        tile.setMinimumHeight(dp(132));
+        tile.setPadding(dp(14), dp(13), dp(14), dp(13));
+        tile.setMinimumHeight(dp(136));
         tile.setLayoutParams(new FrameLayout.LayoutParams(
                 FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT));
 
@@ -3939,16 +3947,21 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
         top.setOrientation(LinearLayout.HORIZONTAL);
         top.setGravity(Gravity.CENTER_VERTICAL);
 
-        // Modern 42x42dp Bento Squircle Icon Box with 2-Tone Gradient & Border
+        // Modern 44x44dp Bento Squircle Icon Box with 2-Tone Gradient & Border
         FrameLayout iconBox = new FrameLayout(this);
-        iconBox.setBackground(rounded(0x28000000 | (glowCol & 0x00FFFFFF), dp(12)));
-        iconBox.setPadding(dp(4), dp(4), dp(4), dp(4));
-        LinearLayout.LayoutParams iblp = new LinearLayout.LayoutParams(dp(42), dp(42));
+        android.graphics.drawable.GradientDrawable ibBg = new android.graphics.drawable.GradientDrawable(
+            android.graphics.drawable.GradientDrawable.Orientation.TL_BR,
+            new int[]{0x40000000 | (glowCol & 0x00FFFFFF), 0x18000000 | (glowCol & 0x00FFFFFF)}
+        );
+        ibBg.setCornerRadius(dp(12));
+        ibBg.setStroke(dp(1), 0x66000000 | (glowCol & 0x00FFFFFF));
+        iconBox.setBackground(ibBg);
+        LinearLayout.LayoutParams iblp = new LinearLayout.LayoutParams(dp(44), dp(44));
         iconBox.setLayoutParams(iblp);
 
         TextView tvIco = new TextView(this);
         tvIco.setText(iconGlyph);
-        tvIco.setTextSize(18);
+        tvIco.setTextSize(20);
         tvIco.setGravity(Gravity.CENTER);
         iconBox.addView(tvIco);
         top.addView(iconBox);
@@ -3964,8 +3977,8 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
             bg.setTextColor(glowCol);
             bg.setTextSize(8.5f);
             bg.setTypeface(Typeface.MONOSPACE);
-            bg.setPadding(dp(7), dp(3), dp(7), dp(3));
-            bg.setBackground(rounded(0x26000000 | (glowCol & 0x00FFFFFF), dp(6)));
+            bg.setPadding(dp(8), dp(4), dp(8), dp(4));
+            bg.setBackground(rounded(0x2E000000 | (glowCol & 0x00FFFFFF), dp(7)));
             top.addView(bg);
         }
         tile.addView(top);
@@ -3989,9 +4002,10 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
 
         TextView arrow = new TextView(this);
         arrow.setText("›");
-        arrow.setTextColor(0xFF64748B);
+        arrow.setTextColor(glowCol);
         arrow.setTextSize(16);
         arrow.setTypeface(Typeface.DEFAULT_BOLD);
+        arrow.setPadding(dp(4), 0, dp(2), 0);
         titleRow.addView(arrow);
 
         tile.addView(titleRow);
@@ -4003,12 +4017,12 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
         desc.setLines(2);
         desc.setMaxLines(2);
         desc.setEllipsize(android.text.TextUtils.TruncateAt.END);
-        desc.setLineSpacing(dp(1), 1f);
+        desc.setLineSpacing(dp(2), 1f);
         tile.addView(desc);
 
         rippleTile.setOnClickListener(new View.OnClickListener() {
             public void onClick(View v) {
-                hapticClick();
+                hapticHeavyClick();
                 if (onClick != null) onClick.onClick(v);
             }
         });
