@@ -838,6 +838,57 @@ public class BadukGameView extends View {
         return sb.toString();
     }
 
+    public boolean importSGF(String sgf) {
+        if (sgf == null || !sgf.contains("(;")) return false;
+        try {
+            int newSize = 19;
+            java.util.regex.Matcher mSz = java.util.regex.Pattern.compile("SZ\\[(\\d+)\\]").matcher(sgf);
+            if (mSz.find()) {
+                try { newSize = Integer.parseInt(mSz.group(1)); } catch (Exception ignored) {}
+            }
+            if (newSize != 9 && newSize != 13 && newSize != 19) newSize = 19;
+            this.boardSize = newSize;
+            resetGame();
+
+            java.util.regex.Matcher mAb = java.util.regex.Pattern.compile("AB(\\[[a-z]{2}\\])+").matcher(sgf);
+            if (mAb.find()) {
+                String match = mAb.group(0);
+                java.util.regex.Matcher mCoords = java.util.regex.Pattern.compile("\\[([a-z]{2})\\]").matcher(match);
+                while (mCoords.find()) {
+                    String c = mCoords.group(1);
+                    int hx = c.charAt(0) - 'a';
+                    int hy = c.charAt(1) - 'a';
+                    if (hx >= 0 && hx < boardSize && hy >= 0 && hy < boardSize) {
+                        board[hy][hx] = 1;
+                        moveList.add(new Point(hx, hy));
+                    }
+                }
+            }
+
+            java.util.regex.Matcher mMoves = java.util.regex.Pattern.compile(";([BW])\\[([a-z]{0,2})\\]").matcher(sgf);
+            while (mMoves.find()) {
+                String colorStr = mMoves.group(1);
+                String coordStr = mMoves.group(2);
+                int color = "B".equalsIgnoreCase(colorStr) ? 1 : 2;
+                if (coordStr.isEmpty() || coordStr.equals("tt")) {
+                    passTurn();
+                } else if (coordStr.length() == 2) {
+                    int gx = coordStr.charAt(0) - 'a';
+                    int gy = coordStr.charAt(1) - 'a';
+                    if (gx >= 0 && gx < boardSize && gy >= 0 && gy < boardSize) {
+                        currentTurn = color;
+                        playMove(gx, gy);
+                    }
+                }
+            }
+            updateStatus();
+            invalidate();
+            return true;
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
     private int countGroupLiberties(int startX, int startY, int color, boolean[][] visited) {
         Set<Integer> liberties = new HashSet<>();
         Queue<Point> q = new LinkedList<>();

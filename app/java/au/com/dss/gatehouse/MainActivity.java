@@ -5185,8 +5185,26 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
                 android.content.ClipboardManager cm = (android.content.ClipboardManager) getSystemService(android.content.Context.CLIPBOARD_SERVICE);
                 if (cm != null) {
                     cm.setPrimaryClip(android.content.ClipData.newPlainText("Baduk SGF", sgf));
-                    Toast.makeText(MainActivity.this, "📋 SGF Game Record Copied to Clipboard!", Toast.LENGTH_SHORT).show();
+                    Toast.makeText(MainActivity.this, "📋 SGF Game Record Copied (Hold to Load SGF)", Toast.LENGTH_SHORT).show();
                 }
+            }
+        });
+        btnSgf.setOnLongClickListener(new View.OnLongClickListener() {
+            public boolean onLongClick(View v) {
+                hapticHeavyClick();
+                android.content.ClipboardManager cm = (android.content.ClipboardManager) getSystemService(android.content.Context.CLIPBOARD_SERVICE);
+                if (cm != null && cm.hasPrimaryClip() && cm.getPrimaryClip().getItemCount() > 0) {
+                    CharSequence text = cm.getPrimaryClip().getItemAt(0).getText();
+                    if (text != null && text.toString().contains("(;")) {
+                        boolean ok = badukView.importSGF(text.toString());
+                        if (ok) {
+                            Toast.makeText(MainActivity.this, "📂 Loaded SGF Game Record from Clipboard!", Toast.LENGTH_SHORT).show();
+                            return true;
+                        }
+                    }
+                }
+                Toast.makeText(MainActivity.this, "No valid SGF text found on clipboard to load", Toast.LENGTH_SHORT).show();
+                return true;
             }
         });
         LinearLayout.LayoutParams sgflp = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 0.8f);
