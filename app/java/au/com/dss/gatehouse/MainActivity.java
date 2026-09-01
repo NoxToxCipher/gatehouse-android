@@ -2483,7 +2483,7 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
 
     private void promptPumpHouseCheck(final String name, final String uid) {
         final boolean isLot16Inside = name.contains("Lot 16 Fire System") || name.contains("Inside");
-        final LinearLayout box = dialogContainer("🔥 " + name, isLot16Inside ? "3-GAUGE SPRINKLER RISER SET" : "1,200 PSI OPTIMAL", colAccent);
+        final LinearLayout box = dialogContainer("🔥 " + name, isLot16Inside ? "3-GAUGE SET" : "1,200 PSI OPTIMAL", colAccent);
 
         ArrayList<PressureRecord> history = pressureHistory.get(name);
         if (history != null && !history.isEmpty()) {
@@ -2521,13 +2521,13 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
 
         if (isLot16Inside) {
             // =================================================================
-            // 💧 3-GAUGE SYSTEM FOR LOT 16 FS INSIDE (1,200 PSI NOMINAL)
+            // 💧 3-GAUGE SYSTEM FOR LOT 16 (1,200 PSI NOMINAL)
             // =================================================================
-            final String[] gaugeNames = {"💧 Town Main", "🚿 Sprinkler Riser", "⚡ Booster Pump"};
+            final String[] gaugeNames = {"Gauge #1", "Gauge #2", "Gauge #3"};
             final int[] gaugePressures = {1200, 1200, 1200};
             final int[] currentGaugeIdx = {0};
 
-            box.addView(formSectionLabel("SELECT RISER GAUGE (TAP TO INSPECT)"));
+            box.addView(formSectionLabel("SELECT GAUGE (TAP TO INSPECT)"));
 
             final LinearLayout tabPills = new LinearLayout(this);
             tabPills.setOrientation(LinearLayout.HORIZONTAL);
@@ -2714,12 +2714,12 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
                                         gaugePressures[2] >= 1100 && gaugePressures[2] <= 1350;
 
                     String autoStatus = allNormal ? "✓ All 3 In-Spec (1,200 PSI Nominal)" :
-                            ("Main: " + getAutoPressureStatus(gaugePressures[0]) + ", " +
-                             "Riser: " + getAutoPressureStatus(gaugePressures[1]) + ", " +
-                             "Booster: " + getAutoPressureStatus(gaugePressures[2]));
+                            ("Gauge #1: " + getAutoPressureStatus(gaugePressures[0]) + ", " +
+                             "Gauge #2: " + getAutoPressureStatus(gaugePressures[1]) + ", " +
+                             "Gauge #3: " + getAutoPressureStatus(gaugePressures[2]));
 
-                    String line = "Lot 16 FS Inside: [Main: " + gaugePressures[0] + " PSI, Riser: " + gaugePressures[1] +
-                                  " PSI, Booster: " + gaugePressures[2] + " PSI] · " + autoStatus;
+                    String line = name + ": [Gauge #1: " + gaugePressures[0] + " PSI, Gauge #2: " + gaugePressures[1] +
+                                  " PSI, Gauge #3: " + gaugePressures[2] + " PSI] · " + autoStatus;
 
                     if (!oneLine(line)) {
                         banner.setText("notes must be one line");
