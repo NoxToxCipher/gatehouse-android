@@ -16214,17 +16214,38 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
                 // Right Column: Luxury Occurrence Card
                 LinearLayout rightCard = new LinearLayout(this);
                 rightCard.setOrientation(LinearLayout.VERTICAL);
+
+                final boolean isHighPriority = entry.category.equalsIgnoreCase("INCIDENT") ||
+                        entry.text.toUpperCase(Locale.US).contains("ALARM") ||
+                        entry.text.toUpperCase(Locale.US).contains("EMERGENCY") ||
+                        entry.text.toUpperCase(Locale.US).contains("BREACH");
+
                 android.graphics.drawable.GradientDrawable cardBg = new android.graphics.drawable.GradientDrawable(
                         android.graphics.drawable.GradientDrawable.Orientation.TL_BR,
-                        new int[]{0xFF1E293B, 0xFF131B2B}
+                        isHighPriority ? new int[]{0xFF2D1515, 0xFF180A0A} : new int[]{0xFF1E293B, 0xFF131B2B}
                 );
                 cardBg.setCornerRadius(dp(14));
-                cardBg.setStroke(dp(1), 0x33000000 | (entry.categoryColor & 0x00FFFFFF));
+                cardBg.setStroke(dp(isHighPriority ? 2 : 1), isHighPriority ? 0xCCEF4444 : (0x33000000 | (entry.categoryColor & 0x00FFFFFF)));
                 rightCard.setBackground(cardBg);
                 rightCard.setPadding(dp(14), dp(11), dp(14), dp(11));
                 LinearLayout.LayoutParams rclp = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
                 rclp.leftMargin = dp(6);
                 rightCard.setLayoutParams(rclp);
+
+                if (isHighPriority) {
+                    TextView tvUrgent = new TextView(this);
+                    tvUrgent.setText("🚨 HIGH PRIORITY INCIDENT · DISPATCH LOGGED");
+                    tvUrgent.setTextColor(0xFFEF4444);
+                    tvUrgent.setTextSize(9f);
+                    tvUrgent.setTypeface(Typeface.create(Typeface.MONOSPACE, Typeface.BOLD));
+                    tvUrgent.setPadding(dp(8), dp(2), dp(8), dp(2));
+                    tvUrgent.setBackground(rounded(0x33EF4444, dp(4)));
+                    LinearLayout.LayoutParams ulp = new LinearLayout.LayoutParams(
+                            LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+                    ulp.bottomMargin = dp(4);
+                    tvUrgent.setLayoutParams(ulp);
+                    rightCard.addView(tvUrgent);
+                }
 
                 // Category & Guard Signature Row
                 LinearLayout topMeta = new LinearLayout(this);
@@ -17212,6 +17233,22 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
         box.addView(card);
 
         final Dialog dlg = createDialogSheet(box);
+
+        TextView btnFilterGuard = actionButton("🔍 Filter Occurrences (L. Doherty)", colLine, colCyan);
+        LinearLayout.LayoutParams flp = new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+        flp.bottomMargin = dp(8);
+        btnFilterGuard.setLayoutParams(flp);
+        btnFilterGuard.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                hapticClick();
+                dlg.dismiss();
+                logbookSearchQuery = "Doherty";
+                showFullLogbookDialog();
+            }
+        });
+        box.addView(btnFilterGuard);
 
         TextView btnClose = actionButton("✓ Attestation Verified", colAccent, colAccentInk);
         btnClose.setOnClickListener(new View.OnClickListener() {
