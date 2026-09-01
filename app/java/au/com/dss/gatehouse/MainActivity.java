@@ -4922,15 +4922,35 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
         bottomRow.setOrientation(LinearLayout.HORIZONTAL);
         bottomRow.setPadding(0, dp(8), 0, 0);
 
-        TextView btnRules = actionButton("📖 Rules & How-To", colPanel2, colAccent);
+        final TextView btnHeatmap = actionButton("🗺️ Heatmap", colPanel2, 0xFF10B981);
+        btnHeatmap.setOnClickListener(new View.OnClickListener() {
+            public void onClick(View v) {
+                hapticClick();
+                badukView.toggleHeatmap();
+                if (badukView.isHeatmapEnabled()) {
+                    btnHeatmap.setBackground(rounded(0xFF10B981, dp(8)));
+                    btnHeatmap.setTextColor(0xFF0F172A);
+                } else {
+                    btnHeatmap.setBackground(rounded(colPanel2, dp(8)));
+                    btnHeatmap.setTextColor(0xFF10B981);
+                }
+            }
+        });
+        LinearLayout.LayoutParams hmlp = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1.1f);
+        hmlp.rightMargin = dp(3);
+        btnHeatmap.setLayoutParams(hmlp);
+        bottomRow.addView(btnHeatmap);
+
+        TextView btnRules = actionButton("📖 Rules", colPanel2, colAccent);
         btnRules.setOnClickListener(new View.OnClickListener() {
             public void onClick(View v) {
                 hapticClick();
                 showBadukRulesDialog();
             }
         });
-        LinearLayout.LayoutParams rblp = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1.2f);
-        rblp.rightMargin = dp(4);
+        LinearLayout.LayoutParams rblp = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1.0f);
+        rblp.leftMargin = dp(3);
+        rblp.rightMargin = dp(3);
         btnRules.setLayoutParams(rblp);
         bottomRow.addView(btnRules);
 
@@ -4942,7 +4962,7 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
             }
         });
         LinearLayout.LayoutParams cblp = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 0.8f);
-        cblp.leftMargin = dp(4);
+        cblp.leftMargin = dp(3);
         btnClose.setLayoutParams(cblp);
         bottomRow.addView(btnClose);
 

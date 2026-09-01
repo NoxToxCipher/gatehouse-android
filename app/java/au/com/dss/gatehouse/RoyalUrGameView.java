@@ -106,6 +106,21 @@ public class RoyalUrGameView extends View {
     private final java.util.List<HistoryState> history = new java.util.ArrayList<>();
     private final Paint moveGlowPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
 
+    // Rosette Sacred Blessing Shimmer & Starburst Particle Dust Ring
+    private static class RosetteParticle {
+        float x, y;
+        float vx, vy;
+        float size;
+        int color;
+        float alpha;
+        long birthTime;
+    }
+    private final java.util.List<RosetteParticle> rosetteParticles = new java.util.ArrayList<>();
+    private long lastRosetteBlessingTime = 0;
+    private float lastRosetteTileX = 0;
+    private float lastRosetteTileY = 0;
+    private final Paint rosetteBlessingPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+
     private float dpf(float v) {
         return v * getResources().getDisplayMetrics().density;
     }
@@ -360,12 +375,44 @@ public class RoyalUrGameView extends View {
 
         boolean landedOnRosette = (nextPos < 14 && IS_ROSETTE[nextPos]);
         if (landedOnRosette) {
+            int r = (currentTurn == 0) ? WHITE_PATH[nextPos][0] : BLACK_PATH[nextPos][0];
+            int c = (currentTurn == 0) ? WHITE_PATH[nextPos][1] : BLACK_PATH[nextPos][1];
+            float pad = dpf(10f);
+            float cellW = (getWidth() - pad * 2) / 8f;
+            float cellH = (getHeight() - dpf(64f)) / 3f;
+            lastRosetteTileX = pad + c * cellW + cellW / 2f;
+            lastRosetteTileY = dpf(8f) + r * cellH + cellH / 2f;
+            lastRosetteBlessingTime = System.currentTimeMillis();
+
+            // Spawn 28 golden starburst blessing particles
+            rosetteParticles.clear();
+            int[] sparkColors = {0xFFFFD166, 0xFFFDE047, 0xFFEF4444, 0xFF38BDF8, 0xFFFFFFFF};
+            for (int p = 0; p < 28; p++) {
+                RosetteParticle rp = new RosetteParticle();
+                rp.x = lastRosetteTileX;
+                rp.y = lastRosetteTileY;
+                double angle = p * (Math.PI * 2.0 / 28.0) + (rand.nextDouble() * 0.2 - 0.1);
+                float speed = dpf(1.8f) + (float)(rand.nextDouble() * dpf(3.2f));
+                rp.vx = (float)(Math.cos(angle) * speed);
+                rp.vy = (float)(Math.sin(angle) * speed);
+                rp.size = dpf(2.0f) + (float)(rand.nextDouble() * dpf(2.5f));
+                rp.color = sparkColors[rand.nextInt(sparkColors.length)];
+                rp.alpha = 1.0f;
+                rp.birthTime = lastRosetteBlessingTime;
+                rosetteParticles.add(rp);
+            }
+
+            try {
+                performHapticFeedback(HapticFeedbackConstants.CONFIRM);
+            } catch (Exception ignored) {}
+
             waitingForRoll = true;
             currentRoll = -1;
             updateStatus();
-            invalidate();
+            postInvalidateOnAnimation();
+
             if (currentTurn == 1) {
-                postDelayed(new Runnable() { public void run() { rollDice(); } }, 450);
+                postDelayed(new Runnable() { public void run() { rollDice(); } }, 650);
             }
         } else {
             passTurn();
@@ -564,6 +611,55 @@ public class RoyalUrGameView extends View {
                 float cy = dpf(8f) + r * cellH + cellH / 2f;
                 drawSumerianPiece(canvas, cx, cy, pieceR, false);
             }
+        }
+
+        // Draw Rosette Blessing Shimmer, Double Pulse & Particle Dust Ring
+        long now = System.currentTimeMillis();
+        long blessingElapsed = now - lastRosetteBlessingTime;
+        boolean hasActiveBlessing = (lastRosetteBlessingTime > 0 && blessingElapsed < 1600);
+
+        if (hasActiveBlessing) {
+            float progress = (float) blessingElapsed / 1600f;
+            // Double heart-beat pulse wave: sin(progress * PI * 3)
+            float pulse = (float) Math.sin(progress * Math.PI * 3.0);
+            float glowR = cellW * (0.55f + 0.35f * Math.max(0f, pulse));
+            rosetteBlessingPaint.setColor(0xFFFFD166);
+            rosetteBlessingPaint.setStyle(Paint.Style.STROKE);
+            rosetteBlessingPaint.setStrokeWidth(dpf(3f) * (1f - progress));
+            rosetteBlessingPaint.setAlpha((int) (220 * (1f - progress)));
+            canvas.drawCircle(lastRosetteTileX, lastRosetteTileY, glowR, rosetteBlessingPaint);
+
+            rosetteBlessingPaint.setStyle(Paint.Style.FILL);
+            rosetteBlessingPaint.setAlpha((int) (60 * (1f - progress)));
+            canvas.drawCircle(lastRosetteTileX, lastRosetteTileY, glowR * 0.8f, rosetteBlessingPaint);
+        }
+
+        // Draw and update starburst particles
+        if (!rosetteParticles.isEmpty()) {
+            Paint pPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+            pPaint.setStyle(Paint.Style.FILL);
+            for (int p = rosetteParticles.size() - 1; p >= 0; p--) {
+                RosetteParticle rp = rosetteParticles.get(p);
+                long pElapsed = now - rp.birthTime;
+                if (pElapsed > 1200) {
+                    rosetteParticles.remove(p);
+                    continue;
+                }
+                float pp = (float) pElapsed / 1200f;
+                rp.x += rp.vx;
+                rp.y += rp.vy;
+                rp.vx *= 0.94f;
+                rp.vy *= 0.94f;
+                rp.alpha = (1f - pp);
+
+                pPaint.setColor(rp.color);
+                pPaint.setAlpha((int)(255 * rp.alpha));
+                canvas.drawCircle(rp.x, rp.y, rp.size * (1f - pp * 0.5f), pPaint);
+            }
+        }
+
+        if (hasActiveBlessing || !rosetteParticles.isEmpty()) {
+            postInvalidateOnAnimation();
         }
 
         // Bottom Dashboard: Reserves & 3D Tetrahedral Dice

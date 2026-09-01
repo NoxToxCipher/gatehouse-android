@@ -4,6 +4,7 @@ import android.content.Context;
 import android.graphics.Canvas;
 import android.graphics.LinearGradient;
 import android.graphics.Paint;
+import android.graphics.Path;
 import android.graphics.Point;
 import android.graphics.RadialGradient;
 import android.graphics.RectF;
@@ -74,10 +75,20 @@ public class BadukGameView extends View {
     private int puzzleIndex = 0;
     private boolean puzzleSolved = false;
     private boolean showTerritory = false;
+    private boolean showHeatmap = false;
     private int difficultyTier = 1; // 0 = Apprentice (1-kyu), 1 = Master (3-dan), 2 = Grandmaster (9-dan)
     private int hintX = -1;
     private int hintY = -1;
     private final Paint hintPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+
+    // Stone Placement Descent & Wood Impact Clack Ripple Animation
+    private int animStoneX = -1;
+    private int animStoneY = -1;
+    private int animStoneColor = 0;
+    private long animStartTime = 0;
+    private static final long PLACEMENT_ANIM_DURATION_MS = 220;
+    private static final long RIPPLE_ANIM_DURATION_MS = 400;
+    private final Paint placementRipplePaint = new Paint(Paint.ANTI_ALIAS_FLAG);
 
     public void setDifficultyTier(int tier) {
         this.difficultyTier = Math.max(0, Math.min(2, tier));
@@ -86,6 +97,21 @@ public class BadukGameView extends View {
 
     public int getDifficultyTier() {
         return difficultyTier;
+    }
+
+    public void toggleHeatmap() {
+        showHeatmap = !showHeatmap;
+        if (showHeatmap) {
+            try { performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK); } catch (Exception ignored) {}
+            if (statusListener != null) {
+                statusListener.onStatusChanged("🗺️ Real-Time Influence Heatmap & Territory Control Active", 0xFF10B981);
+            }
+        }
+        invalidate();
+    }
+
+    public boolean isHeatmapEnabled() {
+        return showHeatmap;
     }
 
     private float dpf(float v) {
@@ -449,7 +475,12 @@ public class BadukGameView extends View {
 
         try {
             if (capturedCount > 0) {
-                performHapticFeedback(HapticFeedbackConstants.LONG_PRESS);
+                performHapticFeedback(HapticFeedbackConstants.CONFIRM);
+                postDelayed(new Runnable() {
+                    public void run() {
+                        try { performHapticFeedback(HapticFeedbackConstants.LONG_PRESS); } catch (Exception ignored) {}
+                    }
+                }, 75);
             } else {
                 performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP);
             }
@@ -466,8 +497,15 @@ public class BadukGameView extends View {
         moveList.add(new Point(x, y));
         consecutivePasses = 0;
         currentTurn = opponent;
+
+        // Trigger elegant stone placement descent and wood impact ripple
+        animStoneX = x;
+        animStoneY = y;
+        animStoneColor = color;
+        animStartTime = System.currentTimeMillis();
+
         updateStatus();
-        invalidate();
+        postInvalidateOnAnimation();
 
         if (mode == 0 && currentTurn == 2) {
             postDelayed(new Runnable() {
@@ -932,8 +970,15 @@ public class BadukGameView extends View {
             }
         }
 
+        // Draw Real-Time Influence Heatmap & Territory Control if enabled
+        if (showHeatmap) {
+            drawInfluenceHeatmap(canvas, startX, startY, cellSize);
+        }
+
         // Draw 3D Bi-convex Stones (Nachiguro Slate & Hyuga Clamshell)
         float stoneR = cellSize * 0.47f;
+        long elapsed = System.currentTimeMillis() - animStartTime;
+        boolean isAnimating = (animStoneX >= 0 && animStoneY >= 0 && elapsed < RIPPLE_ANIM_DURATION_MS);
 
         for (int y = 0; y < boardSize; y++) {
             for (int x = 0; x < boardSize; x++) {
@@ -943,30 +988,59 @@ public class BadukGameView extends View {
                 float cx = startX + x * cellSize;
                 float cy = startY + y * cellSize;
 
-                // Atari Warning Aura (precalculated, zero allocation)
-                if (atariMap[y][x]) {
-                    canvas.drawCircle(cx, cy, stoneR + dpf(2.5f), atariGlowPaint);
-                }
+                if (x == animStoneX && y == animStoneY && elapsed < PLACEMENT_ANIM_DURATION_MS) {
+                    // Elevated Descent Animation
+                    float p = (float) elapsed / PLACEMENT_ANIM_DURATION_MS;
+                    float ease = 1f - (1f - p) * (1f - p) * (1f - p);
+                    float animOffsetY = -dpf(16f) * (1f - ease);
+                    float animScale = 1.0f + 0.30f * (1f - ease);
+                    float curR = stoneR * animScale;
 
-                // Contact Shadow
-                canvas.drawCircle(cx + dpf(1.5f), cy + dpf(2.5f), stoneR, shadowPaint);
+                    // Diffused Elevated Drop Shadow
+                    float shadowDist = dpf(2.5f) + dpf(8.0f) * (1f - ease);
+                    shadowPaint.setAlpha((int) (150 * ease + 50 * (1f - ease)));
+                    canvas.drawCircle(cx + dpf(1.5f), cy + shadowDist, curR * 0.95f, shadowPaint);
+                    shadowPaint.setAlpha(0x99);
 
-                if (val == 1) { // Matte Nachiguro Slate (Bi-convex 3D layered)
-                    canvas.drawCircle(cx, cy, stoneR, blackStoneBasePaint);
-                    canvas.drawCircle(cx - stoneR * 0.30f, cy - stoneR * 0.30f, stoneR * 0.48f, blackStoneHlPaint);
-                    canvas.drawCircle(cx - stoneR * 0.35f, cy - stoneR * 0.35f, stoneR * 0.22f, stoneShinePaint);
-                } else if (val == 2) { // Hyuga Clamshell Pearl
-                    canvas.drawCircle(cx, cy, stoneR, whiteStoneBasePaint);
-                    canvas.drawCircle(cx, cy, stoneR, stoneRimPaint);
-                    canvas.drawCircle(cx - stoneR * 0.28f, cy - stoneR * 0.28f, stoneR * 0.46f, whiteStoneHlPaint);
-                    canvas.drawCircle(cx - stoneR * 0.35f, cy - stoneR * 0.35f, stoneR * 0.24f, stoneShinePaint);
-                }
+                    // 3D Stone at elevated position
+                    drawSingleStone(canvas, cx, cy + animOffsetY, curR, val);
 
-                // Last Move Indicator Ring
-                if (x == lastMoveX && y == lastMoveY) {
-                    canvas.drawCircle(cx, cy, stoneR * 0.5f, lastMovePaint);
+                    // Last Move Ring fade-in
+                    if (p > 0.6f) {
+                        lastMovePaint.setAlpha((int) (255 * (p - 0.6f) / 0.4f));
+                        canvas.drawCircle(cx, cy + animOffsetY, curR * 0.5f, lastMovePaint);
+                        lastMovePaint.setAlpha(255);
+                    }
+                } else {
+                    // Standard Static Stone
+                    if (atariMap[y][x]) {
+                        canvas.drawCircle(cx, cy, stoneR + dpf(2.5f), atariGlowPaint);
+                    }
+                    canvas.drawCircle(cx + dpf(1.5f), cy + dpf(2.5f), stoneR, shadowPaint);
+                    drawSingleStone(canvas, cx, cy, stoneR, val);
+
+                    if (x == lastMoveX && y == lastMoveY) {
+                        canvas.drawCircle(cx, cy, stoneR * 0.5f, lastMovePaint);
+                    }
                 }
             }
+        }
+
+        // Draw Wood Resonance Impact Clack Ripple
+        if (animStoneX >= 0 && animStoneY >= 0 && elapsed < RIPPLE_ANIM_DURATION_MS) {
+            float acx = startX + animStoneX * cellSize;
+            float acy = startY + animStoneY * cellSize;
+            float rp = (float) elapsed / RIPPLE_ANIM_DURATION_MS;
+            float rippleR = stoneR * (1.0f + 1.15f * rp);
+            placementRipplePaint.setColor(0xFFFFD166);
+            placementRipplePaint.setStyle(Paint.Style.STROKE);
+            placementRipplePaint.setStrokeWidth(dpf(2.4f) * (1f - rp));
+            placementRipplePaint.setAlpha((int) (220 * (1f - rp)));
+            canvas.drawCircle(acx, acy, rippleR, placementRipplePaint);
+        }
+
+        if (isAnimating) {
+            postInvalidateOnAnimation();
         }
 
         // Draw Vital Point Hint Beacon (if active)
@@ -1051,6 +1125,97 @@ public class BadukGameView extends View {
                     }
                 }
             }
+        }
+    }
+
+    private void drawInfluenceHeatmap(Canvas canvas, float startX, float startY, float cellSize) {
+        float[][] influence = new float[boardSize][boardSize];
+        for (int r = 0; r < boardSize; r++) {
+            for (int c = 0; c < boardSize; c++) {
+                int color = board[r][c];
+                if (color == 0) continue;
+                float sign = (color == 1) ? 1.0f : -1.0f;
+                for (int y = 0; y < boardSize; y++) {
+                    for (int x = 0; x < boardSize; x++) {
+                        float dx = x - c;
+                        float dy = y - r;
+                        float d2 = dx * dx + dy * dy;
+                        influence[y][x] += sign / (1.0f + d2 * 0.8f);
+                    }
+                }
+            }
+        }
+
+        Paint auraPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+        auraPaint.setStyle(Paint.Style.FILL);
+
+        Paint eyePaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+        eyePaint.setStyle(Paint.Style.STROKE);
+        eyePaint.setStrokeWidth(dpf(1.6f));
+
+        for (int y = 0; y < boardSize; y++) {
+            for (int x = 0; x < boardSize; x++) {
+                if (board[y][x] != 0) continue;
+                float val = influence[y][x];
+                float cx = startX + x * cellSize;
+                float cy = startY + y * cellSize;
+                float r = cellSize * 0.42f;
+
+                if (val >= 0.25f) { // Black Influence Zone
+                    int alpha = (int) Math.min(130, Math.max(35, val * 55f));
+                    auraPaint.setColor((alpha << 24) | 0x0010B981); // Emerald aura
+                    canvas.drawCircle(cx, cy, r, auraPaint);
+                } else if (val <= -0.25f) { // White Influence Zone
+                    int alpha = (int) Math.min(130, Math.max(35, Math.abs(val) * 55f));
+                    auraPaint.setColor((alpha << 24) | 0x0038BDF8); // Azure aura
+                    canvas.drawCircle(cx, cy, r, auraPaint);
+                }
+
+                // Eye-shape recognition (vacant point surrounded by single color)
+                int north = (y > 0) ? board[y - 1][x] : -1;
+                int south = (y < boardSize - 1) ? board[y + 1][x] : -1;
+                int west = (x > 0) ? board[y][x - 1] : -1;
+                int east = (x < boardSize - 1) ? board[y][x + 1] : -1;
+
+                int eyeOwner = 0;
+                if (isSurroundedBy(1, north, south, west, east)) eyeOwner = 1;
+                else if (isSurroundedBy(2, north, south, west, east)) eyeOwner = 2;
+
+                if (eyeOwner != 0) {
+                    eyePaint.setColor(eyeOwner == 1 ? 0xFF34D399 : 0xFF7DD3FC);
+                    float dSize = dpf(4.5f);
+                    Path diamond = new Path();
+                    diamond.moveTo(cx, cy - dSize);
+                    diamond.lineTo(cx + dSize, cy);
+                    diamond.lineTo(cx, cy + dSize);
+                    diamond.lineTo(cx - dSize, cy);
+                    diamond.close();
+                    canvas.drawPath(diamond, eyePaint);
+                }
+            }
+        }
+    }
+
+    private boolean isSurroundedBy(int target, int n, int s, int w, int e) {
+        int count = 0;
+        int validNeighbors = 0;
+        if (n != -1) { validNeighbors++; if (n == target) count++; }
+        if (s != -1) { validNeighbors++; if (s == target) count++; }
+        if (w != -1) { validNeighbors++; if (w == target) count++; }
+        if (e != -1) { validNeighbors++; if (e == target) count++; }
+        return validNeighbors >= 3 && count == validNeighbors;
+    }
+
+    private void drawSingleStone(Canvas canvas, float cx, float cy, float r, int val) {
+        if (val == 1) { // Matte Nachiguro Slate (Bi-convex 3D layered)
+            canvas.drawCircle(cx, cy, r, blackStoneBasePaint);
+            canvas.drawCircle(cx - r * 0.30f, cy - r * 0.30f, r * 0.48f, blackStoneHlPaint);
+            canvas.drawCircle(cx - r * 0.35f, cy - r * 0.35f, r * 0.22f, stoneShinePaint);
+        } else if (val == 2) { // Hyuga Clamshell Pearl
+            canvas.drawCircle(cx, cy, r, whiteStoneBasePaint);
+            canvas.drawCircle(cx, cy, r, stoneRimPaint);
+            canvas.drawCircle(cx - r * 0.28f, cy - r * 0.28f, r * 0.46f, whiteStoneHlPaint);
+            canvas.drawCircle(cx - r * 0.35f, cy - r * 0.35f, r * 0.24f, stoneShinePaint);
         }
     }
 
