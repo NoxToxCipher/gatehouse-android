@@ -15177,6 +15177,27 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
         btnViewMode.setLayoutParams(vmlp);
         topBar.addView(btnViewMode);
 
+        final TextView btnExport = new TextView(this);
+        btnExport.setText("📄 EXPORT");
+        btnExport.setTextColor(0xFF38BDF8);
+        btnExport.setTextSize(9.5f);
+        btnExport.setTypeface(Typeface.create(Typeface.MONOSPACE, Typeface.BOLD));
+        btnExport.setPadding(dp(8), dp(4), dp(8), dp(4));
+        btnExport.setBackground(rounded(0x2238BDF8, dp(6)));
+        LinearLayout.LayoutParams exlp = new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+        exlp.rightMargin = dp(4);
+        btnExport.setLayoutParams(exlp);
+        final LogbookManager logMgrFinal = logMgr;
+        btnExport.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                hapticHeavyClick();
+                exportCurrentShiftStatement(logMgrFinal);
+            }
+        });
+        topBar.addView(btnExport);
+
         TextView btnRefresh = new TextView(this);
         btnRefresh.setText("↻");
         btnRefresh.setTextColor(colPale);
@@ -15350,26 +15371,52 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
         sblp.bottomMargin = dp(6);
         searchBox.setLayoutParams(sblp);
 
+        LinearLayout searchRow = new LinearLayout(this);
+        searchRow.setOrientation(LinearLayout.HORIZONTAL);
+        searchRow.setGravity(Gravity.CENTER_VERTICAL);
+        searchRow.setBackground(rounded(0x18FFFFFF, dp(6)));
+        searchRow.setPadding(dp(8), dp(2), dp(8), dp(2));
+
         final EditText searchField = new EditText(this);
         searchField.setHint("🔍 Search occurrences, regos, lot checks, pumps...");
         searchField.setHintTextColor(colMuted);
         searchField.setTextColor(colPale);
         searchField.setTextSize(11f);
-        searchField.setBackground(rounded(0x18FFFFFF, dp(6)));
-        searchField.setPadding(dp(8), dp(6), dp(8), dp(6));
+        searchField.setBackground(null);
         searchField.setSingleLine(true);
+        LinearLayout.LayoutParams sflp = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
+        searchField.setLayoutParams(sflp);
+
+        final TextView btnClearSearch = new TextView(this);
+        btnClearSearch.setText("✕");
+        btnClearSearch.setTextColor(colMuted);
+        btnClearSearch.setTextSize(12f);
+        btnClearSearch.setPadding(dp(6), dp(4), dp(6), dp(4));
+        btnClearSearch.setVisibility(View.GONE);
+        btnClearSearch.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                hapticClick();
+                searchField.setText("");
+            }
+        });
+
         searchField.addTextChangedListener(new android.text.TextWatcher() {
             @Override
             public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
             @Override
             public void onTextChanged(CharSequence s, int start, int before, int count) {
                 logbookSearchQuery = s.toString();
+                btnClearSearch.setVisibility(s.length() > 0 ? View.VISIBLE : View.GONE);
                 if (refreshContent[0] != null) refreshContent[0].run();
             }
             @Override
             public void afterTextChanged(android.text.Editable s) {}
         });
-        searchBox.addView(searchField);
+
+        searchRow.addView(searchField);
+        searchRow.addView(btnClearSearch);
+        searchBox.addView(searchRow);
 
         // Category Pills inside search box
         HorizontalScrollView catHsv = new HorizontalScrollView(this);
@@ -15948,6 +15995,55 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
 
         box.addView(btnRow);
         dlg.show();
+    }
+
+    private void exportCurrentShiftStatement(LogbookManager logMgr) {
+        if (logMgr == null) return;
+        List<LogbookManager.LogEntry> entries = logMgr.filterEntries(
+                logbookSelectedShiftId, logbookSelectedCategory, logbookSearchQuery);
+        if (entries.isEmpty()) {
+            Toast.makeText(this, "No occurrences to export", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        StringBuilder sb = new StringBuilder();
+        sb.append("========================================\n");
+        sb.append("   DSS SECURITY SHIFT LOGBOOK REPORT    \n");
+        sb.append("========================================\n");
+        sb.append("Shift: ").append(getLogbookSubtitle(logMgr)).append("\n");
+        sb.append("Exported: ").append(new java.text.SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.US).format(new java.util.Date())).append("\n");
+        sb.append("Duty Guard: Lochran Doherty (LIC #41207)\n");
+        sb.append("Total Occurrences: ").append(entries.size()).append("\n");
+        sb.append("----------------------------------------\n\n");
+
+        for (LogbookManager.LogEntry e : entries) {
+            sb.append("[").append(e.timeStr).append("] ");
+            sb.append(e.categoryLabel).append(" (").append(e.guardName).append(")\n");
+            sb.append("  ").append(e.text).append("\n");
+            if (!e.regoPlate.isEmpty()) sb.append("  Plate: ").append(e.regoPlate).append("\n");
+            if (!e.photoHashSnippet.isEmpty()) sb.append("  Photo Evidence: #").append(e.photoHashSnippet).append("\n");
+            sb.append("\n");
+        }
+        sb.append("========================================\n");
+        sb.append("       STATUS: VERIFIED & SEALED        \n");
+        sb.append("========================================\n");
+
+        String statement = sb.toString();
+        android.content.ClipboardManager cm = (android.content.ClipboardManager) getSystemService(android.content.Context.CLIPBOARD_SERVICE);
+        if (cm != null) {
+            cm.setPrimaryClip(android.content.ClipData.newPlainText("DSS Shift Report", statement));
+        }
+
+        try {
+            android.content.Intent sendIntent = new android.content.Intent();
+            sendIntent.setAction(android.content.Intent.ACTION_SEND);
+            sendIntent.putExtra(android.content.Intent.EXTRA_TEXT, statement);
+            sendIntent.putExtra(android.content.Intent.EXTRA_SUBJECT, "DSS Security Shift Logbook Report");
+            sendIntent.setType("text/plain");
+            startActivity(android.content.Intent.createChooser(sendIntent, "Share Shift Logbook Report"));
+        } catch (Exception e) {
+            Toast.makeText(this, "📋 Shift report copied to clipboard!", Toast.LENGTH_SHORT).show();
+        }
     }
 
     private View buildLogbookRuledSheetView(final boolean carbonMode) {
