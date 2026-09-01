@@ -14934,6 +14934,7 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
     private String logbookSelectedTimeBucket = "ALL";
     private String logbookSearchQuery = "";
     private boolean logbookRuledViewMode = false;
+    private boolean logbookIsFullscreen = false;
 
     private String getFormattedShiftDateHeader() {
         SimpleDateFormat sdf = new SimpleDateFormat("EEEE d'TH' MMMM, yyyy", Locale.US);
@@ -15157,13 +15158,15 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
                 public WindowInsets onApplyWindowInsets(View v, WindowInsets insets) {
                     android.graphics.Insets sb = insets.getInsets(
                             WindowInsets.Type.systemBars() | WindowInsets.Type.displayCutout());
-                    root.setPadding(sb.left + dp(8), sb.top + dp(6), sb.right + dp(8), sb.bottom + dp(8));
+                    int padH = logbookIsFullscreen ? dp(2) : dp(8);
+                    root.setPadding(sb.left + padH, sb.top + dp(4), sb.right + padH, sb.bottom + dp(6));
                     return insets;
                 }
             });
             root.requestApplyInsets();
         } else {
-            root.setPadding(dp(8), dp(28), dp(8), dp(12));
+            int padH = logbookIsFullscreen ? dp(2) : dp(8);
+            root.setPadding(padH, dp(24), padH, dp(8));
         }
 
         // =========================================================================
@@ -15271,6 +15274,27 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
             }
         });
         topBar.addView(btnSealShift);
+
+        final TextView btnFullscreen = new TextView(this);
+        btnFullscreen.setText(logbookIsFullscreen ? "❐ COMPACT" : "⛶ EXPAND");
+        btnFullscreen.setTextColor(colPale);
+        btnFullscreen.setTextSize(9.5f);
+        btnFullscreen.setTypeface(Typeface.create(Typeface.MONOSPACE, Typeface.BOLD));
+        btnFullscreen.setPadding(dp(8), dp(4), dp(8), dp(4));
+        btnFullscreen.setBackground(rounded(0x1AFFFFFF, dp(6)));
+        LinearLayout.LayoutParams fslp = new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+        fslp.rightMargin = dp(4);
+        btnFullscreen.setLayoutParams(fslp);
+        btnFullscreen.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                hapticClick();
+                logbookIsFullscreen = !logbookIsFullscreen;
+                showFullLogbookDialog();
+            }
+        });
+        topBar.addView(btnFullscreen);
 
         TextView btnRefresh = new TextView(this);
         btnRefresh.setText("↻");
@@ -15823,6 +15847,97 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
 
             container.addView(emptyBox);
         } else {
+            // 1. Interactive Occurrence Density Heatmap Card
+            LinearLayout heatmapCard = new LinearLayout(this);
+            heatmapCard.setOrientation(LinearLayout.VERTICAL);
+            heatmapCard.setBackground(rounded(0xFF131C2E, dp(10)));
+            heatmapCard.setPadding(dp(10), dp(8), dp(10), dp(8));
+            LinearLayout.LayoutParams hmlp = new LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+            hmlp.bottomMargin = dp(6);
+            heatmapCard.setLayoutParams(hmlp);
+
+            LinearLayout hmTop = new LinearLayout(this);
+            hmTop.setOrientation(LinearLayout.HORIZONTAL);
+            hmTop.setGravity(Gravity.CENTER_VERTICAL);
+
+            TextView tvHmTitle = new TextView(this);
+            tvHmTitle.setText("📊 SHIFT ACTIVITY HEATMAP");
+            tvHmTitle.setTextColor(colAccent);
+            tvHmTitle.setTextSize(9.5f);
+            tvHmTitle.setTypeface(Typeface.create(Typeface.MONOSPACE, Typeface.BOLD));
+            LinearLayout.LayoutParams htlp = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
+            tvHmTitle.setLayoutParams(htlp);
+            hmTop.addView(tvHmTitle);
+
+            TextView tvHmRange = new TextView(this);
+            tvHmRange.setText("18:00 → 06:00 (12-HR PATROL)");
+            tvHmRange.setTextColor(0xFF94A3B8);
+            tvHmRange.setTextSize(9f);
+            tvHmRange.setTypeface(Typeface.MONOSPACE);
+            hmTop.addView(tvHmRange);
+            heatmapCard.addView(hmTop);
+
+            // 12 Hourly Segment Bars
+            LinearLayout barRow = new LinearLayout(this);
+            barRow.setOrientation(LinearLayout.HORIZONTAL);
+            barRow.setPadding(0, dp(6), 0, 0);
+
+            final int[] shiftHours = {18, 19, 20, 21, 22, 23, 0, 1, 2, 3, 4, 5};
+
+            for (final int h : shiftHours) {
+                int countInHour = 0;
+                boolean hasIncInHour = false;
+                for (LogbookManager.LogEntry e : entries) {
+                    if (e.timeStr != null && e.timeStr.length() >= 2) {
+                        try {
+                            int eh = Integer.parseInt(e.timeStr.substring(0, 2));
+                            if (eh == h) {
+                                countInHour++;
+                                if ("INCIDENT".equalsIgnoreCase(e.category)) hasIncInHour = true;
+                            }
+                        } catch (Exception ignored) {}
+                    }
+                }
+
+                LinearLayout col = new LinearLayout(this);
+                col.setOrientation(LinearLayout.VERTICAL);
+                col.setGravity(Gravity.CENTER_HORIZONTAL);
+                LinearLayout.LayoutParams clp = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
+                col.setLayoutParams(clp);
+
+                // Bar Indicator
+                View bar = new View(this);
+                int barColor = countInHour == 0 ? 0x22FFFFFF : (hasIncInHour ? colCrimson : (countInHour >= 3 ? colEmerald : colCyan));
+                bar.setBackground(rounded(barColor, dp(3)));
+                int barHeight = dp(Math.min(22, 6 + countInHour * 4));
+                LinearLayout.LayoutParams blp = new LinearLayout.LayoutParams(dp(12), barHeight);
+                blp.bottomMargin = dp(3);
+                bar.setLayoutParams(blp);
+                col.addView(bar);
+
+                TextView tvH = new TextView(this);
+                tvH.setText(String.format(Locale.US, "%02d", h));
+                tvH.setTextColor(countInHour > 0 ? colPale : 0xFF64748B);
+                tvH.setTextSize(8.5f);
+                tvH.setTypeface(Typeface.create(Typeface.MONOSPACE, Typeface.BOLD));
+                col.addView(tvH);
+
+                final String hourFilterPrefix = String.format(Locale.US, "%02d:", h);
+                col.setOnClickListener(new View.OnClickListener() {
+                    @Override
+                    public void onClick(View v) {
+                        hapticClick();
+                        logbookSearchQuery = hourFilterPrefix;
+                        showFullLogbookDialog();
+                    }
+                });
+
+                barRow.addView(col);
+            }
+            heatmapCard.addView(barRow);
+            container.addView(heatmapCard);
+
             String currentGroupHeader = "";
             for (final LogbookManager.LogEntry entry : entries) {
                 // Shift Date Section Header
