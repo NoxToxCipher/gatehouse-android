@@ -4167,12 +4167,12 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
         TextView nameTv = new TextView(this);
         nameTv.setText(nameStr);
         nameTv.setTextColor(glowCol);
-        nameTv.setTextSize(11f);
+        nameTv.setTextSize(10.5f);
         nameTv.setTypeface(Typeface.DEFAULT_BOLD);
         nameTv.setGravity(Gravity.CENTER);
-        nameTv.setSingleLine(true);
+        nameTv.setMaxLines(2);
         nameTv.setEllipsize(android.text.TextUtils.TruncateAt.END);
-        nameTv.setPadding(0, dp(4), 0, dp(2));
+        nameTv.setPadding(0, dp(3), 0, dp(2));
         pillar.addView(nameTv);
 
         // Score Pill

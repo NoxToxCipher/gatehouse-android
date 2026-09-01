@@ -104,24 +104,24 @@ public class RecreationLeaderboardManager {
     private void seedDefaultHutLeaderboard() {
         long now = System.currentTimeMillis();
         cachedRecords.add(new OfficerScoreRecord(
-                "GUARD-41207", "Lochran Doherty (Overlord)", "#41207", "HUT-01 (Main Gate)",
+                "GUARD-41207", "Officer Lochran Doherty", "#41207", "HUT-01 (Main Gate)",
                 48, 2240, 5, 8, 9, 7, 6, 8, 10, now - 120000
         ));
         cachedRecords.add(new OfficerScoreRecord(
-                "HUT-TERM-01", "Gatehouse Main Terminal", "HUT-01", "HUT-01 (Main Gate)",
-                35, 1980, 4, 6, 5, 6, 5, 7, 6, now - 300000
+                "GUARD-PETREA", "Petrea Doherty", "CONTROL", "Operations & Control",
+                38, 2080, 5, 7, 6, 6, 5, 7, 7, now - 240000
         ));
         cachedRecords.add(new OfficerScoreRecord(
-                "GUARD-39281", "Sarah Chen (Patrol Lead)", "#39281", "HUT-02 (Yard Post)",
-                29, 1850, 3, 5, 4, 5, 4, 6, 5, now - 450000
+                "GUARD-4611218", "Officer Claren Doherty", "#4611218", "HUT-02 (Yard Post)",
+                31, 1920, 3, 5, 5, 5, 4, 6, 6, now - 450000
         ));
         cachedRecords.add(new OfficerScoreRecord(
-                "HUT-TERM-02", "Lot 16 Yard Guard Post", "HUT-02", "HUT-02 (Yard Post)",
-                22, 1720, 2, 4, 3, 4, 3, 4, 4, now - 720000
+                "GUARD-JON", "Officer Jon Naylor", "PATROL", "Lot 16 Guard Post",
+                24, 1760, 2, 4, 4, 4, 3, 4, 5, now - 720000
         ));
         cachedRecords.add(new OfficerScoreRecord(
-                "GUARD-44102", "Dave Miller (Relief Officer)", "#44102", "MOBILE-PATROL",
-                16, 1610, 2, 2, 3, 2, 3, 3, 3, now - 900000
+                "GUARD-KEN", "Officer Ken", "RELIEF", "Mobile Patrol",
+                18, 1620, 2, 3, 3, 3, 3, 3, 4, now - 900000
         ));
         saveRecords();
     }
@@ -134,6 +134,12 @@ public class RecreationLeaderboardManager {
             for (String e : entries) {
                 OfficerScoreRecord r = OfficerScoreRecord.deserialize(e);
                 if (r != null) {
+                    // Upgrade any old placeholder names
+                    if (r.officerName.contains("Sarah Chen") || r.officerName.contains("Dave Miller") || r.officerName.contains("Overlord")) {
+                        cachedRecords.clear();
+                        seedDefaultHutLeaderboard();
+                        return;
+                    }
                     cachedRecords.add(r);
                 }
             }
