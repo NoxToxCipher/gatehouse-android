@@ -203,34 +203,60 @@ public class RoyalUrGameView extends View {
         invalidate();
     }
 
+    private boolean isRolling = false;
+
     public void rollDice() {
-        if (!waitingForRoll) return;
+        if (!waitingForRoll || isRolling) return;
+        isRolling = true;
         try {
             performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP);
         } catch (Exception ignored) {}
 
-        int sum = 0;
-        for (int i = 0; i < 4; i++) {
-            boolean marked = rand.nextBoolean();
-            lastDiceFaces[i] = marked;
-            if (marked) sum++;
-        }
-        currentRoll = sum;
-        waitingForRoll = false;
+        // Animated 5-frame rolling tumble
+        animateDiceTumble(0);
+    }
 
-        if (currentRoll == 0 || !hasLegalMoves(currentTurn, currentRoll)) {
+    private void animateDiceTumble(final int step) {
+        if (step < 5) {
+            for (int i = 0; i < 4; i++) lastDiceFaces[i] = rand.nextBoolean();
+            invalidate();
             postDelayed(new Runnable() {
-                public void run() { passTurn(); }
-            }, 750);
+                public void run() {
+                    animateDiceTumble(step + 1);
+                }
+            }, 55);
         } else {
-            if (currentTurn == 1) {
-                postDelayed(new Runnable() {
-                    public void run() { botExecuteBestMove(); }
-                }, 550);
+            // Final true result
+            int sum = 0;
+            for (int i = 0; i < 4; i++) {
+                boolean marked = rand.nextBoolean();
+                lastDiceFaces[i] = marked;
+                if (marked) sum++;
             }
+            currentRoll = sum;
+            waitingForRoll = false;
+            isRolling = false;
+
+            try {
+                if (currentRoll > 0) {
+                    performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK);
+                }
+            } catch (Exception ignored) {}
+
+            if (currentRoll == 0 || !hasLegalMoves(currentTurn, currentRoll)) {
+                postDelayed(new Runnable() {
+                    public void run() { passTurn(); }
+                }, 750);
+            } else {
+                if (currentTurn == 1) {
+                    postDelayed(new Runnable() {
+                        public void run() { botExecuteBestMove(); }
+                    }, 550);
+                }
+            }
+            updateStatus();
+            invalidate();
         }
-        updateStatus();
-        invalidate();
     }
 
     private boolean hasLegalMoves(int turn, int roll) {
