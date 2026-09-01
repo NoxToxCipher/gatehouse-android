@@ -213,7 +213,10 @@ public class HnefataflGameView extends View {
 
         if (p == 'K' && ((toX == 0 || toX == 10) && (toY == 0 || toY == 10))) {
             gameOver = true;
-            try { RecreationAudioSynth.playBadukStoneClack(); } catch (Exception ignored) {}
+            try {
+                RecreationAudioSynth.playTetrisLineClear();
+                performHapticFeedback(HapticFeedbackConstants.CONFIRM);
+            } catch (Exception ignored) {}
             if (statusListener != null) {
                 statusListener.onStatusChanged("🏆 NORSE VICTORY! King reached sanctuary fort.", 0xFF10B981);
             }

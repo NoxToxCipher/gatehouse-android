@@ -280,6 +280,43 @@ public class BadukGameView extends View {
         resetGame();
     }
 
+    public void setHandicap(int count) {
+        resetGame();
+        if (count < 2) return;
+        count = Math.min(count, 9);
+        int star = (boardSize == 19) ? 3 : (boardSize == 13 ? 3 : 2);
+        int starHigh = boardSize - 1 - star;
+        int mid = boardSize / 2;
+
+        int[][] placementOrder = {
+            {starHigh, star},         // 1. Top-Right
+            {star, starHigh},         // 2. Bottom-Left
+            {starHigh, starHigh},     // 3. Bottom-Right
+            {star, star},             // 4. Top-Left
+            {mid, mid},               // 5. Tengen
+            {star, mid},              // 6. Left side
+            {starHigh, mid},          // 7. Right side
+            {mid, star},              // 8. Top side
+            {mid, starHigh}           // 9. Bottom side
+        };
+
+        for (int i = 0; i < count && i < placementOrder.length; i++) {
+            int hx = placementOrder[i][0];
+            int hy = placementOrder[i][1];
+            board[hy][hx] = 1; // Black stone
+            moveList.add(new Point(hx, hy));
+        }
+        currentTurn = 2; // White plays first against handicap
+        updateStatus();
+        invalidate();
+
+        if (mode == 0 && currentTurn == 2) {
+            postDelayed(new Runnable() {
+                public void run() { botPlayMove(); }
+            }, 600);
+        }
+    }
+
     public int getBoardSize() {
         return boardSize;
     }
