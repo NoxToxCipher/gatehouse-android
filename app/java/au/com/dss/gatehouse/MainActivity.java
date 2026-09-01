@@ -3813,7 +3813,7 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
         final LinearLayout tile = new LinearLayout(this);
         tile.setOrientation(LinearLayout.VERTICAL);
         tile.setPadding(dp(14), dp(13), dp(14), dp(13));
-        tile.setMinimumHeight(dp(148));
+        tile.setMinimumHeight(dp(142));
         tile.setLayoutParams(new FrameLayout.LayoutParams(
                 FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT));
 
@@ -3862,7 +3862,7 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
         LinearLayout titleRow = new LinearLayout(this);
         titleRow.setOrientation(LinearLayout.HORIZONTAL);
         titleRow.setGravity(Gravity.CENTER_VERTICAL);
-        titleRow.setPadding(0, dp(10), 0, dp(2));
+        titleRow.setPadding(0, dp(8), 0, dp(2));
 
         TextView title = new TextView(this);
         title.setText(titleStr);
@@ -3896,19 +3896,6 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
         desc.setLineSpacing(dp(2), 1f);
         tile.addView(desc);
 
-        // 4. Meta Specs Footer Tag
-        if (metaSpecs != null) {
-            TextView metaTv = new TextView(this);
-            metaTv.setText(metaSpecs);
-            metaTv.setTextColor(0xFF64748B);
-            metaTv.setTextSize(9f);
-            metaTv.setTypeface(Typeface.create(Typeface.MONOSPACE, Typeface.BOLD));
-            metaTv.setPadding(0, dp(6), 0, 0);
-            metaTv.setSingleLine(true);
-            metaTv.setEllipsize(android.text.TextUtils.TruncateAt.END);
-            tile.addView(metaTv);
-        }
-
         rippleTile.setOnClickListener(new View.OnClickListener() {
             public void onClick(View v) {
                 hapticHeavyClick();
@@ -3938,7 +3925,7 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
         final LinearLayout tile = new LinearLayout(this);
         tile.setOrientation(LinearLayout.VERTICAL);
         tile.setPadding(dp(14), dp(13), dp(14), dp(13));
-        tile.setMinimumHeight(dp(136));
+        tile.setMinimumHeight(dp(142));
         tile.setLayoutParams(new FrameLayout.LayoutParams(
                 FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT));
 
@@ -3987,7 +3974,7 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
         LinearLayout titleRow = new LinearLayout(this);
         titleRow.setOrientation(LinearLayout.HORIZONTAL);
         titleRow.setGravity(Gravity.CENTER_VERTICAL);
-        titleRow.setPadding(0, dp(10), 0, dp(2));
+        titleRow.setPadding(0, dp(8), 0, dp(2));
 
         TextView title = new TextView(this);
         title.setText(titleStr);
