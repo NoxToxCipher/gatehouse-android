@@ -90,6 +90,15 @@ public class BadukGameView extends View {
     private static final long RIPPLE_ANIM_DURATION_MS = 400;
     private final Paint placementRipplePaint = new Paint(Paint.ANTI_ALIAS_FLAG);
 
+    // Floating Capture Toast Particles
+    private String captureToastText = null;
+    private float captureToastX = 0f;
+    private float captureToastY = 0f;
+    private long captureToastStartTime = 0;
+    private static final long CAPTURE_TOAST_DURATION_MS = 1400;
+    private final Paint captureToastPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+    private final Paint captureToastBgPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+
     public void setDifficultyTier(int tier) {
         this.difficultyTier = Math.max(0, Math.min(2, tier));
         updateStatus();
@@ -504,6 +513,13 @@ public class BadukGameView extends View {
 
         if (color == 1) blackCaptures += capturedCount;
         else whiteCaptures += capturedCount;
+
+        if (capturedCount > 0) {
+            captureToastText = "💥 +" + capturedCount + " CAPTURED";
+            captureToastX = x;
+            captureToastY = y;
+            captureToastStartTime = System.currentTimeMillis();
+        }
 
         lastMoveX = x;
         lastMoveY = y;
@@ -1070,6 +1086,30 @@ public class BadukGameView extends View {
         // Draw Live Territory Control Pips if enabled
         if (showTerritory) {
             drawTerritoryMarkers(canvas, startX, startY, cellSize);
+        }
+
+        // Draw Floating Capture Toast Badge (if active)
+        long toastElapsed = System.currentTimeMillis() - captureToastStartTime;
+        if (captureToastText != null && toastElapsed < CAPTURE_TOAST_DURATION_MS) {
+            float tp = (float) toastElapsed / CAPTURE_TOAST_DURATION_MS;
+            float tcx = startX + captureToastX * cellSize;
+            float tcy = startY + captureToastY * cellSize - dpf(12f) - dpf(22f) * tp;
+            int alpha = (int) (255 * (1f - tp * tp));
+
+            captureToastPaint.setTextSize(dpf(10.5f));
+            captureToastPaint.setTypeface(Typeface.create(Typeface.MONOSPACE, Typeface.BOLD));
+            captureToastPaint.setColor(0xFFFFD166);
+            captureToastPaint.setAlpha(alpha);
+            captureToastPaint.setTextAlign(Paint.Align.CENTER);
+
+            float tw = captureToastPaint.measureText(captureToastText) + dpf(16f);
+            float th = dpf(18f);
+            RectF tRect = new RectF(tcx - tw / 2f, tcy - th + dpf(4f), tcx + tw / 2f, tcy + dpf(4f));
+            captureToastBgPaint.setColor(0xEE0F172A);
+            captureToastBgPaint.setAlpha((int) (220 * (1f - tp)));
+            canvas.drawRoundRect(tRect, dpf(6f), dpf(6f), captureToastBgPaint);
+            canvas.drawText(captureToastText, tcx, tcy, captureToastPaint);
+            postInvalidateOnAnimation();
         }
 
         // Draw KataGo-style Live Winrate Bar

@@ -186,6 +186,7 @@ public class SenetGameView extends View {
         if (!waitingForRoll || isCasting) return;
         isCasting = true;
         try {
+            RecreationAudioSynth.playDiceRoll();
             performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP);
         } catch (Exception ignored) {}
 
@@ -316,6 +317,7 @@ public class SenetGameView extends View {
             if (opp[j] == next) {
                 opp[j] = pos;
                 try {
+                    RecreationAudioSynth.playChessPieceThud(true);
                     performHapticFeedback(HapticFeedbackConstants.LONG_PRESS);
                 } catch (Exception ignored) {}
                 break;
@@ -336,6 +338,7 @@ public class SenetGameView extends View {
 
         my[pieceIdx] = next;
         if (next == 30) {
+            RecreationAudioSynth.playBadukStoneClack();
             if (currentTurn == 0) whiteBorneOff++;
             else blackBorneOff++;
         }
