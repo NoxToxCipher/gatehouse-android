@@ -3890,8 +3890,16 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
         tTitle.setTypeface(Typeface.DEFAULT_BOLD);
         titleCol.addView(tTitle);
 
+        RecreationLeaderboardManager lm = RecreationLeaderboardManager.getInstance(this);
+        java.util.List<RecreationLeaderboardManager.OfficerScoreRecord> topList = lm.getLeaderboard();
+        String subText = "🥇 #1 Officer Lochran Doherty · 0 Wins (1200 ELO)";
+        if (!topList.isEmpty()) {
+            RecreationLeaderboardManager.OfficerScoreRecord topR = topList.get(0);
+            subText = "🥇 #1 " + topR.officerName + " · " + topR.totalWins + " Wins (" + topR.chessElo + " ELO)";
+        }
+
         TextView tSub = new TextView(this);
-        tSub.setText("🥇 #1 Lochran Doherty · 48 Wins (2240 ELO)");
+        tSub.setText(subText);
         tSub.setTextColor(colAccent);
         tSub.setTextSize(11f);
         tSub.setTypeface(Typeface.create(Typeface.MONOSPACE, Typeface.BOLD));

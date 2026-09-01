@@ -105,23 +105,23 @@ public class RecreationLeaderboardManager {
         long now = System.currentTimeMillis();
         cachedRecords.add(new OfficerScoreRecord(
                 "GUARD-41207", "Officer Lochran Doherty", "#41207", "HUT-01 (Main Gate)",
-                48, 2240, 5, 8, 9, 7, 6, 8, 10, now - 120000
+                0, 1200, 1, 0, 0, 0, 0, 0, 0, now
         ));
         cachedRecords.add(new OfficerScoreRecord(
                 "GUARD-PETREA", "Petrea Doherty", "CONTROL", "Operations & Control",
-                38, 2080, 5, 7, 6, 6, 5, 7, 7, now - 240000
+                0, 1200, 1, 0, 0, 0, 0, 0, 0, now
         ));
         cachedRecords.add(new OfficerScoreRecord(
                 "GUARD-4611218", "Officer Claren Doherty", "#4611218", "HUT-02 (Yard Post)",
-                31, 1920, 3, 5, 5, 5, 4, 6, 6, now - 450000
+                0, 1200, 1, 0, 0, 0, 0, 0, 0, now
         ));
         cachedRecords.add(new OfficerScoreRecord(
                 "GUARD-JON", "Officer Jon Naylor", "PATROL", "Lot 16 Guard Post",
-                24, 1760, 2, 4, 4, 4, 3, 4, 5, now - 720000
+                0, 1200, 1, 0, 0, 0, 0, 0, 0, now
         ));
         cachedRecords.add(new OfficerScoreRecord(
                 "GUARD-KEN", "Officer Ken", "RELIEF", "Mobile Patrol",
-                18, 1620, 2, 3, 3, 3, 3, 3, 4, now - 900000
+                0, 1200, 1, 0, 0, 0, 0, 0, 0, now
         ));
         saveRecords();
     }
@@ -134,8 +134,9 @@ public class RecreationLeaderboardManager {
             for (String e : entries) {
                 OfficerScoreRecord r = OfficerScoreRecord.deserialize(e);
                 if (r != null) {
-                    // Upgrade any old placeholder names
-                    if (r.officerName.contains("Sarah Chen") || r.officerName.contains("Dave Miller") || r.officerName.contains("Overlord")) {
+                    // Purge legacy mock data / fake win numbers
+                    if (r.officerName.contains("Sarah Chen") || r.officerName.contains("Dave Miller") ||
+                        r.officerName.contains("Overlord") || r.totalWins >= 15) {
                         cachedRecords.clear();
                         seedDefaultHutLeaderboard();
                         return;
