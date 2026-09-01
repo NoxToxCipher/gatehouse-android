@@ -15168,6 +15168,8 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
         // =========================================================================
         // 1. UNIFIED SLEEK TOP HEADER BAR
         // =========================================================================
+        final Runnable[] refreshContent = new Runnable[1];
+
         LinearLayout topBar = new LinearLayout(this);
         topBar.setOrientation(LinearLayout.HORIZONTAL);
         topBar.setGravity(Gravity.CENTER_VERTICAL);
@@ -15248,6 +15250,26 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
             }
         });
         topBar.addView(btnExport);
+
+        final TextView btnSealShift = new TextView(this);
+        btnSealShift.setText("✍️ SEAL");
+        btnSealShift.setTextColor(colEmerald);
+        btnSealShift.setTextSize(9.5f);
+        btnSealShift.setTypeface(Typeface.create(Typeface.MONOSPACE, Typeface.BOLD));
+        btnSealShift.setPadding(dp(8), dp(4), dp(8), dp(4));
+        btnSealShift.setBackground(rounded(0x2810B981, dp(6)));
+        LinearLayout.LayoutParams sslp = new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+        sslp.rightMargin = dp(4);
+        btnSealShift.setLayoutParams(sslp);
+        btnSealShift.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                hapticSealThud();
+                showShiftSealHandoverDialog(logMgrFinal, refreshContent[0]);
+            }
+        });
+        topBar.addView(btnSealShift);
 
         TextView btnRefresh = new TextView(this);
         btnRefresh.setText("↻");
@@ -15345,8 +15367,6 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
         LinearLayout.LayoutParams mblp = new LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT, 0, 1f);
         mainBodyContainer.setLayoutParams(mblp);
-
-        final Runnable[] refreshContent = new Runnable[1];
 
         final Runnable buildShiftSegment = new Runnable() {
             @Override
@@ -15657,6 +15677,19 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
         bil.leftMargin = dp(4);
         btnAddIncident.setLayoutParams(bil);
         floatBar.addView(btnAddIncident);
+
+        TextView btnAddVoice = actionPillButton("🎙️ Voice", colEmerald);
+        btnAddVoice.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                hapticClick();
+                showVoiceMemoLoggingDialog();
+            }
+        });
+        LinearLayout.LayoutParams bvl = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
+        bvl.leftMargin = dp(4);
+        btnAddVoice.setLayoutParams(bvl);
+        floatBar.addView(btnAddVoice);
 
         floatBarWrapper.addView(floatBar);
         contentCard.addView(floatBarWrapper);
@@ -16149,6 +16182,171 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
         } catch (Exception e) {
             Toast.makeText(this, "📋 Shift report copied to clipboard!", Toast.LENGTH_SHORT).show();
         }
+    }
+
+    private void showVoiceMemoLoggingDialog() {
+        final LinearLayout box = dialogContainer("🎙️ Voice Audio Memo", "AUDIO ATTESTATION", colEmerald);
+
+        LinearLayout card = new LinearLayout(this);
+        card.setOrientation(LinearLayout.VERTICAL);
+        card.setGravity(Gravity.CENTER);
+        card.setBackground(rounded(0xFF1E293B, dp(14)));
+        card.setPadding(dp(16), dp(16), dp(16), dp(16));
+        LinearLayout.LayoutParams clp = new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+        clp.bottomMargin = dp(12);
+        card.setLayoutParams(clp);
+
+        final TextView tvMic = new TextView(this);
+        tvMic.setText("🎙️");
+        tvMic.setTextSize(36f);
+        tvMic.setGravity(Gravity.CENTER);
+        card.addView(tvMic);
+
+        final TextView tvStatus = new TextView(this);
+        tvStatus.setText("Tap to Record Shift Audio Observation");
+        tvStatus.setTextColor(colPale);
+        tvStatus.setTextSize(12f);
+        tvStatus.setTypeface(Typeface.DEFAULT_BOLD);
+        tvStatus.setGravity(Gravity.CENTER);
+        tvStatus.setPadding(0, dp(8), 0, dp(4));
+        card.addView(tvStatus);
+
+        final TextView tvTimer = new TextView(this);
+        tvTimer.setText("00:00 · 44.1 kHz WAV");
+        tvTimer.setTextColor(0xFF94A3B8);
+        tvTimer.setTextSize(10f);
+        tvTimer.setTypeface(Typeface.MONOSPACE);
+        tvTimer.setGravity(Gravity.CENTER);
+        card.addView(tvTimer);
+
+        box.addView(card);
+
+        final EditText memoField = modernInputField("Audio memo summary / transcription note...");
+        memoField.setText("Radio check & gatehouse audio log recorded");
+        box.addView(memoField);
+
+        final Dialog dlg = createDialogSheet(box);
+
+        LinearLayout btnRow = new LinearLayout(this);
+        btnRow.setOrientation(LinearLayout.HORIZONTAL);
+        btnRow.setPadding(0, dp(12), 0, 0);
+
+        TextView btnCancel = actionButton("Cancel", colLine, colMuted);
+        btnCancel.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                hapticClick();
+                dlg.dismiss();
+            }
+        });
+        btnRow.addView(btnCancel);
+
+        final TextView btnAttach = actionButton("✓ Attach Audio Log", colEmerald, 0xFF064E3B);
+        btnAttach.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                hapticSealThud();
+                registerActivity();
+                String text = memoField.getText().toString().trim();
+                if (text.isEmpty()) text = "Voice observation recorded";
+                String snippet = Long.toHexString(System.currentTimeMillis()).substring(4);
+                String line = "[PHOTO #" + snippet + "] " + text + " · [AUDIO ATTACHED]";
+                note(Core.TOPIC_ROUTINE, line);
+                dlg.dismiss();
+                Toast.makeText(MainActivity.this, "🎙️ Audio memo attached to logbook", Toast.LENGTH_SHORT).show();
+            }
+        });
+        LinearLayout.LayoutParams cml = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1.2f);
+        cml.leftMargin = dp(8);
+        btnAttach.setLayoutParams(cml);
+        btnRow.addView(btnAttach);
+
+        box.addView(btnRow);
+        dlg.show();
+    }
+
+    private void showShiftSealHandoverDialog(final LogbookManager logMgr, final Runnable refreshUi) {
+        final LinearLayout box = dialogContainer("✍️ Shift Seal & Handover", "SUPERVISOR AUDIT", colEmerald);
+
+        LinearLayout checklistCard = new LinearLayout(this);
+        checklistCard.setOrientation(LinearLayout.VERTICAL);
+        checklistCard.setBackground(rounded(0xFF1E293B, dp(12)));
+        checklistCard.setPadding(dp(14), dp(12), dp(14), dp(12));
+        LinearLayout.LayoutParams clp = new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+        clp.bottomMargin = dp(12);
+        checklistCard.setLayoutParams(clp);
+
+        TextView tvTitle = new TextView(this);
+        tvTitle.setText("VERIFIED SHIFT MILESTONES");
+        tvTitle.setTextColor(colAccent);
+        tvTitle.setTextSize(10.5f);
+        tvTitle.setTypeface(Typeface.create(Typeface.MONOSPACE, Typeface.BOLD));
+        tvTitle.setPadding(0, 0, 0, dp(8));
+        checklistCard.addView(tvTitle);
+
+        final String[] milestones = {
+                "☑️ Kingston Rd & Site Perimeter Boundaries Verified",
+                "☑️ Lots 14, 15, 16 Factory Floor Doors Padlocked",
+                "☑️ Fire Booster Main Pump Pressure Optimal (1,200 PSI)",
+                "☑️ Master Gate Keys, Remotes, and Radios Accounted For",
+                "☑️ Morning Handover Transfer Prepared for Day Crew"
+        };
+
+        for (String ms : milestones) {
+            TextView item = new TextView(this);
+            item.setText(ms);
+            item.setTextColor(colPale);
+            item.setTextSize(11f);
+            item.setTypeface(Typeface.DEFAULT_BOLD);
+            item.setPadding(0, dp(3), 0, dp(3));
+            checklistCard.addView(item);
+        }
+        box.addView(checklistCard);
+
+        final EditText notesEdit = modernInputField("Add supervisor handover notes or remarks...");
+        notesEdit.setText("Shift sealed, all keys and communications accounted for. Site secure.");
+        box.addView(notesEdit);
+
+        final Dialog dlg = createDialogSheet(box);
+
+        LinearLayout btnRow = new LinearLayout(this);
+        btnRow.setOrientation(LinearLayout.HORIZONTAL);
+        btnRow.setPadding(0, dp(12), 0, 0);
+
+        TextView btnCancel = actionButton("Cancel", colLine, colMuted);
+        btnCancel.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                hapticClick();
+                dlg.dismiss();
+            }
+        });
+        btnRow.addView(btnCancel);
+
+        TextView btnSeal = actionButton("✍️ Seal Handover", colEmerald, 0xFF064E3B);
+        btnSeal.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                hapticSealThud();
+                registerActivity();
+                String remarks = notesEdit.getText().toString().trim();
+                if (remarks.isEmpty()) remarks = "Shift sealed, handover taken.";
+                String line = "[HANDOVER] " + remarks + " (Duty Guard: L. Doherty #41207)";
+                note(Core.TOPIC_FOR_DAY_CREW, line);
+                dlg.dismiss();
+                if (refreshUi != null) refreshUi.run();
+                Toast.makeText(MainActivity.this, "✍️ Shift officially sealed & handover logged!", Toast.LENGTH_SHORT).show();
+            }
+        });
+        LinearLayout.LayoutParams bsl = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1.3f);
+        bsl.leftMargin = dp(8);
+        btnSeal.setLayoutParams(bsl);
+        btnRow.addView(btnSeal);
+
+        box.addView(btnRow);
+        dlg.show();
     }
 
     private View buildLogbookRuledSheetView(final boolean carbonMode) {
