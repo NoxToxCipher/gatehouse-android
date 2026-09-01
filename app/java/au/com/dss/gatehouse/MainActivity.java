@@ -10106,43 +10106,73 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
     private LinearLayout buildAussieSportsCard() {
         final LinearLayout card = new LinearLayout(this);
         card.setOrientation(LinearLayout.VERTICAL);
-        card.setBackground(rounded(colPanel, dp(16)));
-        card.setPadding(dp(14), dp(14), dp(14), dp(14));
-        card.setElevation(dp(3));
+        android.graphics.drawable.GradientDrawable gd = new android.graphics.drawable.GradientDrawable();
+        gd.setColor(colPanel);
+        gd.setCornerRadius(dp(18));
+        gd.setStroke(dp(1), colLineSubtle);
+        card.setBackground(gd);
+        card.setPadding(dp(16), dp(16), dp(16), dp(16));
+        card.setElevation(dp(4));
         LinearLayout.LayoutParams clp = new LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
-        clp.bottomMargin = dp(12);
+        clp.topMargin = dp(10);
+        clp.bottomMargin = dp(16);
         card.setLayoutParams(clp);
 
-        // Header Row: Title + Live Badge
-        LinearLayout topRow = new LinearLayout(this);
-        topRow.setOrientation(LinearLayout.HORIZONTAL);
-        topRow.setGravity(Gravity.CENTER_VERTICAL);
+        // 1. Hero Header: Big Icon, Title, Subtitle, Live Badge
+        LinearLayout top = new LinearLayout(this);
+        top.setOrientation(LinearLayout.HORIZONTAL);
+        top.setGravity(Gravity.CENTER_VERTICAL);
+
+        TextView icon = new TextView(this);
+        icon.setText("🏉");
+        icon.setTextSize(22);
+        icon.setPadding(0, 0, dp(10), 0);
+        top.addView(icon);
+
+        LinearLayout textCol = new LinearLayout(this);
+        textCol.setOrientation(LinearLayout.VERTICAL);
+        LinearLayout.LayoutParams tclp = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
+        textCol.setLayoutParams(tclp);
 
         TextView title = new TextView(this);
-        title.setText("🏉 AUSSIE SPORTS RADAR");
-        title.setTextColor(colAccent);
-        title.setTextSize(12);
-        title.setTypeface(Typeface.create(Typeface.MONOSPACE, Typeface.BOLD));
-        LinearLayout.LayoutParams tlp = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
-        title.setLayoutParams(tlp);
-        topRow.addView(title);
+        title.setText("AUSSIE FOOTY & LIVE SPORTS RADAR");
+        title.setTextColor(colPale);
+        title.setTextSize(13.5f);
+        title.setTypeface(Typeface.DEFAULT_BOLD);
+        textCol.addView(title);
 
-        TextView subBadge = new TextView(this);
-        subBadge.setText("NRL · UNION · AFL");
-        subBadge.setTextColor(colMuted);
-        subBadge.setTextSize(9.5f);
-        subBadge.setTypeface(Typeface.MONOSPACE);
-        subBadge.setPadding(dp(6), dp(2), dp(6), dp(2));
-        subBadge.setBackground(rounded(colPanel2, dp(4)));
-        topRow.addView(subBadge);
+        TextView sub = new TextView(this);
+        sub.setText("NRL · Super Rugby · AFL · Live Scores & Broadcast Guide");
+        sub.setTextColor(colMuted);
+        sub.setTextSize(10.5f);
+        textCol.addView(sub);
+        top.addView(textCol);
 
-        card.addView(topRow);
+        TextView badge = new TextView(this);
+        badge.setText("LIVE RADAR ◹");
+        badge.setTextColor(colAccent);
+        badge.setTextSize(10f);
+        badge.setTypeface(Typeface.create(Typeface.MONOSPACE, Typeface.BOLD));
+        badge.setPadding(dp(8), dp(4), dp(8), dp(4));
+        badge.setBackground(rounded(colPanel2, dp(6)));
+        top.addView(badge);
+        card.addView(top);
 
-        // Filter Strip (ALL, NRL, UNION, AFL)
+        // 2. Divider Bar
+        View div = new View(this);
+        div.setBackgroundColor(colLineSubtle);
+        LinearLayout.LayoutParams dlp = new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT, dp(1));
+        dlp.topMargin = dp(10);
+        dlp.bottomMargin = dp(8);
+        div.setLayoutParams(dlp);
+        card.addView(div);
+
+        // 3. Filter Strip (ALL, NRL, UNION, AFL)
         HorizontalScrollView filterScroll = new HorizontalScrollView(this);
         filterScroll.setHorizontalScrollBarEnabled(false);
-        filterScroll.setPadding(0, dp(8), 0, dp(6));
+        filterScroll.setPadding(0, dp(4), 0, dp(8));
 
         final LinearLayout filterRow = new LinearLayout(this);
         filterRow.setOrientation(LinearLayout.HORIZONTAL);
@@ -10165,7 +10195,7 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
             chip.setText(fLabel);
             chip.setTextSize(10.5f);
             chip.setTypeface(Typeface.DEFAULT_BOLD);
-            chip.setPadding(dp(10), dp(5), dp(10), dp(5));
+            chip.setPadding(dp(12), dp(6), dp(12), dp(6));
 
             boolean sel = sportsActiveFilter.equalsIgnoreCase(fKey);
             chip.setTextColor(sel ? colAccentInk : colPale);
@@ -10173,7 +10203,7 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
 
             LinearLayout.LayoutParams plp = new LinearLayout.LayoutParams(
                     LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT);
-            plp.rightMargin = dp(4);
+            plp.rightMargin = dp(6);
             chip.setLayoutParams(plp);
 
             chip.setOnClickListener(new View.OnClickListener() {
@@ -10194,21 +10224,22 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
         filterScroll.addView(filterRow);
         card.addView(filterScroll);
 
+        // 4. Matches Container
         card.addView(matchesContainer);
         populateSportsMatches(matchesContainer);
 
-        // Footer Refresh Row
+        // 5. Footer Refresh & Broadcast Strip
         LinearLayout footRow = new LinearLayout(this);
         footRow.setOrientation(LinearLayout.HORIZONTAL);
         footRow.setGravity(Gravity.CENTER_VERTICAL);
-        footRow.setPadding(0, dp(8), 0, 0);
+        footRow.setPadding(0, dp(10), 0, 0);
 
         TextView refreshBtn = new TextView(this);
         refreshBtn.setText("↻ Refresh Live Scores");
         refreshBtn.setTextColor(colCyan);
         refreshBtn.setTextSize(11);
         refreshBtn.setTypeface(Typeface.DEFAULT_BOLD);
-        refreshBtn.setPadding(dp(10), dp(6), dp(10), dp(6));
+        refreshBtn.setPadding(dp(12), dp(6), dp(12), dp(6));
         refreshBtn.setBackground(rounded(colPanel2, dp(8)));
         refreshBtn.setOnClickListener(new View.OnClickListener() {
             public void onClick(View v) {
