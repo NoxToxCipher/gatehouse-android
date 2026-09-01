@@ -492,12 +492,16 @@ public class BadukGameView extends View {
     private void botPlayMove() {
         if (currentTurn != 2 || gameOver) return;
 
-        // 1. Defend own groups in Atari (1 liberty)
+        // 1. URGENT ATARI COMBAT: Immediate Defense & Capture
+        // 1A. Defend own groups in Atari (1 liberty)
+        int bestDefX = -1, bestDefY = -1;
+        int maxDefGain = 0;
         for (int y = 0; y < boardSize; y++) {
             for (int x = 0; x < boardSize; x++) {
                 if (board[y][x] == 2) {
                     boolean[][] v = new boolean[boardSize][boardSize];
                     if (countGroupLiberties(x, y, 2, v) == 1) {
+                        // Find the escape liberty
                         int[][] dirs = {{0,1}, {0,-1}, {1,0}, {-1,0}};
                         for (int[] d : dirs) {
                             int nx = x + d[0];
@@ -507,8 +511,10 @@ public class BadukGameView extends View {
                                 boolean[][] v2 = new boolean[boardSize][boardSize];
                                 int libs = countGroupLiberties(nx, ny, 2, v2);
                                 board[ny][nx] = 0;
-                                if (libs >= 2) {
-                                    if (playMove(nx, ny)) return;
+                                if (libs >= 2 && libs > maxDefGain) {
+                                    maxDefGain = libs;
+                                    bestDefX = nx;
+                                    bestDefY = ny;
                                 }
                             }
                         }
@@ -516,8 +522,13 @@ public class BadukGameView extends View {
                 }
             }
         }
+        if (bestDefX != -1 && bestDefY != -1) {
+            if (playMove(bestDefX, bestDefY)) return;
+        }
 
-        // 2. Capture opponent groups in Atari
+        // 1B. Capture opponent groups in Atari (1 liberty)
+        int bestCapX = -1, bestCapY = -1;
+        int maxCapSize = 0;
         for (int y = 0; y < boardSize; y++) {
             for (int x = 0; x < boardSize; x++) {
                 if (board[y][x] == 1) {
@@ -528,70 +539,225 @@ public class BadukGameView extends View {
                             int nx = x + d[0];
                             int ny = y + d[1];
                             if (nx >= 0 && nx < boardSize && ny >= 0 && ny < boardSize && board[ny][nx] == 0) {
-                                if (playMove(nx, ny)) return;
+                                boolean[][] vSelf = new boolean[boardSize][boardSize];
+                                int groupSize = countGroupSize(x, y, 1, vSelf);
+                                if (groupSize > maxCapSize) {
+                                    maxCapSize = groupSize;
+                                    bestCapX = nx;
+                                    bestCapY = ny;
+                                }
                             }
                         }
                     }
                 }
             }
         }
+        if (bestCapX != -1 && bestCapY != -1) {
+            if (playMove(bestCapX, bestCapY)) return;
+        }
 
-        // 3. Positional & MCTS Evaluation
-        int bestX = -1, bestY = -1;
-        float bestScore = -99999f;
-
-        for (int y = 0; y < boardSize; y++) {
-            for (int x = 0; x < boardSize; x++) {
-                if (board[y][x] != 0) continue;
-
-                board[y][x] = 2;
-                boolean[][] vTest = new boolean[boardSize][boardSize];
-                int testLibs = countGroupLiberties(x, y, 2, vTest);
-                board[y][x] = 0;
-                if (testLibs <= 1) continue; // Avoid self-atari
-
-                float score = 0f;
-                int distEdgeX = Math.min(x, boardSize - 1 - x);
-                int distEdgeY = Math.min(y, boardSize - 1 - y);
-
-                // Star point & 3rd/4th line territory preference
-                if (distEdgeX == 2 && distEdgeY == 2) score += 45f;
-                else if (distEdgeX >= 2 && distEdgeY >= 2) score += 30f;
-                else if (distEdgeX == 0 || distEdgeY == 0) score -= 25f;
-
-                // Contact engagement
-                if (lastMoveX >= 0) {
-                    int dx = Math.abs(x - lastMoveX);
-                    int dy = Math.abs(y - lastMoveY);
-                    if (dx <= 1 && dy <= 1 && (dx + dy > 0)) score += 35f;
-                }
-
-                // Connections
-                int friendly = 0;
-                int[][] dirs = {{0,1}, {0,-1}, {1,0}, {-1,0}};
-                for (int[] d : dirs) {
-                    int nx = x + d[0];
-                    int ny = y + d[1];
-                    if (nx >= 0 && nx < boardSize && ny >= 0 && ny < boardSize && board[ny][nx] == 2) friendly++;
-                }
-                score += friendly * 18f;
-                score += testLibs * 8f;
-
-                for (int sim = 0; sim < 10; sim++) score += rng.nextFloat() * 12f;
-
-                if (score > bestScore) {
-                    bestScore = score;
-                    bestX = x;
-                    bestY = y;
+        // 2. OPENING JOSEKI / CORNER & TENGEN (First 4 moves)
+        if (moveList.size() <= 4) {
+            int center = boardSize / 2;
+            int star = (boardSize >= 13) ? 3 : 2;
+            int starHigh = boardSize - 1 - star;
+            int[][] openingPoints = {
+                {center, center}, // Tengen
+                {star, star}, {starHigh, star}, {star, starHigh}, {starHigh, starHigh}, // 4 Star Corners
+                {center, star}, {star, center}, {center, starHigh}, {starHigh, center} // Side Approaches
+            };
+            for (int[] pt : openingPoints) {
+                if (board[pt[1]][pt[0]] == 0) {
+                    if (playMove(pt[0], pt[1])) return;
                 }
             }
         }
 
-        if (bestX != -1 && bestY != -1) {
-            if (playMove(bestX, bestY)) return;
+        // 3. CANDIDATE MOVES WITH SHAPE HEURISTICS & MONTE CARLO ROLLOUTS
+        List<CandidateMove> candidates = new ArrayList<>();
+        for (int y = 0; y < boardSize; y++) {
+            for (int x = 0; x < boardSize; x++) {
+                if (board[y][x] != 0) continue;
+
+                // Test self-liberties
+                board[y][x] = 2;
+                boolean[][] vTest = new boolean[boardSize][boardSize];
+                int testLibs = countGroupLiberties(x, y, 2, vTest);
+                board[y][x] = 0;
+                if (testLibs <= 1) continue; // Strictly avoid self-atari traps
+
+                float shapeScore = evaluateShapeScore(x, y);
+                candidates.add(new CandidateMove(x, y, shapeScore));
+            }
         }
 
+        if (candidates.isEmpty()) {
+            passTurn();
+            return;
+        }
+
+        // Sort candidates descending by shape heuristic score
+        java.util.Collections.sort(candidates, new java.util.Comparator<CandidateMove>() {
+            @Override
+            public int compare(CandidateMove a, CandidateMove b) {
+                return Float.compare(b.shapeScore, a.shapeScore);
+            }
+        });
+
+        // Run Monte Carlo Rollouts on top 6 candidates
+        int numTop = Math.min(candidates.size(), 6);
+        CandidateMove bestMove = candidates.get(0);
+        float bestTotalScore = -999999f;
+
+        for (int i = 0; i < numTop; i++) {
+            CandidateMove c = candidates.get(i);
+            float winRate = runMonteCarloRollouts(c.x, c.y, 25, 12);
+            float totalScore = c.shapeScore * 0.45f + winRate * 55f;
+            if (totalScore > bestTotalScore) {
+                bestTotalScore = totalScore;
+                bestMove = c;
+            }
+        }
+
+        if (bestMove != null && playMove(bestMove.x, bestMove.y)) return;
+
         passTurn();
+    }
+
+    private static class CandidateMove {
+        final int x, y;
+        final float shapeScore;
+        CandidateMove(int x, int y, float s) {
+            this.x = x; this.y = y; this.shapeScore = s;
+        }
+    }
+
+    private int countGroupSize(int startX, int startY, int color, boolean[][] visited) {
+        int count = 0;
+        Queue<Point> q = new LinkedList<>();
+        q.add(new Point(startX, startY));
+        visited[startY][startX] = true;
+        count++;
+
+        int[][] dirs = {{0,1}, {0,-1}, {1,0}, {-1,0}};
+        while (!q.isEmpty()) {
+            Point p = q.poll();
+            for (int[] d : dirs) {
+                int nx = p.x + d[0];
+                int ny = p.y + d[1];
+                if (nx >= 0 && nx < boardSize && ny >= 0 && ny < boardSize && board[ny][nx] == color && !visited[ny][nx]) {
+                    visited[ny][nx] = true;
+                    count++;
+                    q.add(new Point(nx, ny));
+                }
+            }
+        }
+        return count;
+    }
+
+    private float evaluateShapeScore(int x, int y) {
+        float score = 0f;
+        int distEdgeX = Math.min(x, boardSize - 1 - x);
+        int distEdgeY = Math.min(y, boardSize - 1 - y);
+
+        // 3rd / 4th line Golden Territory Lines (optimal Go balance)
+        if (distEdgeX == 2 && distEdgeY == 2) score += 60f;
+        else if (distEdgeX >= 2 && distEdgeY >= 2) score += 42f;
+        else if (distEdgeX == 1 || distEdgeY == 1) score += 15f;
+        else if (distEdgeX == 0 || distEdgeY == 0) score -= 35f; // First line penalty (death line)
+
+        // Contact & Tesuji Shape Patterns
+        int friendlyNeighbors = 0;
+        int enemyNeighbors = 0;
+        int friendlyDiagonals = 0;
+        int enemyDiagonals = 0;
+
+        int[][] dirs = {{0,1}, {0,-1}, {1,0}, {-1,0}};
+        for (int[] d : dirs) {
+            int nx = x + d[0];
+            int ny = y + d[1];
+            if (nx >= 0 && nx < boardSize && ny >= 0 && ny < boardSize) {
+                if (board[ny][nx] == 2) friendlyNeighbors++;
+                else if (board[ny][nx] == 1) enemyNeighbors++;
+            }
+        }
+
+        int[][] diagDirs = {{1,1}, {1,-1}, {-1,1}, {-1,-1}};
+        for (int[] d : diagDirs) {
+            int nx = x + d[0];
+            int ny = y + d[1];
+            if (nx >= 0 && nx < boardSize && ny >= 0 && ny < boardSize) {
+                if (board[ny][nx] == 2) friendlyDiagonals++;
+                else if (board[ny][nx] == 1) enemyDiagonals++;
+            }
+        }
+
+        // Hane & Head of 2 Stones (powerful wrapping shape)
+        if (enemyNeighbors >= 1 && friendlyNeighbors >= 1) score += 55f;
+
+        // Tiger's Mouth (3 surrounding friendly stones creating eye mouth)
+        if (friendlyNeighbors >= 2 && friendlyDiagonals >= 1) score += 65f;
+
+        // Kosumi (Diagonal connection with protection against cuts)
+        if (friendlyDiagonals >= 1 && enemyNeighbors == 0) score += 40f;
+
+        // Extension from friendly wall
+        score += friendlyNeighbors * 22f;
+
+        // Pressure opponent stone
+        if (enemyNeighbors == 1) score += 30f;
+
+        // Proximity to last move
+        if (lastMoveX >= 0) {
+            int dx = Math.abs(x - lastMoveX);
+            int dy = Math.abs(y - lastMoveY);
+            if (dx <= 2 && dy <= 2 && (dx + dy > 0)) score += 28f;
+        }
+
+        return score;
+    }
+
+    private float runMonteCarloRollouts(int startX, int startY, int numRollouts, int maxDepth) {
+        int wins = 0;
+        int[][] simBoard = new int[boardSize][boardSize];
+
+        for (int sim = 0; sim < numRollouts; sim++) {
+            // Copy state
+            for (int r = 0; r < boardSize; r++) {
+                System.arraycopy(board[r], 0, simBoard[r], 0, boardSize);
+            }
+            simBoard[startY][startX] = 2; // White candidate
+
+            // Fast Playouts
+            int turn = 1; // Black next
+            for (int ply = 0; ply < maxDepth; ply++) {
+                List<Point> legalMoves = new ArrayList<>();
+                for (int r = 0; r < boardSize; r++) {
+                    for (int c = 0; c < boardSize; c++) {
+                        if (simBoard[r][c] == 0) legalMoves.add(new Point(c, r));
+                    }
+                }
+                if (legalMoves.isEmpty()) break;
+
+                // Pick a pseudo-random move with preference for center
+                Point p = legalMoves.get(rng.nextInt(legalMoves.size()));
+                simBoard[p.y][p.x] = turn;
+                turn = (turn == 1) ? 2 : 1;
+            }
+
+            // Evaluate territory differential
+            int whiteScore = 0;
+            int blackScore = 0;
+            for (int r = 0; r < boardSize; r++) {
+                for (int c = 0; c < boardSize; c++) {
+                    if (simBoard[r][c] == 2) whiteScore += 2;
+                    else if (simBoard[r][c] == 1) blackScore += 2;
+                }
+            }
+            if (whiteScore + 6 >= blackScore) wins++; // 6.5 Komi advantage for White
+        }
+
+        return (float) wins / (float) numRollouts;
     }
 
     @Override
