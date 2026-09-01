@@ -3290,11 +3290,11 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
 
         final String[][] categories = {
             {"ALL", "🌟 All Tools"},
+            {"SYSTEM", "⚙️ System & Hub"},
             {"HARDWARE", "⚡ Comms & Gear"},
             {"SENSORS", "🛰️ Radar & Sensors"},
-            {"GAMES", "🎮 Board Games (8)"},
             {"VAULT", "🪪 Vault & Docs"},
-            {"SYSTEM", "⚙️ System & OTA"}
+            {"GAMES", "🎮 Board Games (8)"}
         };
 
         final List<TextView> pillViews = new ArrayList<>();
@@ -3357,7 +3357,57 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
     private void populateToolsContent(LinearLayout container) {
         boolean showAll = "ALL".equalsIgnoreCase(toolsActiveFilter);
 
-        // 1. ⚡ COMMS & OPERATIONAL GEAR
+        // 1. ⚙️ PREFERENCES & SYSTEM HUB (Placed at top for testing & instant access)
+        if (showAll || "SYSTEM".equalsIgnoreCase(toolsActiveFilter)) {
+            container.addView(sectionHeader("⚙️ PREFERENCES & SYSTEM HUB", null));
+
+            // Hero Card: Tester Feedback Hub
+            container.addView(buildTesterFeedbackCard());
+
+            LinearLayout rHub = new LinearLayout(this);
+            rHub.setOrientation(LinearLayout.HORIZONTAL);
+            rHub.addView(buildCompactToolTile("⚙️", "Preferences", "THEMES", colAccent, "Display themes & haptics", new View.OnClickListener() {
+                public void onClick(View v) {
+                    hapticClick();
+                    showSettingsDialog();
+                }
+            }));
+            rHub.addView(buildCompactToolTile("⚡", "OTA Updates", "v" + AutoUpdateManager.getAppVersion(this), colEmerald, "Check live GitHub build", new View.OnClickListener() {
+                public void onClick(View v) {
+                    hapticHeavyClick();
+                    AutoUpdateManager.checkForUpdateAsync(MainActivity.this, true, new AutoUpdateManager.UpdateCheckCallback() {
+                        @Override
+                        public void onUpdateFound(final String newSha, final long bytes) {
+                            runOnUiThread(new Runnable() {
+                                public void run() {
+                                    banner.setText("✓ New OTA update ready (SHA " + (newSha.length() > 8 ? newSha.substring(0, 8) : newSha) + ") · Installing");
+                                    banner.setVisibility(View.VISIBLE);
+                                }
+                            });
+                        }
+                        @Override
+                        public void onNoUpdateAvailable() {
+                            runOnUiThread(new Runnable() {
+                                public void run() {
+                                    Toast.makeText(MainActivity.this, "✓ Gatehouse is up to date", Toast.LENGTH_SHORT).show();
+                                }
+                            });
+                        }
+                        @Override
+                        public void onError(final String message) {
+                            runOnUiThread(new Runnable() {
+                                public void run() {
+                                    Toast.makeText(MainActivity.this, "Update check: " + message, Toast.LENGTH_SHORT).show();
+                                }
+                            });
+                        }
+                    });
+                }
+            }));
+            container.addView(rHub);
+        }
+
+        // 2. ⚡ COMMS & OPERATIONAL GEAR
         if (showAll || "HARDWARE".equalsIgnoreCase(toolsActiveFilter)) {
             container.addView(sectionHeader("⚡ COMMS & OPERATIONAL GEAR", null));
 
@@ -3394,7 +3444,7 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
             container.addView(r2);
         }
 
-        // 2. 🛰️ RADAR & SENSORS
+        // 3. 🛰️ RADAR & SENSORS
         if (showAll || "SENSORS".equalsIgnoreCase(toolsActiveFilter)) {
             container.addView(sectionHeader("🛰️ SENSORS & ENVIRONMENTAL RADAR", null));
             LinearLayout r3 = new LinearLayout(this);
@@ -3440,7 +3490,48 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
             container.addView(r4b);
         }
 
-        // 3. 🎮 RECREATION & BOARD GAMES ARCADE (8 GAMES)
+        // 4. 🪪 OFFICER VAULT & COMPLIANCE
+        if (showAll || "VAULT".equalsIgnoreCase(toolsActiveFilter)) {
+            container.addView(sectionHeader("🪪 OFFICER VAULT & COMPLIANCE", null));
+            LinearLayout r5 = new LinearLayout(this);
+            r5.setOrientation(LinearLayout.HORIZONTAL);
+            r5.addView(buildCompactToolTile("🪪", "Officer Vault", "LIC #41207", colPale, "Digital ID & credentials", new View.OnClickListener() {
+                public void onClick(View v) {
+                    hapticClick();
+                    showOfficerCredentialVaultDialog();
+                }
+            }));
+            r5.addView(buildCompactToolTile("⚖️", "Security Award", "MA000016", colAccent, "Pay rates & allowances reader", new View.OnClickListener() {
+                public void onClick(View v) {
+                    hapticHeavyClick();
+                    List<DeputyApi.DeputyDocument> docs = DeputyApi.getPreloadedDocuments();
+                    if (!docs.isEmpty()) {
+                        showDocumentReader(docs.get(0));
+                    } else {
+                        showDocumentLibraryDialog();
+                    }
+                }
+            }));
+            container.addView(r5);
+
+            LinearLayout r6 = new LinearLayout(this);
+            r6.setOrientation(LinearLayout.HORIZONTAL);
+            r6.addView(buildCompactToolTile("📡", "Offline Mesh", "P2P SYNC", colCyan, "Encrypted local peer sync", new View.OnClickListener() {
+                public void onClick(View v) {
+                    hapticClick();
+                    showNfcBleMeshDialog();
+                }
+            }));
+            r6.addView(buildCompactToolTile("📚", "Deputy Docs", "8 DOCS", 0xFF00E5FF, "Award, Fair Work & WHS manuals", new View.OnClickListener() {
+                public void onClick(View v) {
+                    hapticHeavyClick();
+                    showDocumentLibraryDialog();
+                }
+            }));
+            container.addView(r6);
+        }
+
+        // 5. 🎮 RECREATION & BOARD GAMES ARCADE (8 GAMES - Placed at bottom)
         if (showAll || "GAMES".equalsIgnoreCase(toolsActiveFilter)) {
             container.addView(sectionHeader("🎮 OFFICER RECREATION & BOARD GAMES (8)", null));
 
@@ -3507,97 +3598,6 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
                 }
             }));
             container.addView(rGames4);
-        }
-
-        // 4. 🪪 OFFICER VAULT & COMPLIANCE
-        if (showAll || "VAULT".equalsIgnoreCase(toolsActiveFilter)) {
-            container.addView(sectionHeader("🪪 OFFICER VAULT & COMPLIANCE", null));
-            LinearLayout r5 = new LinearLayout(this);
-            r5.setOrientation(LinearLayout.HORIZONTAL);
-            r5.addView(buildCompactToolTile("🪪", "Officer Vault", "LIC #41207", colPale, "Digital ID & credentials", new View.OnClickListener() {
-                public void onClick(View v) {
-                    hapticClick();
-                    showOfficerCredentialVaultDialog();
-                }
-            }));
-            r5.addView(buildCompactToolTile("⚖️", "Security Award", "MA000016", colAccent, "Pay rates & allowances reader", new View.OnClickListener() {
-                public void onClick(View v) {
-                    hapticHeavyClick();
-                    List<DeputyApi.DeputyDocument> docs = DeputyApi.getPreloadedDocuments();
-                    if (!docs.isEmpty()) {
-                        showDocumentReader(docs.get(0));
-                    } else {
-                        showDocumentLibraryDialog();
-                    }
-                }
-            }));
-            container.addView(r5);
-
-            LinearLayout r6 = new LinearLayout(this);
-            r6.setOrientation(LinearLayout.HORIZONTAL);
-            r6.addView(buildCompactToolTile("📡", "Offline Mesh", "P2P SYNC", colCyan, "Encrypted local peer sync", new View.OnClickListener() {
-                public void onClick(View v) {
-                    hapticClick();
-                    showNfcBleMeshDialog();
-                }
-            }));
-            r6.addView(buildCompactToolTile("📚", "Deputy Docs", "8 DOCS", 0xFF00E5FF, "Award, Fair Work & WHS manuals", new View.OnClickListener() {
-                public void onClick(View v) {
-                    hapticHeavyClick();
-                    showDocumentLibraryDialog();
-                }
-            }));
-            container.addView(r6);
-        }
-
-        // 5. ⚙️ PREFERENCES & SYSTEM HUB
-        if (showAll || "SYSTEM".equalsIgnoreCase(toolsActiveFilter)) {
-            container.addView(sectionHeader("⚙️ PREFERENCES & SYSTEM HUB", null));
-
-            // Hero Card: Tester Feedback Hub
-            container.addView(buildTesterFeedbackCard());
-
-            LinearLayout r7 = new LinearLayout(this);
-            r7.setOrientation(LinearLayout.HORIZONTAL);
-            r7.addView(buildCompactToolTile("⚙️", "Preferences", "THEMES", colAccent, "Display themes & haptics", new View.OnClickListener() {
-                public void onClick(View v) {
-                    hapticClick();
-                    showSettingsDialog();
-                }
-            }));
-            r7.addView(buildCompactToolTile("⚡", "OTA Updates", "v" + AutoUpdateManager.getAppVersion(this), colEmerald, "Check live GitHub build", new View.OnClickListener() {
-                public void onClick(View v) {
-                    hapticHeavyClick();
-                    AutoUpdateManager.checkForUpdateAsync(MainActivity.this, true, new AutoUpdateManager.UpdateCheckCallback() {
-                        @Override
-                        public void onUpdateFound(final String newSha, final long bytes) {
-                            runOnUiThread(new Runnable() {
-                                public void run() {
-                                    banner.setText("✓ New OTA update ready (SHA " + (newSha.length() > 8 ? newSha.substring(0, 8) : newSha) + ") · Installing");
-                                    banner.setVisibility(View.VISIBLE);
-                                }
-                            });
-                        }
-                        @Override
-                        public void onNoUpdateAvailable() {
-                            runOnUiThread(new Runnable() {
-                                public void run() {
-                                    Toast.makeText(MainActivity.this, "✓ Gatehouse is up to date", Toast.LENGTH_SHORT).show();
-                                }
-                            });
-                        }
-                        @Override
-                        public void onError(final String message) {
-                            runOnUiThread(new Runnable() {
-                                public void run() {
-                                    Toast.makeText(MainActivity.this, "Update check: " + message, Toast.LENGTH_SHORT).show();
-                                }
-                            });
-                        }
-                    });
-                }
-            }));
-            container.addView(r7);
         }
     }
 
