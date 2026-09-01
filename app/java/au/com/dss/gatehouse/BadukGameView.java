@@ -78,6 +78,8 @@ public class BadukGameView extends View {
     private boolean puzzleSolved = false;
     private boolean showTerritory = false;
     private boolean showHeatmap = false;
+    private boolean showMoveNumbers = false;
+    private final Paint moveNumberPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
     private int difficultyTier = 1; // 0 = Apprentice (1-kyu), 1 = Master (3-dan), 2 = Grandmaster (9-dan)
     private int hintX = -1;
     private int hintY = -1;
@@ -87,6 +89,15 @@ public class BadukGameView extends View {
     private boolean isScoringMode = false;
     private final boolean[][] deadStones = new boolean[19][19];
     private final Paint deadStoneCrossPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+
+    public void toggleMoveNumbers() {
+        showMoveNumbers = !showMoveNumbers;
+        invalidate();
+    }
+
+    public boolean isMoveNumbersEnabled() {
+        return showMoveNumbers;
+    }
 
     // Stone Placement Descent & Wood Impact Clack Ripple Animation
     private int animStoneX = -1;
@@ -1244,6 +1255,26 @@ public class BadukGameView extends View {
 
                     if (x == lastMoveX && y == lastMoveY) {
                         canvas.drawCircle(cx, cy, stoneR * 0.5f, lastMovePaint);
+                    }
+                }
+            }
+        }
+
+        // Draw Move Numbers Overlay
+        if (showMoveNumbers) {
+            moveNumberPaint.setTextSize(Math.max(dpf(7.5f), cellSize * 0.38f));
+            moveNumberPaint.setTextAlign(Paint.Align.CENTER);
+            moveNumberPaint.setTypeface(Typeface.create(Typeface.MONOSPACE, Typeface.BOLD));
+
+            for (int i = 0; i < moveList.size(); i++) {
+                Point pt = moveList.get(i);
+                if (pt.x >= 0 && pt.x < boardSize && pt.y >= 0 && pt.y < boardSize) {
+                    int stoneColor = board[pt.y][pt.x];
+                    if (stoneColor != 0) {
+                        float cx = startX + pt.x * cellSize;
+                        float cy = startY + pt.y * cellSize;
+                        moveNumberPaint.setColor(stoneColor == 1 ? 0xFFFFFFFF : 0xFF0F172A);
+                        canvas.drawText(String.valueOf(i + 1), cx, cy + dpf(3f), moveNumberPaint);
                     }
                 }
             }

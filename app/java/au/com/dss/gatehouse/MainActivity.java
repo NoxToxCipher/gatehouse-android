@@ -5088,6 +5088,26 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
         btnHeatmap.setLayoutParams(hmlp);
         bottomRow.addView(btnHeatmap);
 
+        final TextView btnNumbers = actionButton("🔢 #", colPanel2, 0xFF38BDF8);
+        btnNumbers.setOnClickListener(new View.OnClickListener() {
+            public void onClick(View v) {
+                hapticClick();
+                badukView.toggleMoveNumbers();
+                if (badukView.isMoveNumbersEnabled()) {
+                    btnNumbers.setBackground(rounded(0xFF38BDF8, dp(8)));
+                    btnNumbers.setTextColor(0xFF0F172A);
+                } else {
+                    btnNumbers.setBackground(rounded(colPanel2, dp(8)));
+                    btnNumbers.setTextColor(0xFF38BDF8);
+                }
+            }
+        });
+        LinearLayout.LayoutParams nblp = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 0.7f);
+        nblp.leftMargin = dp(2);
+        nblp.rightMargin = dp(2);
+        btnNumbers.setLayoutParams(nblp);
+        bottomRow.addView(btnNumbers);
+
         TextView btnSgf = actionButton("📋 SGF", colPanel2, colCyan);
         btnSgf.setOnClickListener(new View.OnClickListener() {
             public void onClick(View v) {
@@ -5100,7 +5120,7 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
                 }
             }
         });
-        LinearLayout.LayoutParams sgflp = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 0.9f);
+        LinearLayout.LayoutParams sgflp = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 0.8f);
         sgflp.leftMargin = dp(2);
         sgflp.rightMargin = dp(2);
         btnSgf.setLayoutParams(sgflp);
@@ -5113,7 +5133,7 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
                 showBadukRulesDialog();
             }
         });
-        LinearLayout.LayoutParams rblp = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 0.9f);
+        LinearLayout.LayoutParams rblp = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 0.8f);
         rblp.leftMargin = dp(2);
         rblp.rightMargin = dp(2);
         btnRules.setLayoutParams(rblp);

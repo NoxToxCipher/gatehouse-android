@@ -338,9 +338,17 @@ public class SenetGameView extends View {
 
         my[pieceIdx] = next;
         if (next == 30) {
-            RecreationAudioSynth.playBadukStoneClack();
+            try {
+                RecreationAudioSynth.playTetrisLineClear();
+                performHapticFeedback(HapticFeedbackConstants.CONFIRM);
+            } catch (Exception ignored) {}
             if (currentTurn == 0) whiteBorneOff++;
             else blackBorneOff++;
+        } else {
+            try {
+                RecreationAudioSynth.playBadukStoneClack();
+                performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP);
+            } catch (Exception ignored) {}
         }
 
         if (whiteBorneOff == 5 || blackBorneOff == 5) {
@@ -351,6 +359,9 @@ public class SenetGameView extends View {
 
         boolean extraRoll = (currentRoll == 1 || currentRoll == 4 || currentRoll == 5);
         if (extraRoll) {
+            try {
+                RecreationAudioSynth.playTetrisRotate();
+            } catch (Exception ignored) {}
             waitingForRoll = true;
             currentRoll = -1;
             updateStatus();
