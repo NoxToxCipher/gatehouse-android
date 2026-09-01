@@ -3945,13 +3945,13 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
 
     private void showGameRulesGuideDialog(String gameTitle, String historyOrigin, String objective, String[] rules, String[] proTips, int accentColor) {
         hapticHeavyClick();
-        final LinearLayout box = dialogContainer("📖 " + gameTitle, "RULES & STRATEGY GUIDE", accentColor);
+        final LinearLayout box = dialogContainer("📖 " + gameTitle, "OFFICIAL RULES & GAMEPLAY GUIDE", accentColor);
 
-        // 1. Heritage Origin Card
+        // 1. Heritage Origin Bento Card
         LinearLayout originCard = new LinearLayout(this);
         originCard.setOrientation(LinearLayout.VERTICAL);
         originCard.setBackground(rounded(colPanel2, dp(12)));
-        originCard.setPadding(dp(12), dp(10), dp(12), dp(10));
+        originCard.setPadding(dp(14), dp(12), dp(14), dp(12));
         LinearLayout.LayoutParams oclp = new LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
         oclp.bottomMargin = dp(8);
@@ -3969,18 +3969,19 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
         origTxt.setText(historyOrigin);
         origTxt.setTextColor(colPale);
         origTxt.setTextSize(11.5f);
-        origTxt.setPadding(0, dp(3), 0, 0);
+        origTxt.setPadding(0, dp(4), 0, 0);
+        origTxt.setLineSpacing(dp(2), 1f);
         originCard.addView(origTxt);
         box.addView(originCard);
 
-        // 2. Win Objective Card
+        // 2. Win Objective Bento Card
         LinearLayout objCard = new LinearLayout(this);
         objCard.setOrientation(LinearLayout.VERTICAL);
         objCard.setBackground(rounded(colPanel2, dp(12)));
-        objCard.setPadding(dp(12), dp(10), dp(12), dp(10));
+        objCard.setPadding(dp(14), dp(12), dp(14), dp(12));
         LinearLayout.LayoutParams objlp = new LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
-        objlp.bottomMargin = dp(8);
+        objlp.bottomMargin = dp(10);
         objCard.setLayoutParams(objlp);
 
         TextView objHdr = new TextView(this);
@@ -3995,66 +3996,108 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
         objTxt.setText(objective);
         objTxt.setTextColor(colPale);
         objTxt.setTextSize(11.5f);
-        objTxt.setPadding(0, dp(3), 0, 0);
+        objTxt.setPadding(0, dp(4), 0, 0);
+        objTxt.setLineSpacing(dp(2), 1f);
         objCard.addView(objTxt);
         box.addView(objCard);
 
-        // 3. Step-by-Step Rules
-        LinearLayout rulesCard = new LinearLayout(this);
-        rulesCard.setOrientation(LinearLayout.VERTICAL);
-        rulesCard.setBackground(rounded(colPanel2, dp(12)));
-        rulesCard.setPadding(dp(12), dp(10), dp(12), dp(10));
-        LinearLayout.LayoutParams rlp = new LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
-        rlp.bottomMargin = dp(8);
-        rulesCard.setLayoutParams(rlp);
-
-        TextView rulesHdr = new TextView(this);
-        rulesHdr.setText("📖 HOW TO PLAY & CORE RULES");
-        rulesHdr.setTextColor(accentColor);
-        rulesHdr.setTextSize(10.5f);
-        rulesHdr.setTypeface(Typeface.DEFAULT_BOLD);
-        rulesHdr.setLetterSpacing(0.08f);
-        rulesCard.addView(rulesHdr);
+        // 3. Step-by-Step Rule Bento Cards
+        TextView rulesSectionHdr = new TextView(this);
+        rulesSectionHdr.setText("📖 STEP-BY-STEP RULES");
+        rulesSectionHdr.setTextColor(accentColor);
+        rulesSectionHdr.setTextSize(11f);
+        rulesSectionHdr.setTypeface(Typeface.DEFAULT_BOLD);
+        rulesSectionHdr.setLetterSpacing(0.08f);
+        rulesSectionHdr.setPadding(dp(2), dp(4), dp(2), dp(6));
+        box.addView(rulesSectionHdr);
 
         for (int i = 0; i < rules.length; i++) {
-            TextView rItem = new TextView(this);
-            rItem.setText((i + 1) + ". " + rules[i]);
-            rItem.setTextColor(colPale);
-            rItem.setTextSize(11f);
-            rItem.setPadding(0, dp(3), 0, dp(2));
-            rulesCard.addView(rItem);
-        }
-        box.addView(rulesCard);
-
-        // 4. Strategy Tips
-        if (proTips != null && proTips.length > 0) {
-            LinearLayout tipCard = new LinearLayout(this);
-            tipCard.setOrientation(LinearLayout.VERTICAL);
-            tipCard.setBackground(rounded(colPanel2, dp(12)));
-            tipCard.setPadding(dp(12), dp(10), dp(12), dp(10));
-            LinearLayout.LayoutParams tlp = new LinearLayout.LayoutParams(
+            LinearLayout itemCard = new LinearLayout(this);
+            itemCard.setOrientation(LinearLayout.HORIZONTAL);
+            itemCard.setBackground(rounded(0xFF131B2B, dp(12)));
+            itemCard.setPadding(dp(12), dp(10), dp(12), dp(10));
+            LinearLayout.LayoutParams itemLp = new LinearLayout.LayoutParams(
                     LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
-            tlp.bottomMargin = dp(8);
-            tipCard.setLayoutParams(tlp);
+            itemLp.bottomMargin = dp(6);
+            itemCard.setLayoutParams(itemLp);
 
-            TextView tipHdr = new TextView(this);
-            tipHdr.setText("💡 STRATEGY & MASTERY TIPS");
-            tipHdr.setTextColor(0xFFFFD166);
-            tipHdr.setTextSize(10.5f);
-            tipHdr.setTypeface(Typeface.DEFAULT_BOLD);
-            tipHdr.setLetterSpacing(0.08f);
-            tipCard.addView(tipHdr);
+            // Numbered Squircle Pod
+            FrameLayout numBox = new FrameLayout(this);
+            numBox.setBackground(rounded(0x28000000 | (accentColor & 0x00FFFFFF), dp(8)));
+            LinearLayout.LayoutParams nlp = new LinearLayout.LayoutParams(dp(28), dp(28));
+            nlp.rightMargin = dp(10);
+            numBox.setLayoutParams(nlp);
 
-            for (String tip : proTips) {
-                TextView tItem = new TextView(this);
-                tItem.setText("★ " + tip);
-                tItem.setTextColor(colPale);
-                tItem.setTextSize(11f);
-                tItem.setPadding(0, dp(3), 0, dp(2));
-                tipCard.addView(tItem);
+            TextView numTv = new TextView(this);
+            numTv.setText(String.format(java.util.Locale.US, "%02d", i + 1));
+            numTv.setTextColor(accentColor);
+            numTv.setTextSize(11f);
+            numTv.setTypeface(Typeface.create(Typeface.MONOSPACE, Typeface.BOLD));
+            numTv.setGravity(Gravity.CENTER);
+            numBox.addView(numTv);
+            itemCard.addView(numBox);
+
+            // Rule Text
+            TextView rText = new TextView(this);
+            rText.setText(rules[i]);
+            rText.setTextColor(colPale);
+            rText.setTextSize(11.5f);
+            rText.setLineSpacing(dp(2), 1f);
+            LinearLayout.LayoutParams textLp = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
+            rText.setLayoutParams(textLp);
+            itemCard.addView(rText);
+
+            box.addView(itemCard);
+        }
+
+        // 4. Strategy & Mastery Bento Cards
+        if (proTips != null && proTips.length > 0) {
+            TextView tipsSectionHdr = new TextView(this);
+            tipsSectionHdr.setText("💡 STRATEGY & MASTERY TIPS");
+            tipsSectionHdr.setTextColor(0xFFFFD166);
+            tipsSectionHdr.setTextSize(11f);
+            tipsSectionHdr.setTypeface(Typeface.DEFAULT_BOLD);
+            tipsSectionHdr.setLetterSpacing(0.08f);
+            tipsSectionHdr.setPadding(dp(2), dp(8), dp(2), dp(6));
+            box.addView(tipsSectionHdr);
+
+            for (int i = 0; i < proTips.length; i++) {
+                LinearLayout tipCard = new LinearLayout(this);
+                tipCard.setOrientation(LinearLayout.HORIZONTAL);
+                tipCard.setBackground(rounded(0xFF1B1F2D, dp(12)));
+                tipCard.setPadding(dp(12), dp(10), dp(12), dp(10));
+                LinearLayout.LayoutParams tipLp = new LinearLayout.LayoutParams(
+                        LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+                tipLp.bottomMargin = dp(6);
+                tipCard.setLayoutParams(tipLp);
+
+                // Star Squircle Pod
+                FrameLayout starBox = new FrameLayout(this);
+                starBox.setBackground(rounded(0x33FFD166, dp(8)));
+                LinearLayout.LayoutParams slp = new LinearLayout.LayoutParams(dp(28), dp(28));
+                slp.rightMargin = dp(10);
+                starBox.setLayoutParams(slp);
+
+                TextView starTv = new TextView(this);
+                starTv.setText("★");
+                starTv.setTextColor(0xFFFFD166);
+                starTv.setTextSize(13f);
+                starTv.setGravity(Gravity.CENTER);
+                starBox.addView(starTv);
+                tipCard.addView(starBox);
+
+                // Tip Text
+                TextView tipText = new TextView(this);
+                tipText.setText(proTips[i]);
+                tipText.setTextColor(colPale);
+                tipText.setTextSize(11.5f);
+                tipText.setLineSpacing(dp(2), 1f);
+                LinearLayout.LayoutParams tipTextLp = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
+                tipText.setLayoutParams(tipTextLp);
+                tipCard.addView(tipText);
+
+                box.addView(tipCard);
             }
-            box.addView(tipCard);
         }
 
         final Dialog dlg = createDialogSheet(box);
@@ -4068,7 +4111,7 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
         });
         LinearLayout.LayoutParams clp = new LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
-        clp.topMargin = dp(4);
+        clp.topMargin = dp(8);
         btnGotIt.setLayoutParams(clp);
         box.addView(btnGotIt);
 

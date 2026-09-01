@@ -685,16 +685,37 @@ public class ChessGameView extends View {
                     float cx = left + cellSize / 2f;
                     float cy = top + cellSize * 0.76f;
                     boolean isWhite = isWhitePiece(p);
+                    boolean isSelected = (c == selectedX && r == selectedY);
 
-                    // Drop Shadow & 3D Depth
-                    canvas.drawText(glyph, cx + dpf(1.5f), cy + dpf(2.2f), shadowPaint);
+                    float drawCy = isSelected ? (cy - dpf(4f)) : cy;
+                    float originalWhiteTextSize = whitePiecePaint.getTextSize();
+                    float originalBlackTextSize = blackPiecePaint.getTextSize();
+
+                    if (isSelected) {
+                        float liftedSize = cellSize * 0.82f;
+                        whitePiecePaint.setTextSize(liftedSize);
+                        blackPiecePaint.setTextSize(liftedSize);
+                        shadowPaint.setTextSize(liftedSize);
+
+                        // Floating Deep Drop Shadow
+                        canvas.drawText(glyph, cx + dpf(3.5f), cy + dpf(5.5f), shadowPaint);
+                    } else {
+                        // Normal Contact Shadow
+                        canvas.drawText(glyph, cx + dpf(1.5f), cy + dpf(2.2f), shadowPaint);
+                    }
 
                     if (isWhite) {
-                        canvas.drawText(glyph, cx, cy, whitePiecePaint);
+                        canvas.drawText(glyph, cx, drawCy, whitePiecePaint);
                     } else {
                         // Subtle golden hairline for obsidian black piece
-                        canvas.drawText(glyph, cx + dpf(0.5f), cy + dpf(0.5f), pieceRimPaint);
-                        canvas.drawText(glyph, cx, cy, blackPiecePaint);
+                        canvas.drawText(glyph, cx + dpf(0.5f), drawCy + dpf(0.5f), pieceRimPaint);
+                        canvas.drawText(glyph, cx, drawCy, blackPiecePaint);
+                    }
+
+                    if (isSelected) {
+                        whitePiecePaint.setTextSize(originalWhiteTextSize);
+                        blackPiecePaint.setTextSize(originalBlackTextSize);
+                        shadowPaint.setTextSize(originalWhiteTextSize);
                     }
                 }
             }
