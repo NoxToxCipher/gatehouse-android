@@ -15217,6 +15217,17 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
         tvSubHead.setTextSize(9f);
         tvSubHead.setTypeface(Typeface.MONOSPACE);
         tvSubHead.setGravity(Gravity.CENTER);
+        tvSubHead.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                hapticClick();
+                logbookSelectedCategory = "ALL";
+                logbookSelectedTimeBucket = "ALL";
+                logbookSearchQuery = "";
+                tvSubHead.setText(getLogbookSubtitle(logMgr));
+                if (refreshContent[0] != null) refreshContent[0].run();
+            }
+        });
         titleCol.addView(tvSubHead);
 
         row1.addView(titleCol);
@@ -15359,6 +15370,12 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
     }
 
     private String getLogbookSubtitle(LogbookManager logMgr) {
+        boolean hasFilter = !logbookSelectedCategory.equalsIgnoreCase("ALL") ||
+                !logbookSelectedTimeBucket.equalsIgnoreCase("ALL") ||
+                !logbookSearchQuery.isEmpty();
+        if (hasFilter) {
+            return "⚡ Filtered: " + logbookSelectedCategory + " · " + logbookSelectedTimeBucket + " (Tap to Reset)";
+        }
         if ("ALL".equalsIgnoreCase(logbookSelectedShiftId)) {
             return "All Archives · " + logMgr.getAllShifts().size() + " Shifts · " + logMgr.getAllEntriesChronological(false).size() + " Occurrences";
         }
@@ -16006,10 +16023,12 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
             container.addView(heatmapCard);
 
             String currentGroupHeader = "";
+            LogbookManager.LogEntry prevEntryInShift = null;
             for (final LogbookManager.LogEntry entry : entries) {
                 // Shift Date Section Header
                 if (!entry.shiftDateStr.equals(currentGroupHeader)) {
                     currentGroupHeader = entry.shiftDateStr;
+                    prevEntryInShift = null;
                     LinearLayout headerRow = new LinearLayout(this);
                     headerRow.setOrientation(LinearLayout.HORIZONTAL);
                     headerRow.setGravity(Gravity.CENTER_VERTICAL);
@@ -16060,6 +16079,32 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
                     headerRow.addView(plaque);
                     container.addView(headerRow);
                 }
+
+                // Inactivity Interval Plaque (if >= 60 mins between occurrences on same shift)
+                if (prevEntryInShift != null) {
+                    int gap = entry.occurredMin - prevEntryInShift.occurredMin;
+                    if (gap < 0) gap += 1440;
+                    if (gap >= 60) {
+                        LinearLayout gapRow = new LinearLayout(this);
+                        gapRow.setOrientation(LinearLayout.HORIZONTAL);
+                        gapRow.setGravity(Gravity.CENTER);
+                        gapRow.setPadding(0, dp(3), 0, dp(3));
+
+                        TextView tvGap = new TextView(this);
+                        int gH = gap / 60;
+                        int gM = gap % 60;
+                        String gapStr = gH > 0 ? (gH + "h " + (gM > 0 ? gM + "m" : "")) : (gM + "m");
+                        tvGap.setText("⏱️ INTERVAL: " + gapStr + " · Routine Tolerance");
+                        tvGap.setTextColor(0xFF94A3B8);
+                        tvGap.setTextSize(9f);
+                        tvGap.setTypeface(Typeface.create(Typeface.MONOSPACE, Typeface.BOLD));
+                        tvGap.setPadding(dp(10), dp(3), dp(10), dp(3));
+                        tvGap.setBackground(rounded(0x18FFFFFF, dp(10)));
+                        gapRow.addView(tvGap);
+                        container.addView(gapRow);
+                    }
+                }
+                prevEntryInShift = entry;
 
                 // Timeline Row: Left Timestamp & Node | Right Occurrence Card
                 LinearLayout timelineRow = new LinearLayout(this);
