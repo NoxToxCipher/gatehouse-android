@@ -3764,7 +3764,7 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
 
         // 5. 🎮 RECREATION & BOARD GAMES ARCADE (8 GAMES - Placed at bottom)
         if (showAll || "GAMES".equalsIgnoreCase(toolsActiveFilter)) {
-            container.addView(sectionHeader("🎮 OFFICER RECREATION & BOARD GAMES (8)", null));
+            container.addView(sectionHeader("🎮 OFFICER RECREATION & ARCADE SUITE (10)", null));
 
             // Hero Off-Grid BLE Mesh Osmosis Leaderboard
             container.addView(buildRecreationLeaderboardCard());
@@ -3824,6 +3824,20 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
                 }
             }));
             container.addView(rGames4);
+
+            LinearLayout rGames5 = new LinearLayout(this);
+            rGames5.setOrientation(LinearLayout.HORIZONTAL);
+            rGames5.addView(buildGameCard("👾", "Space Invaders", "1978 ARCADE", 0xFF10B981, "5 alien rows, bunkers, mystery UFO & CRT scanlines", "👾 VECTOR ARCADE · MOTHERSHIP", new View.OnClickListener() {
+                public void onClick(View v) {
+                    showSpaceInvadersGameDialog();
+                }
+            }));
+            rGames5.addView(buildGameCard("🧱", "Cyber Tetris", "10×20 MATRIX", 0xFF06B6D4, "SRS rotation, ghost projection, hold queue & particle clears", "🧱 7 TETROMINOES · LINE FLASH", new View.OnClickListener() {
+                public void onClick(View v) {
+                    showTetrisGameDialog();
+                }
+            }));
+            container.addView(rGames5);
         }
     }
 
@@ -5781,6 +5795,221 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
             }
         });
         LinearLayout.LayoutParams cblp = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 0.8f);
+        cblp.leftMargin = dp(4);
+        btnClose.setLayoutParams(cblp);
+        bottomRow.addView(btnClose);
+
+        box.addView(bottomRow);
+        dlg.show();
+    }
+
+    // =========================================================================
+    // 👾 9. SPACE INVADERS ARCADE DIALOG (1978 VECTOR ENGINE)
+    // =========================================================================
+
+    private void showSpaceInvadersGameDialog() {
+        final LinearLayout box = dialogContainer("👾 Space Invaders", "1978 VECTOR ARCADE", 0xFF10B981);
+
+        final TextView statusLbl = new TextView(this);
+        statusLbl.setText("👾 Wave 1 · Score: 0 · Lives: 3");
+        statusLbl.setTextColor(0xFF38BDF8);
+        statusLbl.setTextSize(12.5f);
+        statusLbl.setTypeface(Typeface.create(Typeface.MONOSPACE, Typeface.BOLD));
+        statusLbl.setSingleLine(true);
+        statusLbl.setEllipsize(android.text.TextUtils.TruncateAt.END);
+        statusLbl.setHeight(dp(26));
+        statusLbl.setGravity(Gravity.CENTER_VERTICAL);
+        statusLbl.setPadding(0, dp(2), 0, dp(4));
+        box.addView(statusLbl);
+
+        final SpaceInvadersGameView invadersView = new SpaceInvadersGameView(this);
+        LinearLayout.LayoutParams ivl = new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT, dp(310));
+        invadersView.setLayoutParams(ivl);
+        box.addView(invadersView);
+
+        invadersView.setStatusListener(new SpaceInvadersGameView.StatusListener() {
+            @Override
+            public void onStatusChanged(String text, int color) {
+                statusLbl.setText(text);
+                statusLbl.setTextColor(color != 0 ? color : colPale);
+            }
+        });
+
+        LinearLayout ctrlRow = new LinearLayout(this);
+        ctrlRow.setOrientation(LinearLayout.HORIZONTAL);
+        ctrlRow.setPadding(0, dp(8), 0, 0);
+
+        TextView btnFire = actionButton("🚀 Fire Laser", 0xFF10B981, colAccentInk);
+        btnFire.setOnClickListener(new View.OnClickListener() {
+            public void onClick(View v) {
+                invadersView.fireLaser();
+            }
+        });
+        LinearLayout.LayoutParams flp = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1.4f);
+        flp.rightMargin = dp(4);
+        btnFire.setLayoutParams(flp);
+        ctrlRow.addView(btnFire);
+
+        TextView btnRestart = actionButton("↻ Restart", colLine, colPale);
+        btnRestart.setOnClickListener(new View.OnClickListener() {
+            public void onClick(View v) {
+                hapticClick();
+                invadersView.startNewGame();
+            }
+        });
+        LinearLayout.LayoutParams rlp = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
+        rlp.leftMargin = dp(4);
+        btnRestart.setLayoutParams(rlp);
+        ctrlRow.addView(btnRestart);
+        box.addView(ctrlRow);
+
+        final Dialog dlg = createDialogSheet(box);
+
+        LinearLayout bottomRow = new LinearLayout(this);
+        bottomRow.setOrientation(LinearLayout.HORIZONTAL);
+        bottomRow.setPadding(0, dp(8), 0, 0);
+
+        TextView btnClose = actionButton("Close", colLine, colPale);
+        btnClose.setOnClickListener(new View.OnClickListener() {
+            public void onClick(View v) {
+                hapticClick();
+                dlg.dismiss();
+            }
+        });
+        LinearLayout.LayoutParams cblp = new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+        btnClose.setLayoutParams(cblp);
+        bottomRow.addView(btnClose);
+
+        box.addView(bottomRow);
+        dlg.show();
+    }
+
+    // =========================================================================
+    // 🧱 10. CYBER TETRIS DIALOG (10x20 MATRIX ENGINE)
+    // =========================================================================
+
+    private void showTetrisGameDialog() {
+        final LinearLayout box = dialogContainer("🧱 Cyber Tetris", "10×20 MATRIX SRS", 0xFF06B6D4);
+
+        final TextView statusLbl = new TextView(this);
+        statusLbl.setText("🧱 Level 1 · Lines: 0 · Score: 0");
+        statusLbl.setTextColor(0xFF06B6D4);
+        statusLbl.setTextSize(12.5f);
+        statusLbl.setTypeface(Typeface.create(Typeface.MONOSPACE, Typeface.BOLD));
+        statusLbl.setSingleLine(true);
+        statusLbl.setEllipsize(android.text.TextUtils.TruncateAt.END);
+        statusLbl.setHeight(dp(26));
+        statusLbl.setGravity(Gravity.CENTER_VERTICAL);
+        statusLbl.setPadding(0, dp(2), 0, dp(4));
+        box.addView(statusLbl);
+
+        final TetrisGameView tetrisView = new TetrisGameView(this);
+        LinearLayout.LayoutParams tvl = new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT, dp(310));
+        tetrisView.setLayoutParams(tvl);
+        box.addView(tetrisView);
+
+        tetrisView.setStatusListener(new TetrisGameView.StatusListener() {
+            @Override
+            public void onStatusChanged(String text, int color) {
+                statusLbl.setText(text);
+                statusLbl.setTextColor(color != 0 ? color : colPale);
+            }
+        });
+
+        LinearLayout ctrlRow1 = new LinearLayout(this);
+        ctrlRow1.setOrientation(LinearLayout.HORIZONTAL);
+        ctrlRow1.setPadding(0, dp(8), 0, 0);
+
+        TextView btnLeft = actionButton("⬅️", colPanel2, colPale);
+        btnLeft.setOnClickListener(new View.OnClickListener() {
+            public void onClick(View v) {
+                tetrisView.moveLeft();
+            }
+        });
+        LinearLayout.LayoutParams clp1 = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
+        clp1.rightMargin = dp(2);
+        btnLeft.setLayoutParams(clp1);
+        ctrlRow1.addView(btnLeft);
+
+        TextView btnRotate = actionButton("🔄 Rotate", 0xFF06B6D4, colAccentInk);
+        btnRotate.setOnClickListener(new View.OnClickListener() {
+            public void onClick(View v) {
+                tetrisView.rotateCW();
+            }
+        });
+        LinearLayout.LayoutParams clp2 = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1.4f);
+        clp2.leftMargin = dp(2);
+        clp2.rightMargin = dp(2);
+        btnRotate.setLayoutParams(clp2);
+        ctrlRow1.addView(btnRotate);
+
+        TextView btnRight = actionButton("➡️", colPanel2, colPale);
+        btnRight.setOnClickListener(new View.OnClickListener() {
+            public void onClick(View v) {
+                tetrisView.moveRight();
+            }
+        });
+        LinearLayout.LayoutParams clp3 = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
+        clp3.leftMargin = dp(2);
+        btnRight.setLayoutParams(clp3);
+        ctrlRow1.addView(btnRight);
+        box.addView(ctrlRow1);
+
+        LinearLayout ctrlRow2 = new LinearLayout(this);
+        ctrlRow2.setOrientation(LinearLayout.HORIZONTAL);
+        ctrlRow2.setPadding(0, dp(6), 0, 0);
+
+        TextView btnHold = actionButton("📦 Hold", colPanel2, 0xFFA855F7);
+        btnHold.setOnClickListener(new View.OnClickListener() {
+            public void onClick(View v) {
+                tetrisView.holdCurrentPiece();
+            }
+        });
+        LinearLayout.LayoutParams hlp = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
+        hlp.rightMargin = dp(3);
+        btnHold.setLayoutParams(hlp);
+        ctrlRow2.addView(btnHold);
+
+        TextView btnDrop = actionButton("⚡ Hard Drop", 0xFFEAB308, colAccentInk);
+        btnDrop.setOnClickListener(new View.OnClickListener() {
+            public void onClick(View v) {
+                tetrisView.hardDrop();
+            }
+        });
+        LinearLayout.LayoutParams dlp = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1.3f);
+        dlp.leftMargin = dp(3);
+        btnDrop.setLayoutParams(dlp);
+        ctrlRow2.addView(btnDrop);
+        box.addView(ctrlRow2);
+
+        final Dialog dlg = createDialogSheet(box);
+
+        LinearLayout bottomRow = new LinearLayout(this);
+        bottomRow.setOrientation(LinearLayout.HORIZONTAL);
+        bottomRow.setPadding(0, dp(8), 0, 0);
+
+        TextView btnRestart = actionButton("↻ New Matrix", colLine, colPale);
+        btnRestart.setOnClickListener(new View.OnClickListener() {
+            public void onClick(View v) {
+                hapticClick();
+                tetrisView.startNewGame();
+            }
+        });
+        LinearLayout.LayoutParams relp = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1.1f);
+        relp.rightMargin = dp(4);
+        btnRestart.setLayoutParams(relp);
+        bottomRow.addView(btnRestart);
+
+        TextView btnClose = actionButton("Close", colLine, colPale);
+        btnClose.setOnClickListener(new View.OnClickListener() {
+            public void onClick(View v) {
+                hapticClick();
+                dlg.dismiss();
+            }
+        });
+        LinearLayout.LayoutParams cblp = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 0.9f);
         cblp.leftMargin = dp(4);
         btnClose.setLayoutParams(cblp);
         bottomRow.addView(btnClose);

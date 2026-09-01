@@ -70,6 +70,114 @@ public class RecreationAudioSynth {
         });
     }
 
+    public static void playLaserShoot() {
+        Executors.newSingleThreadExecutor().execute(new Runnable() {
+            @Override
+            public void run() {
+                try {
+                    int durationMs = 110;
+                    int numSamples = (SAMPLE_RATE * durationMs) / 1000;
+                    short[] buffer = new short[numSamples];
+                    // Rapid downward pitch sweep (1200Hz -> 180Hz)
+                    for (int i = 0; i < numSamples; i++) {
+                        double t = (double) i / SAMPLE_RATE;
+                        double freq = 1200.0 - (1020.0 * (i / (double) numSamples));
+                        double sample = Math.sin(2.0 * Math.PI * freq * t) * Math.exp(-t * 18.0);
+                        buffer[i] = (short) (Math.max(-1.0, Math.min(1.0, sample)) * 28000.0);
+                    }
+                    playPcmBuffer(buffer);
+                } catch (Throwable ignored) {}
+            }
+        });
+    }
+
+    public static void playExplosion() {
+        Executors.newSingleThreadExecutor().execute(new Runnable() {
+            @Override
+            public void run() {
+                try {
+                    int durationMs = 240;
+                    int numSamples = (SAMPLE_RATE * durationMs) / 1000;
+                    short[] buffer = new short[numSamples];
+                    // Noise crunch + low resonant rumble
+                    for (int i = 0; i < numSamples; i++) {
+                        double t = (double) i / SAMPLE_RATE;
+                        double noise = (Math.random() * 2.0 - 1.0) * Math.exp(-t * 14.0);
+                        double sub = Math.sin(2.0 * Math.PI * 65.0 * t) * Math.exp(-t * 8.0) * 0.8;
+                        double sample = (noise * 0.7 + sub * 0.5);
+                        buffer[i] = (short) (Math.max(-1.0, Math.min(1.0, sample)) * 30000.0);
+                    }
+                    playPcmBuffer(buffer);
+                } catch (Throwable ignored) {}
+            }
+        });
+    }
+
+    public static void playTetrisLineClear() {
+        Executors.newSingleThreadExecutor().execute(new Runnable() {
+            @Override
+            public void run() {
+                try {
+                    int durationMs = 220;
+                    int numSamples = (SAMPLE_RATE * durationMs) / 1000;
+                    short[] buffer = new short[numSamples];
+                    // 4-note ascending arcade arpeggio: C5 (523Hz), E5 (659Hz), G5 (784Hz), C6 (1046Hz)
+                    double[] notes = {523.25, 659.25, 783.99, 1046.50};
+                    int noteLen = numSamples / 4;
+                    for (int i = 0; i < numSamples; i++) {
+                        int nIdx = Math.min(3, i / noteLen);
+                        double t = (double) (i % noteLen) / SAMPLE_RATE;
+                        double freq = notes[nIdx];
+                        // 8-bit square / pulse wave with harmonics
+                        double sample = (Math.sin(2.0 * Math.PI * freq * t) > 0 ? 0.6 : -0.6) * Math.exp(-t * 12.0);
+                        buffer[i] = (short) (sample * 24000.0);
+                    }
+                    playPcmBuffer(buffer);
+                } catch (Throwable ignored) {}
+            }
+        });
+    }
+
+    public static void playTetrisRotate() {
+        Executors.newSingleThreadExecutor().execute(new Runnable() {
+            @Override
+            public void run() {
+                try {
+                    int durationMs = 60;
+                    int numSamples = (SAMPLE_RATE * durationMs) / 1000;
+                    short[] buffer = new short[numSamples];
+                    // Crisp 8-bit frequency chirp (440Hz -> 880Hz)
+                    for (int i = 0; i < numSamples; i++) {
+                        double t = (double) i / SAMPLE_RATE;
+                        double freq = 440.0 + (440.0 * (i / (double) numSamples));
+                        double sample = (Math.sin(2.0 * Math.PI * freq * t) > 0 ? 0.5 : -0.5) * Math.exp(-t * 28.0);
+                        buffer[i] = (short) (sample * 22000.0);
+                    }
+                    playPcmBuffer(buffer);
+                } catch (Throwable ignored) {}
+            }
+        });
+    }
+
+    public static void playTetrisHardDrop() {
+        Executors.newSingleThreadExecutor().execute(new Runnable() {
+            @Override
+            public void run() {
+                try {
+                    int durationMs = 80;
+                    int numSamples = (SAMPLE_RATE * durationMs) / 1000;
+                    short[] buffer = new short[numSamples];
+                    for (int i = 0; i < numSamples; i++) {
+                        double t = (double) i / SAMPLE_RATE;
+                        double sample = Math.sin(2.0 * Math.PI * 90.0 * t) * Math.exp(-t * 35.0);
+                        buffer[i] = (short) (sample * 28000.0);
+                    }
+                    playPcmBuffer(buffer);
+                } catch (Throwable ignored) {}
+            }
+        });
+    }
+
     public static void playDiceRoll() {
         Executors.newSingleThreadExecutor().execute(new Runnable() {
             @Override
