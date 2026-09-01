@@ -3715,7 +3715,6 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
                 }
             }));
             container.addView(r5);
-
             LinearLayout r6 = new LinearLayout(this);
             r6.setOrientation(LinearLayout.HORIZONTAL);
             r6.addView(buildCompactToolTile("📡", "Offline Mesh", "P2P SYNC", colCyan, "Encrypted local peer sync", new View.OnClickListener() {
@@ -3739,15 +3738,13 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
 
             LinearLayout rGames1 = new LinearLayout(this);
             rGames1.setOrientation(LinearLayout.HORIZONTAL);
-            rGames1.addView(buildCompactToolTile("⚪⚫", "Baduk (Go)", "MCTS · DAN", colAccent, "Tsumego puzzles, Dan AI & territory score engine", new View.OnClickListener() {
+            rGames1.addView(buildGameCard("⚪⚫", "Baduk (Go)", "MCTS · DAN", colAccent, "Tsumego puzzles, Dan AI & territory score engine", "⚡ MCTS ROLLOUT · 9×9 & 19×19", new View.OnClickListener() {
                 public void onClick(View v) {
-                    hapticHeavyClick();
                     showBadukGameDialog();
                 }
             }));
-            rGames1.addView(buildCompactToolTile("♟️", "Grandmaster Chess", "ELO 2200", colCyan, "Captured graveyard, advantage bar & Stockfish AI", new View.OnClickListener() {
+            rGames1.addView(buildGameCard("♟️", "Grandmaster Chess", "ELO 2200", colCyan, "Captured graveyard, advantage bar & Stockfish AI", "♔ 8×8 TOURNAMENT · GRAVEYARD", new View.OnClickListener() {
                 public void onClick(View v) {
-                    hapticHeavyClick();
                     showChessGameDialog();
                 }
             }));
@@ -3755,15 +3752,13 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
 
             LinearLayout rGames2 = new LinearLayout(this);
             rGames2.setOrientation(LinearLayout.HORIZONTAL);
-            rGames2.addView(buildCompactToolTile("🏺", "Royal Game of Ur", "2600 BCE", colAccent, "3D animated pyramid dice & Sumerian combat", new View.OnClickListener() {
+            rGames2.addView(buildGameCard("🏺", "Royal Game of Ur", "2600 BCE", colAccent, "3D animated pyramid dice & Sumerian combat", "🎲 4 PYRAMID DICE · ROSETTE", new View.OnClickListener() {
                 public void onClick(View v) {
-                    hapticHeavyClick();
                     showRoyalUrGameDialog();
                 }
             }));
-            rGames2.addView(buildCompactToolTile("🪲", "Egyptian Senet", "3100 BCE", 0xFFFDE047, "3D hieroglyphic stick casting & underworld race", new View.OnClickListener() {
+            rGames2.addView(buildGameCard("🪲", "Egyptian Senet", "3100 BCE", 0xFFFDE047, "3D hieroglyphic stick casting & underworld race", "📜 4 CASTING STICKS · 30 TILES", new View.OnClickListener() {
                 public void onClick(View v) {
-                    hapticHeavyClick();
                     showSenetGameDialog();
                 }
             }));
@@ -3771,15 +3766,13 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
 
             LinearLayout rGames3 = new LinearLayout(this);
             rGames3.setOrientation(LinearLayout.HORIZONTAL);
-            rGames3.addView(buildCompactToolTile("🐺", "Viking Hnefatafl", "11×11 TAFL", colCrimson, "King's escape route tracers & corner fort victory", new View.OnClickListener() {
+            rGames3.addView(buildGameCard("🐺", "Viking Hnefatafl", "11×11 TAFL", colCrimson, "King's escape route tracers & corner fort victory", "🛡️ 11×11 FETLAR · 37 WARRIORS", new View.OnClickListener() {
                 public void onClick(View v) {
-                    hapticHeavyClick();
                     showHnefataflGameDialog();
                 }
             }));
-            rGames3.addView(buildCompactToolTile("🎲", "Backgammon", "24 POINTS", colEmerald, "Pip equity counter & 3D checker stacks", new View.OnClickListener() {
+            rGames3.addView(buildGameCard("🎲", "Backgammon", "24 POINTS", colEmerald, "Pip equity counter & 3D checker stacks", "🎲 24 POINTS · BEARING OFF", new View.OnClickListener() {
                 public void onClick(View v) {
-                    hapticHeavyClick();
                     showBackgammonGameDialog();
                 }
             }));
@@ -3787,20 +3780,143 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
 
             LinearLayout rGames4 = new LinearLayout(this);
             rGames4.setOrientation(LinearLayout.HORIZONTAL);
-            rGames4.addView(buildCompactToolTile("🏛️", "Nine Men's Morris", "1400 BCE", colCyan, "Concentric intaglio mills & 3-piece flying phase", new View.OnClickListener() {
+            rGames4.addView(buildGameCard("🏛️", "Nine Men's Morris", "1400 BCE", colCyan, "Concentric intaglio mills & 3-piece flying phase", "🏛️ 3 CONCENTRIC SQUARES · MILLS", new View.OnClickListener() {
                 public void onClick(View v) {
-                    hapticHeavyClick();
                     showNineMensMorrisGameDialog();
                 }
             }));
-            rGames4.addView(buildCompactToolTile("🔴🟡", "Connect 4", "7×6 ACRYLIC", 0xFFF59E0B, "Gravity drop physics & victory star sparklers", new View.OnClickListener() {
+            rGames4.addView(buildGameCard("🔴🟡", "Connect 4", "7×6 ACRYLIC", 0xFFF59E0B, "Gravity drop physics & victory star sparklers", "⚡ 7×6 GRAVITY · SOLVER BOT", new View.OnClickListener() {
                 public void onClick(View v) {
-                    hapticHeavyClick();
                     showConnectFourGameDialog();
                 }
             }));
             container.addView(rGames4);
         }
+    }
+
+    private View buildGameCard(String iconGlyph, String titleStr, String badgeStr, int badgeCol, String descStr, String metaSpecs, final View.OnClickListener onClick) {
+        final int glowCol = (badgeCol != 0 ? badgeCol : colCyan);
+        final RippleCardFrameLayout rippleTile = new RippleCardFrameLayout(this, 18f, glowCol);
+
+        android.graphics.drawable.GradientDrawable cardBg = new android.graphics.drawable.GradientDrawable(
+            android.graphics.drawable.GradientDrawable.Orientation.TOP_BOTTOM,
+            new int[]{0xFF161E2E, 0xFF0E1422}
+        );
+        cardBg.setCornerRadius(dp(18));
+        cardBg.setStroke(dp(1), 0x28000000 | (glowCol & 0x00FFFFFF));
+        rippleTile.setBackground(cardBg);
+
+        LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.MATCH_PARENT, 1f);
+        lp.setMargins(dp(5), dp(5), dp(5), dp(5));
+        rippleTile.setLayoutParams(lp);
+
+        final LinearLayout tile = new LinearLayout(this);
+        tile.setOrientation(LinearLayout.VERTICAL);
+        tile.setPadding(dp(14), dp(13), dp(14), dp(13));
+        tile.setMinimumHeight(dp(148));
+        tile.setLayoutParams(new FrameLayout.LayoutParams(
+                FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT));
+
+        // 1. Top Row: 3D Squircle Icon Pod + Status Badge
+        LinearLayout top = new LinearLayout(this);
+        top.setOrientation(LinearLayout.HORIZONTAL);
+        top.setGravity(Gravity.CENTER_VERTICAL);
+
+        // 44x44dp Squircle Icon Box with glowing inner aura
+        FrameLayout iconBox = new FrameLayout(this);
+        android.graphics.drawable.GradientDrawable ibBg = new android.graphics.drawable.GradientDrawable(
+            android.graphics.drawable.GradientDrawable.Orientation.TL_BR,
+            new int[]{0x40000000 | (glowCol & 0x00FFFFFF), 0x18000000 | (glowCol & 0x00FFFFFF)}
+        );
+        ibBg.setCornerRadius(dp(12));
+        ibBg.setStroke(dp(1), 0x66000000 | (glowCol & 0x00FFFFFF));
+        iconBox.setBackground(ibBg);
+        LinearLayout.LayoutParams iblp = new LinearLayout.LayoutParams(dp(44), dp(44));
+        iconBox.setLayoutParams(iblp);
+
+        TextView tvIco = new TextView(this);
+        tvIco.setText(iconGlyph);
+        tvIco.setTextSize(20);
+        tvIco.setGravity(Gravity.CENTER);
+        iconBox.addView(tvIco);
+        top.addView(iconBox);
+
+        View sp = new View(this);
+        LinearLayout.LayoutParams spl = new LinearLayout.LayoutParams(0, 1, 1f);
+        sp.setLayoutParams(spl);
+        top.addView(sp);
+
+        if (badgeStr != null) {
+            TextView bg = new TextView(this);
+            bg.setText("● " + badgeStr);
+            bg.setTextColor(glowCol);
+            bg.setTextSize(8.5f);
+            bg.setTypeface(Typeface.MONOSPACE);
+            bg.setPadding(dp(8), dp(4), dp(8), dp(4));
+            bg.setBackground(rounded(0x2E000000 | (glowCol & 0x00FFFFFF), dp(7)));
+            top.addView(bg);
+        }
+        tile.addView(top);
+
+        // 2. Title Row with subtle round chevron pod
+        LinearLayout titleRow = new LinearLayout(this);
+        titleRow.setOrientation(LinearLayout.HORIZONTAL);
+        titleRow.setGravity(Gravity.CENTER_VERTICAL);
+        titleRow.setPadding(0, dp(10), 0, dp(2));
+
+        TextView title = new TextView(this);
+        title.setText(titleStr);
+        title.setTextColor(0xFFFFFFFF);
+        title.setTextSize(13.5f);
+        title.setTypeface(Typeface.DEFAULT_BOLD);
+        title.setSingleLine(true);
+        title.setEllipsize(android.text.TextUtils.TruncateAt.END);
+        LinearLayout.LayoutParams tlp = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
+        title.setLayoutParams(tlp);
+        titleRow.addView(title);
+
+        TextView arrow = new TextView(this);
+        arrow.setText("›");
+        arrow.setTextColor(glowCol);
+        arrow.setTextSize(16);
+        arrow.setTypeface(Typeface.DEFAULT_BOLD);
+        arrow.setPadding(dp(4), 0, dp(2), 0);
+        titleRow.addView(arrow);
+
+        tile.addView(titleRow);
+
+        // 3. Description
+        TextView desc = new TextView(this);
+        desc.setText(descStr);
+        desc.setTextColor(0xFF94A3B8);
+        desc.setTextSize(11f);
+        desc.setLines(2);
+        desc.setMaxLines(2);
+        desc.setEllipsize(android.text.TextUtils.TruncateAt.END);
+        desc.setLineSpacing(dp(2), 1f);
+        tile.addView(desc);
+
+        // 4. Meta Specs Footer Tag
+        if (metaSpecs != null) {
+            TextView metaTv = new TextView(this);
+            metaTv.setText(metaSpecs);
+            metaTv.setTextColor(0xFF64748B);
+            metaTv.setTextSize(9f);
+            metaTv.setTypeface(Typeface.create(Typeface.MONOSPACE, Typeface.BOLD));
+            metaTv.setPadding(0, dp(6), 0, 0);
+            metaTv.setSingleLine(true);
+            metaTv.setEllipsize(android.text.TextUtils.TruncateAt.END);
+            tile.addView(metaTv);
+        }
+
+        rippleTile.setOnClickListener(new View.OnClickListener() {
+            public void onClick(View v) {
+                hapticHeavyClick();
+                if (onClick != null) onClick.onClick(v);
+            }
+        });
+        rippleTile.addView(tile);
+        return rippleTile;
     }
 
     private View buildCompactToolTile(String iconGlyph, String titleStr, String badgeStr, int badgeCol, String descStr, final View.OnClickListener onClick) {
