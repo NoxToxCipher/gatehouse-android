@@ -33,10 +33,12 @@ public class BackgammonGameView extends View {
     private final Paint pointLightPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final Paint goldBorderPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final Paint goldDetailPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+    private final Paint moveBeaconPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final Paint shadowPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final Paint checkerPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final Paint checkerRimPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final Paint checkerShinePaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+    private final Paint latheRingPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final Paint textPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final Paint diceFacePaint = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final Paint dicePipPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
@@ -68,18 +70,25 @@ public class BackgammonGameView extends View {
 
         goldBorderPaint.setColor(0xFFEAB308);
         goldBorderPaint.setStyle(Paint.Style.STROKE);
-        goldBorderPaint.setStrokeWidth(dpf(1.8f));
+        goldBorderPaint.setStrokeWidth(dpf(2f));
 
-        goldDetailPaint.setColor(0xFFFDE047);
+        goldDetailPaint.setColor(0xFFCA8A04);
         goldDetailPaint.setStyle(Paint.Style.STROKE);
         goldDetailPaint.setStrokeWidth(dpf(1f));
+
+        moveBeaconPaint.setColor(0xCCFDE047);
+        moveBeaconPaint.setStyle(Paint.Style.STROKE);
+        moveBeaconPaint.setStrokeWidth(dpf(2.4f));
 
         shadowPaint.setColor(0x99000000);
         shadowPaint.setStyle(Paint.Style.FILL);
 
         checkerRimPaint.setColor(0xFFFFFFFF);
         checkerRimPaint.setStyle(Paint.Style.STROKE);
-        checkerRimPaint.setStrokeWidth(dpf(1.3f));
+        checkerRimPaint.setStrokeWidth(dpf(1.2f));
+
+        latheRingPaint.setStyle(Paint.Style.STROKE);
+        latheRingPaint.setStrokeWidth(dpf(1f));
 
         checkerShinePaint.setColor(0xAAFFFFFF);
         checkerShinePaint.setStyle(Paint.Style.FILL);
@@ -94,7 +103,7 @@ public class BackgammonGameView extends View {
         dicePipPaint.setColor(0xFF0F172A);
         dicePipPaint.setStyle(Paint.Style.FILL);
 
-        trayBgPaint.setColor(0xFF0F172A);
+        trayBgPaint.setColor(0xFF131B2B);
         trayBgPaint.setStyle(Paint.Style.FILL);
 
         resetGame();
@@ -420,6 +429,22 @@ public class BackgammonGameView extends View {
         return super.onTouchEvent(event);
     }
 
+    private boolean isPointMovable(int fromPoint) {
+        if (!whiteTurn || waitingForRoll || availableDice.isEmpty()) return false;
+        if (whiteBar > 0) return (fromPoint == -1);
+        if (fromPoint < 0 || fromPoint >= 24 || points[fromPoint] <= 0) return false;
+
+        for (int die : availableDice) {
+            int toPoint = fromPoint - die;
+            if (toPoint >= 0) {
+                if (points[toPoint] >= -1) return true;
+            } else {
+                if (canBearOff(true)) return true;
+            }
+        }
+        return false;
+    }
+
     @Override
     protected void onDraw(Canvas canvas) {
         super.onDraw(canvas);
@@ -427,8 +452,9 @@ public class BackgammonGameView extends View {
         int h = getHeight();
         if (w <= 0 || h <= 0) return;
 
+        // Moroccan Walnut Board Bed
         rect.set(0, 0, w, h);
-        boardWoodPaint.setShader(new LinearGradient(0, 0, w, h, 0xFF1C1917, 0xFF0F172A, Shader.TileMode.CLAMP));
+        boardWoodPaint.setShader(new LinearGradient(0, 0, w, h, 0xFF2C160B, 0xFF190C06, Shader.TileMode.CLAMP));
         canvas.drawRoundRect(rect, dpf(16f), dpf(16f), boardWoodPaint);
 
         rect.set(dpf(2.5f), dpf(2.5f), w - dpf(2.5f), h - dpf(2.5f));
@@ -439,17 +465,22 @@ public class BackgammonGameView extends View {
         float colW = (w - pad * 2 - barW) / 12f;
         float triH = (h - dpf(46f)) * 0.42f;
 
-        // Draw Central Bar
+        // Draw Central Bar (Solid Ebony Divider with Brass Hinges)
         float barLeft = pad + 6 * colW;
         rect.set(barLeft, dpf(8f), barLeft + barW, h - dpf(36f));
         Paint barPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
-        barPaint.setColor(0xFF292524);
+        barPaint.setColor(0xFF140D09);
         canvas.drawRoundRect(rect, dpf(4f), dpf(4f), barPaint);
         canvas.drawRoundRect(rect, dpf(4f), dpf(4f), goldDetailPaint);
 
-        // Draw 24 Points with Shaded Gradients
-        pointDarkPaint.setColor(0xFF1E293B);
-        pointLightPaint.setColor(0xFF451A03);
+        // Draw 24 Points with Inlaid Ivory & Rosewood
+        pointLightPaint.setColor(0xFFECE1CA); // Inlaid Cream Ivory
+        pointDarkPaint.setColor(0xFF85371A);  // Inlaid Burnt Rosewood
+
+        Paint pointBevel = new Paint(Paint.ANTI_ALIAS_FLAG);
+        pointBevel.setColor(0x44000000);
+        pointBevel.setStyle(Paint.Style.STROKE);
+        pointBevel.setStrokeWidth(dpf(1f));
 
         for (int i = 0; i < 12; i++) {
             float left = pad + (i < 6 ? i * colW : i * colW + barW);
@@ -462,6 +493,7 @@ public class BackgammonGameView extends View {
             triPath.lineTo(left + colW / 2f, dpf(8f) + triH);
             triPath.close();
             canvas.drawPath(triPath, isDark ? pointDarkPaint : pointLightPaint);
+            canvas.drawPath(triPath, pointBevel);
 
             // Bottom row points (11..0)
             triPath.reset();
@@ -470,16 +502,38 @@ public class BackgammonGameView extends View {
             triPath.lineTo(left + colW / 2f, h - dpf(36f) - triH);
             triPath.close();
             canvas.drawPath(triPath, !isDark ? pointDarkPaint : pointLightPaint);
+            canvas.drawPath(triPath, pointBevel);
         }
 
-        // Draw Checkers with 3D Radial Shine
+        // Draw Checkers on Central Bar if any
         float checkerR = Math.min(colW * 0.44f, dpf(11f));
+        if (whiteBar > 0) {
+            float bcx = barLeft + barW / 2f;
+            float bcy = (h - dpf(36f)) / 2f + dpf(14f);
+            drawBackgammonChecker(canvas, bcx, bcy, checkerR, true, isPointMovable(-1));
+            if (whiteBar > 1) {
+                textPaint.setTextSize(dpf(9f));
+                canvas.drawText("×" + whiteBar, bcx, bcy + dpf(3f), textPaint);
+            }
+        }
+        if (blackBar > 0) {
+            float bcx = barLeft + barW / 2f;
+            float bcy = (h - dpf(36f)) / 2f - dpf(14f);
+            drawBackgammonChecker(canvas, bcx, bcy, checkerR, false, false);
+            if (blackBar > 1) {
+                textPaint.setTextSize(dpf(9f));
+                canvas.drawText("×" + blackBar, bcx, bcy + dpf(3f), textPaint);
+            }
+        }
+
+        // Draw Checkers on 24 Points
         for (int p = 0; p < 24; p++) {
             int count = points[p];
             if (count == 0) continue;
 
             boolean isGold = (count > 0);
             int absCount = Math.abs(count);
+            boolean isMovable = isGold && isPointMovable(p);
 
             float cx;
             float cyStart;
@@ -497,12 +551,14 @@ public class BackgammonGameView extends View {
                 cyStep = checkerR * 1.8f;
             }
 
-            for (int k = 0; k < Math.min(absCount, 5); k++) {
-                drawBackgammonChecker(canvas, cx, cyStart + k * cyStep, checkerR, isGold);
+            int drawCount = Math.min(absCount, 5);
+            for (int k = 0; k < drawCount; k++) {
+                boolean isTop = (k == drawCount - 1);
+                drawBackgammonChecker(canvas, cx, cyStart + k * cyStep, checkerR, isGold, isTop && isMovable);
             }
             if (absCount > 5) {
                 textPaint.setTextSize(dpf(9f));
-                canvas.drawText("+" + (absCount - 5), cx, cyStart + 4 * cyStep, textPaint);
+                canvas.drawText("+" + (absCount - 5), cx, cyStart + 4 * cyStep + dpf(3f), textPaint);
             }
         }
 
@@ -521,22 +577,43 @@ public class BackgammonGameView extends View {
         }
     }
 
-    private void drawBackgammonChecker(Canvas canvas, float cx, float cy, float r, boolean isGold) {
-        canvas.drawCircle(cx + dpf(1f), cy + dpf(1.5f), r, shadowPaint);
+    private void drawBackgammonChecker(Canvas canvas, float cx, float cy, float r, boolean isGold, boolean isMovable) {
+        // Deep drop shadow
+        canvas.drawCircle(cx + dpf(1.2f), cy + dpf(1.8f), r, shadowPaint);
+
+        // Movable beacon glow halo
+        if (isMovable) {
+            canvas.drawCircle(cx, cy, r + dpf(2.4f), moveBeaconPaint);
+        }
 
         RadialGradient grad = new RadialGradient(
             cx - r * 0.3f, cy - r * 0.3f, r * 1.3f,
-            isGold ? new int[]{0xFFFEF08A, 0xFFEAB308, 0xFF713F12} : new int[]{0xFFBAE6FD, 0xFF0284C7, 0xFF082F49},
+            isGold ? new int[]{0xFFFFFDF5, 0xFFFDE047, 0xFFD97706, 0xFF78350F}
+                   : new int[]{0xFFE0F2FE, 0xFF0284C7, 0xFF082F49, 0xFF031628},
             null, Shader.TileMode.CLAMP
         );
         checkerPaint.setShader(grad);
         canvas.drawCircle(cx, cy, r, checkerPaint);
         canvas.drawCircle(cx, cy, r, checkerRimPaint);
-        canvas.drawCircle(cx, cy, r * 0.5f, goldDetailPaint);
+
+        // Concentric Turned Lathe Rings
+        latheRingPaint.setColor(isGold ? 0x6678350F : 0x55000000);
+        canvas.drawCircle(cx, cy, r * 0.65f, latheRingPaint);
+        canvas.drawCircle(cx, cy, r * 0.35f, latheRingPaint);
+
+        // Center Brass/Ivory Stud
+        Paint studPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+        studPaint.setColor(isGold ? 0xFFFDE047 : 0xFF38BDF8);
+        canvas.drawCircle(cx, cy, dpf(1.6f), studPaint);
+
         canvas.drawCircle(cx - r * 0.35f, cy - r * 0.35f, r * 0.28f, checkerShinePaint);
     }
 
     private void draw3DDie(Canvas canvas, float cx, float cy, float s, int val) {
+        // Deep drop shadow
+        rect.set(cx - s + dpf(1f), cy - s + dpf(1.5f), cx + s + dpf(1f), cy + s + dpf(1.5f));
+        canvas.drawRoundRect(rect, dpf(3.5f), dpf(3.5f), shadowPaint);
+
         rect.set(cx - s, cy - s, cx + s, cy + s);
         canvas.drawRoundRect(rect, dpf(3.5f), dpf(3.5f), diceFacePaint);
         canvas.drawRoundRect(rect, dpf(3.5f), dpf(3.5f), goldBorderPaint);
