@@ -180,34 +180,56 @@ public class SenetGameView extends View {
         invalidate();
     }
 
+    private boolean isCasting = false;
+
     public void throwSticks() {
-        if (!waitingForRoll) return;
+        if (!waitingForRoll || isCasting) return;
+        isCasting = true;
         try {
             performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP);
         } catch (Exception ignored) {}
 
-        int lightSides = 0;
-        for (int i = 0; i < 4; i++) {
-            boolean isLight = rand.nextBoolean();
-            lastSticksLight[i] = isLight;
-            if (isLight) lightSides++;
-        }
-        currentRoll = (lightSides == 0) ? 5 : lightSides;
-        waitingForRoll = false;
+        animateSticksTumble(0);
+    }
 
-        if (!hasLegalMoves(currentTurn, currentRoll)) {
+    private void animateSticksTumble(final int step) {
+        if (step < 5) {
+            for (int i = 0; i < 4; i++) lastSticksLight[i] = rand.nextBoolean();
+            invalidate();
             postDelayed(new Runnable() {
-                public void run() { passTurn(); }
-            }, 750);
+                public void run() {
+                    animateSticksTumble(step + 1);
+                }
+            }, 55);
         } else {
-            if (currentTurn == 1) {
-                postDelayed(new Runnable() {
-                    public void run() { botExecuteMove(); }
-                }, 550);
+            int lightSides = 0;
+            for (int i = 0; i < 4; i++) {
+                boolean isLight = rand.nextBoolean();
+                lastSticksLight[i] = isLight;
+                if (isLight) lightSides++;
             }
+            currentRoll = (lightSides == 0) ? 5 : lightSides;
+            waitingForRoll = false;
+            isCasting = false;
+
+            try {
+                performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK);
+            } catch (Exception ignored) {}
+
+            if (!hasLegalMoves(currentTurn, currentRoll)) {
+                postDelayed(new Runnable() {
+                    public void run() { passTurn(); }
+                }, 750);
+            } else {
+                if (currentTurn == 1) {
+                    postDelayed(new Runnable() {
+                        public void run() { botExecuteMove(); }
+                    }, 550);
+                }
+            }
+            updateStatus();
+            invalidate();
         }
-        updateStatus();
-        invalidate();
     }
 
     private boolean hasLegalMoves(int turn, int roll) {

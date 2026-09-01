@@ -4385,7 +4385,17 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
         LinearLayout.LayoutParams tlp = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
         tlp.leftMargin = dp(2); tlp.rightMargin = dp(2); btnTerritory.setLayoutParams(tlp); ctrlRow.addView(btnTerritory);
 
-        TextView btnNextPuzzle = actionButton("Next ➔", colLine, 0xFFFFD166);
+        TextView btnHint = actionButton("💡 Hint", colLine, 0xFFFFD166);
+        btnHint.setOnClickListener(new View.OnClickListener() {
+            public void onClick(View v) {
+                hapticClick();
+                badukView.showHint();
+            }
+        });
+        LinearLayout.LayoutParams hlp = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
+        hlp.leftMargin = dp(2); hlp.rightMargin = dp(2); btnHint.setLayoutParams(hlp); ctrlRow.addView(btnHint);
+
+        TextView btnNextPuzzle = actionButton("Next ➔", colLine, 0xFF38BDF8);
         btnNextPuzzle.setOnClickListener(new View.OnClickListener() {
             public void onClick(View v) {
                 hapticClick();

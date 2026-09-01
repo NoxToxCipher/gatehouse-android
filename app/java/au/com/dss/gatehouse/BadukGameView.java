@@ -68,6 +68,9 @@ public class BadukGameView extends View {
     private int puzzleIndex = 0;
     private boolean puzzleSolved = false;
     private boolean showTerritory = false;
+    private int hintX = -1;
+    private int hintY = -1;
+    private final Paint hintPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
 
     private float dpf(float v) {
         return v * getResources().getDisplayMetrics().density;
@@ -77,6 +80,10 @@ public class BadukGameView extends View {
         super(context);
         setClickable(true);
         setFocusable(true);
+
+        hintPaint.setColor(0xFFFFD166);
+        hintPaint.setStyle(Paint.Style.STROKE);
+        hintPaint.setStrokeWidth(dpf(2.5f));
 
         goldBorderPaint.setColor(0xFFEAB308);
         goldBorderPaint.setStyle(Paint.Style.STROKE);
@@ -386,8 +393,15 @@ public class BadukGameView extends View {
         }
 
         try {
-            performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP);
+            if (capturedCount > 0) {
+                performHapticFeedback(HapticFeedbackConstants.LONG_PRESS);
+            } else {
+                performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP);
+            }
         } catch (Exception ignored) {}
+
+        hintX = -1;
+        hintY = -1;
 
         if (color == 1) blackCaptures += capturedCount;
         else whiteCaptures += capturedCount;
@@ -500,6 +514,13 @@ public class BadukGameView extends View {
 
     private void botPlayMove() {
         if (currentTurn != 2 || gameOver) return;
+        Point best = findBestMove(2);
+        if (best != null && playMove(best.x, best.y)) return;
+        passTurn();
+    }
+
+    public Point findBestMove(int color) {
+        int opponent = (color == 1) ? 2 : 1;
 
         // 1. URGENT ATARI COMBAT: Immediate Defense & Capture
         // 1A. Defend own groups in Atari (1 liberty)
@@ -507,18 +528,17 @@ public class BadukGameView extends View {
         int maxDefGain = 0;
         for (int y = 0; y < boardSize; y++) {
             for (int x = 0; x < boardSize; x++) {
-                if (board[y][x] == 2) {
+                if (board[y][x] == color) {
                     boolean[][] v = new boolean[boardSize][boardSize];
-                    if (countGroupLiberties(x, y, 2, v) == 1) {
-                        // Find the escape liberty
+                    if (countGroupLiberties(x, y, color, v) == 1) {
                         int[][] dirs = {{0,1}, {0,-1}, {1,0}, {-1,0}};
                         for (int[] d : dirs) {
                             int nx = x + d[0];
                             int ny = y + d[1];
                             if (nx >= 0 && nx < boardSize && ny >= 0 && ny < boardSize && board[ny][nx] == 0) {
-                                board[ny][nx] = 2;
+                                board[ny][nx] = color;
                                 boolean[][] v2 = new boolean[boardSize][boardSize];
-                                int libs = countGroupLiberties(nx, ny, 2, v2);
+                                int libs = countGroupLiberties(nx, ny, color, v2);
                                 board[ny][nx] = 0;
                                 if (libs >= 2 && libs > maxDefGain) {
                                     maxDefGain = libs;
@@ -532,7 +552,7 @@ public class BadukGameView extends View {
             }
         }
         if (bestDefX != -1 && bestDefY != -1) {
-            if (playMove(bestDefX, bestDefY)) return;
+            return new Point(bestDefX, bestDefY);
         }
 
         // 1B. Capture opponent groups in Atari (1 liberty)
@@ -540,16 +560,16 @@ public class BadukGameView extends View {
         int maxCapSize = 0;
         for (int y = 0; y < boardSize; y++) {
             for (int x = 0; x < boardSize; x++) {
-                if (board[y][x] == 1) {
+                if (board[y][x] == opponent) {
                     boolean[][] v = new boolean[boardSize][boardSize];
-                    if (countGroupLiberties(x, y, 1, v) == 1) {
+                    if (countGroupLiberties(x, y, opponent, v) == 1) {
                         int[][] dirs = {{0,1}, {0,-1}, {1,0}, {-1,0}};
                         for (int[] d : dirs) {
                             int nx = x + d[0];
                             int ny = y + d[1];
                             if (nx >= 0 && nx < boardSize && ny >= 0 && ny < boardSize && board[ny][nx] == 0) {
                                 boolean[][] vSelf = new boolean[boardSize][boardSize];
-                                int groupSize = countGroupSize(x, y, 1, vSelf);
+                                int groupSize = countGroupSize(x, y, opponent, vSelf);
                                 if (groupSize > maxCapSize) {
                                     maxCapSize = groupSize;
                                     bestCapX = nx;
@@ -562,7 +582,7 @@ public class BadukGameView extends View {
             }
         }
         if (bestCapX != -1 && bestCapY != -1) {
-            if (playMove(bestCapX, bestCapY)) return;
+            return new Point(bestCapX, bestCapY);
         }
 
         // 2. OPENING JOSEKI / CORNER & TENGEN (First 4 moves)
@@ -571,13 +591,13 @@ public class BadukGameView extends View {
             int star = (boardSize >= 13) ? 3 : 2;
             int starHigh = boardSize - 1 - star;
             int[][] openingPoints = {
-                {center, center}, // Tengen
-                {star, star}, {starHigh, star}, {star, starHigh}, {starHigh, starHigh}, // 4 Star Corners
-                {center, star}, {star, center}, {center, starHigh}, {starHigh, center} // Side Approaches
+                {center, center},
+                {star, star}, {starHigh, star}, {star, starHigh}, {starHigh, starHigh},
+                {center, star}, {star, center}, {center, starHigh}, {starHigh, center}
             };
             for (int[] pt : openingPoints) {
                 if (board[pt[1]][pt[0]] == 0) {
-                    if (playMove(pt[0], pt[1])) return;
+                    return new Point(pt[0], pt[1]);
                 }
             }
         }
@@ -589,23 +609,19 @@ public class BadukGameView extends View {
                 if (board[y][x] != 0) continue;
 
                 // Test self-liberties
-                board[y][x] = 2;
+                board[y][x] = color;
                 boolean[][] vTest = new boolean[boardSize][boardSize];
-                int testLibs = countGroupLiberties(x, y, 2, vTest);
+                int testLibs = countGroupLiberties(x, y, color, vTest);
                 board[y][x] = 0;
-                if (testLibs <= 1) continue; // Strictly avoid self-atari traps
+                if (testLibs <= 1) continue; // Avoid self-atari
 
                 float shapeScore = evaluateShapeScore(x, y);
                 candidates.add(new CandidateMove(x, y, shapeScore));
             }
         }
 
-        if (candidates.isEmpty()) {
-            passTurn();
-            return;
-        }
+        if (candidates.isEmpty()) return null;
 
-        // Sort candidates descending by shape heuristic score
         java.util.Collections.sort(candidates, new java.util.Comparator<CandidateMove>() {
             @Override
             public int compare(CandidateMove a, CandidateMove b) {
@@ -613,7 +629,6 @@ public class BadukGameView extends View {
             }
         });
 
-        // Run Monte Carlo Rollouts on top 6 candidates
         int numTop = Math.min(candidates.size(), 6);
         CandidateMove bestMove = candidates.get(0);
         float bestTotalScore = -999999f;
@@ -628,9 +643,7 @@ public class BadukGameView extends View {
             }
         }
 
-        if (bestMove != null && playMove(bestMove.x, bestMove.y)) return;
-
-        passTurn();
+        return (bestMove != null) ? new Point(bestMove.x, bestMove.y) : null;
     }
 
     private static class CandidateMove {
@@ -928,8 +941,35 @@ public class BadukGameView extends View {
             }
         }
 
+        // Draw Vital Point Hint Beacon (if active)
+        if (hintX != -1 && hintY != -1) {
+            float hcx = startX + hintX * cellSize;
+            float hcy = startY + hintY * cellSize;
+            canvas.drawCircle(hcx, hcy, stoneR + dpf(3f), hintPaint);
+            Paint hintFill = new Paint(Paint.ANTI_ALIAS_FLAG);
+            hintFill.setColor(0x44FFD166);
+            hintFill.setStyle(Paint.Style.FILL);
+            canvas.drawCircle(hcx, hcy, stoneR * 0.4f, hintFill);
+        }
+
         // Draw Live Territory Control Pips
         drawTerritoryMarkers(canvas, startX, startY, cellSize);
+    }
+
+    public void showHint() {
+        if (gameOver || mode == 1) return;
+        Point best = findBestMove(currentTurn);
+        if (best != null) {
+            hintX = best.x;
+            hintY = best.y;
+            try {
+                performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK);
+            } catch (Exception ignored) {}
+            if (statusListener != null) {
+                statusListener.onStatusChanged("💡 Tesuji Hint: Best point indicated at " + (char)('A' + hintX) + (hintY + 1), 0xFFFFD166);
+            }
+            invalidate();
+        }
     }
 
     private void drawTerritoryMarkers(Canvas canvas, float startX, float startY, float cellSize) {
