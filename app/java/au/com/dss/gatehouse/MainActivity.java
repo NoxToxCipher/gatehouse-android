@@ -3602,28 +3602,35 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
     }
 
     private View buildCompactToolTile(String iconGlyph, String titleStr, String badgeStr, int badgeCol, String descStr, final View.OnClickListener onClick) {
-        final RippleCardFrameLayout rippleTile = new RippleCardFrameLayout(this, 14f, (badgeCol != 0 ? badgeCol : colCyan));
-        rippleTile.setBackground(rounded(colPanel, dp(14)));
+        final int glowCol = (badgeCol != 0 ? badgeCol : colCyan);
+        final RippleCardFrameLayout rippleTile = new RippleCardFrameLayout(this, 16f, glowCol);
+        rippleTile.setBackground(rounded(0xFF131B2B, dp(16)));
         LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
-        lp.setMargins(dp(4), dp(4), dp(4), dp(4));
+        lp.setMargins(dp(5), dp(5), dp(5), dp(5));
         rippleTile.setLayoutParams(lp);
 
         final LinearLayout tile = new LinearLayout(this);
         tile.setOrientation(LinearLayout.VERTICAL);
-        tile.setPadding(dp(12), dp(12), dp(12), dp(12));
+        tile.setPadding(dp(14), dp(14), dp(14), dp(14));
         tile.setLayoutParams(new FrameLayout.LayoutParams(
                 FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.WRAP_CONTENT));
 
+        // Top Row: Squircle Bento Icon Pod + Badge Pill
         LinearLayout top = new LinearLayout(this);
         top.setOrientation(LinearLayout.HORIZONTAL);
         top.setGravity(Gravity.CENTER_VERTICAL);
 
+        // Modern 42x42dp Bento Squircle Icon Box with 2-Tone Gradient & Border
         FrameLayout iconBox = new FrameLayout(this);
-        iconBox.setBackground(rounded(0x22000000 | (badgeCol & 0x00FFFFFF), dp(8)));
-        iconBox.setPadding(dp(6), dp(6), dp(6), dp(6));
+        iconBox.setBackground(rounded(0x28000000 | (glowCol & 0x00FFFFFF), dp(12)));
+        iconBox.setPadding(dp(4), dp(4), dp(4), dp(4));
+        LinearLayout.LayoutParams iblp = new LinearLayout.LayoutParams(dp(42), dp(42));
+        iconBox.setLayoutParams(iblp);
+
         TextView tvIco = new TextView(this);
         tvIco.setText(iconGlyph);
-        tvIco.setTextSize(14);
+        tvIco.setTextSize(18);
+        tvIco.setGravity(Gravity.CENTER);
         iconBox.addView(tvIco);
         top.addView(iconBox);
 
@@ -3634,28 +3641,45 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
 
         if (badgeStr != null) {
             TextView bg = new TextView(this);
-            bg.setText(badgeStr);
-            bg.setTextColor(badgeCol);
+            bg.setText("● " + badgeStr);
+            bg.setTextColor(glowCol);
             bg.setTextSize(8.5f);
             bg.setTypeface(Typeface.MONOSPACE);
-            bg.setPadding(dp(5), dp(2), dp(5), dp(2));
-            bg.setBackground(rounded(0x22000000 | (badgeCol & 0x00FFFFFF), dp(4)));
+            bg.setPadding(dp(7), dp(3), dp(7), dp(3));
+            bg.setBackground(rounded(0x26000000 | (glowCol & 0x00FFFFFF), dp(6)));
             top.addView(bg);
         }
         tile.addView(top);
 
+        // Title Row with modern forward indicator
+        LinearLayout titleRow = new LinearLayout(this);
+        titleRow.setOrientation(LinearLayout.HORIZONTAL);
+        titleRow.setGravity(Gravity.CENTER_VERTICAL);
+        titleRow.setPadding(0, dp(10), 0, dp(2));
+
         TextView title = new TextView(this);
         title.setText(titleStr);
-        title.setTextColor(colPale);
-        title.setTextSize(13);
+        title.setTextColor(0xFFFFFFFF);
+        title.setTextSize(13.5f);
         title.setTypeface(Typeface.DEFAULT_BOLD);
-        title.setPadding(0, dp(8), 0, dp(2));
-        tile.addView(title);
+        LinearLayout.LayoutParams tlp = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
+        title.setLayoutParams(tlp);
+        titleRow.addView(title);
+
+        TextView arrow = new TextView(this);
+        arrow.setText("›");
+        arrow.setTextColor(0xFF64748B);
+        arrow.setTextSize(16);
+        arrow.setTypeface(Typeface.DEFAULT_BOLD);
+        titleRow.addView(arrow);
+
+        tile.addView(titleRow);
 
         TextView desc = new TextView(this);
         desc.setText(descStr);
-        desc.setTextColor(colMuted);
-        desc.setTextSize(10.5f);
+        desc.setTextColor(0xFF94A3B8);
+        desc.setTextSize(11f);
+        desc.setLineSpacing(dp(1), 1f);
         tile.addView(desc);
 
         rippleTile.setOnClickListener(new View.OnClickListener() {
