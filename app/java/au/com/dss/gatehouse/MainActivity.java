@@ -3519,6 +3519,7 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
     }
 
     private String toolsActiveFilter = "ALL";
+    private String contactsActiveFilter = "ALL";
 
     private LinearLayout buildToolsTab() {
         final LinearLayout container = new LinearLayout(this);
@@ -9596,78 +9597,152 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
     }
 
     private LinearLayout buildContactsTab() {
-        boolean isLandscape = getResources().getConfiguration().orientation == android.content.res.Configuration.ORIENTATION_LANDSCAPE;
+        final LinearLayout container = new LinearLayout(this);
+        container.setOrientation(LinearLayout.VERTICAL);
+        container.setPadding(0, dp(4), 0, dp(56));
 
-        if (isLandscape) {
-            LinearLayout container = new LinearLayout(this);
-            container.setOrientation(LinearLayout.HORIZONTAL);
-            container.setBaselineAligned(false);
-            container.setPadding(0, dp(6), 0, dp(56));
+        // 1. 🧭 Top Category Filter Bar
+        HorizontalScrollView filterScroll = new HorizontalScrollView(this);
+        filterScroll.setHorizontalScrollBarEnabled(false);
+        filterScroll.setPadding(0, dp(2), 0, dp(8));
 
-            LinearLayout leftCol = new LinearLayout(this);
-            leftCol.setOrientation(LinearLayout.VERTICAL);
-            LinearLayout.LayoutParams lclp = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1.05f);
-            lclp.rightMargin = dp(10);
-            leftCol.setLayoutParams(lclp);
+        final LinearLayout filterRow = new LinearLayout(this);
+        filterRow.setOrientation(LinearLayout.HORIZONTAL);
+        filterRow.setPadding(dp(4), 0, dp(4), 0);
 
-            leftCol.addView(terminalProfileCard());
-            leftCol.addView(contactsSectionHeader("🏭 HUME DOORS AFTER HOURS CONTACTS", colCyan));
-            leftCol.addView(contactCard("Noel Johns*", "Hume Doors After Hours Staff Contact", "0403195061", "AFTER HOURS", colAccent));
-            leftCol.addView(contactCard("Trevor Crane*", "Hume Doors After Hours Staff Contact", "0403195062", "AFTER HOURS", colAccent));
-            leftCol.addView(contactCard("Rees Brandon", "Hume Doors After Hours Staff Contact", "0403362525", "AFTER HOURS", colAccent));
-            leftCol.addView(contactCard("Nicole Berryman", "Hume I.T. / Failures · Phone a/c #3020201", "0412538844", "I.T. & OPTUS", colCyan));
-            leftCol.addView(contactCard("Dean Buckley*", "Hume Doors After Hours Staff Contact", "0412216318", "AFTER HOURS", colAccent));
-            leftCol.addView(contactCard("Graeme Buckley", "Hume Doors After Hours Staff Contact", "0422376468", "AFTER HOURS", colAccent));
-            leftCol.addView(contactCard("Michael Buckley", "Hume Doors After Hours Staff Contact", "0478352547", "AFTER HOURS", colAccent));
+        final String[][] categories = {
+            {"ALL", "🌐 ALL (14)"},
+            {"EMERGENCY", "🚨 EMERGENCY (4)"},
+            {"SECURITY", "🛡️ SECURITY & SITE (3)"},
+            {"HUME", "🏭 HUME AFTER HOURS (7)"}
+        };
 
-            LinearLayout rightCol = new LinearLayout(this);
-            rightCol.setOrientation(LinearLayout.VERTICAL);
-            LinearLayout.LayoutParams rclp = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 0.95f);
-            rclp.leftMargin = dp(10);
-            rightCol.setLayoutParams(rclp);
+        for (final String[] cat : categories) {
+            final String catKey = cat[0];
+            final String catLabel = cat[1];
+            final boolean isSelected = contactsActiveFilter.equalsIgnoreCase(catKey);
 
-            rightCol.addView(contactsSectionHeader("🛡️ SITE GATEHOUSE & SECURITY", colEmerald));
-            rightCol.addView(contactCard("Gatehouse Site Cell Phone", "Hume Kingston After Hours Duty Mobile", "0478352551", "DUTY PHONE", colEmerald));
-            rightCol.addView(contactCard("Officer Lochran Doherty", "G.J.G. Security · Static Guard LIC #41207", "0404530014", "ON SITE (TONIGHT)", colEmerald));
-            rightCol.addView(contactCard("Petrea Doherty", "G.J.G. Security Services Pty Ltd", "0401371724", "SECURITY OPS", colEmerald));
+            final TextView pill = new TextView(this);
+            pill.setText(catLabel);
+            pill.setTextSize(11);
+            pill.setTypeface(Typeface.create(Typeface.MONOSPACE, Typeface.BOLD));
+            pill.setPadding(dp(12), dp(6), dp(12), dp(6));
+            pill.setTextColor(isSelected ? colAccentInk : colPale);
+            pill.setBackground(rounded(isSelected ? colAccent : colPanel2, dp(8)));
 
-            rightCol.addView(contactsSectionHeader("🚨 EMERGENCY SERVICES (24/7)", colCrimson));
-            rightCol.addView(contactCard("Triple Zero (000)", "Police · Fire · Ambulance Emergency", "000", "24/7 PRIORITY", colCrimson));
-            rightCol.addView(contactCard("Police Attendance (All Hrs)", "Police Non-Life Threatening (3364 6464)", "0733646464", "24/7 POLICE", colCrimson));
-            rightCol.addView(contactCard("Logan Central Police", "Local Station General Enquiries (3826 1888)", "0738261888", "LOCAL POLICE", colCrimson));
-            rightCol.addView(contactCard("Fire Brigade (Loganlea)", "Loganlea 3884 2550 · Woodridge 3287 8730", "0738842550", "FIRE STN", colCrimson));
+            LinearLayout.LayoutParams plp = new LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+            plp.rightMargin = dp(6);
+            pill.setLayoutParams(plp);
 
-            container.addView(leftCol);
-            container.addView(rightCol);
-            return container;
+            pill.setOnClickListener(new View.OnClickListener() {
+                public void onClick(View v) {
+                    hapticClick();
+                    contactsActiveFilter = catKey;
+                    for (int i = 0; i < filterRow.getChildCount(); i++) {
+                        View child = filterRow.getChildAt(i);
+                        if (child instanceof TextView) {
+                            boolean sel = categories[i][0].equalsIgnoreCase(contactsActiveFilter);
+                            ((TextView) child).setTextColor(sel ? colAccentInk : colPale);
+                            child.setBackground(rounded(sel ? colAccent : colPanel2, dp(8)));
+                        }
+                    }
+                    contactsContent.removeAllViews();
+                    contactsContent.addView(buildContactsTab());
+                }
+            });
+            filterRow.addView(pill);
+        }
+        filterScroll.addView(filterRow);
+        container.addView(filterScroll);
+
+        // 2. Terminal Hardware Profile Card
+        container.addView(terminalProfileCard());
+
+        boolean showAll = "ALL".equalsIgnoreCase(contactsActiveFilter);
+
+        // 3. 🚨 EMERGENCY SERVICES (24/7)
+        if (showAll || "EMERGENCY".equalsIgnoreCase(contactsActiveFilter)) {
+            container.addView(contactsSectionHeader("🚨 EMERGENCY SERVICES (24/7 PRIORITY)", 0xFFEF4444));
+
+            // Emergency Tri-Pod Speed-Dial Banner
+            LinearLayout speedDial = new LinearLayout(this);
+            speedDial.setOrientation(LinearLayout.HORIZONTAL);
+            speedDial.setPadding(0, 0, 0, dp(8));
+
+            speedDial.addView(buildEmergencyQuickTile("🚨", "000", "TRIPLE ZERO", 0xFFEF4444, "000"));
+            speedDial.addView(buildEmergencyQuickTile("🚓", "POLICE", "3364 6464", 0xFF38BDF8, "0733646464"));
+            speedDial.addView(buildEmergencyQuickTile("🚒", "FIRE STN", "3884 2550", 0xFFF59E0B, "0738842550"));
+            container.addView(speedDial);
+
+            container.addView(contactCard("Triple Zero (000)", "Police · Fire · Ambulance Emergency", "000", "24/7 PRIORITY", 0xFFEF4444, "🚨"));
+            container.addView(contactCard("Police Attendance (All Hrs)", "Police Non-Life Threatening (3364 6464)", "0733646464", "24/7 POLICE", 0xFF38BDF8, "🚓"));
+            container.addView(contactCard("Logan Central Police", "Local Station General Enquiries (3826 1888)", "0738261888", "LOCAL POLICE", 0xFF38BDF8, "👮"));
+            container.addView(contactCard("Fire Brigade (Loganlea)", "Loganlea 3884 2550 · Woodridge 3287 8730", "0738842550", "FIRE STN", 0xFFF59E0B, "🚒"));
         }
 
-        LinearLayout container = new LinearLayout(this);
-        container.setOrientation(LinearLayout.VERTICAL);
-        container.setPadding(0, dp(6), 0, dp(56));
+        // 4. 🛡️ SITE GATEHOUSE & SECURITY
+        if (showAll || "SECURITY".equalsIgnoreCase(contactsActiveFilter)) {
+            container.addView(contactsSectionHeader("🛡️ SITE GATEHOUSE & SECURITY OPS", colEmerald));
+            container.addView(contactCard("Gatehouse Site Cell Phone", "Hume Kingston After Hours Duty Mobile", "0478352551", "DUTY PHONE", colEmerald, "📱"));
+            container.addView(contactCard("Officer Lochran Doherty", "G.J.G. Security · Static Guard LIC #41207", "0404530014", "ON SITE (TONIGHT)", colEmerald, "🛡️"));
+            container.addView(contactCard("Petrea Doherty", "G.J.G. Security Services Pty Ltd", "0401371724", "SECURITY OPS", colEmerald, "📞"));
+        }
 
-        container.addView(terminalProfileCard());
-        container.addView(contactsSectionHeader("🏭 HUME DOORS AFTER HOURS CONTACTS", colCyan));
-        container.addView(contactCard("Noel Johns*", "Hume Doors After Hours Staff Contact", "0403195061", "AFTER HOURS", colAccent));
-        container.addView(contactCard("Trevor Crane*", "Hume Doors After Hours Staff Contact", "0403195062", "AFTER HOURS", colAccent));
-        container.addView(contactCard("Rees Brandon", "Hume Doors After Hours Staff Contact", "0403362525", "AFTER HOURS", colAccent));
-        container.addView(contactCard("Nicole Berryman", "Hume I.T. / Failures · Phone a/c #3020201", "0412538844", "I.T. & OPTUS", colCyan));
-        container.addView(contactCard("Dean Buckley*", "Hume Doors After Hours Staff Contact", "0412216318", "AFTER HOURS", colAccent));
-        container.addView(contactCard("Graeme Buckley", "Hume Doors After Hours Staff Contact", "0422376468", "AFTER HOURS", colAccent));
-        container.addView(contactCard("Michael Buckley", "Hume Doors After Hours Staff Contact", "0478352547", "AFTER HOURS", colAccent));
-
-        container.addView(contactsSectionHeader("🛡️ SITE GATEHOUSE & SECURITY", colEmerald));
-        container.addView(contactCard("Gatehouse Site Cell Phone", "Hume Kingston After Hours Duty Mobile", "0478352551", "DUTY PHONE", colEmerald));
-        container.addView(contactCard("Officer Lochran Doherty", "G.J.G. Security · Static Guard LIC #41207", "0404530014", "ON SITE (TONIGHT)", colEmerald));
-        container.addView(contactCard("Petrea Doherty", "G.J.G. Security Services Pty Ltd", "0401371724", "SECURITY OPS", colEmerald));
-
-        container.addView(contactsSectionHeader("🚨 EMERGENCY SERVICES (24/7)", colCrimson));
-        container.addView(contactCard("Triple Zero (000)", "Police · Fire · Ambulance Emergency", "000", "24/7 PRIORITY", colCrimson));
-        container.addView(contactCard("Police Attendance (All Hrs)", "Police Non-Life Threatening (3364 6464)", "0733646464", "24/7 POLICE", colCrimson));
-        container.addView(contactCard("Logan Central Police", "Local Station General Enquiries (3826 1888)", "0738261888", "LOCAL POLICE", colCrimson));
-        container.addView(contactCard("Fire Brigade (Loganlea)", "Loganlea 3884 2550 · Woodridge 3287 8730", "0738842550", "FIRE STN", colCrimson));
+        // 5. 🏭 HUME DOORS AFTER HOURS CONTACTS
+        if (showAll || "HUME".equalsIgnoreCase(contactsActiveFilter)) {
+            container.addView(contactsSectionHeader("🏭 HUME DOORS AFTER HOURS KEYHOLDERS & STAFF", colCyan));
+            container.addView(contactCard("Noel Johns (Keyholder)", "Hume Doors After Hours Staff Contact", "0403195061", "KEYHOLDER", colAccent, "🔑"));
+            container.addView(contactCard("Trevor Crane (Keyholder)", "Hume Doors After Hours Staff Contact", "0403195062", "KEYHOLDER", colAccent, "🔑"));
+            container.addView(contactCard("Rees Brandon", "Hume Doors After Hours Staff Contact", "0403362525", "AFTER HOURS", colAccent, "🏭"));
+            container.addView(contactCard("Nicole Berryman", "Hume I.T. / Failures · Phone a/c #3020201", "0412538844", "I.T. & OPTUS", colCyan, "💻"));
+            container.addView(contactCard("Dean Buckley (Keyholder)", "Hume Doors After Hours Staff Contact", "0412216318", "KEYHOLDER", colAccent, "🔑"));
+            container.addView(contactCard("Graeme Buckley", "Hume Doors After Hours Staff Contact", "0422376468", "AFTER HOURS", colAccent, "🏭"));
+            container.addView(contactCard("Michael Buckley", "Hume Doors After Hours Staff Contact", "0478352547", "AFTER HOURS", colAccent, "🏭"));
+        }
 
         return container;
+    }
+
+    private View buildEmergencyQuickTile(String icon, String title, String sub, final int color, final String phone) {
+        LinearLayout tile = new LinearLayout(this);
+        tile.setOrientation(LinearLayout.VERTICAL);
+        tile.setGravity(Gravity.CENTER);
+        tile.setBackground(rounded(colPanel, dp(12)));
+        tile.setPadding(dp(8), dp(10), dp(8), dp(10));
+        LinearLayout.LayoutParams tlp = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
+        tlp.setMargins(dp(3), 0, dp(3), 0);
+        tile.setLayoutParams(tlp);
+
+        TextView iconTxt = new TextView(this);
+        iconTxt.setText(icon);
+        iconTxt.setTextSize(18);
+        iconTxt.setGravity(Gravity.CENTER);
+        tile.addView(iconTxt);
+
+        TextView titleTxt = new TextView(this);
+        titleTxt.setText(title);
+        titleTxt.setTextColor(color);
+        titleTxt.setTextSize(13);
+        titleTxt.setTypeface(Typeface.create(Typeface.MONOSPACE, Typeface.BOLD));
+        titleTxt.setPadding(0, dp(2), 0, 0);
+        tile.addView(titleTxt);
+
+        TextView subTxt = new TextView(this);
+        subTxt.setText(sub);
+        subTxt.setTextColor(colMuted);
+        subTxt.setTextSize(9);
+        subTxt.setTypeface(Typeface.MONOSPACE);
+        tile.addView(subTxt);
+
+        tile.setOnClickListener(new View.OnClickListener() {
+            public void onClick(View v) {
+                hapticHeavyClick();
+                registerActivity();
+                dialNumber(phone);
+            }
+        });
+        return tile;
     }
 
     private TextView contactsSectionHeader(String title, int color) {
@@ -9676,66 +9751,82 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
         t.setTextColor(color);
         t.setTextSize(11);
         t.setTypeface(Typeface.DEFAULT_BOLD);
-        t.setLetterSpacing(0.12f);
-        t.setPadding(0, dp(14), 0, dp(6));
+        t.setLetterSpacing(0.10f);
+        t.setPadding(dp(4), dp(14), dp(4), dp(6));
         return t;
     }
 
     private LinearLayout contactCard(final String name, String subtitle, final String phoneDisplay,
-                                     String badgeText, final int badgeColor) {
+                                     String badgeText, final int badgeColor, String avatarIcon) {
         LinearLayout card = new LinearLayout(this);
-        card.setOrientation(LinearLayout.VERTICAL);
-        card.setBackground(rounded(colPanel, dp(16)));
-        card.setPadding(dp(16), dp(14), dp(16), dp(14));
-        card.setElevation(dp(4));
+        card.setOrientation(LinearLayout.HORIZONTAL);
+        card.setGravity(Gravity.CENTER_VERTICAL);
+        card.setBackground(rounded(colPanel, dp(14)));
+        card.setPadding(dp(12), dp(12), dp(12), dp(12));
+        card.setElevation(dp(3));
 
         LinearLayout.LayoutParams clp = new LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
-        clp.bottomMargin = dp(10);
+        clp.bottomMargin = dp(8);
         card.setLayoutParams(clp);
 
-        LinearLayout top = new LinearLayout(this);
-        top.setOrientation(LinearLayout.HORIZONTAL);
-        top.setGravity(Gravity.CENTER_VERTICAL);
+        // 1. Left 3D Avatar Pod (44x44dp)
+        FrameLayout avatarFrame = new FrameLayout(this);
+        avatarFrame.setBackground(rounded(colPanel2, dp(10)));
+        LinearLayout.LayoutParams aflp = new LinearLayout.LayoutParams(dp(42), dp(42));
+        aflp.rightMargin = dp(12);
+        avatarFrame.setLayoutParams(aflp);
 
-        TextView title = new TextView(this);
-        title.setText(name);
-        title.setTextColor(colPale);
-        title.setTextSize(14.5f);
-        title.setTypeface(Typeface.DEFAULT_BOLD);
-        LinearLayout.LayoutParams tl = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
-        title.setLayoutParams(tl);
-        top.addView(title);
+        TextView aIcon = new TextView(this);
+        aIcon.setText(avatarIcon);
+        aIcon.setTextSize(18);
+        aIcon.setGravity(Gravity.CENTER);
+        avatarFrame.addView(aIcon);
+        card.addView(avatarFrame);
+
+        // 2. Middle Contact Information
+        LinearLayout infoCol = new LinearLayout(this);
+        infoCol.setOrientation(LinearLayout.VERTICAL);
+        LinearLayout.LayoutParams iclp = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
+        infoCol.setLayoutParams(iclp);
+
+        LinearLayout topRow = new LinearLayout(this);
+        topRow.setOrientation(LinearLayout.HORIZONTAL);
+        topRow.setGravity(Gravity.CENTER_VERTICAL);
+
+        TextView nameTxt = new TextView(this);
+        nameTxt.setText(name);
+        nameTxt.setTextColor(colPale);
+        nameTxt.setTextSize(14f);
+        nameTxt.setTypeface(Typeface.DEFAULT_BOLD);
+        LinearLayout.LayoutParams nlp = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
+        nameTxt.setLayoutParams(nlp);
+        topRow.addView(nameTxt);
 
         TextView badge = new TextView(this);
         badge.setText(badgeText);
         badge.setTextColor(badgeColor);
-        badge.setTextSize(9.5f);
+        badge.setTextSize(9f);
         badge.setTypeface(Typeface.MONOSPACE);
-        badge.setPadding(dp(8), dp(3), dp(8), dp(3));
-        badge.setBackground(rounded(colPanel2, dp(6)));
-        top.addView(badge);
-        card.addView(top);
+        badge.setPadding(dp(6), dp(2), dp(6), dp(2));
+        badge.setBackground(rounded(colPanel2, dp(4)));
+        topRow.addView(badge);
+        infoCol.addView(topRow);
 
-        TextView sub = new TextView(this);
-        sub.setText(subtitle);
-        sub.setTextColor(colMuted);
-        sub.setTextSize(12f);
-        sub.setPadding(0, dp(3), 0, dp(10));
-        card.addView(sub);
-
-        LinearLayout btm = new LinearLayout(this);
-        btm.setOrientation(LinearLayout.HORIZONTAL);
-        btm.setGravity(Gravity.CENTER_VERTICAL);
+        TextView subTxt = new TextView(this);
+        subTxt.setText(subtitle);
+        subTxt.setTextColor(colMuted);
+        subTxt.setTextSize(11f);
+        subTxt.setPadding(0, dp(2), 0, dp(4));
+        infoCol.addView(subTxt);
 
         final String formattedNum = formatPhoneNumber(phoneDisplay);
-        TextView num = new TextView(this);
-        num.setText("📞 " + formattedNum);
-        num.setTextColor(colAccent);
-        num.setTextSize(13f);
-        num.setTypeface(Typeface.create(Typeface.MONOSPACE, Typeface.BOLD));
-        num.setPadding(0, dp(4), dp(8), dp(4));
-        num.setOnClickListener(new View.OnClickListener() {
+        TextView numTxt = new TextView(this);
+        numTxt.setText("📞 " + formattedNum);
+        numTxt.setTextColor(colAccent);
+        numTxt.setTextSize(12f);
+        numTxt.setTypeface(Typeface.create(Typeface.MONOSPACE, Typeface.BOLD));
+        numTxt.setOnClickListener(new View.OnClickListener() {
             public void onClick(View v) {
                 hapticClick();
                 try {
@@ -9745,12 +9836,17 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
                         banner.setText("✓ Copied " + formattedNum + " to clipboard");
                         banner.setVisibility(View.VISIBLE);
                     }
-                } catch (Exception e) {}
+                } catch (Exception ignored) {}
             }
         });
-        LinearLayout.LayoutParams nl = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
-        num.setLayoutParams(nl);
-        btm.addView(num);
+        infoCol.addView(numTxt);
+        card.addView(infoCol);
+
+        // 3. Right Action Suite (SMS + CALL)
+        LinearLayout actionCol = new LinearLayout(this);
+        actionCol.setOrientation(LinearLayout.HORIZONTAL);
+        actionCol.setGravity(Gravity.CENTER_VERTICAL);
+        actionCol.setPadding(dp(8), 0, 0, 0);
 
         final boolean isMobile = phoneDisplay.startsWith("04");
         if (isMobile) {
@@ -9759,8 +9855,8 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
             btnSms.setTextColor(colCyan);
             btnSms.setTextSize(11f);
             btnSms.setTypeface(Typeface.DEFAULT_BOLD);
-            btnSms.setPadding(dp(12), dp(7), dp(12), dp(7));
-            btnSms.setBackground(rounded(colPanel2, dp(8)));
+            btnSms.setPadding(dp(10), dp(6), dp(10), dp(6));
+            btnSms.setBackground(rounded(colPanel2, dp(6)));
             LinearLayout.LayoutParams slp = new LinearLayout.LayoutParams(
                     LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT);
             slp.rightMargin = dp(6);
@@ -9774,19 +9870,19 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
                         smsIntent.setData(Uri.parse("smsto:" + phoneDisplay));
                         smsIntent.putExtra("sms_body", "DSS Gatehouse (Hume Kingston Post 01): ");
                         startActivity(smsIntent);
-                    } catch (Exception e) {}
+                    } catch (Exception ignored) {}
                 }
             });
-            btm.addView(btnSms);
+            actionCol.addView(btnSms);
         }
 
         TextView btnCall = new TextView(this);
-        btnCall.setText(phoneDisplay.equals("000") ? "CALL 000" : "CALL");
+        btnCall.setText(phoneDisplay.equals("000") ? "000" : "CALL");
         btnCall.setTextColor(phoneDisplay.equals("000") ? 0xFFFFFFFF : colAccentInk);
         btnCall.setTextSize(11f);
         btnCall.setTypeface(Typeface.DEFAULT_BOLD);
-        btnCall.setPadding(dp(14), dp(7), dp(14), dp(7));
-        btnCall.setBackground(rounded(phoneDisplay.equals("000") ? colCrimson : colAccent, dp(8)));
+        btnCall.setPadding(dp(12), dp(6), dp(12), dp(6));
+        btnCall.setBackground(rounded(phoneDisplay.equals("000") ? colCrimson : colAccent, dp(6)));
         btnCall.setOnClickListener(new View.OnClickListener() {
             public void onClick(View v) {
                 hapticHeavyClick();
@@ -9794,8 +9890,8 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
                 dialNumber(phoneDisplay);
             }
         });
-        btm.addView(btnCall);
-        card.addView(btm);
+        actionCol.addView(btnCall);
+        card.addView(actionCol);
 
         return card;
     }
