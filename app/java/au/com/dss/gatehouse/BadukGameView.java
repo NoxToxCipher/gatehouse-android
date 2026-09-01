@@ -474,6 +474,7 @@ public class BadukGameView extends View {
         }
 
         try {
+            RecreationAudioSynth.playBadukStoneClack();
             if (capturedCount > 0) {
                 performHapticFeedback(HapticFeedbackConstants.CONFIRM);
                 postDelayed(new Runnable() {
@@ -1058,6 +1059,34 @@ public class BadukGameView extends View {
         if (showTerritory) {
             drawTerritoryMarkers(canvas, startX, startY, cellSize);
         }
+
+        // Draw KataGo-style Live Winrate Bar
+        drawKataGoEvaluationBanner(canvas, w, h);
+    }
+
+    private void drawKataGoEvaluationBanner(Canvas canvas, float w, float h) {
+        if (mode == 1) return; // Not in Tsumego
+        float barH = dpf(3.5f);
+        float barY = dpf(2.5f);
+        float barW = w - dpf(14f);
+        float barX = dpf(7f);
+
+        int bTerr = countTerritory(1) + blackCaptures;
+        int wTerr = countTerritory(2) + whiteCaptures + (boardSize == 19 ? 7 : 6);
+        float total = bTerr + wTerr + 1;
+        float bRate = Math.max(0.08f, Math.min(0.92f, (float) bTerr / total));
+
+        Paint bBarPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+        bBarPaint.setColor(0xFF0F172A);
+        bBarPaint.setStyle(Paint.Style.FILL);
+        RectF bRect = new RectF(barX, barY, barX + barW * bRate, barY + barH);
+        canvas.drawRoundRect(bRect, dpf(2f), dpf(2f), bBarPaint);
+
+        Paint wBarPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+        wBarPaint.setColor(0xFFF8FAFC);
+        wBarPaint.setStyle(Paint.Style.FILL);
+        RectF wRect = new RectF(barX + barW * bRate, barY, barX + barW, barY + barH);
+        canvas.drawRoundRect(wRect, dpf(2f), dpf(2f), wBarPaint);
     }
 
     public void showHint() {

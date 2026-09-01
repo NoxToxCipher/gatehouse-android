@@ -277,9 +277,51 @@ public class ChessGameView extends View {
                 statusListener.onStatusChanged("♔ White to move · " + p.title, 0xFF38BDF8);
             }
         } else {
-            String turn = whiteTurn ? "♔ White to move" : "♚ Black to move (AI)";
-            statusListener.onStatusChanged(turn + " · 8×8 Tournament Engine", 0xFFFFD166);
+            float eval = calculateEvaluation();
+            String evalStr = (eval >= 0 ? "+" : "") + String.format(java.util.Locale.US, "%.1f", eval);
+            String opening = detectChessOpening();
+            String turn = whiteTurn ? "♔ White (" + evalStr + ")" : "♚ Black (" + evalStr + ")";
+            statusListener.onStatusChanged(turn + " · " + opening, 0xFFFFD166);
         }
+    }
+
+    public float calculateEvaluation() {
+        int whiteMaterial = 0;
+        int blackMaterial = 0;
+        for (int r = 0; r < 8; r++) {
+            for (int c = 0; c < 8; c++) {
+                char p = board[r][c];
+                if (p == '.') continue;
+                int val = 0;
+                switch (Character.toLowerCase(p)) {
+                    case 'p': val = 100; break;
+                    case 'n': case 'b': val = 320; break;
+                    case 'r': val = 500; break;
+                    case 'q': val = 950; break;
+                    case 'k': val = 20000; break;
+                }
+                if (isWhitePiece(p)) whiteMaterial += val;
+                else blackMaterial += val;
+            }
+        }
+        int diff = whiteMaterial - blackMaterial;
+        return diff / 100.0f;
+    }
+
+    private String detectChessOpening() {
+        if (history.isEmpty()) return "Opening Phase (1. e4 / d4)";
+        if (history.size() <= 2) {
+            if (board[4][4] == 'P' && board[3][4] == 'p') return "⚔️ King's Pawn Open Game";
+            if (board[4][3] == 'P' && board[3][3] == 'p') return "⚔️ Queen's Pawn Game";
+            if (board[4][4] == 'P' && board[3][2] == 'p') return "⚡ Sicilian Defense";
+            if (board[4][4] == 'P' && board[2][4] == 'p') return "🛡️ French Defense";
+        } else if (history.size() <= 6) {
+            if (board[4][4] == 'P' && board[3][2] == 'p') return "⚡ Sicilian Defense (Open)";
+            if (board[4][3] == 'P' && board[4][2] == 'P') return "👑 Queen's Gambit";
+            if (board[3][1] == 'B' && board[4][4] == 'P') return "🏰 Ruy Lopez (Spanish Game)";
+            return "♟️ Strategic Middle Game";
+        }
+        return "⚔️ Grandmaster Combat";
     }
 
     private String getPieceGlyph(char p) {
@@ -444,6 +486,7 @@ public class ChessGameView extends View {
         board[fromY][fromX] = '.';
 
         try {
+            RecreationAudioSynth.playChessPieceThud(isCapture);
             if (isCapture) {
                 performHapticFeedback(HapticFeedbackConstants.LONG_PRESS);
             } else {
@@ -627,6 +670,28 @@ public class ChessGameView extends View {
 
         rect.set(dpf(2.5f), dpf(2.5f), w - dpf(2.5f), h - dpf(2.5f));
         canvas.drawRoundRect(rect, dpf(14f), dpf(14f), goldBorderPaint);
+
+        // Draw Real-Time Advantage Evaluation Bar
+        if (mode != 1) {
+            float eval = calculateEvaluation();
+            float evalRate = Math.max(0.08f, Math.min(0.92f, 0.5f + (eval / 15.0f)));
+            float barH = dpf(3.5f);
+            float barY = dpf(2.5f);
+            float barW = w - dpf(14f);
+            float barX = dpf(7f);
+
+            Paint wEvalPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+            wEvalPaint.setColor(0xFFF8FAFC);
+            wEvalPaint.setStyle(Paint.Style.FILL);
+            RectF wEvalRect = new RectF(barX, barY, barX + barW * evalRate, barY + barH);
+            canvas.drawRoundRect(wEvalRect, dpf(2f), dpf(2f), wEvalPaint);
+
+            Paint bEvalPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+            bEvalPaint.setColor(0xFF0F172A);
+            bEvalPaint.setStyle(Paint.Style.FILL);
+            RectF bEvalRect = new RectF(barX + barW * evalRate, barY, barX + barW, barY + barH);
+            canvas.drawRoundRect(bEvalRect, dpf(2f), dpf(2f), bEvalPaint);
+        }
 
         float margin = dpf(14f);
         float pad = dpf(4f);
