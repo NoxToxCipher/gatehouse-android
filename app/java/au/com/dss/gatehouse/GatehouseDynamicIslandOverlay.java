@@ -97,8 +97,8 @@ public class GatehouseDynamicIslandOverlay {
         islandRoot = new FrameLayout(parentContainer.getContext());
         FrameLayout.LayoutParams rlp = new FrameLayout.LayoutParams(compactWidth, compactHeight);
         rlp.gravity = Gravity.TOP | Gravity.CENTER_HORIZONTAL;
-        // Positioned safely centered between left clock & right status icons
-        rlp.topMargin = dp(6);
+        // Positioned cleanly below the status bar so zero status icons are obscured
+        rlp.topMargin = dp(44);
         islandRoot.setLayoutParams(rlp);
         islandRoot.setVisibility(View.GONE);
         islandRoot.setElevation(dp(20));
