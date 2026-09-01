@@ -4987,6 +4987,25 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
         bottomRow.setOrientation(LinearLayout.HORIZONTAL);
         bottomRow.setPadding(0, dp(8), 0, 0);
 
+        final TextView btnScoring = actionButton("⚖️ Score", colPanel2, 0xFFEAB308);
+        btnScoring.setOnClickListener(new View.OnClickListener() {
+            public void onClick(View v) {
+                hapticClick();
+                badukView.toggleScoringMode();
+                if (badukView.isScoringMode()) {
+                    btnScoring.setBackground(rounded(0xFFEAB308, dp(8)));
+                    btnScoring.setTextColor(0xFF0F172A);
+                } else {
+                    btnScoring.setBackground(rounded(colPanel2, dp(8)));
+                    btnScoring.setTextColor(0xFFEAB308);
+                }
+            }
+        });
+        LinearLayout.LayoutParams sclp = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1.0f);
+        sclp.rightMargin = dp(2);
+        btnScoring.setLayoutParams(sclp);
+        bottomRow.addView(btnScoring);
+
         final TextView btnHeatmap = actionButton("🗺️ Heatmap", colPanel2, 0xFF10B981);
         btnHeatmap.setOnClickListener(new View.OnClickListener() {
             public void onClick(View v) {
@@ -5002,7 +5021,8 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
             }
         });
         LinearLayout.LayoutParams hmlp = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1.1f);
-        hmlp.rightMargin = dp(3);
+        hmlp.leftMargin = dp(2);
+        hmlp.rightMargin = dp(2);
         btnHeatmap.setLayoutParams(hmlp);
         bottomRow.addView(btnHeatmap);
 
@@ -5013,9 +5033,9 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
                 showBadukRulesDialog();
             }
         });
-        LinearLayout.LayoutParams rblp = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1.0f);
-        rblp.leftMargin = dp(3);
-        rblp.rightMargin = dp(3);
+        LinearLayout.LayoutParams rblp = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 0.9f);
+        rblp.leftMargin = dp(2);
+        rblp.rightMargin = dp(2);
         btnRules.setLayoutParams(rblp);
         bottomRow.addView(btnRules);
 
@@ -5027,7 +5047,7 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
             }
         });
         LinearLayout.LayoutParams cblp = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 0.8f);
-        cblp.leftMargin = dp(3);
+        cblp.leftMargin = dp(2);
         btnClose.setLayoutParams(cblp);
         bottomRow.addView(btnClose);
 
