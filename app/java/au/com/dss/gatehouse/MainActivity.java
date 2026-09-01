@@ -6385,8 +6385,8 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
                     row2.setPadding(0, dp(4), 0, 0);
 
                     double diff = thisPrice - minPrice;
-                    String sub = isCheapest ? ("Lowest · " + String.format(Locale.US, "%.1f km", s.distanceKm))
-                            : String.format(Locale.US, "+%.1f¢ vs lowest · %.1f km", diff, s.distanceKm);
+                    String sub = isCheapest ? ("Best price · " + String.format(Locale.US, "%.1f km", s.distanceKm))
+                            : String.format(Locale.US, "+%.1f¢ · %.1f km", diff, s.distanceKm);
 
                     TextView subTxt = new TextView(MainActivity.this);
                     subTxt.setText(sub);
