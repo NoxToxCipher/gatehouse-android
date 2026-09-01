@@ -6349,7 +6349,11 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
 
                     LinearLayout sCard = new LinearLayout(MainActivity.this);
                     sCard.setOrientation(LinearLayout.VERTICAL);
-                    sCard.setBackground(rounded(isCheapest ? 0xFF172554 : 0xFF1E293B, dp(12)));
+                    GradientDrawable scBg = new GradientDrawable();
+                    scBg.setColor(isCheapest ? 0xFF172554 : 0xFF1E293B);
+                    scBg.setCornerRadius(dp(12));
+                    scBg.setStroke(dp(1), isCheapest ? 0x6038BDF8 : 0x1AFFFFFF);
+                    sCard.setBackground(scBg);
                     sCard.setPadding(dp(14), dp(12), dp(14), dp(12));
                     LinearLayout.LayoutParams slp = new LinearLayout.LayoutParams(
                             LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
