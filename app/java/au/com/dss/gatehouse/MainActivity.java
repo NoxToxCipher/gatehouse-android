@@ -1254,6 +1254,7 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
         });
 
         setContentView(rootFrame);
+        GatehouseDynamicIslandOverlay.getInstance(this).attachToContainer(rootFrame);
     }
 
     private final Runnable tick = new Runnable() {
@@ -6639,14 +6640,6 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
         btnStream.setTypeface(Typeface.DEFAULT_BOLD);
         btnStream.setPadding(dp(8), dp(4), dp(8), dp(4));
         btnStream.setBackground(rounded(0xFF10B981, dp(6)));
-        btnStream.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                hapticHeavyClick();
-                GatehouseIslandManager.getInstance(MainActivity.this).showFuelIsland(168.9, 6.0, 30);
-                Toast.makeText(MainActivity.this, "✓ Dynamic Island pill projected to top cutout", Toast.LENGTH_SHORT).show();
-            }
-        });
         islandCard.addView(btnStream);
         box.addView(islandCard);
 
@@ -6655,6 +6648,17 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
         refreshFuelView.run();
 
         final Dialog dlg = createDialogSheet(box);
+
+        btnStream.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                hapticHeavyClick();
+                dlg.dismiss();
+                GatehouseDynamicIslandOverlay.getInstance(MainActivity.this).showFuelIsland(168.9, 6.0, 30);
+                GatehouseIslandManager.getInstance(MainActivity.this).showFuelIsland(168.9, 6.0, 30);
+                Toast.makeText(MainActivity.this, "✓ Dynamic Island active around top cutout", Toast.LENGTH_SHORT).show();
+            }
+        });
 
         LinearLayout btnRow = new LinearLayout(this);
         btnRow.setOrientation(LinearLayout.HORIZONTAL);
@@ -6696,8 +6700,10 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
         btnIsland.setOnClickListener(new View.OnClickListener() {
             public void onClick(View v) {
                 hapticHeavyClick();
+                dlg.dismiss();
+                GatehouseDynamicIslandOverlay.getInstance(MainActivity.this).showFuelIsland(168.9, 6.0, 30);
                 GatehouseIslandManager.getInstance(MainActivity.this).showFuelIsland(168.9, 6.0, 30);
-                Toast.makeText(MainActivity.this, "✓ Dynamic Island pill projected (Xiaomi / OxygenOS)", Toast.LENGTH_SHORT).show();
+                Toast.makeText(MainActivity.this, "✓ Dynamic Island active around top cutout", Toast.LENGTH_SHORT).show();
             }
         });
         LinearLayout.LayoutParams ilp = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
