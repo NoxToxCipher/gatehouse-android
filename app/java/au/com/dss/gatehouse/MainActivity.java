@@ -5020,11 +5020,29 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
                 }
             }
         });
-        LinearLayout.LayoutParams hmlp = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1.1f);
+        LinearLayout.LayoutParams hmlp = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1.0f);
         hmlp.leftMargin = dp(2);
         hmlp.rightMargin = dp(2);
         btnHeatmap.setLayoutParams(hmlp);
         bottomRow.addView(btnHeatmap);
+
+        TextView btnSgf = actionButton("📋 SGF", colPanel2, colCyan);
+        btnSgf.setOnClickListener(new View.OnClickListener() {
+            public void onClick(View v) {
+                hapticClick();
+                String sgf = badukView.exportSGF();
+                android.content.ClipboardManager cm = (android.content.ClipboardManager) getSystemService(android.content.Context.CLIPBOARD_SERVICE);
+                if (cm != null) {
+                    cm.setPrimaryClip(android.content.ClipData.newPlainText("Baduk SGF", sgf));
+                    Toast.makeText(MainActivity.this, "📋 SGF Game Record Copied to Clipboard!", Toast.LENGTH_SHORT).show();
+                }
+            }
+        });
+        LinearLayout.LayoutParams sgflp = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 0.9f);
+        sgflp.leftMargin = dp(2);
+        sgflp.rightMargin = dp(2);
+        btnSgf.setLayoutParams(sgflp);
+        bottomRow.addView(btnSgf);
 
         TextView btnRules = actionButton("📖 Rules", colPanel2, colAccent);
         btnRules.setOnClickListener(new View.OnClickListener() {
@@ -5046,7 +5064,7 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
                 dlg.dismiss();
             }
         });
-        LinearLayout.LayoutParams cblp = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 0.8f);
+        LinearLayout.LayoutParams cblp = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 0.7f);
         cblp.leftMargin = dp(2);
         btnClose.setLayoutParams(cblp);
         bottomRow.addView(btnClose);

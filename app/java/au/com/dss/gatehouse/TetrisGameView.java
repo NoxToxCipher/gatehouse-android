@@ -395,10 +395,13 @@ public class TetrisGameView extends View {
 
         if (action == MotionEvent.ACTION_DOWN) {
             float boardW = w * 0.65f;
+            float pad = dpf(8f);
+            float mTop = pad + dpf(144f);
+
             if (ex < boardW) {
-                if (ey < h * 0.45f) {
+                if (ey < h * 0.40f) {
                     rotateCW();
-                } else if (ey > h * 0.75f) {
+                } else if (ey > h * 0.78f) {
                     hardDrop();
                 } else if (ex < boardW * 0.45f) {
                     moveLeft();
@@ -408,8 +411,12 @@ public class TetrisGameView extends View {
                     softDrop();
                 }
             } else {
-                if (ey < h * 0.35f) {
+                if (ey < pad + dpf(140f)) {
                     holdCurrentPiece();
+                } else if (ey >= mTop + dpf(86f) && ey <= mTop + dpf(116f)) {
+                    rotateCW();
+                } else if (ey >= mTop + dpf(120f)) {
+                    hardDrop();
                 } else {
                     rotateCW();
                 }
@@ -528,11 +535,39 @@ public class TetrisGameView extends View {
 
         // Metrics Panel
         float mTop = pad + dpf(144f);
-        drawSidePanel(canvas, sideX, mTop, sideW, dpf(80f), "METRICS");
+        drawSidePanel(canvas, sideX, mTop, sideW, dpf(78f), "METRICS");
         hudLabelPaint.setTextAlign(Paint.Align.CENTER);
-        canvas.drawText("LVL: " + level, sideX + sideW / 2f, mTop + dpf(28f), hudLabelPaint);
-        canvas.drawText("LINES: " + lines, sideX + sideW / 2f, mTop + dpf(46f), hudLabelPaint);
-        canvas.drawText("PTS: " + score, sideX + sideW / 2f, mTop + dpf(64f), hudLabelPaint);
+        canvas.drawText("LVL: " + level, sideX + sideW / 2f, mTop + dpf(26f), hudLabelPaint);
+        canvas.drawText("LINES: " + lines, sideX + sideW / 2f, mTop + dpf(44f), hudLabelPaint);
+        canvas.drawText("PTS: " + score, sideX + sideW / 2f, mTop + dpf(62f), hudLabelPaint);
+
+        // Sidebar Virtual Arcade Badges (Rotate & Drop)
+        Paint ctrlBg = new Paint(Paint.ANTI_ALIAS_FLAG);
+        Paint ctrlBorder = new Paint(Paint.ANTI_ALIAS_FLAG);
+        ctrlBorder.setStyle(Paint.Style.STROKE);
+        ctrlBorder.setStrokeWidth(dpf(1.2f));
+        Paint ctrlText = new Paint(Paint.ANTI_ALIAS_FLAG);
+        ctrlText.setTextSize(dpf(9f));
+        ctrlText.setTypeface(Typeface.create(Typeface.MONOSPACE, Typeface.BOLD));
+        ctrlText.setTextAlign(Paint.Align.CENTER);
+
+        // 🔄 Rotate Button
+        RectF rotRect = new RectF(sideX, mTop + dpf(84f), sideX + sideW, mTop + dpf(110f));
+        ctrlBg.setColor(0x2238BDF8);
+        ctrlBorder.setColor(0x6638BDF8);
+        ctrlText.setColor(0xFF38BDF8);
+        canvas.drawRoundRect(rotRect, dpf(6f), dpf(6f), ctrlBg);
+        canvas.drawRoundRect(rotRect, dpf(6f), dpf(6f), ctrlBorder);
+        canvas.drawText("🔄 ROTATE", rotRect.centerX(), rotRect.centerY() + dpf(3f), ctrlText);
+
+        // ⚡ Hard Drop Button
+        RectF dropRect = new RectF(sideX, mTop + dpf(116f), sideX + sideW, mTop + dpf(142f));
+        ctrlBg.setColor(0x33EF4444);
+        ctrlBorder.setColor(0x88EF4444);
+        ctrlText.setColor(0xFFF43F5E);
+        canvas.drawRoundRect(dropRect, dpf(6f), dpf(6f), ctrlBg);
+        canvas.drawRoundRect(dropRect, dpf(6f), dpf(6f), ctrlBorder);
+        canvas.drawText("⚡ DROP", dropRect.centerX(), dropRect.centerY() + dpf(3f), ctrlText);
 
         postInvalidateOnAnimation();
     }

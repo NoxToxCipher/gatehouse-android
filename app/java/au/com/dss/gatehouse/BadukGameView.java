@@ -658,6 +658,27 @@ public class BadukGameView extends View {
         }
     }
 
+    public String exportSGF() {
+        StringBuilder sb = new StringBuilder();
+        sb.append("(;GM[1]FF[4]CA[UTF-8]AP[GatehouseSecurity]");
+        sb.append("SZ[").append(boardSize).append("]");
+        sb.append("KM[").append(boardSize == 19 ? "7.5" : "6.5").append("]");
+        sb.append("RU[Japanese]");
+        sb.append("PW[").append(mode == 0 ? "KataGo AI (" + (difficultyTier == 2 ? "9-Dan" : (difficultyTier == 1 ? "3-Dan" : "1-Kyu")) + ")" : "White Player").append("]");
+        sb.append("PB[Officer Lochran Doherty]");
+        sb.append("DT[").append(new java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.US).format(new java.util.Date())).append("]");
+
+        for (int i = 0; i < moveList.size(); i++) {
+            Point p = moveList.get(i);
+            char colChar = (char) ('a' + p.x);
+            char rowChar = (char) ('a' + p.y);
+            String moveColor = (i % 2 == 0) ? ";B[" : ";W[";
+            sb.append(moveColor).append(colChar).append(rowChar).append("]");
+        }
+        sb.append(")");
+        return sb.toString();
+    }
+
     private int countGroupLiberties(int startX, int startY, int color, boolean[][] visited) {
         Set<Integer> liberties = new HashSet<>();
         Queue<Point> q = new LinkedList<>();
