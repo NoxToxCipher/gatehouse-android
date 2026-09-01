@@ -6302,11 +6302,15 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
 
                     TextView tab = new TextView(MainActivity.this);
                     tab.setText(gradeLabel);
-                    tab.setTextColor(isSel ? 0xFF0F172A : colPale);
+                    tab.setTextColor(isSel ? 0xFF38BDF8 : colMuted);
                     tab.setTextSize(11f);
-                    tab.setTypeface(Typeface.create(Typeface.MONOSPACE, Typeface.BOLD));
+                    tab.setTypeface(Typeface.create(Typeface.MONOSPACE, isSel ? Typeface.BOLD : Typeface.NORMAL));
                     tab.setPadding(dp(12), dp(6), dp(12), dp(6));
-                    tab.setBackground(rounded(isSel ? 0xFFF59E0B : 0x22FFFFFF, dp(8)));
+                    GradientDrawable tabBg = new GradientDrawable();
+                    tabBg.setColor(isSel ? 0x2E38BDF8 : 0x14FFFFFF);
+                    tabBg.setCornerRadius(dp(8));
+                    tabBg.setStroke(dp(1), isSel ? 0x6638BDF8 : 0x00000000);
+                    tab.setBackground(tabBg);
                     tab.setOnClickListener(new View.OnClickListener() {
                         @Override
                         public void onClick(View v) {
