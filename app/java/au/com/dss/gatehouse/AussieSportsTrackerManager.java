@@ -30,16 +30,24 @@ public class AussieSportsTrackerManager {
     private static final String KEY_LAST_FETCH_TS = "last_sports_fetch_ts";
 
     public enum SportLeague {
-        NRL("🏉 NRL", 0xFF10B981),
-        RUGBY_UNION("🏉 Rugby Union", 0xFF38BDF8),
-        AFL("🏉 AFL", 0xFFF59E0B);
+        NRL("🟢 NRL", "🏉", 0xFF10B981, 0xFF047857, 0x3310B981, "🟢 NATIONAL RUGBY LEAGUE · TELSTRA PREMIERSHIP"),
+        RUGBY_UNION("🔵 RUGBY UNION", "🏉", 0xFF38BDF8, 0xFF1D4ED8, 0x3338BDF8, "🔵 RUGBY UNION · SUPER RUGBY & WALLABIES"),
+        AFL("🔴 AFL", "🔴", 0xFFEF4444, 0xFFB91C1C, 0x33EF4444, "🔴 AUSTRALIAN FOOTBALL LEAGUE · TOYOTA PREMIERSHIP");
 
         public final String label;
+        public final String icon;
         public final int color;
+        public final int darkColor;
+        public final int tintColor;
+        public final String bannerTitle;
 
-        SportLeague(String label, int color) {
+        SportLeague(String label, String icon, int color, int darkColor, int tintColor, String bannerTitle) {
             this.label = label;
+            this.icon = icon;
             this.color = color;
+            this.darkColor = darkColor;
+            this.tintColor = tintColor;
+            this.bannerTitle = bannerTitle;
         }
     }
 

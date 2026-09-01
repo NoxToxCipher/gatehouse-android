@@ -10220,10 +10220,10 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
         filterRow.setOrientation(LinearLayout.HORIZONTAL);
 
         final String[][] leagueFilters = {
-            {"ALL", "🔥 ALL MATCHES"},
-            {"NRL", "🏉 NRL"},
-            {"RUGBY_UNION", "🏉 RUGBY UNION"},
-            {"AFL", "🏉 AFL"}
+            {"ALL", "🔥 ALL DISCIPLINES", String.valueOf(colAccent)},
+            {"NRL", "🟢 NRL LEAGUE", String.valueOf(0xFF10B981)},
+            {"RUGBY_UNION", "🔵 RUGBY UNION", String.valueOf(0xFF38BDF8)},
+            {"AFL", "🔴 AFL FOOTY", String.valueOf(0xFFEF4444)}
         };
 
         final LinearLayout matchesContainer = new LinearLayout(this);
@@ -10233,6 +10233,7 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
         for (final String[] f : leagueFilters) {
             final String fKey = f[0];
             final String fLabel = f[1];
+            final int fColor = Integer.parseInt(f[2]);
             final TextView chip = new TextView(this);
             chip.setText(fLabel);
             chip.setTextSize(10.5f);
@@ -10241,7 +10242,7 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
 
             boolean sel = sportsActiveFilter.equalsIgnoreCase(fKey);
             chip.setTextColor(sel ? colAccentInk : colPale);
-            chip.setBackground(rounded(sel ? colAccent : colPanel2, dp(10)));
+            chip.setBackground(rounded(sel ? fColor : colPanel2, dp(10)));
 
             LinearLayout.LayoutParams plp = new LinearLayout.LayoutParams(
                     LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT);
@@ -10254,8 +10255,9 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
                     sportsActiveFilter = fKey;
                     for (int i = 0; i < leagueFilters.length; i++) {
                         boolean s = leagueFilters[i][0].equalsIgnoreCase(sportsActiveFilter);
+                        int c = Integer.parseInt(leagueFilters[i][2]);
                         filterChips.get(i).setTextColor(s ? colAccentInk : colPale);
-                        filterChips.get(i).setBackground(rounded(s ? colAccent : colPanel2, dp(10)));
+                        filterChips.get(i).setBackground(rounded(s ? c : colPanel2, dp(10)));
                     }
                     populateSportsMatches(matchesContainer);
                 }
@@ -10329,34 +10331,95 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
         container.removeAllViews();
         List<AussieSportsTrackerManager.SportsMatch> list = AussieSportsTrackerManager.getInstance(this).getCachedMatches();
 
-        int count = 0;
-        for (AussieSportsTrackerManager.SportsMatch m : list) {
-            if (!"ALL".equalsIgnoreCase(sportsActiveFilter)) {
-                if (!m.league.name().equalsIgnoreCase(sportsActiveFilter)) continue;
+        if ("ALL".equalsIgnoreCase(sportsActiveFilter)) {
+            // Group by discipline with distinct section banners
+            for (AussieSportsTrackerManager.SportLeague league : AussieSportsTrackerManager.SportLeague.values()) {
+                List<AussieSportsTrackerManager.SportsMatch> matchesInLeague = new ArrayList<>();
+                for (AussieSportsTrackerManager.SportsMatch m : list) {
+                    if (m.league == league) matchesInLeague.add(m);
+                }
+                if (!matchesInLeague.isEmpty()) {
+                    container.addView(buildDisciplineHeaderRibbon(league));
+                    for (AussieSportsTrackerManager.SportsMatch m : matchesInLeague) {
+                        container.addView(buildSportsMatchRow(m));
+                    }
+                }
             }
-            container.addView(buildSportsMatchRow(m));
-            count++;
+        } else {
+            int count = 0;
+            for (AussieSportsTrackerManager.SportsMatch m : list) {
+                if (m.league.name().equalsIgnoreCase(sportsActiveFilter)) {
+                    container.addView(buildSportsMatchRow(m));
+                    count++;
+                }
+            }
+            if (count == 0) {
+                TextView empty = new TextView(this);
+                empty.setText("No matches scheduled in this category today.");
+                empty.setTextColor(colMuted);
+                empty.setTextSize(11);
+                empty.setPadding(dp(8), dp(12), dp(8), dp(12));
+                container.addView(empty);
+            }
         }
+    }
 
-        if (count == 0) {
-            TextView empty = new TextView(this);
-            empty.setText("No matches scheduled in this category today.");
-            empty.setTextColor(colMuted);
-            empty.setTextSize(11);
-            empty.setPadding(dp(8), dp(12), dp(8), dp(12));
-            container.addView(empty);
-        }
+    private View buildDisciplineHeaderRibbon(AussieSportsTrackerManager.SportLeague league) {
+        LinearLayout ribbon = new LinearLayout(this);
+        ribbon.setOrientation(LinearLayout.HORIZONTAL);
+        ribbon.setGravity(Gravity.CENTER_VERTICAL);
+        android.graphics.drawable.GradientDrawable rgd = new android.graphics.drawable.GradientDrawable();
+        rgd.setColor(league.tintColor);
+        rgd.setCornerRadius(dp(8));
+        rgd.setStroke(dp(1), league.color);
+        ribbon.setBackground(rgd);
+        ribbon.setPadding(dp(10), dp(7), dp(10), dp(7));
+        LinearLayout.LayoutParams rlp = new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+        rlp.topMargin = dp(10);
+        rlp.bottomMargin = dp(6);
+        ribbon.setLayoutParams(rlp);
+
+        TextView title = new TextView(this);
+        title.setText(league.bannerTitle);
+        title.setTextColor(league.color);
+        title.setTextSize(11f);
+        title.setTypeface(Typeface.create(Typeface.MONOSPACE, Typeface.BOLD));
+        ribbon.addView(title);
+        return ribbon;
     }
 
     private View buildSportsMatchRow(final AussieSportsTrackerManager.SportsMatch m) {
         LinearLayout row = new LinearLayout(this);
-        row.setOrientation(LinearLayout.VERTICAL);
-        row.setBackground(rounded(colPanel2, dp(12)));
-        row.setPadding(dp(12), dp(10), dp(12), dp(10));
+        row.setOrientation(LinearLayout.HORIZONTAL);
+        row.setGravity(Gravity.CENTER_VERTICAL);
+        android.graphics.drawable.GradientDrawable cardGd = new android.graphics.drawable.GradientDrawable();
+        cardGd.setColor(colPanel2);
+        cardGd.setCornerRadius(dp(12));
+        cardGd.setStroke(dp(1), (0x55000000 | (m.league.color & 0x00FFFFFF)));
+        row.setBackground(cardGd);
+        row.setPadding(0, 0, dp(12), 0);
         LinearLayout.LayoutParams rlp = new LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
         rlp.bottomMargin = dp(8);
         row.setLayoutParams(rlp);
+
+        // 1. Left Discipline Color Accent Bar (4dp wide)
+        View accentBar = new View(this);
+        android.graphics.drawable.GradientDrawable bgBar = new android.graphics.drawable.GradientDrawable();
+        bgBar.setColor(m.league.color);
+        bgBar.setCornerRadii(new float[]{dp(12), dp(12), 0, 0, 0, 0, dp(12), dp(12)});
+        accentBar.setBackground(bgBar);
+        LinearLayout.LayoutParams ablp = new LinearLayout.LayoutParams(dp(5), LinearLayout.LayoutParams.MATCH_PARENT);
+        accentBar.setLayoutParams(ablp);
+        row.addView(accentBar);
+
+        // 2. Main Match Content Body
+        LinearLayout content = new LinearLayout(this);
+        content.setOrientation(LinearLayout.VERTICAL);
+        content.setPadding(dp(10), dp(10), dp(4), dp(10));
+        LinearLayout.LayoutParams clp = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
+        content.setLayoutParams(clp);
 
         // Header Line: League + Status Clock + Broadcast TV
         LinearLayout hLine = new LinearLayout(this);
@@ -10368,6 +10431,8 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
         lBadge.setTextColor(m.league.color);
         lBadge.setTextSize(10f);
         lBadge.setTypeface(Typeface.create(Typeface.MONOSPACE, Typeface.BOLD));
+        lBadge.setPadding(dp(6), dp(2), dp(6), dp(2));
+        lBadge.setBackground(rounded(m.league.tintColor, dp(4)));
         hLine.addView(lBadge);
 
         TextView sBadge = new TextView(this);
@@ -10375,7 +10440,7 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
         sBadge.setTextColor(m.status.color);
         sBadge.setTextSize(10f);
         sBadge.setTypeface(Typeface.DEFAULT_BOLD);
-        sBadge.setPadding(dp(6), dp(1), dp(6), dp(1));
+        sBadge.setPadding(dp(6), dp(2), dp(6), dp(2));
         sBadge.setBackground(rounded(m.status == AussieSportsTrackerManager.MatchStatus.LIVE ? 0x33EF4444 : colPanel, dp(4)));
         LinearLayout.LayoutParams slp = new LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT);
@@ -10392,7 +10457,7 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
         tvTxt.setLayoutParams(tlp);
         hLine.addView(tvTxt);
 
-        row.addView(hLine);
+        content.addView(hLine);
 
         // Teams & Score Clash Line
         LinearLayout mLine = new LinearLayout(this);
@@ -10425,8 +10490,12 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
         LinearLayout scoreBox = new LinearLayout(this);
         scoreBox.setOrientation(LinearLayout.HORIZONTAL);
         scoreBox.setGravity(Gravity.CENTER);
-        scoreBox.setBackground(rounded(colPanel, dp(6)));
-        scoreBox.setPadding(dp(12), dp(4), dp(12), dp(4));
+        android.graphics.drawable.GradientDrawable sbg = new android.graphics.drawable.GradientDrawable();
+        sbg.setColor(m.league.tintColor);
+        sbg.setCornerRadius(dp(8));
+        sbg.setStroke(dp(1), m.league.color);
+        scoreBox.setBackground(sbg);
+        scoreBox.setPadding(dp(12), dp(5), dp(12), dp(5));
 
         TextView scoreTxt = new TextView(this);
         if (m.status == AussieSportsTrackerManager.MatchStatus.UPCOMING) {
@@ -10434,7 +10503,7 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
             scoreTxt.setTextColor(colQuiet);
         } else {
             scoreTxt.setText(m.homeScore + " - " + m.awayScore);
-            scoreTxt.setTextColor(m.status == AussieSportsTrackerManager.MatchStatus.LIVE ? colAccent : colPale);
+            scoreTxt.setTextColor(m.league.color);
         }
         scoreTxt.setTextSize(15f);
         scoreTxt.setTypeface(Typeface.create(Typeface.MONOSPACE, Typeface.BOLD));
@@ -10465,15 +10534,16 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
         awayCol.addView(aShort);
         mLine.addView(awayCol);
 
-        row.addView(mLine);
+        content.addView(mLine);
 
         // Venue & Date Subtitle
         TextView vTxt = new TextView(this);
         vTxt.setText("📍 " + m.venue + " · " + m.matchDateStr + " (" + m.roundName + ")");
         vTxt.setTextColor(colQuiet);
         vTxt.setTextSize(10f);
-        row.addView(vTxt);
+        content.addView(vTxt);
 
+        row.addView(content);
         return row;
     }
 
