@@ -17239,26 +17239,78 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
         tvTitle.setTextColor(colAccent);
         tvTitle.setTextSize(10.5f);
         tvTitle.setTypeface(Typeface.create(Typeface.MONOSPACE, Typeface.BOLD));
-        tvTitle.setPadding(0, 0, 0, dp(8));
+        tvTitle.setPadding(0, 0, 0, dp(6));
         checklistCard.addView(tvTitle);
 
         final String[] milestones = {
-                "☑️ Kingston Rd & Site Perimeter Boundaries Verified",
-                "☑️ Lots 14, 15, 16 Factory Floor Doors Padlocked",
-                "☑️ Fire Booster Main Pump Pressure Optimal (1,200 PSI)",
-                "☑️ Master Gate Keys, Remotes, and Radios Accounted For",
-                "☑️ Morning Handover Transfer Prepared for Day Crew"
+                "Kingston Rd & Site Perimeter Boundaries Verified",
+                "Lots 14, 15, 16 Factory Floor Doors Padlocked",
+                "Fire Booster Main Pump Pressure Optimal (1,200 PSI)",
+                "Master Gate Keys, Remotes, and Radios Accounted For",
+                "Morning Handover Transfer Prepared for Day Crew"
         };
+        final boolean[] checked = {true, true, true, true, true};
+        final TextView tvReadiness = new TextView(this);
+        tvReadiness.setTextSize(9.5f);
+        tvReadiness.setTypeface(Typeface.create(Typeface.MONOSPACE, Typeface.BOLD));
+        tvReadiness.setPadding(0, 0, 0, dp(6));
 
-        for (String ms : milestones) {
-            TextView item = new TextView(this);
-            item.setText(ms);
-            item.setTextColor(colPale);
-            item.setTextSize(11f);
-            item.setTypeface(Typeface.DEFAULT_BOLD);
-            item.setPadding(0, dp(3), 0, dp(3));
-            checklistCard.addView(item);
-        }
+        final LinearLayout itemsCol = new LinearLayout(this);
+        itemsCol.setOrientation(LinearLayout.VERTICAL);
+
+        final Runnable updateChecklistUi = new Runnable() {
+            @Override
+            public void run() {
+                itemsCol.removeAllViews();
+                int doneCount = 0;
+                for (int i = 0; i < milestones.length; i++) {
+                    final int idx = i;
+                    final boolean isDone = checked[idx];
+                    if (isDone) doneCount++;
+
+                    LinearLayout row = new LinearLayout(MainActivity.this);
+                    row.setOrientation(LinearLayout.HORIZONTAL);
+                    row.setGravity(Gravity.CENTER_VERTICAL);
+                    row.setPadding(0, dp(3), 0, dp(3));
+                    row.setOnClickListener(new View.OnClickListener() {
+                        @Override
+                        public void onClick(View v) {
+                            hapticClick();
+                            checked[idx] = !checked[idx];
+                            run();
+                        }
+                    });
+
+                    TextView tvCheck = new TextView(MainActivity.this);
+                    tvCheck.setText(isDone ? "☑️ " : "⬜ ");
+                    tvCheck.setTextSize(13f);
+                    row.addView(tvCheck);
+
+                    TextView item = new TextView(MainActivity.this);
+                    item.setText(milestones[idx]);
+                    item.setTextColor(isDone ? colPale : 0xFF64748B);
+                    item.setTextSize(11f);
+                    item.setTypeface(Typeface.DEFAULT_BOLD);
+                    LinearLayout.LayoutParams tlp = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
+                    item.setLayoutParams(tlp);
+                    row.addView(item);
+
+                    itemsCol.addView(row);
+                }
+
+                int pct = (doneCount * 100) / milestones.length;
+                if (doneCount == milestones.length) {
+                    tvReadiness.setText("✓ 100% READY TO SEAL · ALL PROTOCOLS VERIFIED");
+                    tvReadiness.setTextColor(colEmerald);
+                } else {
+                    tvReadiness.setText("⚠️ " + pct + "% READINESS · " + (milestones.length - doneCount) + " ITEMS PENDING");
+                    tvReadiness.setTextColor(0xFFFDE047);
+                }
+            }
+        };
+        updateChecklistUi.run();
+        checklistCard.addView(tvReadiness);
+        checklistCard.addView(itemsCol);
         box.addView(checklistCard);
 
         final EditText notesEdit = modernInputField("Add supervisor handover notes or remarks...");
