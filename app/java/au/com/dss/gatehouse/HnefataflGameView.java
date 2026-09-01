@@ -469,6 +469,76 @@ public class HnefataflGameView extends View {
             canvas.drawCircle(cx, cy, dpf(4.5f), targetDotPaint);
             canvas.drawCircle(cx, cy, dpf(2f), pieceShinePaint);
         }
+
+        // Draw Jarl King Escape Route Tracers
+        drawKingEscapeTracers(canvas, startX, startY, cellSize);
+    }
+
+    private void drawKingEscapeTracers(Canvas canvas, float startX, float startY, float cellSize) {
+        Point king = null;
+        for (int r = 0; r < 11; r++) {
+            for (int c = 0; c < 11; c++) {
+                if (board[r][c] == 'K') {
+                    king = new Point(c, r);
+                    break;
+                }
+            }
+            if (king != null) break;
+        }
+        if (king == null) return;
+
+        int[][] corners = {{0,0}, {10,0}, {0,10}, {10,10}};
+        Paint tracerPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+        tracerPaint.setColor(0xCC10B981);
+        tracerPaint.setStyle(Paint.Style.STROKE);
+        tracerPaint.setStrokeWidth(dpf(3f));
+
+        Paint tracerGlow = new Paint(Paint.ANTI_ALIAS_FLAG);
+        tracerGlow.setColor(0x6634D399);
+        tracerGlow.setStyle(Paint.Style.STROKE);
+        tracerGlow.setStrokeWidth(dpf(7f));
+
+        Paint fortAlert = new Paint(Paint.ANTI_ALIAS_FLAG);
+        fortAlert.setColor(0xEE10B981);
+        fortAlert.setStyle(Paint.Style.FILL);
+
+        float kx = startX + king.x * cellSize + cellSize / 2f;
+        float ky = startY + king.y * cellSize + cellSize / 2f;
+
+        for (int[] cr : corners) {
+            int cx = cr[0];
+            int cy = cr[1];
+            // Check if king has clear orthogonal path to this corner
+            if (king.x == cx || king.y == cy) {
+                boolean clear = true;
+                if (king.x == cx) {
+                    int step = Integer.compare(cy, king.y);
+                    int cur = king.y + step;
+                    while (cur != cy) {
+                        if (board[cur][cx] != '.') { clear = false; break; }
+                        cur += step;
+                    }
+                } else {
+                    int step = Integer.compare(cx, king.x);
+                    int cur = king.x + step;
+                    while (cur != cx) {
+                        if (board[cy][cur] != '.') { clear = false; break; }
+                        cur += step;
+                    }
+                }
+
+                if (clear) {
+                    float targetX = startX + cx * cellSize + cellSize / 2f;
+                    float targetY = startY + cy * cellSize + cellSize / 2f;
+                    canvas.drawLine(kx, ky, targetX, targetY, tracerGlow);
+                    canvas.drawLine(kx, ky, targetX, targetY, tracerPaint);
+
+                    // Corner Fort Victory Aura
+                    canvas.drawCircle(targetX, targetY, cellSize * 0.45f, fortAlert);
+                    canvas.drawCircle(targetX, targetY, cellSize * 0.45f, goldBorderPaint);
+                }
+            }
+        }
     }
 
     private void drawVikingShield(Canvas canvas, float cx, float cy, float r, int lightCol, int darkCol) {

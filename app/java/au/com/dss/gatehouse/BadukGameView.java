@@ -318,8 +318,17 @@ public class BadukGameView extends View {
                 statusListener.onStatusChanged("● Black to play · " + p.title, 0xFFFFD166);
             }
         } else {
+            int blackTerritory = countTerritory(1);
+            int whiteTerritory = countTerritory(2);
+            float blackTotal = blackTerritory + blackCaptures;
+            float whiteTotal = whiteTerritory + whiteCaptures + 6.5f;
+
+            String leadStr = (blackTotal > whiteTotal)
+                    ? String.format(java.util.Locale.US, "● Black +%.1f", (blackTotal - whiteTotal))
+                    : String.format(java.util.Locale.US, "○ White +%.1f", (whiteTotal - blackTotal));
+
             String turn = (currentTurn == 1) ? "● Black's Turn" : "○ White's Turn (Bot)";
-            statusListener.onStatusChanged(turn + " · " + boardSize + "×" + boardSize + " · Captures: ● " + blackCaptures + " | ○ " + whiteCaptures, 0xFFFFD166);
+            statusListener.onStatusChanged(turn + " · " + leadStr + " (●" + (int)blackTotal + " vs ○" + String.format(java.util.Locale.US, "%.1f", whiteTotal) + ")", (currentTurn == 1 ? 0xFFFFD166 : 0xFF38BDF8));
         }
     }
 
@@ -915,6 +924,61 @@ public class BadukGameView extends View {
                 // Last Move Indicator
                 if (x == lastMoveX && y == lastMoveY) {
                     canvas.drawCircle(cx, cy, stoneR * 0.5f, lastMovePaint);
+                }
+            }
+        }
+
+        // Draw Live Territory Control Pips
+        drawTerritoryMarkers(canvas, startX, startY, cellSize);
+    }
+
+    private void drawTerritoryMarkers(Canvas canvas, float startX, float startY, float cellSize) {
+        boolean[][] visited = new boolean[boardSize][boardSize];
+        Paint bTerr = new Paint(Paint.ANTI_ALIAS_FLAG);
+        bTerr.setColor(0x88000000);
+        bTerr.setStyle(Paint.Style.FILL);
+
+        Paint wTerr = new Paint(Paint.ANTI_ALIAS_FLAG);
+        wTerr.setColor(0x88FFFFFF);
+        wTerr.setStyle(Paint.Style.FILL);
+
+        for (int r = 0; r < boardSize; r++) {
+            for (int c = 0; c < boardSize; c++) {
+                if (board[r][c] == 0 && !visited[r][c]) {
+                    List<Point> emptyRegion = new ArrayList<>();
+                    Set<Integer> surroundingColors = new HashSet<>();
+                    Queue<Point> q = new LinkedList<>();
+
+                    q.add(new Point(c, r));
+                    visited[r][c] = true;
+
+                    int[][] dirs = {{0,1}, {0,-1}, {1,0}, {-1,0}};
+                    while (!q.isEmpty()) {
+                        Point p = q.poll();
+                        emptyRegion.add(p);
+                        for (int[] d : dirs) {
+                            int nx = p.x + d[0];
+                            int ny = p.y + d[1];
+                            if (nx >= 0 && nx < boardSize && ny >= 0 && ny < boardSize) {
+                                if (board[ny][nx] == 0 && !visited[ny][nx]) {
+                                    visited[ny][nx] = true;
+                                    q.add(new Point(nx, ny));
+                                } else if (board[ny][nx] != 0) {
+                                    surroundingColors.add(board[ny][nx]);
+                                }
+                            }
+                        }
+                    }
+
+                    if (surroundingColors.size() == 1) {
+                        int owner = surroundingColors.iterator().next();
+                        for (Point pt : emptyRegion) {
+                            float cx = startX + pt.x * cellSize;
+                            float cy = startY + pt.y * cellSize;
+                            float s = dpf(2.5f);
+                            canvas.drawRect(cx - s, cy - s, cx + s, cy + s, (owner == 1) ? bTerr : wTerr);
+                        }
+                    }
                 }
             }
         }
