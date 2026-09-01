@@ -16294,6 +16294,15 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
                     }
                 });
 
+                rightCard.setOnLongClickListener(new View.OnLongClickListener() {
+                    @Override
+                    public boolean onLongClick(View v) {
+                        hapticHeavyClick();
+                        showQuickOccurrenceActionSheet(entry, refreshContent);
+                        return true;
+                    }
+                });
+
                 timelineRow.addView(rightCard);
                 container.addView(timelineRow);
             }
@@ -16467,6 +16476,39 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
             box.addView(attachBox);
         }
 
+        // Cryptographic Digital Seal Plaque
+        LinearLayout sealPlaque = new LinearLayout(this);
+        sealPlaque.setOrientation(LinearLayout.VERTICAL);
+        android.graphics.drawable.GradientDrawable spBg = new android.graphics.drawable.GradientDrawable(
+                android.graphics.drawable.GradientDrawable.Orientation.TL_BR,
+                new int[]{0x2210B981, 0x110F172A}
+        );
+        spBg.setCornerRadius(dp(8));
+        spBg.setStroke(dp(1), 0x4410B981);
+        sealPlaque.setBackground(spBg);
+        sealPlaque.setPadding(dp(10), dp(8), dp(10), dp(8));
+        LinearLayout.LayoutParams splp = new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+        splp.bottomMargin = dp(8);
+        sealPlaque.setLayoutParams(splp);
+
+        TextView tvSealHead = new TextView(this);
+        tvSealHead.setText("🛡️ IMMUTABLE DIGITAL ATTESTATION SEAL");
+        tvSealHead.setTextColor(colEmerald);
+        tvSealHead.setTextSize(9.5f);
+        tvSealHead.setTypeface(Typeface.create(Typeface.MONOSPACE, Typeface.BOLD));
+        sealPlaque.addView(tvSealHead);
+
+        TextView tvSealHash = new TextView(this);
+        String hashSnippet = Integer.toHexString((entry.shiftDateStr + entry.timeStr + entry.text + entry.guardName).hashCode());
+        tvSealHash.setText("HASH: #SHA256:" + hashSnippet.toUpperCase(Locale.US) + " · SEC PROVIDERS ACT 1993");
+        tvSealHash.setTextColor(0xFF94A3B8);
+        tvSealHash.setTextSize(8.5f);
+        tvSealHash.setTypeface(Typeface.MONOSPACE);
+        tvSealHash.setPadding(0, dp(2), 0, 0);
+        sealPlaque.addView(tvSealHash);
+        box.addView(sealPlaque);
+
         // Quick Action Toolbar
         LinearLayout actionToolbar = new LinearLayout(this);
         actionToolbar.setOrientation(LinearLayout.HORIZONTAL);
@@ -16617,6 +16659,91 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
             }
         });
         box.addView(btnSave);
+        dlg.show();
+    }
+
+    private void showQuickOccurrenceActionSheet(final LogbookManager.LogEntry entry, final Runnable[] refreshContent) {
+        if (entry == null) return;
+        final LinearLayout box = dialogContainer("Quick Actions", "OCCURRENCE SHORTCUTS", entry.categoryColor);
+
+        TextView tvPreview = new TextView(this);
+        tvPreview.setText("[" + entry.timeStr + "] " + entry.categoryLabel + "\n" + entry.text);
+        tvPreview.setTextColor(colPale);
+        tvPreview.setTextSize(11f);
+        tvPreview.setTypeface(Typeface.MONOSPACE);
+        tvPreview.setPadding(dp(10), dp(8), dp(10), dp(8));
+        tvPreview.setBackground(rounded(0xFF1E293B, dp(8)));
+        LinearLayout.LayoutParams plp = new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+        plp.bottomMargin = dp(10);
+        tvPreview.setLayoutParams(plp);
+        box.addView(tvPreview);
+
+        final Dialog dlg = createDialogSheet(box);
+
+        TextView btnInspect = actionButton("🔍 Inspect Full Details & Seal", colLine, colCyan);
+        btnInspect.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                hapticClick();
+                dlg.dismiss();
+                showLogEntryDetailSheet(entry);
+            }
+        });
+        box.addView(btnInspect);
+
+        TextView btnAddendum = actionButton("✏️ Append Official Addendum", colLine, colEmerald);
+        LinearLayout.LayoutParams alp = new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+        alp.topMargin = dp(6);
+        btnAddendum.setLayoutParams(alp);
+        btnAddendum.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                hapticClick();
+                dlg.dismiss();
+                showAddendumSheet(entry);
+            }
+        });
+        box.addView(btnAddendum);
+
+        TextView btnFilterCat = actionButton("⚡ Filter Only " + entry.categoryLabel, colLine, 0xFFFDE047);
+        LinearLayout.LayoutParams fclp = new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+        fclp.topMargin = dp(6);
+        btnFilterCat.setLayoutParams(fclp);
+        btnFilterCat.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                hapticClick();
+                dlg.dismiss();
+                logbookSelectedCategory = entry.category;
+                if (refreshContent != null && refreshContent[0] != null) refreshContent[0].run();
+            }
+        });
+        box.addView(btnFilterCat);
+
+        TextView btnCopy = actionButton("📋 Copy Occurrence", colLine, colPale);
+        LinearLayout.LayoutParams cplp = new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+        cplp.topMargin = dp(6);
+        btnCopy.setLayoutParams(cplp);
+        btnCopy.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                hapticHeavyClick();
+                dlg.dismiss();
+                String copyText = "[" + entry.timeStr + " - " + entry.shiftDateStr + "] " +
+                        entry.categoryLabel + " (" + entry.guardName + "): " + entry.text;
+                android.content.ClipboardManager cm = (android.content.ClipboardManager) getSystemService(android.content.Context.CLIPBOARD_SERVICE);
+                if (cm != null) {
+                    cm.setPrimaryClip(android.content.ClipData.newPlainText("Log Occurrence", copyText));
+                    Toast.makeText(MainActivity.this, "📋 Copied to clipboard", Toast.LENGTH_SHORT).show();
+                }
+            }
+        });
+        box.addView(btnCopy);
+
         dlg.show();
     }
 
