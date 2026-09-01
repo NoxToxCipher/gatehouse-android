@@ -15323,13 +15323,25 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
         scTop.setGravity(Gravity.CENTER_VERTICAL);
 
         TextView tvOfficer = new TextView(this);
-        tvOfficer.setText("🛡️ L. DOHERTY #41207");
+        tvOfficer.setText("🛡️ L. DOHERTY #41207 ↗");
         tvOfficer.setTextColor(colAccent);
         tvOfficer.setTextSize(10.5f);
         tvOfficer.setTypeface(Typeface.create(Typeface.MONOSPACE, Typeface.BOLD));
-        LinearLayout.LayoutParams oflp = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
-        tvOfficer.setLayoutParams(oflp);
+        tvOfficer.setPadding(dp(6), dp(2), dp(6), dp(2));
+        tvOfficer.setBackground(rounded(0x22F59E0B, dp(6)));
+        tvOfficer.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                hapticClick();
+                showOfficerCredentialModal();
+            }
+        });
         scTop.addView(tvOfficer);
+
+        View space = new View(this);
+        LinearLayout.LayoutParams splp = new LinearLayout.LayoutParams(0, dp(1), 1f);
+        space.setLayoutParams(splp);
+        scTop.addView(space);
 
         TextView tvShiftTime = new TextView(this);
         tvShiftTime.setText("🌙 18:00 → 06:00 · ACTIVE");
@@ -15645,6 +15657,69 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
         timeHsv.addView(timeRow);
         searchBox.addView(timeHsv);
 
+        final LinearLayout activeFilterStrip = new LinearLayout(this);
+        activeFilterStrip.setOrientation(LinearLayout.HORIZONTAL);
+        activeFilterStrip.setGravity(Gravity.CENTER_VERTICAL);
+        activeFilterStrip.setBackground(rounded(0x22F59E0B, dp(6)));
+        activeFilterStrip.setPadding(dp(8), dp(4), dp(8), dp(4));
+        LinearLayout.LayoutParams aflp = new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+        aflp.topMargin = dp(4);
+        activeFilterStrip.setLayoutParams(aflp);
+
+        final TextView tvFilterSummary = new TextView(this);
+        tvFilterSummary.setTextColor(0xFFFDE047);
+        tvFilterSummary.setTextSize(9f);
+        tvFilterSummary.setTypeface(Typeface.create(Typeface.MONOSPACE, Typeface.BOLD));
+        LinearLayout.LayoutParams tslp = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
+        tvFilterSummary.setLayoutParams(tslp);
+        activeFilterStrip.addView(tvFilterSummary);
+
+        TextView btnResetAll = new TextView(this);
+        btnResetAll.setText("✕ RESET ALL");
+        btnResetAll.setTextColor(colPale);
+        btnResetAll.setTextSize(8.5f);
+        btnResetAll.setTypeface(Typeface.create(Typeface.MONOSPACE, Typeface.BOLD));
+        btnResetAll.setPadding(dp(6), dp(2), dp(6), dp(2));
+        btnResetAll.setBackground(rounded(0x44EF4444, dp(4)));
+        activeFilterStrip.addView(btnResetAll);
+        searchBox.addView(activeFilterStrip);
+
+        final Runnable updateActiveFilterStrip = new Runnable() {
+            @Override
+            public void run() {
+                boolean hasCat = !logbookSelectedCategory.equalsIgnoreCase("ALL");
+                boolean hasTime = !logbookSelectedTimeBucket.equalsIgnoreCase("ALL");
+                boolean hasQuery = !logbookSearchQuery.isEmpty();
+                if (hasCat || hasTime || hasQuery) {
+                    activeFilterStrip.setVisibility(View.VISIBLE);
+                    StringBuilder sb = new StringBuilder("⚡ FILTERED: ");
+                    if (hasCat) sb.append("[").append(logbookSelectedCategory).append("] ");
+                    if (hasTime) sb.append("[").append(logbookSelectedTimeBucket).append("] ");
+                    if (hasQuery) sb.append("[\"").append(logbookSearchQuery).append("\"] ");
+                    tvFilterSummary.setText(sb.toString().trim());
+                } else {
+                    activeFilterStrip.setVisibility(View.GONE);
+                }
+            }
+        };
+
+        btnResetAll.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                hapticClick();
+                logbookSelectedCategory = "ALL";
+                logbookSelectedTimeBucket = "ALL";
+                logbookSearchQuery = "";
+                searchField.setText("");
+                buildCatPills.run();
+                buildTimePills.run();
+                updateActiveFilterStrip.run();
+                if (refreshContent[0] != null) refreshContent[0].run();
+            }
+        });
+        updateActiveFilterStrip.run();
+
         contentCard.addView(searchBox);
 
         btnRefresh.setOnClickListener(new View.OnClickListener() {
@@ -15655,6 +15730,7 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
                 buildShiftSegment.run();
                 buildCatPills.run();
                 buildTimePills.run();
+                updateActiveFilterStrip.run();
                 if (refreshContent[0] != null) refreshContent[0].run();
                 Toast.makeText(MainActivity.this, "✓ Logbook ledger synced", Toast.LENGTH_SHORT).show();
             }
@@ -16396,6 +16472,64 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
         } catch (Exception e) {
             Toast.makeText(this, "📋 Shift report copied to clipboard!", Toast.LENGTH_SHORT).show();
         }
+    }
+
+    private void showOfficerCredentialModal() {
+        final LinearLayout box = dialogContainer("🛡️ Duty Officer Credential", "QLD LICENSED SECURITY", colAccent);
+
+        LinearLayout card = new LinearLayout(this);
+        card.setOrientation(LinearLayout.VERTICAL);
+        card.setBackground(rounded(0xFF1E293B, dp(14)));
+        card.setPadding(dp(16), dp(16), dp(16), dp(16));
+        LinearLayout.LayoutParams clp = new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+        clp.bottomMargin = dp(12);
+        card.setLayoutParams(clp);
+
+        TextView tvName = new TextView(this);
+        tvName.setText("OFFICER LOCHRAN DOHERTY");
+        tvName.setTextColor(colPale);
+        tvName.setTextSize(14f);
+        tvName.setTypeface(Typeface.DEFAULT_BOLD);
+        card.addView(tvName);
+
+        TextView tvLic = new TextView(this);
+        tvLic.setText("QLD SECURITY PROVIDER LICENCE: #41207");
+        tvLic.setTextColor(colAccent);
+        tvLic.setTextSize(11f);
+        tvLic.setTypeface(Typeface.create(Typeface.MONOSPACE, Typeface.BOLD));
+        tvLic.setPadding(0, dp(4), 0, dp(8));
+        card.addView(tvLic);
+
+        TextView tvPost = new TextView(this);
+        tvPost.setText("POST: Kingston Rd Gatehouse & Industrial Perimeter");
+        tvPost.setTextColor(colCyan);
+        tvPost.setTextSize(10.5f);
+        tvPost.setTypeface(Typeface.MONOSPACE);
+        card.addView(tvPost);
+
+        TextView tvSpark = new TextView(this);
+        tvSpark.setText("SPARK CRYPTOGRAPHIC SEAL: SHA256-DSS-41207-SEALED");
+        tvSpark.setTextColor(0xFF94A3B8);
+        tvSpark.setTextSize(9f);
+        tvSpark.setTypeface(Typeface.MONOSPACE);
+        tvSpark.setPadding(0, dp(4), 0, 0);
+        card.addView(tvSpark);
+
+        box.addView(card);
+
+        final Dialog dlg = createDialogSheet(box);
+
+        TextView btnClose = actionButton("✓ Attestation Verified", colAccent, colAccentInk);
+        btnClose.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                hapticClick();
+                dlg.dismiss();
+            }
+        });
+        box.addView(btnClose);
+        dlg.show();
     }
 
     private void showVoiceMemoLoggingDialog() {
