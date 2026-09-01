@@ -15398,11 +15398,20 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
         int numPhotos = logMgr.filterEntries("ALL", "PHOTO", "").size();
 
         TextView tvTelemetry = new TextView(this);
-        tvTelemetry.setText("📊 METRICS: " + numPatrols + " Patrols · " + numLots + " Lots · " + numPumps + " Pumps · " + numRegos + " Regos · " + numPhotos + " Photos");
+        tvTelemetry.setText("📊 METRICS: " + numPatrols + " Patrols · " + numLots + " Lots · " + numPumps + " Pumps · " + numRegos + " Regos · " + numPhotos + " Photos ↗");
         tvTelemetry.setTextColor(0xFF94A3B8);
         tvTelemetry.setTextSize(9f);
         tvTelemetry.setTypeface(Typeface.create(Typeface.MONOSPACE, Typeface.NORMAL));
-        tvTelemetry.setPadding(0, dp(2), 0, 0);
+        tvTelemetry.setPadding(dp(6), dp(3), dp(6), dp(3));
+        tvTelemetry.setBackground(rounded(0x18FFFFFF, dp(6)));
+        final LogbookManager logMgrForMetrics = logMgr;
+        tvTelemetry.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                hapticClick();
+                showShiftMetricsModal(logMgrForMetrics);
+            }
+        });
         shiftCard.addView(tvTelemetry);
 
         contentCard.addView(shiftCard);
@@ -16695,6 +16704,99 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
         sb.append("I, Lochran Doherty, certify that the above occurrences represent a true and accurate record of all activities, patrol inspections, and security observations observed during my assigned shift.\n");
         sb.append("SIGNATURE SEAL: [SEALED ELECTRONICALLY VIA DSS SPARK ENGINE #41207]\n");
         shareStatement("DSS Statutory Security Legal Statement", sb.toString());
+    }
+
+    private void showShiftMetricsModal(final LogbookManager logMgr) {
+        if (logMgr == null) return;
+        final List<LogbookManager.LogEntry> entries = logMgr.filterEntries(
+                logbookSelectedShiftId, "ALL", "", "ALL");
+
+        final LinearLayout box = dialogContainer("📊 Shift Operational Analytics", "SPARK AUDIT METRICS", colCyan);
+
+        LinearLayout kpiCard = new LinearLayout(this);
+        kpiCard.setOrientation(LinearLayout.VERTICAL);
+        kpiCard.setBackground(rounded(0xFF1E293B, dp(12)));
+        kpiCard.setPadding(dp(14), dp(12), dp(14), dp(12));
+        LinearLayout.LayoutParams kclp = new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+        kclp.bottomMargin = dp(10);
+        kpiCard.setLayoutParams(kclp);
+
+        TextView tvKpiHead = new TextView(this);
+        tvKpiHead.setText("SHIFT TOTAL: " + entries.size() + " VERIFIED OCCURRENCES");
+        tvKpiHead.setTextColor(colPale);
+        tvKpiHead.setTextSize(12f);
+        tvKpiHead.setTypeface(Typeface.create(Typeface.MONOSPACE, Typeface.BOLD));
+        kpiCard.addView(tvKpiHead);
+
+        TextView tvKpiSub = new TextView(this);
+        tvKpiSub.setText("Shift: " + getLogbookSubtitle(logMgr));
+        tvKpiSub.setTextColor(colMuted);
+        tvKpiSub.setTextSize(9.5f);
+        tvKpiSub.setTypeface(Typeface.MONOSPACE);
+        tvKpiSub.setPadding(0, dp(2), 0, dp(8));
+        kpiCard.addView(tvKpiSub);
+
+        String[][] cats = {
+                {"PATROL", "🛡️ Routine Patrols", "#00E5FF"},
+                {"LOT_LOCKUP", "🏢 Lot Lockups", "#F59E0B"},
+                {"FIRE_PUMP", "💧 Fire Pumps", "#38BDF8"},
+                {"VEHICLE_REGO", "🚗 Vehicles", "#F97316"},
+                {"PHOTO", "📷 Evidences", "#A855F7"},
+                {"INCIDENT", "🚨 Incidents", "#EF4444"}
+        };
+
+        int total = Math.max(1, entries.size());
+
+        for (String[] c : cats) {
+            String cId = c[0];
+            String cName = c[1];
+            int cColor = android.graphics.Color.parseColor(c[2]);
+            int count = 0;
+            for (LogbookManager.LogEntry e : entries) {
+                if (cId.equalsIgnoreCase(e.category)) count++;
+            }
+
+            if (count > 0 || cId.equals("PATROL")) {
+                LinearLayout row = new LinearLayout(this);
+                row.setOrientation(LinearLayout.HORIZONTAL);
+                row.setGravity(Gravity.CENTER_VERTICAL);
+                row.setPadding(0, dp(3), 0, dp(3));
+
+                TextView tvLabel = new TextView(this);
+                tvLabel.setText(cName);
+                tvLabel.setTextColor(colPale);
+                tvLabel.setTextSize(9.5f);
+                tvLabel.setTypeface(Typeface.MONOSPACE);
+                LinearLayout.LayoutParams tlp = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
+                tvLabel.setLayoutParams(tlp);
+                row.addView(tvLabel);
+
+                int pct = (count * 100) / total;
+                TextView tvVal = new TextView(this);
+                tvVal.setText(count + " (" + pct + "%)");
+                tvVal.setTextColor(cColor);
+                tvVal.setTextSize(9.5f);
+                tvVal.setTypeface(Typeface.create(Typeface.MONOSPACE, Typeface.BOLD));
+                row.addView(tvVal);
+
+                kpiCard.addView(row);
+            }
+        }
+        box.addView(kpiCard);
+
+        final Dialog dlg = createDialogSheet(box);
+
+        TextView btnClose = actionButton("✓ Close Analytics", colLine, colPale);
+        btnClose.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                hapticClick();
+                dlg.dismiss();
+            }
+        });
+        box.addView(btnClose);
+        dlg.show();
     }
 
     private void showOfficerCredentialModal() {
