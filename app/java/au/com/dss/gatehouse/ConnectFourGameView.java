@@ -15,6 +15,8 @@ import android.view.HapticFeedbackConstants;
 import android.view.MotionEvent;
 import android.view.View;
 import android.view.animation.BounceInterpolator;
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * ConnectFourGameView — Classic 7x6 Connect 4 Grid.
@@ -90,6 +92,27 @@ public class ConnectFourGameView extends View {
         resetGame();
     }
 
+    private static class HistoryState {
+        final int[][] grid = new int[6][7];
+        final boolean playerTurn;
+        final boolean gameOver;
+        final int winR1, winC1, winR2, winC2;
+
+        HistoryState(int[][] g, boolean pt, boolean go, int r1, int c1, int r2, int c2) {
+            for (int r = 0; r < 6; r++) {
+                System.arraycopy(g[r], 0, grid[r], 0, 7);
+            }
+            this.playerTurn = pt;
+            this.gameOver = go;
+            this.winR1 = r1;
+            this.winC1 = c1;
+            this.winR2 = r2;
+            this.winC2 = c2;
+        }
+    }
+
+    private final List<HistoryState> history = new ArrayList<>();
+
     public void setStatusListener(StatusListener l) {
         this.statusListener = l;
         updateStatus();
@@ -102,6 +125,7 @@ public class ConnectFourGameView extends View {
         for (int r = 0; r < 6; r++) {
             for (int c = 0; c < 7; c++) grid[r][c] = 0;
         }
+        history.clear();
         playerTurn = true;
         gameOver = false;
         isDropping = false;
@@ -110,8 +134,29 @@ public class ConnectFourGameView extends View {
         invalidate();
     }
 
+    public void undoMove() {
+        if (isDropping || history.isEmpty()) return;
+        HistoryState prev = history.remove(history.size() - 1);
+        if (!prev.playerTurn && !history.isEmpty()) {
+            prev = history.remove(history.size() - 1);
+        }
+        for (int r = 0; r < 6; r++) {
+            System.arraycopy(prev.grid[r], 0, grid[r], 0, 7);
+        }
+        this.playerTurn = prev.playerTurn;
+        this.gameOver = prev.gameOver;
+        this.winR1 = prev.winR1;
+        this.winC1 = prev.winC1;
+        this.winR2 = prev.winR2;
+        this.winC2 = prev.winC2;
+        updateStatus();
+        invalidate();
+    }
+
     public boolean dropDisc(final int col) {
         if (col < 0 || col >= 7 || gameOver || isDropping) return false;
+
+        history.add(new HistoryState(grid, playerTurn, gameOver, winR1, winC1, winR2, winC2));
 
         int targetRow = -1;
         for (int r = 5; r >= 0; r--) {

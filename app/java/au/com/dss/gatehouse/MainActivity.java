@@ -4202,6 +4202,18 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
         ctrlRow.setOrientation(LinearLayout.HORIZONTAL);
         ctrlRow.setPadding(0, dp(8), 0, 0);
 
+        TextView btnUndo = actionButton("↶ Undo", colLine, colPale);
+        btnUndo.setOnClickListener(new View.OnClickListener() {
+            public void onClick(View v) {
+                hapticClick();
+                taflView.undoMove();
+            }
+        });
+        LinearLayout.LayoutParams tulp = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
+        tulp.rightMargin = dp(4);
+        btnUndo.setLayoutParams(tulp);
+        ctrlRow.addView(btnUndo);
+
         TextView btnReset = actionButton("↻ New Tafl Match", colLine, colPale);
         btnReset.setOnClickListener(new View.OnClickListener() {
             public void onClick(View v) {
@@ -4209,6 +4221,9 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
                 taflView.resetGame();
             }
         });
+        LinearLayout.LayoutParams trlp = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
+        trlp.leftMargin = dp(4);
+        btnReset.setLayoutParams(trlp);
         ctrlRow.addView(btnReset);
         box.addView(ctrlRow);
 
@@ -4261,19 +4276,32 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
         ctrlRow.setOrientation(LinearLayout.HORIZONTAL);
         ctrlRow.setPadding(0, dp(8), 0, 0);
 
-        TextView btnRoll = actionButton("🎲 Roll Dice", colEmerald, colAccentInk);
+        TextView btnRoll = actionButton("🎲 Roll", colEmerald, colAccentInk);
         btnRoll.setOnClickListener(new View.OnClickListener() {
             public void onClick(View v) {
                 hapticClick();
                 bgView.rollDice();
             }
         });
-        LinearLayout.LayoutParams blp1 = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1.2f);
-        blp1.rightMargin = dp(4);
+        LinearLayout.LayoutParams blp1 = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1.1f);
+        blp1.rightMargin = dp(3);
         btnRoll.setLayoutParams(blp1);
         ctrlRow.addView(btnRoll);
 
-        TextView btnReset = actionButton("↻ New Game", colLine, colPale);
+        TextView btnUndo = actionButton("↶ Undo", colLine, colPale);
+        btnUndo.setOnClickListener(new View.OnClickListener() {
+            public void onClick(View v) {
+                hapticClick();
+                bgView.undoMove();
+            }
+        });
+        LinearLayout.LayoutParams blpUndo = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 0.9f);
+        blpUndo.leftMargin = dp(3);
+        blpUndo.rightMargin = dp(3);
+        btnUndo.setLayoutParams(blpUndo);
+        ctrlRow.addView(btnUndo);
+
+        TextView btnReset = actionButton("↻ New", colLine, colPale);
         btnReset.setOnClickListener(new View.OnClickListener() {
             public void onClick(View v) {
                 hapticClick();
@@ -4281,7 +4309,7 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
             }
         });
         LinearLayout.LayoutParams blp2 = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 0.8f);
-        blp2.leftMargin = dp(4);
+        blp2.leftMargin = dp(3);
         btnReset.setLayoutParams(blp2);
         ctrlRow.addView(btnReset);
         box.addView(ctrlRow);
@@ -4335,6 +4363,18 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
         ctrlRow.setOrientation(LinearLayout.HORIZONTAL);
         ctrlRow.setPadding(0, dp(8), 0, 0);
 
+        TextView btnUndo = actionButton("↶ Undo", colLine, colPale);
+        btnUndo.setOnClickListener(new View.OnClickListener() {
+            public void onClick(View v) {
+                hapticClick();
+                nmmView.undoMove();
+            }
+        });
+        LinearLayout.LayoutParams nulp = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
+        nulp.rightMargin = dp(4);
+        btnUndo.setLayoutParams(nulp);
+        ctrlRow.addView(btnUndo);
+
         TextView btnReset = actionButton("↻ New Match", colLine, colPale);
         btnReset.setOnClickListener(new View.OnClickListener() {
             public void onClick(View v) {
@@ -4342,6 +4382,9 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
                 nmmView.resetGame();
             }
         });
+        LinearLayout.LayoutParams nrlp = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
+        nrlp.leftMargin = dp(4);
+        btnReset.setLayoutParams(nrlp);
         ctrlRow.addView(btnReset);
         box.addView(ctrlRow);
 
@@ -4394,6 +4437,18 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
         ctrlRow.setOrientation(LinearLayout.HORIZONTAL);
         ctrlRow.setPadding(0, dp(8), 0, 0);
 
+        TextView btnUndo = actionButton("↶ Undo", colLine, colPale);
+        btnUndo.setOnClickListener(new View.OnClickListener() {
+            public void onClick(View v) {
+                hapticClick();
+                c4View.undoMove();
+            }
+        });
+        LinearLayout.LayoutParams culp = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
+        culp.rightMargin = dp(4);
+        btnUndo.setLayoutParams(culp);
+        ctrlRow.addView(btnUndo);
+
         TextView btnReset = actionButton("↻ New Grid", colLine, colPale);
         btnReset.setOnClickListener(new View.OnClickListener() {
             public void onClick(View v) {
@@ -4401,6 +4456,9 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
                 c4View.resetGame();
             }
         });
+        LinearLayout.LayoutParams crlp = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
+        crlp.leftMargin = dp(4);
+        btnReset.setLayoutParams(crlp);
         ctrlRow.addView(btnReset);
         box.addView(ctrlRow);
 

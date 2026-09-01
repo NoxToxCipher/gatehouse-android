@@ -122,6 +122,25 @@ public class NineMensMorrisGameView extends View {
         resetGame();
     }
 
+    private static class HistoryState {
+        final int[] board = new int[24];
+        final int whiteUnplaced, blackUnplaced, whiteAlive, blackAlive;
+        final boolean whiteTurn, mustRemoveOpponent, gameOver;
+
+        HistoryState(int[] b, int wu, int bu, int wa, int ba, boolean wt, boolean mro, boolean go) {
+            System.arraycopy(b, 0, board, 0, 24);
+            this.whiteUnplaced = wu;
+            this.blackUnplaced = bu;
+            this.whiteAlive = wa;
+            this.blackAlive = ba;
+            this.whiteTurn = wt;
+            this.mustRemoveOpponent = mro;
+            this.gameOver = go;
+        }
+    }
+
+    private final List<HistoryState> history = new ArrayList<>();
+
     public void setStatusListener(StatusListener l) {
         this.statusListener = l;
         updateStatus();
@@ -129,6 +148,7 @@ public class NineMensMorrisGameView extends View {
 
     public void resetGame() {
         for (int i = 0; i < 24; i++) board[i] = 0;
+        history.clear();
         whiteUnplaced = 9;
         blackUnplaced = 9;
         whiteAlive = 9;
@@ -137,6 +157,25 @@ public class NineMensMorrisGameView extends View {
         mustRemoveOpponent = false;
         selectedIndex = -1;
         gameOver = false;
+        updateStatus();
+        invalidate();
+    }
+
+    public void undoMove() {
+        if (history.isEmpty()) return;
+        HistoryState prev = history.remove(history.size() - 1);
+        if (!prev.whiteTurn && !history.isEmpty()) {
+            prev = history.remove(history.size() - 1);
+        }
+        System.arraycopy(prev.board, 0, board, 0, 24);
+        this.whiteUnplaced = prev.whiteUnplaced;
+        this.blackUnplaced = prev.blackUnplaced;
+        this.whiteAlive = prev.whiteAlive;
+        this.blackAlive = prev.blackAlive;
+        this.whiteTurn = prev.whiteTurn;
+        this.mustRemoveOpponent = prev.mustRemoveOpponent;
+        this.gameOver = prev.gameOver;
+        this.selectedIndex = -1;
         updateStatus();
         invalidate();
     }
@@ -154,6 +193,7 @@ public class NineMensMorrisGameView extends View {
 
     private boolean tryPlacePiece(int idx) {
         if (board[idx] != 0) return false;
+        history.add(new HistoryState(board, whiteUnplaced, blackUnplaced, whiteAlive, blackAlive, whiteTurn, mustRemoveOpponent, gameOver));
         int color = whiteTurn ? 1 : 2;
         board[idx] = color;
 
@@ -179,6 +219,7 @@ public class NineMensMorrisGameView extends View {
 
     private boolean tryMovePiece(int fromIdx, int toIdx) {
         if (board[toIdx] != 0) return false;
+        history.add(new HistoryState(board, whiteUnplaced, blackUnplaced, whiteAlive, blackAlive, whiteTurn, mustRemoveOpponent, gameOver));
         int color = whiteTurn ? 1 : 2;
         int alive = whiteTurn ? whiteAlive : blackAlive;
 

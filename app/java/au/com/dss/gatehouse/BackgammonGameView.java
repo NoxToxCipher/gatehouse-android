@@ -100,6 +100,29 @@ public class BackgammonGameView extends View {
         resetGame();
     }
 
+    private static class HistoryState {
+        final int[] points = new int[24];
+        final int whiteBar, blackBar, whiteOff, blackOff;
+        final boolean whiteTurn, waitingForRoll;
+        final List<Integer> availableDice = new ArrayList<>();
+        final int lastDie1, lastDie2;
+
+        HistoryState(int[] pts, int wb, int bb, int wo, int bo, boolean wt, boolean wfr, List<Integer> dice, int d1, int d2) {
+            System.arraycopy(pts, 0, points, 0, 24);
+            this.whiteBar = wb;
+            this.blackBar = bb;
+            this.whiteOff = wo;
+            this.blackOff = bo;
+            this.whiteTurn = wt;
+            this.waitingForRoll = wfr;
+            this.availableDice.addAll(dice);
+            this.lastDie1 = d1;
+            this.lastDie2 = d2;
+        }
+    }
+
+    private final List<HistoryState> history = new ArrayList<>();
+
     public void setStatusListener(StatusListener l) {
         this.statusListener = l;
         updateStatus();
@@ -117,6 +140,7 @@ public class BackgammonGameView extends View {
         points[7] = -3;
         points[5] = -5;
 
+        history.clear();
         whiteBar = 0;
         blackBar = 0;
         whiteOff = 0;
@@ -130,8 +154,31 @@ public class BackgammonGameView extends View {
         invalidate();
     }
 
+    public void undoMove() {
+        if (history.isEmpty()) return;
+        HistoryState prev = history.remove(history.size() - 1);
+        if (!prev.whiteTurn && !history.isEmpty()) {
+            prev = history.remove(history.size() - 1);
+        }
+        System.arraycopy(prev.points, 0, points, 0, 24);
+        this.whiteBar = prev.whiteBar;
+        this.blackBar = prev.blackBar;
+        this.whiteOff = prev.whiteOff;
+        this.blackOff = prev.blackOff;
+        this.whiteTurn = prev.whiteTurn;
+        this.waitingForRoll = prev.waitingForRoll;
+        this.availableDice.clear();
+        this.availableDice.addAll(prev.availableDice);
+        this.lastDie1 = prev.lastDie1;
+        this.lastDie2 = prev.lastDie2;
+        this.selectedPoint = -1;
+        updateStatus();
+        invalidate();
+    }
+
     public void rollDice() {
         if (!waitingForRoll) return;
+        history.add(new HistoryState(points, whiteBar, blackBar, whiteOff, blackOff, whiteTurn, waitingForRoll, availableDice, lastDie1, lastDie2));
         try {
             performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP);
         } catch (Exception ignored) {}
@@ -217,6 +264,7 @@ public class BackgammonGameView extends View {
 
     private boolean tryMoveChecker(int fromPoint, int dieVal) {
         if (!availableDice.contains(dieVal)) return false;
+        history.add(new HistoryState(points, whiteBar, blackBar, whiteOff, blackOff, whiteTurn, waitingForRoll, availableDice, lastDie1, lastDie2));
 
         if (whiteTurn) {
             int toPoint = (fromPoint == -1) ? 24 - dieVal : fromPoint - dieVal;

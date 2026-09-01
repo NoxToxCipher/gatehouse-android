@@ -86,6 +86,22 @@ public class HnefataflGameView extends View {
         resetGame();
     }
 
+    private static class HistoryState {
+        final char[][] board = new char[11][11];
+        final boolean defendersTurn;
+        final boolean gameOver;
+
+        HistoryState(char[][] b, boolean dt, boolean go) {
+            for (int r = 0; r < 11; r++) {
+                System.arraycopy(b[r], 0, board[r], 0, 11);
+            }
+            this.defendersTurn = dt;
+            this.gameOver = go;
+        }
+    }
+
+    private final List<HistoryState> history = new ArrayList<>();
+
     public void setStatusListener(StatusListener l) {
         this.statusListener = l;
         updateStatus();
@@ -112,11 +128,30 @@ public class HnefataflGameView extends View {
         };
         for (int[] a : atts) board[a[0]][a[1]] = 'A';
 
+        history.clear();
         defendersTurn = true;
         selectedX = -1;
         selectedY = -1;
         validMoves.clear();
         gameOver = false;
+        updateStatus();
+        invalidate();
+    }
+
+    public void undoMove() {
+        if (history.isEmpty()) return;
+        HistoryState prev = history.remove(history.size() - 1);
+        if (!prev.defendersTurn && !history.isEmpty()) {
+            prev = history.remove(history.size() - 1);
+        }
+        for (int r = 0; r < 11; r++) {
+            System.arraycopy(prev.board[r], 0, board[r], 0, 11);
+        }
+        this.defendersTurn = prev.defendersTurn;
+        this.gameOver = prev.gameOver;
+        this.selectedX = -1;
+        this.selectedY = -1;
+        this.validMoves.clear();
         updateStatus();
         invalidate();
     }
@@ -152,6 +187,7 @@ public class HnefataflGameView extends View {
     }
 
     private void executeMove(int fromX, int fromY, int toX, int toY) {
+        history.add(new HistoryState(board, defendersTurn, gameOver));
         char p = board[fromY][fromX];
         board[toY][toX] = p;
         board[fromY][fromX] = '.';
