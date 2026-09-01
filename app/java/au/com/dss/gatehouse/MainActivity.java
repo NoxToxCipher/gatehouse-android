@@ -9436,6 +9436,7 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
             rightCol.addView(buildPttRadioBar());
 
             rightCol.addView(buildLogbookEntranceCard());
+            rightCol.addView(buildAussieSportsCard());
 
             primary = new TextView(this);
             primary.setTextSize(15);
@@ -9549,6 +9550,7 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
             container.addView(buildPttRadioBar());
 
             container.addView(buildLogbookEntranceCard());
+            container.addView(buildAussieSportsCard());
 
             primary = new TextView(this);
             primary.setTextSize(15);
@@ -10166,8 +10168,8 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
             chip.setPadding(dp(10), dp(5), dp(10), dp(5));
 
             boolean sel = sportsActiveFilter.equalsIgnoreCase(fKey);
-            chip.setTextColor(sel ? 0xFF0F172A : colPale);
-            chip.setBackground(rounded(sel ? 0xFFFFD166 : colPanel2, dp(10)));
+            chip.setTextColor(sel ? colAccentInk : colPale);
+            chip.setBackground(rounded(sel ? colAccent : colPanel2, dp(10)));
 
             LinearLayout.LayoutParams plp = new LinearLayout.LayoutParams(
                     LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT);
@@ -10180,8 +10182,8 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
                     sportsActiveFilter = fKey;
                     for (int i = 0; i < leagueFilters.length; i++) {
                         boolean s = leagueFilters[i][0].equalsIgnoreCase(sportsActiveFilter);
-                        filterChips.get(i).setTextColor(s ? 0xFF0F172A : colPale);
-                        filterChips.get(i).setBackground(rounded(s ? 0xFFFFD166 : colPanel2, dp(10)));
+                        filterChips.get(i).setTextColor(s ? colAccentInk : colPale);
+                        filterChips.get(i).setBackground(rounded(s ? colAccent : colPanel2, dp(10)));
                     }
                     populateSportsMatches(matchesContainer);
                 }
@@ -10274,11 +10276,11 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
     private View buildSportsMatchRow(final AussieSportsTrackerManager.SportsMatch m) {
         LinearLayout row = new LinearLayout(this);
         row.setOrientation(LinearLayout.VERTICAL);
-        row.setBackground(rounded(0xFF0F172A, dp(10)));
-        row.setPadding(dp(10), dp(10), dp(10), dp(10));
+        row.setBackground(rounded(colPanel2, dp(12)));
+        row.setPadding(dp(12), dp(10), dp(12), dp(10));
         LinearLayout.LayoutParams rlp = new LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
-        rlp.bottomMargin = dp(6);
+        rlp.bottomMargin = dp(8);
         row.setLayoutParams(rlp);
 
         // Header Line: League + Status Clock + Broadcast TV
@@ -10299,7 +10301,7 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
         sBadge.setTextSize(10f);
         sBadge.setTypeface(Typeface.DEFAULT_BOLD);
         sBadge.setPadding(dp(6), dp(1), dp(6), dp(1));
-        sBadge.setBackground(rounded(m.status == AussieSportsTrackerManager.MatchStatus.LIVE ? 0x33EF4444 : colPanel2, dp(4)));
+        sBadge.setBackground(rounded(m.status == AussieSportsTrackerManager.MatchStatus.LIVE ? 0x33EF4444 : colPanel, dp(4)));
         LinearLayout.LayoutParams slp = new LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT);
         slp.leftMargin = dp(6);
@@ -10357,7 +10359,7 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
             scoreTxt.setTextColor(colQuiet);
         } else {
             scoreTxt.setText(m.homeScore + " - " + m.awayScore);
-            scoreTxt.setTextColor(m.status == AussieSportsTrackerManager.MatchStatus.LIVE ? 0xFFFFD166 : colPale);
+            scoreTxt.setTextColor(m.status == AussieSportsTrackerManager.MatchStatus.LIVE ? colAccent : colPale);
         }
         scoreTxt.setTextSize(15f);
         scoreTxt.setTypeface(Typeface.create(Typeface.MONOSPACE, Typeface.BOLD));
