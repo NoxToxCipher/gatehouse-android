@@ -350,6 +350,10 @@ public class GatehouseDynamicIslandOverlay {
         currentState = IslandState.EXPANDED_CARD;
         cancelAutoCollapse();
 
+        try {
+            islandRoot.performHapticFeedback(android.view.HapticFeedbackConstants.KEYBOARD_TAP);
+        } catch (Exception ignored) {}
+
         updateViewsData();
 
         // Fluid morph from compactWidth/Height to expandedWidth/Height
@@ -401,6 +405,10 @@ public class GatehouseDynamicIslandOverlay {
         if (islandRoot == null || currentState != IslandState.EXPANDED_CARD) return;
         currentState = IslandState.COMPACT_PILL;
         cancelAutoCollapse();
+
+        try {
+            islandRoot.performHapticFeedback(android.view.HapticFeedbackConstants.KEYBOARD_TAP);
+        } catch (Exception ignored) {}
 
         final int startW = islandRoot.getWidth();
         final int startH = islandRoot.getHeight();
