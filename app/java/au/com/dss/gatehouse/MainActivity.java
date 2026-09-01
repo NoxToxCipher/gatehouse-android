@@ -15311,6 +15311,7 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
                 {"HANDOVER", "🤝 Handovers"}
         };
 
+        final LogbookManager logMgrInstance = logMgr;
         final Runnable buildCatPills = new Runnable() {
             @Override
             public void run() {
@@ -15319,14 +15320,15 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
                     final String catId = cat[0];
                     final String catLabel = cat[1];
                     final boolean isSelected = catId.equalsIgnoreCase(logbookSelectedCategory);
+                    final int count = logMgrInstance.filterEntries(logbookSelectedShiftId, catId, "").size();
 
                     TextView chip = new TextView(MainActivity.this);
-                    chip.setText(catLabel);
-                    chip.setTextColor(isSelected ? colAccentInk : colMuted);
-                    chip.setTextSize(9f);
+                    chip.setText(catLabel + " (" + count + ")");
+                    chip.setTextColor(isSelected ? colAccentInk : colPale);
+                    chip.setTextSize(9.5f);
                     chip.setTypeface(Typeface.create(Typeface.MONOSPACE, Typeface.BOLD));
-                    chip.setPadding(dp(7), dp(3), dp(7), dp(3));
-                    chip.setBackground(rounded(isSelected ? colAccent : 0x1AFFFFFF, dp(5)));
+                    chip.setPadding(dp(8), dp(4), dp(8), dp(4));
+                    chip.setBackground(rounded(isSelected ? colAccent : 0x22FFFFFF, dp(6)));
                     chip.setOnClickListener(new View.OnClickListener() {
                         @Override
                         public void onClick(View v) {
@@ -15338,7 +15340,7 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
                     });
                     LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(
                             LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT);
-                    lp.rightMargin = dp(3);
+                    lp.rightMargin = dp(4);
                     chip.setLayoutParams(lp);
                     catRow.addView(chip);
                 }
@@ -15523,14 +15525,33 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
                     LinearLayout headerRow = new LinearLayout(this);
                     headerRow.setOrientation(LinearLayout.HORIZONTAL);
                     headerRow.setGravity(Gravity.CENTER_VERTICAL);
-                    headerRow.setPadding(dp(4), dp(10), dp(4), dp(6));
+                    headerRow.setPadding(dp(4), dp(12), dp(4), dp(8));
+
+                    LinearLayout plaque = new LinearLayout(this);
+                    plaque.setOrientation(LinearLayout.HORIZONTAL);
+                    plaque.setGravity(Gravity.CENTER_VERTICAL);
+                    android.graphics.drawable.GradientDrawable plBg = new android.graphics.drawable.GradientDrawable(
+                            android.graphics.drawable.GradientDrawable.Orientation.LEFT_RIGHT,
+                            new int[]{0x33F59E0B, 0x110F172A}
+                    );
+                    plBg.setCornerRadius(dp(8));
+                    plBg.setStroke(dp(1), 0x44F59E0B);
+                    plaque.setBackground(plBg);
+                    plaque.setPadding(dp(10), dp(5), dp(12), dp(5));
+
+                    TextView tvCal = new TextView(this);
+                    tvCal.setText("📅 ");
+                    tvCal.setTextSize(11f);
+                    plaque.addView(tvCal);
 
                     TextView tvShiftTitle = new TextView(this);
-                    tvShiftTitle.setText("── " + currentGroupHeader + " · " + entry.guardName.toUpperCase(Locale.US) + " ──");
-                    tvShiftTitle.setTextColor(colCyan);
-                    tvShiftTitle.setTextSize(10f);
+                    tvShiftTitle.setText(currentGroupHeader + " · 🛡️ " + entry.guardName.toUpperCase(Locale.US));
+                    tvShiftTitle.setTextColor(colAccent);
+                    tvShiftTitle.setTextSize(10.5f);
                     tvShiftTitle.setTypeface(Typeface.create(Typeface.MONOSPACE, Typeface.BOLD));
-                    headerRow.addView(tvShiftTitle);
+                    plaque.addView(tvShiftTitle);
+
+                    headerRow.addView(plaque);
                     container.addView(headerRow);
                 }
 
@@ -15539,7 +15560,7 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
                 timelineRow.setOrientation(LinearLayout.HORIZONTAL);
                 timelineRow.setPadding(0, dp(2), 0, dp(6));
 
-                // Left Column: Time & Node
+                // Left Column: Time & Dual-Ring Node
                 LinearLayout leftCol = new LinearLayout(this);
                 leftCol.setOrientation(LinearLayout.VERTICAL);
                 leftCol.setGravity(Gravity.CENTER_HORIZONTAL);
@@ -15553,27 +15574,40 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
                 tvTime.setTypeface(Typeface.create(Typeface.MONOSPACE, Typeface.BOLD));
                 leftCol.addView(tvTime);
 
+                FrameLayout nodeRing = new FrameLayout(this);
+                nodeRing.setBackground(rounded(0x44000000 | (entry.categoryColor & 0x00FFFFFF), dp(7)));
+                LinearLayout.LayoutParams nrlp = new LinearLayout.LayoutParams(dp(14), dp(14));
+                nrlp.topMargin = dp(3);
+                nrlp.bottomMargin = dp(3);
+                nodeRing.setLayoutParams(nrlp);
+
                 View nodeDot = new View(this);
                 nodeDot.setBackground(rounded(entry.categoryColor, dp(4)));
-                LinearLayout.LayoutParams ndlp = new LinearLayout.LayoutParams(dp(8), dp(8));
-                ndlp.topMargin = dp(4);
-                ndlp.bottomMargin = dp(4);
+                FrameLayout.LayoutParams ndlp = new FrameLayout.LayoutParams(dp(8), dp(8));
+                ndlp.gravity = Gravity.CENTER;
                 nodeDot.setLayoutParams(ndlp);
-                leftCol.addView(nodeDot);
+                nodeRing.addView(nodeDot);
+                leftCol.addView(nodeRing);
 
                 View rail = new View(this);
-                rail.setBackgroundColor(0x22FFFFFF);
+                rail.setBackgroundColor(0x28FFFFFF);
                 LinearLayout.LayoutParams rlp = new LinearLayout.LayoutParams(dp(2), 0, 1f);
                 rail.setLayoutParams(rlp);
                 leftCol.addView(rail);
 
                 timelineRow.addView(leftCol);
 
-                // Right Column: Clean Occurrence Body
+                // Right Column: Luxury Occurrence Card
                 LinearLayout rightCard = new LinearLayout(this);
                 rightCard.setOrientation(LinearLayout.VERTICAL);
-                rightCard.setBackground(rounded(0xFF1E293B, dp(12)));
-                rightCard.setPadding(dp(12), dp(10), dp(12), dp(10));
+                android.graphics.drawable.GradientDrawable cardBg = new android.graphics.drawable.GradientDrawable(
+                        android.graphics.drawable.GradientDrawable.Orientation.TL_BR,
+                        new int[]{0xFF1E293B, 0xFF131B2B}
+                );
+                cardBg.setCornerRadius(dp(14));
+                cardBg.setStroke(dp(1), 0x33000000 | (entry.categoryColor & 0x00FFFFFF));
+                rightCard.setBackground(cardBg);
+                rightCard.setPadding(dp(14), dp(11), dp(14), dp(11));
                 LinearLayout.LayoutParams rclp = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
                 rclp.leftMargin = dp(6);
                 rightCard.setLayoutParams(rclp);
