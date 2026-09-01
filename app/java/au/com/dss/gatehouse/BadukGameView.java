@@ -499,16 +499,27 @@ public class BadukGameView extends View {
                 lastMoveX = x;
                 lastMoveY = y;
                 puzzleSolved = true;
+                captureToastText = "🎉 TESUJI MASTERED! Problem Solved";
+                captureToastX = x;
+                captureToastY = y;
+                captureToastStartTime = System.currentTimeMillis();
                 try {
-                    performHapticFeedback(HapticFeedbackConstants.LONG_PRESS);
+                    RecreationAudioSynth.playTetrisLineClear();
+                    performHapticFeedback(HapticFeedbackConstants.CONFIRM);
                 } catch (Exception ignored) {}
                 updateStatus();
                 invalidate();
+                postDelayed(new Runnable() {
+                    public void run() {
+                        nextPuzzle();
+                    }
+                }, 1600);
                 return true;
             } else {
                 if (statusListener != null) {
                     statusListener.onStatusChanged("✗ Incorrect. Find the vital point!", 0xFFEF4444);
                 }
+                try { performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP); } catch (Exception ignored) {}
                 return false;
             }
         }

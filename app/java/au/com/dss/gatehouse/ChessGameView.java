@@ -447,10 +447,16 @@ public class ChessGameView extends View {
                 board[fromY][fromX] = '.';
                 puzzleSolved = true;
                 try {
-                    performHapticFeedback(HapticFeedbackConstants.LONG_PRESS);
+                    RecreationAudioSynth.playTetrisLineClear();
+                    performHapticFeedback(HapticFeedbackConstants.CONFIRM);
                 } catch (Exception ignored) {}
                 updateStatus();
                 invalidate();
+                postDelayed(new Runnable() {
+                    public void run() {
+                        nextPuzzle();
+                    }
+                }, 1600);
                 return;
             } else {
                 if (statusListener != null) {
@@ -459,6 +465,7 @@ public class ChessGameView extends View {
                 selectedX = -1;
                 selectedY = -1;
                 validMoves.clear();
+                try { performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP); } catch (Exception ignored) {}
                 invalidate();
                 return;
             }
@@ -503,6 +510,15 @@ public class ChessGameView extends View {
         selectedY = -1;
         validMoves.clear();
         whiteTurn = !whiteTurn;
+
+        // Check if move gives check to opponent
+        if (isKingInCheck(whiteTurn)) {
+            try {
+                RecreationAudioSynth.playLaserShoot();
+                performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK);
+            } catch (Exception ignored) {}
+        }
+
         updateStatus();
         invalidate();
 
