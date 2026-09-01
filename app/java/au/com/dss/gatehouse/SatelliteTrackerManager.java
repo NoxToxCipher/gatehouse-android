@@ -543,6 +543,18 @@ public class SatelliteTrackerManager {
 
     public static void dispatchPassAlert(Context context, VisualPass pass, boolean isTest) {
         try {
+            if (pass == null) return;
+
+            // Deduplication: prevent repeat notifications for the same pass
+            SharedPreferences prefs = context.getSharedPreferences("satellite_tracker_prefs", Context.MODE_PRIVATE);
+            String passKey = "notified_pass_" + (pass.passId != null ? pass.passId : (pass.satId + "_" + pass.startUtcMillis));
+            if (!isTest && prefs.getBoolean(passKey, false)) {
+                return;
+            }
+            if (!isTest) {
+                prefs.edit().putBoolean(passKey, true).apply();
+            }
+
             initChannels(context);
             NotificationManager nm = (NotificationManager) context.getSystemService(Context.NOTIFICATION_SERVICE);
             if (nm == null) return;

@@ -32,6 +32,7 @@ public final class AutoUpdateManager {
     private static final String PREFS_NAME = "gatehouse_autoupdate";
     private static final String KEY_LAST_CHECK = "last_check_ms";
     private static final String KEY_LAST_SHA = "last_installed_sha";
+    private static final String KEY_LAST_NOTIFIED_SHA = "last_notified_sha";
     private static final String CHANNEL_UPDATES = "gatehouse_updates";
     private static final int NOTIF_ID_UPDATE = 8801;
     public static final String ACTION_CHECK_UPDATE = "au.com.dss.gatehouse.ACTION_CHECK_UPDATE";
@@ -51,8 +52,24 @@ public final class AutoUpdateManager {
     public static void init(Context context) {
         initChannel(context);
         scheduleHourlyAlarm(context);
-        // Check on app launch if it has been > 1 hour since last check
+
+        // Cancel any pending update notification since app is currently running
+        try {
+            NotificationManager nm = (NotificationManager) context.getSystemService(Context.NOTIFICATION_SERVICE);
+            if (nm != null) {
+                nm.cancel(NOTIF_ID_UPDATE);
+            }
+        } catch (Exception ignored) {}
+
         SharedPreferences prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE);
+        try {
+            String currentAppSha = computeFileSha256(new File(context.getPackageCodePath()));
+            prefs.edit().putString(KEY_LAST_SHA, currentAppSha)
+                        .putString(KEY_LAST_NOTIFIED_SHA, currentAppSha)
+                        .apply();
+        } catch (Exception ignored) {}
+
+        // Check on app launch if it has been > 1 hour since last check
         long lastCheck = prefs.getLong(KEY_LAST_CHECK, 0);
         long now = System.currentTimeMillis();
         if (now - lastCheck >= 60 * 60 * 1000L) {
@@ -211,6 +228,19 @@ public final class AutoUpdateManager {
 
     private static void showUpdateNotification(Context context, File apkFile, String newSha) {
         try {
+            if (newSha == null || newSha.trim().isEmpty()) return;
+
+            SharedPreferences prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE);
+            String lastNotifiedSha = prefs.getString(KEY_LAST_NOTIFIED_SHA, "");
+            String currentAppSha = prefs.getString(KEY_LAST_SHA, "");
+
+            // If already notified for this exact SHA, or if this SHA is already currently installed, suppress duplicate notification
+            if (newSha.equalsIgnoreCase(lastNotifiedSha) || newSha.equalsIgnoreCase(currentAppSha)) {
+                return;
+            }
+
+            prefs.edit().putString(KEY_LAST_NOTIFIED_SHA, newSha).apply();
+
             NotificationManager nm = (NotificationManager) context.getSystemService(Context.NOTIFICATION_SERVICE);
             if (nm == null) return;
 
