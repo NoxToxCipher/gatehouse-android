@@ -5441,21 +5441,23 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
         dlg.show();
     }
 
-    private LinearLayout buildTesterFeedbackCard() {
-        LinearLayout card = new LinearLayout(this);
-        card.setOrientation(LinearLayout.VERTICAL);
+    private View buildTesterFeedbackCard() {
+        final RippleCardFrameLayout card = new RippleCardFrameLayout(this, 16f, 0xFF00E5FF);
         card.setBackground(rounded(colPanel, dp(16)));
-        card.setPadding(dp(16), dp(14), dp(16), dp(14));
         LinearLayout.LayoutParams clp = new LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
         clp.bottomMargin = dp(12);
         card.setLayoutParams(clp);
 
+        LinearLayout body = new LinearLayout(this);
+        body.setOrientation(LinearLayout.VERTICAL);
+        body.setPadding(dp(16), dp(14), dp(16), dp(14));
+
         LinearLayout top = new LinearLayout(this);
         top.setOrientation(LinearLayout.HORIZONTAL);
         top.setGravity(Gravity.CENTER_VERTICAL);
 
-        // Icon Avatar Container (Matching Crake Blue Icon)
+        // Icon Avatar Container (Crake Blue / Cyan)
         FrameLayout iconFrame = new FrameLayout(this);
         iconFrame.setBackground(rounded(0x3300E5FF, dp(10)));
         iconFrame.setPadding(dp(8), dp(8), dp(8), dp(8));
@@ -5475,15 +5477,33 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
         LinearLayout.LayoutParams tclp = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
         titleCol.setLayoutParams(tclp);
 
+        LinearLayout titleRow = new LinearLayout(this);
+        titleRow.setOrientation(LinearLayout.HORIZONTAL);
+        titleRow.setGravity(Gravity.CENTER_VERTICAL);
+
         TextView title = new TextView(this);
         title.setText("Tester Hub & Feedback");
         title.setTextColor(0xFFFFFFFF);
         title.setTextSize(13.5f);
         title.setTypeface(Typeface.DEFAULT_BOLD);
-        titleCol.addView(title);
+        titleRow.addView(title);
+
+        TextView liveBadge = new TextView(this);
+        liveBadge.setText("● ACTIVE HUB");
+        liveBadge.setTextColor(0xFF00E5FF);
+        liveBadge.setTextSize(8.5f);
+        liveBadge.setTypeface(Typeface.MONOSPACE);
+        liveBadge.setPadding(dp(6), dp(2), dp(6), dp(2));
+        liveBadge.setBackground(rounded(0x2200E5FF, dp(4)));
+        LinearLayout.LayoutParams lblp = new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+        lblp.leftMargin = dp(8);
+        liveBadge.setLayoutParams(lblp);
+        titleRow.addView(liveBadge);
+        titleCol.addView(titleRow);
 
         TextView sub = new TextView(this);
-        sub.setText("Report bugs, screenshots & suggestions");
+        sub.setText("Report bugs, screenshots, logs & suggestions");
         sub.setTextColor(0xFF94A3B8);
         sub.setTextSize(11);
         titleCol.addView(sub);
@@ -5491,25 +5511,95 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
 
         // Open Button (Vibrant Cyan)
         TextView btnOpen = new TextView(this);
-        btnOpen.setText("Open");
+        btnOpen.setText("Open ➔");
         btnOpen.setTextColor(0xFF0F172A);
         btnOpen.setTextSize(12);
         btnOpen.setTypeface(Typeface.DEFAULT_BOLD);
-        btnOpen.setPadding(dp(16), dp(8), dp(16), dp(8));
+        btnOpen.setPadding(dp(14), dp(8), dp(14), dp(8));
         btnOpen.setBackground(rounded(0xFF00E5FF, dp(8)));
-        btnOpen.setOnClickListener(new View.OnClickListener() {
+        top.addView(btnOpen);
+        body.addView(top);
+
+        // Quick Action Row below
+        LinearLayout actionRow = new LinearLayout(this);
+        actionRow.setOrientation(LinearLayout.HORIZONTAL);
+        actionRow.setPadding(0, dp(10), 0, 0);
+
+        TextView qkBug = new TextView(this);
+        qkBug.setText("⚠️ Log Bug");
+        qkBug.setTextSize(10.5f);
+        qkBug.setTypeface(Typeface.DEFAULT_BOLD);
+        qkBug.setTextColor(0xFFFF4081);
+        qkBug.setBackground(rounded(0x22FF4081, dp(8)));
+        qkBug.setPadding(dp(10), dp(6), dp(10), dp(6));
+        LinearLayout.LayoutParams qblp = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
+        qblp.rightMargin = dp(4);
+        qkBug.setLayoutParams(qblp);
+        qkBug.setGravity(Gravity.CENTER);
+        qkBug.setOnClickListener(new View.OnClickListener() {
             public void onClick(View v) {
                 hapticHeavyClick();
-                showTesterFeedbackScreen();
+                showTesterFeedbackScreen(0);
             }
         });
-        top.addView(btnOpen);
+        actionRow.addView(qkBug);
 
-        card.addView(top);
+        TextView qkFeat = new TextView(this);
+        qkFeat.setText("⭐ Suggestion");
+        qkFeat.setTextSize(10.5f);
+        qkFeat.setTypeface(Typeface.DEFAULT_BOLD);
+        qkFeat.setTextColor(0xFFFFB300);
+        qkFeat.setBackground(rounded(0x22FFB300, dp(8)));
+        qkFeat.setPadding(dp(10), dp(6), dp(10), dp(6));
+        LinearLayout.LayoutParams qflp = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
+        qflp.leftMargin = dp(2);
+        qflp.rightMargin = dp(2);
+        qkFeat.setLayoutParams(qflp);
+        qkFeat.setGravity(Gravity.CENTER);
+        qkFeat.setOnClickListener(new View.OnClickListener() {
+            public void onClick(View v) {
+                hapticHeavyClick();
+                showTesterFeedbackScreen(1);
+            }
+        });
+        actionRow.addView(qkFeat);
+
+        TextView qkPatrol = new TextView(this);
+        qkPatrol.setText("🛡️ Patrol Log");
+        qkPatrol.setTextSize(10.5f);
+        qkPatrol.setTypeface(Typeface.DEFAULT_BOLD);
+        qkPatrol.setTextColor(colCyan);
+        qkPatrol.setBackground(rounded(0x2200E5FF, dp(8)));
+        qkPatrol.setPadding(dp(10), dp(6), dp(10), dp(6));
+        LinearLayout.LayoutParams qplp = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
+        qplp.leftMargin = dp(4);
+        qkPatrol.setLayoutParams(qplp);
+        qkPatrol.setGravity(Gravity.CENTER);
+        qkPatrol.setOnClickListener(new View.OnClickListener() {
+            public void onClick(View v) {
+                hapticHeavyClick();
+                showTesterFeedbackScreen(2);
+            }
+        });
+        actionRow.addView(qkPatrol);
+
+        body.addView(actionRow);
+
+        card.setOnClickListener(new View.OnClickListener() {
+            public void onClick(View v) {
+                hapticHeavyClick();
+                showTesterFeedbackScreen(0);
+            }
+        });
+        card.addView(body);
         return card;
     }
 
     private void showTesterFeedbackScreen() {
+        showTesterFeedbackScreen(0);
+    }
+
+    private void showTesterFeedbackScreen(final int initialIndex) {
         hapticHeavyClick();
         final Dialog dlg = new Dialog(this, android.R.style.Theme_Black_NoTitleBar_Fullscreen);
         
@@ -5598,46 +5688,50 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
         FrameLayout idIcon = new FrameLayout(this);
         idIcon.setBackground(rounded(0x2200E5FF, dp(8)));
         idIcon.setPadding(dp(8), dp(8), dp(8), dp(8));
-        LinearLayout.LayoutParams iilp = new LinearLayout.LayoutParams(dp(36), dp(36));
-        iilp.rightMargin = dp(12);
-        idIcon.setLayoutParams(iilp);
-
-        TextView tvIdGlyph = new TextView(this);
-        tvIdGlyph.setText("👤");
-        tvIdGlyph.setTextSize(15);
-        tvIdGlyph.setGravity(Gravity.CENTER);
-        idIcon.addView(tvIdGlyph);
+        TextView idIcoTv = new TextView(this);
+        idIcoTv.setText("👤");
+        idIcoTv.setTextSize(15);
+        idIcon.addView(idIcoTv);
         idCard.addView(idIcon);
 
-        final LinearLayout idTextCol = new LinearLayout(this);
-        idTextCol.setOrientation(LinearLayout.VERTICAL);
+        LinearLayout idDetails = new LinearLayout(this);
+        idDetails.setOrientation(LinearLayout.VERTICAL);
+        idDetails.setPadding(dp(10), 0, 0, 0);
         LinearLayout.LayoutParams idtlp = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
-        idTextCol.setLayoutParams(idtlp);
+        idDetails.setLayoutParams(idtlp);
 
-        final TextView tvIdName = new TextView(this);
-        tvIdName.setText("Tester Identity: " + getTesterIdentityName());
-        tvIdName.setTextColor(0xFFFFFFFF);
-        tvIdName.setTextSize(13);
-        tvIdName.setTypeface(Typeface.DEFAULT_BOLD);
-        idTextCol.addView(tvIdName);
+        final TextView nameLbl = new TextView(this);
+        nameLbl.setText("Tester: " + getTesterIdentityName());
+        nameLbl.setTextColor(0xFFFFFFFF);
+        nameLbl.setTextSize(13);
+        nameLbl.setTypeface(Typeface.DEFAULT_BOLD);
+        idDetails.addView(nameLbl);
 
-        TextView tvIdSub = new TextView(this);
-        tvIdSub.setText("Your suggestions will be attributed to this tester name");
-        tvIdSub.setTextColor(0xFF94A3B8);
-        tvIdSub.setTextSize(10.5f);
-        idTextCol.addView(tvIdSub);
-        idCard.addView(idTextCol);
+        TextView licLbl = new TextView(this);
+        licLbl.setText("Station Post 01 · Hume Doors Kingston");
+        licLbl.setTextColor(0xFF94A3B8);
+        licLbl.setTextSize(10.5f);
+        idDetails.addView(licLbl);
+        idCard.addView(idDetails);
 
-        idCard.setOnClickListener(new View.OnClickListener() {
+        TextView btnEditName = new TextView(this);
+        btnEditName.setText("Change");
+        btnEditName.setTextColor(0xFF00E5FF);
+        btnEditName.setTextSize(11);
+        btnEditName.setTypeface(Typeface.DEFAULT_BOLD);
+        btnEditName.setPadding(dp(8), dp(4), dp(8), dp(4));
+        btnEditName.setBackground(rounded(0x2200E5FF, dp(6)));
+        btnEditName.setOnClickListener(new View.OnClickListener() {
             public void onClick(View v) {
                 hapticClick();
                 showEditTesterIdentityDialog(new Runnable() {
                     public void run() {
-                        tvIdName.setText("Tester Identity: " + getTesterIdentityName());
+                        nameLbl.setText("Tester: " + getTesterIdentityName());
                     }
                 });
             }
         });
+        idCard.addView(btnEditName);
         root.addView(idCard);
 
         // 3. Feedback Type Header & Badge
@@ -5647,14 +5741,15 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
         final String[] catBadges = {"BUG", "FEATURE", "PATROL", "RADAR"};
         final int[] catColors = {0xFFFF4081, 0xFFFFB300, 0xFF00E5FF, 0xFF00E676};
 
-        final int[] selectedIndex = {0}; // Default: Bug Report
+        final int validInit = Math.max(0, Math.min(3, initialIndex));
+        final int[] selectedIndex = {validInit};
 
         LinearLayout typeTop = new LinearLayout(this);
         typeTop.setOrientation(LinearLayout.HORIZONTAL);
         typeTop.setGravity(Gravity.CENTER_VERTICAL);
         typeTop.setPadding(0, dp(4), 0, dp(8));
 
-        TextView typeLabel = new TextView(this);
+        final TextView typeLabel = new TextView(this);
         typeLabel.setText("FEEDBACK TYPE");
         typeLabel.setTextColor(catColors[selectedIndex[0]]);
         typeLabel.setTextSize(11);
@@ -5665,12 +5760,12 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
         typeTop.addView(typeLabel);
 
         final TextView catBadge = new TextView(this);
-        catBadge.setText(catBadges[0]);
-        catBadge.setTextColor(catColors[0]);
+        catBadge.setText(catBadges[selectedIndex[0]]);
+        catBadge.setTextColor(catColors[selectedIndex[0]]);
         catBadge.setTextSize(9);
         catBadge.setTypeface(Typeface.MONOSPACE);
         catBadge.setPadding(dp(6), dp(2), dp(6), dp(2));
-        catBadge.setBackground(rounded(0x22FF4081, dp(4)));
+        catBadge.setBackground(rounded(0x22000000 | (catColors[selectedIndex[0]] & 0x00FFFFFF), dp(4)));
         typeTop.addView(catBadge);
         root.addView(typeTop);
 
@@ -5719,6 +5814,24 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
 
             cBox.addView(content);
             catCards[i] = cBox;
+
+            cBox.setOnClickListener(new View.OnClickListener() {
+                public void onClick(View v) {
+                    hapticClick();
+                    selectedIndex[0] = idx;
+                    typeLabel.setTextColor(catColors[idx]);
+                    catBadge.setText(catBadges[idx]);
+                    catBadge.setTextColor(catColors[idx]);
+                    catBadge.setBackground(rounded(0x22000000 | (catColors[idx] & 0x00FFFFFF), dp(4)));
+                    for (int k = 0; k < 4; k++) {
+                        boolean selected = (k == idx);
+                        catCards[k].setBackground(selected ? outlined(catColors[k], dp(10)) : rounded(0xFF1E293B, dp(10)));
+                        LinearLayout inner = (LinearLayout) catCards[k].getChildAt(0);
+                        TextView t = (TextView) inner.getChildAt(1);
+                        t.setTextColor(selected ? 0xFFFFFFFF : 0xFF94A3B8);
+                    }
+                }
+            });
 
             if (i < 2) row1.addView(cBox); else row2.addView(cBox);
         }
