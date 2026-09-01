@@ -29,15 +29,22 @@ public class NineMensMorrisGameView extends View {
     private StatusListener statusListener;
     private final Paint boardBgPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final Paint goldBorderPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+    private final Paint goldDetailPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+    private final Paint conduitShadowPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final Paint conduitPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final Paint conduitGlowPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
-    private final Paint nodePaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+    private final Paint millBeamGoldPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+    private final Paint millBeamCyanPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+    private final Paint millBeamGlowPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+    private final Paint nodeSocketOuterPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+    private final Paint nodeSocketInnerPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final Paint shadowPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final Paint piecePaint = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final Paint pieceRimPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final Paint shinePaint = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final Paint selectGlowPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
-    private final Paint millGlowPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+    private final Paint strikeReticlePaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+    private final Paint targetPipPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final Paint textPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final RectF rect = new RectF();
 
@@ -88,16 +95,41 @@ public class NineMensMorrisGameView extends View {
 
         goldBorderPaint.setColor(0xFFEAB308);
         goldBorderPaint.setStyle(Paint.Style.STROKE);
-        goldBorderPaint.setStrokeWidth(dpf(1.8f));
+        goldBorderPaint.setStrokeWidth(dpf(2f));
 
-        conduitPaint.setColor(0xFF38BDF8);
+        goldDetailPaint.setColor(0xFFCA8A04);
+        goldDetailPaint.setStyle(Paint.Style.STROKE);
+        goldDetailPaint.setStrokeWidth(dpf(1f));
+
+        conduitShadowPaint.setColor(0xFF040812);
+        conduitShadowPaint.setStyle(Paint.Style.STROKE);
+        conduitShadowPaint.setStrokeWidth(dpf(8f));
+
+        conduitPaint.setColor(0xFFEAB308);
+        conduitPaint.setStyle(Paint.Style.STROKE);
         conduitPaint.setStrokeWidth(dpf(2.8f));
 
-        conduitGlowPaint.setColor(0x3338BDF8);
-        conduitGlowPaint.setStrokeWidth(dpf(6f));
+        conduitGlowPaint.setColor(0x33EAB308);
+        conduitGlowPaint.setStyle(Paint.Style.STROKE);
+        conduitGlowPaint.setStrokeWidth(dpf(6.5f));
 
-        nodePaint.setColor(0xFF1E293B);
-        nodePaint.setStyle(Paint.Style.FILL);
+        millBeamGoldPaint.setColor(0xFFF59E0B);
+        millBeamGoldPaint.setStyle(Paint.Style.STROKE);
+        millBeamGoldPaint.setStrokeWidth(dpf(4.2f));
+
+        millBeamCyanPaint.setColor(0xFF00E5FF);
+        millBeamCyanPaint.setStyle(Paint.Style.STROKE);
+        millBeamCyanPaint.setStrokeWidth(dpf(4.2f));
+
+        millBeamGlowPaint.setStyle(Paint.Style.STROKE);
+        millBeamGlowPaint.setStrokeWidth(dpf(11f));
+
+        nodeSocketOuterPaint.setColor(0xFFCA8A04);
+        nodeSocketOuterPaint.setStyle(Paint.Style.STROKE);
+        nodeSocketOuterPaint.setStrokeWidth(dpf(1.6f));
+
+        nodeSocketInnerPaint.setColor(0xFF0C1425);
+        nodeSocketInnerPaint.setStyle(Paint.Style.FILL);
 
         shadowPaint.setColor(0x99000000);
         shadowPaint.setStyle(Paint.Style.FILL);
@@ -112,8 +144,12 @@ public class NineMensMorrisGameView extends View {
         selectGlowPaint.setColor(0x88FFD166);
         selectGlowPaint.setStyle(Paint.Style.FILL);
 
-        millGlowPaint.setColor(0x8810B981);
-        millGlowPaint.setStyle(Paint.Style.FILL);
+        strikeReticlePaint.setColor(0xEEF43F5E);
+        strikeReticlePaint.setStyle(Paint.Style.STROKE);
+        strikeReticlePaint.setStrokeWidth(dpf(2.2f));
+
+        targetPipPaint.setColor(0xAAFFD166);
+        targetPipPaint.setStyle(Paint.Style.FILL);
 
         textPaint.setColor(0xFFE2E8F0);
         textPaint.setTextAlign(Paint.Align.CENTER);
@@ -412,6 +448,37 @@ public class NineMensMorrisGameView extends View {
         return super.onTouchEvent(event);
     }
 
+    private boolean isAdjacentNode(int from, int to) {
+        for (int adj : ADJACENT[from]) {
+            if (adj == to) return true;
+        }
+        return false;
+    }
+
+    private boolean isLegalTarget(int idx) {
+        if (!whiteTurn || mustRemoveOpponent || gameOver) return false;
+        if (whiteUnplaced > 0) {
+            return board[idx] == 0;
+        } else {
+            if (selectedIndex == -1) return false;
+            if (board[idx] != 0) return false;
+            return (whiteAlive == 3 || isAdjacentNode(selectedIndex, idx));
+        }
+    }
+
+    private boolean isTargetableForRemoval(int idx) {
+        if (!whiteTurn || !mustRemoveOpponent || gameOver) return false;
+        if (board[idx] != 2) return false;
+        boolean allInMills = true;
+        for (int i = 0; i < 24; i++) {
+            if (board[i] == 2 && !isMill(i, 2)) {
+                allInMills = false;
+                break;
+            }
+        }
+        return allInMills || !isMill(idx, 2);
+    }
+
     @Override
     protected void onDraw(Canvas canvas) {
         super.onDraw(canvas);
@@ -419,18 +486,22 @@ public class NineMensMorrisGameView extends View {
         int h = getHeight();
         if (w <= 0 || h <= 0) return;
 
+        // Rich Imperial Slate Canvas with Radial Illumination
         rect.set(0, 0, w, h);
-        boardBgPaint.setShader(new LinearGradient(0, 0, w, h, 0xFF090D16, 0xFF1E293B, Shader.TileMode.CLAMP));
+        boardBgPaint.setShader(new LinearGradient(0, 0, w, h, 0xFF0B101D, 0xFF182238, Shader.TileMode.CLAMP));
         canvas.drawRoundRect(rect, dpf(16f), dpf(16f), boardBgPaint);
 
         rect.set(dpf(2.5f), dpf(2.5f), w - dpf(2.5f), h - dpf(2.5f));
         canvas.drawRoundRect(rect, dpf(14f), dpf(14f), goldBorderPaint);
 
-        float size = Math.min(w, h - dpf(28f));
-        float startX = (w - size) / 2f;
-        float startY = (h - dpf(28f) - size) / 2f + dpf(8f);
+        rect.set(dpf(5.5f), dpf(5.5f), w - dpf(5.5f), h - dpf(5.5f));
+        canvas.drawRoundRect(rect, dpf(11f), dpf(11f), goldDetailPaint);
 
-        // Draw 3 Concentric Conduit Squares with Glow
+        float size = Math.min(w, h - dpf(32f));
+        float startX = (w - size) / 2f;
+        float startY = (h - dpf(32f) - size) / 2f + dpf(8f);
+
+        // 1. Draw 3 Concentric Deep Recessed Conduit Grooves
         for (int sq = 0; sq < 3; sq++) {
             int offset = sq * 8;
             for (int i = 0; i < 8; i++) {
@@ -439,57 +510,126 @@ public class NineMensMorrisGameView extends View {
                 float y1 = startY + NODES[offset + i][1] * size;
                 float x2 = startX + NODES[next][0] * size;
                 float y2 = startY + NODES[next][1] * size;
+                canvas.drawLine(x1, y1, x2, y2, conduitShadowPaint);
                 canvas.drawLine(x1, y1, x2, y2, conduitGlowPaint);
                 canvas.drawLine(x1, y1, x2, y2, conduitPaint);
             }
         }
 
-        // Draw Cross Conduits
+        // 2. Draw Cross Connecting Conduits
         int[][] cross = {{1, 9}, {9, 17}, {3, 11}, {11, 19}, {5, 13}, {13, 21}, {7, 15}, {15, 23}};
         for (int[] c : cross) {
             float x1 = startX + NODES[c[0]][0] * size;
             float y1 = startY + NODES[c[0]][1] * size;
             float x2 = startX + NODES[c[1]][0] * size;
             float y2 = startY + NODES[c[1]][1] * size;
+            canvas.drawLine(x1, y1, x2, y2, conduitShadowPaint);
             canvas.drawLine(x1, y1, x2, y2, conduitGlowPaint);
             canvas.drawLine(x1, y1, x2, y2, conduitPaint);
         }
 
-        // Draw 24 Nodes with 3D Spheres
-        float nodeR = dpf(7f);
-        float pieceR = dpf(12f);
+        // 3. Draw Active Mill Laser Energy Beams
+        for (int[] m : MILLS) {
+            int c = board[m[0]];
+            if (c != 0 && board[m[1]] == c && board[m[2]] == c) {
+                float x0 = startX + NODES[m[0]][0] * size;
+                float y0 = startY + NODES[m[0]][1] * size;
+                float x1 = startX + NODES[m[1]][0] * size;
+                float y1 = startY + NODES[m[1]][1] * size;
+                float x2 = startX + NODES[m[2]][0] * size;
+                float y2 = startY + NODES[m[2]][1] * size;
+
+                millBeamGlowPaint.setColor(c == 1 ? 0x55F59E0B : 0x5500E5FF);
+                canvas.drawLine(x0, y0, x1, y1, millBeamGlowPaint);
+                canvas.drawLine(x1, y1, x2, y2, millBeamGlowPaint);
+
+                Paint laserP = (c == 1 ? millBeamGoldPaint : millBeamCyanPaint);
+                canvas.drawLine(x0, y0, x1, y1, laserP);
+                canvas.drawLine(x1, y1, x2, y2, laserP);
+            }
+        }
+
+        // 4. Draw 24 Inlaid Brass & Obsidian Sockets with 3D Spheres
+        float socketR = dpf(8f);
+        float pieceR = dpf(12.5f);
 
         for (int i = 0; i < 24; i++) {
             float nx = startX + NODES[i][0] * size;
             float ny = startY + NODES[i][1] * size;
 
-            canvas.drawCircle(nx, ny, nodeR, nodePaint);
-            canvas.drawCircle(nx, ny, nodeR, goldBorderPaint);
+            // Inlaid Brass Socket Depth
+            canvas.drawCircle(nx, ny, socketR, nodeSocketInnerPaint);
+            canvas.drawCircle(nx, ny, socketR, nodeSocketOuterPaint);
+            canvas.drawCircle(nx, ny, dpf(2f), goldDetailPaint);
 
+            // Valid Target Pip Beacon
+            if (isLegalTarget(i)) {
+                canvas.drawCircle(nx, ny, dpf(4.5f), targetPipPaint);
+                canvas.drawCircle(nx, ny, dpf(2f), shinePaint);
+            }
+
+            // Selected Piece Illumination & Corner Brackets
             if (i == selectedIndex) {
-                canvas.drawCircle(nx, ny, pieceR * 1.4f, selectGlowPaint);
+                canvas.drawCircle(nx, ny, pieceR * 1.45f, selectGlowPaint);
+                Paint tick = new Paint(Paint.ANTI_ALIAS_FLAG);
+                tick.setColor(0xFFFFD166);
+                tick.setStrokeWidth(dpf(2f));
+                float tr = pieceR * 1.3f;
+                float tLen = dpf(4.5f);
+                canvas.drawLine(nx - tr, ny - tr, nx - tr + tLen, ny - tr, tick);
+                canvas.drawLine(nx - tr, ny - tr, nx - tr, ny - tr + tLen, tick);
+                canvas.drawLine(nx + tr, ny - tr, nx + tr - tLen, ny - tr, tick);
+                canvas.drawLine(nx + tr, ny - tr, nx + tr, ny - tr + tLen, tick);
+                canvas.drawLine(nx - tr, ny + tr, nx - tr + tLen, ny + tr, tick);
+                canvas.drawLine(nx - tr, ny + tr, nx - tr, ny + tr - tLen, tick);
+                canvas.drawLine(nx + tr, ny + tr, nx + tr - tLen, ny + tr, tick);
+                canvas.drawLine(nx + tr, ny + tr, nx + tr, ny + tr - tLen, tick);
             }
 
             int val = board[i];
-            if (val == 1) draw3DMarble(canvas, nx, ny, pieceR, true);
-            else if (val == 2) draw3DMarble(canvas, nx, ny, pieceR, false);
+            if (val == 1) {
+                draw3DMarble(canvas, nx, ny, pieceR, true);
+            } else if (val == 2) {
+                draw3DMarble(canvas, nx, ny, pieceR, false);
+                // Strike Reticle when targetable for removal
+                if (isTargetableForRemoval(i)) {
+                    float rr = pieceR * 1.35f;
+                    canvas.drawCircle(nx, ny, rr, strikeReticlePaint);
+                    // 4 Crosshair Ticks
+                    canvas.drawLine(nx, ny - rr - dpf(3f), nx, ny - rr + dpf(3f), strikeReticlePaint);
+                    canvas.drawLine(nx, ny + rr - dpf(3f), nx, ny + rr + dpf(3f), strikeReticlePaint);
+                    canvas.drawLine(nx - rr - dpf(3f), ny, nx - rr + dpf(3f), ny, strikeReticlePaint);
+                    canvas.drawLine(nx + rr - dpf(3f), ny, nx + rr + dpf(3f), ny, strikeReticlePaint);
+                }
+            }
         }
 
+        // Bottom Telemetry Bar
         textPaint.setTextSize(dpf(10f));
-        canvas.drawText("🟡 Gold: " + whiteAlive + " (Unplaced: " + whiteUnplaced + ") | 🔵 Cyan: " + blackAlive + " (Unplaced: " + blackUnplaced + ")", w / 2f, h - dpf(8f), textPaint);
+        canvas.drawText("🟡 Gold: " + whiteAlive + " (" + whiteUnplaced + " in reserve)   |   🔵 Cyan: " + blackAlive + " (" + blackUnplaced + " in reserve)", w / 2f, h - dpf(9f), textPaint);
     }
 
     private void draw3DMarble(Canvas canvas, float cx, float cy, float r, boolean isGold) {
-        canvas.drawCircle(cx + dpf(1.5f), cy + dpf(2f), r, shadowPaint);
+        // Deep ambient drop shadow
+        canvas.drawCircle(cx + dpf(1.8f), cy + dpf(2.4f), r, shadowPaint);
 
         RadialGradient grad = new RadialGradient(
             cx - r * 0.3f, cy - r * 0.3f, r * 1.3f,
-            isGold ? new int[]{0xFFFFFBEB, 0xFFF59E0B, 0xFF78350F} : new int[]{0xFFE0F2FE, 0xFF0284C7, 0xFF082F49},
+            isGold ? new int[]{0xFFFFFFF5, 0xFFFDE047, 0xFFD97706, 0xFF451A03}
+                   : new int[]{0xFFF0FDF4, 0xFF38BDF8, 0xFF0284C7, 0xFF031628},
             null, Shader.TileMode.CLAMP
         );
         piecePaint.setShader(grad);
         canvas.drawCircle(cx, cy, r, piecePaint);
-        canvas.drawCircle(cx, cy, r, pieceRimPaint);
-        canvas.drawCircle(cx - r * 0.35f, cy - r * 0.35f, r * 0.3f, shinePaint);
+
+        // Filigree Rim (Gold or Silver)
+        Paint rim = new Paint(Paint.ANTI_ALIAS_FLAG);
+        rim.setColor(isGold ? 0xCCFDE047 : 0xCCE0F2FE);
+        rim.setStyle(Paint.Style.STROKE);
+        rim.setStrokeWidth(dpf(1.4f));
+        canvas.drawCircle(cx, cy, r, rim);
+
+        // Specular Curved Flare
+        canvas.drawCircle(cx - r * 0.35f, cy - r * 0.35f, r * 0.32f, shinePaint);
     }
 }
