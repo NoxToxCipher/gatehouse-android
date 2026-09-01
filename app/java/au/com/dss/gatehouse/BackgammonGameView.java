@@ -59,6 +59,32 @@ public class BackgammonGameView extends View {
     private int selectedPoint = -1;
     private int lastDie1 = 0, lastDie2 = 0;
 
+    // Animation States
+    private boolean isRolling = false;
+    private int tumbleDie1 = 1, tumbleDie2 = 1;
+    private float tumbleRot1 = 0f, tumbleRot2 = 0f;
+
+    // Checker Sliding Animation
+    private boolean isCheckerAnimating = false;
+    private float animStartX, animStartY;
+    private float animEndX, animEndY;
+    private boolean animIsGold;
+    private long animStartTime = 0;
+    private static final long CHECKER_SLIDE_DURATION_MS = 220;
+
+    // Blot Hit Shockwave Ripple
+    private float rippleX = -1, rippleY = -1;
+    private long rippleStartTime = 0;
+    private static final long RIPPLE_DURATION_MS = 380;
+    private final Paint ripplePaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+
+    // Bearing-off Particles
+    private final List<Particle> particles = new ArrayList<>();
+    private static class Particle {
+        float x, y, vx, vy, alpha, size;
+        int color;
+    }
+
     private float dpf(float v) {
         return v * getResources().getDisplayMetrics().density;
     }
@@ -186,40 +212,63 @@ public class BackgammonGameView extends View {
     }
 
     public void rollDice() {
-        if (!waitingForRoll) return;
+        if (!waitingForRoll || isRolling) return;
+        isRolling = true;
         history.add(new HistoryState(points, whiteBar, blackBar, whiteOff, blackOff, whiteTurn, waitingForRoll, availableDice, lastDie1, lastDie2));
         try {
             RecreationAudioSynth.playDiceRoll();
             performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP);
         } catch (Exception ignored) {}
 
-        int d1 = rand.nextInt(6) + 1;
-        int d2 = rand.nextInt(6) + 1;
-        lastDie1 = d1;
-        lastDie2 = d2;
+        animateDiceTumble(0);
+    }
 
-        availableDice.clear();
-        if (d1 == d2) {
-            for (int i = 0; i < 4; i++) availableDice.add(d1);
-        } else {
-            availableDice.add(d1);
-            availableDice.add(d2);
-        }
-        waitingForRoll = false;
-
-        if (!canAnyMove(whiteTurn)) {
+    private void animateDiceTumble(final int step) {
+        if (step < 6) {
+            tumbleDie1 = rand.nextInt(6) + 1;
+            tumbleDie2 = rand.nextInt(6) + 1;
+            tumbleRot1 = (rand.nextFloat() - 0.5f) * 40f;
+            tumbleRot2 = (rand.nextFloat() - 0.5f) * 40f;
+            invalidate();
             postDelayed(new Runnable() {
-                public void run() { endTurn(); }
-            }, 700);
+                public void run() {
+                    animateDiceTumble(step + 1);
+                }
+            }, 45);
         } else {
-            if (!whiteTurn) {
-                postDelayed(new Runnable() {
-                    public void run() { botPlayTurn(); }
-                }, 500);
+            int d1 = rand.nextInt(6) + 1;
+            int d2 = rand.nextInt(6) + 1;
+            lastDie1 = d1;
+            lastDie2 = d2;
+            tumbleDie1 = d1;
+            tumbleDie2 = d2;
+            tumbleRot1 = 0f;
+            tumbleRot2 = 0f;
+            isRolling = false;
+
+            availableDice.clear();
+            if (d1 == d2) {
+                for (int i = 0; i < 4; i++) availableDice.add(d1);
+            } else {
+                availableDice.add(d1);
+                availableDice.add(d2);
             }
+            waitingForRoll = false;
+
+            if (!canAnyMove(whiteTurn)) {
+                postDelayed(new Runnable() {
+                    public void run() { endTurn(); }
+                }, 700);
+            } else {
+                if (!whiteTurn) {
+                    postDelayed(new Runnable() {
+                        public void run() { botPlayTurn(); }
+                    }, 500);
+                }
+            }
+            updateStatus();
+            invalidate();
         }
-        updateStatus();
-        invalidate();
     }
 
     private boolean canAnyMove(boolean isWhite) {
@@ -284,6 +333,7 @@ public class BackgammonGameView extends View {
                 if (points[toPoint] == -1) {
                     points[toPoint] = 0;
                     blackBar++;
+                    triggerRipple(toPoint, false);
                     try {
                         RecreationAudioSynth.playChessPieceThud(true);
                         performHapticFeedback(HapticFeedbackConstants.LONG_PRESS);
@@ -295,11 +345,14 @@ public class BackgammonGameView extends View {
             } else {
                 if (!canBearOff(true)) return false;
                 whiteOff++;
+                spawnBearingOffParticles(true);
                 try { RecreationAudioSynth.playBadukStoneClack(); } catch (Exception ignored) {}
             }
 
             if (fromPoint == -1) whiteBar--;
             else points[fromPoint]--;
+
+            triggerSlide(fromPoint, toPoint, true);
 
         } else {
             int toPoint = (fromPoint == -1) ? dieVal - 1 : fromPoint + dieVal;
@@ -309,6 +362,7 @@ public class BackgammonGameView extends View {
                 if (points[toPoint] == 1) {
                     points[toPoint] = 0;
                     whiteBar++;
+                    triggerRipple(toPoint, true);
                     try {
                         RecreationAudioSynth.playChessPieceThud(true);
                         performHapticFeedback(HapticFeedbackConstants.LONG_PRESS);
@@ -320,11 +374,14 @@ public class BackgammonGameView extends View {
             } else {
                 if (!canBearOff(false)) return false;
                 blackOff++;
+                spawnBearingOffParticles(false);
                 try { RecreationAudioSynth.playBadukStoneClack(); } catch (Exception ignored) {}
             }
 
             if (fromPoint == -1) blackBar--;
             else points[fromPoint]++;
+
+            triggerSlide(fromPoint, toPoint, false);
         }
 
         try {
@@ -575,6 +632,52 @@ public class BackgammonGameView extends View {
             }
         }
 
+        // Render Shockwave Ripple on Blot Hits
+        long rippleElapsed = System.currentTimeMillis() - rippleStartTime;
+        if (rippleX >= 0 && rippleElapsed < RIPPLE_DURATION_MS) {
+            float rp = (float) rippleElapsed / RIPPLE_DURATION_MS;
+            float rR = checkerR * (1.0f + 2.2f * rp);
+            ripplePaint.setColor(0xFFFFD166);
+            ripplePaint.setStyle(Paint.Style.STROKE);
+            ripplePaint.setStrokeWidth(dpf(2.4f) * (1f - rp));
+            ripplePaint.setAlpha((int) (220 * (1f - rp)));
+            canvas.drawCircle(rippleX, rippleY, rR, ripplePaint);
+            postInvalidateOnAnimation();
+        }
+
+        // Render Animated Sliding Active Checker
+        long slideElapsed = System.currentTimeMillis() - animStartTime;
+        if (isCheckerAnimating && slideElapsed < CHECKER_SLIDE_DURATION_MS) {
+            float sp = (float) slideElapsed / CHECKER_SLIDE_DURATION_MS;
+            float t = 1f - (1f - sp) * (1f - sp); // Ease-out quad
+            float curX = animStartX + (animEndX - animStartX) * t;
+            float curY = animStartY + (animEndY - animStartY) * t - (float) Math.sin(sp * Math.PI) * dpf(14f);
+            drawBackgammonChecker(canvas, curX, curY, checkerR * 1.08f, animIsGold, false);
+            postInvalidateOnAnimation();
+        } else if (isCheckerAnimating) {
+            isCheckerAnimating = false;
+        }
+
+        // Render Bearing-Off Golden Particles
+        if (!particles.isEmpty()) {
+            Paint pPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+            pPaint.setStyle(Paint.Style.FILL);
+            for (int i = particles.size() - 1; i >= 0; i--) {
+                Particle p = particles.get(i);
+                p.x += p.vx;
+                p.y += p.vy;
+                p.alpha -= 0.045f;
+                if (p.alpha <= 0) {
+                    particles.remove(i);
+                } else {
+                    pPaint.setColor(p.color);
+                    pPaint.setAlpha((int) (255 * p.alpha));
+                    canvas.drawCircle(p.x, p.y, p.size * p.alpha, pPaint);
+                }
+            }
+            postInvalidateOnAnimation();
+        }
+
         // Bottom Dashboard: Checkers Borne Off & 3D Rolling Dice
         float trayTop = h - dpf(32f);
         rect.set(pad, trayTop, w - pad, h - dpf(4f));
@@ -584,10 +687,94 @@ public class BackgammonGameView extends View {
         textPaint.setTextSize(dpf(10f));
         canvas.drawText("🟡 Off: " + whiteOff + " (Bar " + whiteBar + ") | 🔵 Off: " + blackOff + " (Bar " + blackBar + ")", w * 0.38f, h - dpf(12f), textPaint);
 
-        if (lastDie1 > 0 && lastDie2 > 0) {
-            draw3DDie(canvas, w - dpf(65f), h - dpf(18f), dpf(10.5f), lastDie1);
-            draw3DDie(canvas, w - dpf(35f), h - dpf(18f), dpf(10.5f), lastDie2);
+        if (isRolling || (lastDie1 > 0 && lastDie2 > 0)) {
+            int d1 = isRolling ? tumbleDie1 : lastDie1;
+            int d2 = isRolling ? tumbleDie2 : lastDie2;
+            float rot1 = isRolling ? tumbleRot1 : 0f;
+            float rot2 = isRolling ? tumbleRot2 : 0f;
+            draw3DDie(canvas, w - dpf(65f), h - dpf(18f), dpf(10.5f), d1, rot1);
+            draw3DDie(canvas, w - dpf(35f), h - dpf(18f), dpf(10.5f), d2, rot2);
+            if (isRolling) postInvalidateOnAnimation();
         }
+    }
+
+    private float[] getPointCoordinates(int p, boolean isBar, boolean isGold, float w, float h) {
+        float pad = dpf(10f);
+        float barW = dpf(16f);
+        float colW = (w - pad * 2 - barW) / 12f;
+        float checkerR = Math.min(colW * 0.44f, dpf(11f));
+        float barLeft = pad + 6 * colW;
+
+        if (isBar || p == -1) {
+            float bcx = barLeft + barW / 2f;
+            float bcy = isGold ? ((h - dpf(36f)) / 2f + dpf(14f)) : ((h - dpf(36f)) / 2f - dpf(14f));
+            return new float[]{bcx, bcy};
+        }
+        if (p < 0 || p >= 24) { // Borne off tray
+            return new float[]{isGold ? (w * 0.35f) : (w * 0.65f), h - dpf(18f)};
+        }
+
+        int count = Math.abs(points[p]);
+        float cx, cy;
+        if (p < 12) {
+            int col = 11 - p;
+            cx = pad + (col < 6 ? col * colW : col * colW + barW) + colW / 2f;
+            cy = h - dpf(36f) - checkerR - Math.min(count, 4) * checkerR * 1.8f;
+        } else {
+            int col = p - 12;
+            cx = pad + (col < 6 ? col * colW : col * colW + barW) + colW / 2f;
+            cy = dpf(8f) + checkerR + Math.min(count, 4) * checkerR * 1.8f;
+        }
+        return new float[]{cx, cy};
+    }
+
+    private void triggerSlide(int fromPt, int toPt, boolean isGold) {
+        float w = getWidth();
+        float h = getHeight();
+        if (w <= 0 || h <= 0) return;
+        float[] start = getPointCoordinates(fromPt, fromPt == -1, isGold, w, h);
+        float[] end = getPointCoordinates(toPt, false, isGold, w, h);
+        animStartX = start[0];
+        animStartY = start[1];
+        animEndX = end[0];
+        animEndY = end[1];
+        animIsGold = isGold;
+        animStartTime = System.currentTimeMillis();
+        isCheckerAnimating = true;
+        invalidate();
+    }
+
+    private void triggerRipple(int pt, boolean isGold) {
+        float w = getWidth();
+        float h = getHeight();
+        if (w <= 0 || h <= 0) return;
+        float[] pos = getPointCoordinates(pt, false, isGold, w, h);
+        rippleX = pos[0];
+        rippleY = pos[1];
+        rippleStartTime = System.currentTimeMillis();
+        invalidate();
+    }
+
+    private void spawnBearingOffParticles(boolean isGold) {
+        float w = getWidth();
+        float h = getHeight();
+        if (w <= 0 || h <= 0) return;
+        float ox = isGold ? (w * 0.35f) : (w * 0.65f);
+        float oy = h - dpf(18f);
+        for (int i = 0; i < 14; i++) {
+            Particle p = new Particle();
+            p.x = ox + (rand.nextFloat() - 0.5f) * dpf(24f);
+            p.y = oy + (rand.nextFloat() - 0.5f) * dpf(10f);
+            float angle = (float) (rand.nextFloat() * Math.PI * 2);
+            float speed = dpf(1.2f + rand.nextFloat() * 2.5f);
+            p.vx = (float) Math.cos(angle) * speed;
+            p.vy = (float) Math.sin(angle) * speed - dpf(1.5f);
+            p.alpha = 1.0f;
+            p.size = dpf(2f + rand.nextFloat() * 2.5f);
+            p.color = isGold ? 0xFFFDE047 : 0xFF38BDF8;
+            particles.add(p);
+        }
+        invalidate();
     }
 
     private void drawBackgammonChecker(Canvas canvas, float cx, float cy, float r, boolean isGold, boolean isMovable) {
@@ -622,7 +809,11 @@ public class BackgammonGameView extends View {
         canvas.drawCircle(cx - r * 0.35f, cy - r * 0.35f, r * 0.28f, checkerShinePaint);
     }
 
-    private void draw3DDie(Canvas canvas, float cx, float cy, float s, int val) {
+    private void draw3DDie(Canvas canvas, float cx, float cy, float s, int val, float rot) {
+        canvas.save();
+        if (rot != 0f) {
+            canvas.rotate(rot, cx, cy);
+        }
         // Deep drop shadow
         rect.set(cx - s + dpf(1f), cy - s + dpf(1.5f), cx + s + dpf(1f), cy + s + dpf(1.5f));
         canvas.drawRoundRect(rect, dpf(3.5f), dpf(3.5f), shadowPaint);
@@ -644,5 +835,6 @@ public class BackgammonGameView extends View {
             canvas.drawCircle(cx - s * 0.5f, cy, dpf(1.8f), dicePipPaint);
             canvas.drawCircle(cx + s * 0.5f, cy, dpf(1.8f), dicePipPaint);
         }
+        canvas.restore();
     }
 }
