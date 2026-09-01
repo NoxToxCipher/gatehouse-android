@@ -313,6 +313,8 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
     private boolean hasMag = false;
     private float currentAzimuth = 0f;
     private float smoothedAzimuth = 0f;
+    private float smoothedTiltPitch = 0f;
+    private float smoothedTiltRoll = 0f;
     private boolean isCompassInitialized = false;
 
     // 🔦 Robust Double-Chop Shake Detector
@@ -1537,67 +1539,79 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
 
             float cx = w / 2f;
             float cy = h / 2f;
-            float r = Math.min(w, h) / 2f - dpf(10f);
+            float r = Math.min(w, h) / 2f - dpf(8f);
 
-            // 1. 3D DEVICE GYROSCOPE PERSPECTIVE TRANSFORM (BlackBerry 10 Parallax Effect)
-            float tiltRoll = Math.max(-20f, Math.min(20f, lastAccel[0] * 2.0f));
-            float tiltPitch = Math.max(-20f, Math.min(20f, (lastAccel[1] - 4.5f) * 2.0f));
+            // 1. FULL 3D SPATIAL GYROSCOPE CAMERA PERSPECTIVE
+            float tiltRoll = Math.max(-45f, Math.min(45f, smoothedTiltRoll));
+            float tiltPitch = Math.max(-45f, Math.min(45f, smoothedTiltPitch));
 
             canvas.save();
             camera3D.save();
+            camera3D.translate(0, 0, -dpf(12f));
             camera3D.rotateX(-tiltPitch);
-            camera3D.rotateY(-tiltRoll);
+            camera3D.rotateY(tiltRoll);
             camera3D.getMatrix(matrix3D);
             camera3D.restore();
             matrix3D.preTranslate(-cx, -cy);
             matrix3D.postTranslate(cx, cy);
             canvas.concat(matrix3D);
 
-            // 2. 3D CHASSIS DROP SHADOW & GIMBAL CASING
-            float shadowOffX = -tiltRoll * 0.35f;
-            float shadowOffY = tiltPitch * 0.35f + dpf(3.5f);
+            // 2. LAYER 1: 3D GIMBAL HOUSING & DYNAMIC AMBIENT GROUND SHADOW
+            float shadowOffX = -tiltRoll * 0.75f;
+            float shadowOffY = tiltPitch * 0.75f + dpf(5.5f);
             canvas.drawCircle(cx + shadowOffX, cy + shadowOffY, r, shadowPaint);
 
-            // Machined Titanium Outer Rim
+            // Machined Aerospace Titanium Outer Rim
             RadialGradient rimGrad = new RadialGradient(
-                cx - r * 0.3f, cy - r * 0.3f, r * 1.3f,
-                new int[]{0xFF475569, 0xFF1E293B, 0xFF0F172A},
+                cx - tiltRoll * 0.4f, cy - r * 0.4f + tiltPitch * 0.4f, r * 1.35f,
+                new int[]{0xFF475569, 0xFF1E293B, 0xFF0B1120},
                 null, Shader.TileMode.CLAMP
             );
             chassisPaint.setShader(rimGrad);
             chassisPaint.setStyle(Paint.Style.FILL);
             canvas.drawCircle(cx, cy, r, chassisPaint);
 
-            // Precision Chamfered Brass Accent Ring
+            // Precision Chamfered 24K Gold Accent Rim
             bezelRingPaint.setStyle(Paint.Style.STROKE);
-            bezelRingPaint.setStrokeWidth(dpf(2f));
+            bezelRingPaint.setStrokeWidth(dpf(2.4f));
             bezelRingPaint.setColor(0xFFEAB308);
             canvas.drawCircle(cx, cy, r - dpf(2f), bezelRingPaint);
 
-            // 4 Machined Hex Stud Screws at 0, 90, 180, 270
+            // 8 Machined Hex Stud Screws Around the Bezel
             Paint screwPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
             screwPaint.setColor(0xFF94A3B8);
             screwPaint.setStyle(Paint.Style.FILL);
-            for (int a = 0; a < 360; a += 90) {
+            for (int a = 0; a < 360; a += 45) {
                 double rad = Math.toRadians(a);
-                float sx = (float) (cx + Math.cos(rad) * (r - dpf(5f)));
-                float sy = (float) (cy + Math.sin(rad) * (r - dpf(5f)));
-                canvas.drawCircle(sx, sy, dpf(2f), screwPaint);
+                float sx = (float) (cx + Math.cos(rad) * (r - dpf(4.8f)));
+                float sy = (float) (cy + Math.sin(rad) * (r - dpf(4.8f)));
+                canvas.drawCircle(sx, sy, dpf(1.8f), screwPaint);
             }
 
-            // 3. INNER OBSIDIAN DIAL BED
+            // 3. LAYER 2: RECESSED 3D OBSIDIAN DIAL BED (Parallax Depth Shift)
             float dialR = r - dpf(10f);
+            float dialParallaxX = -tiltRoll * 0.35f;
+            float dialParallaxY = tiltPitch * 0.35f;
+
             RadialGradient dialGrad = new RadialGradient(
-                cx, cy, dialR,
-                new int[]{0xFF1E293B, 0xFF0F172A, 0xFF050811},
+                cx + dialParallaxX, cy + dialParallaxY, dialR,
+                new int[]{0xFF1E293B, 0xFF0F172A, 0xFF030712},
                 null, Shader.TileMode.CLAMP
             );
             dialBgPaint.setShader(dialGrad);
             dialBgPaint.setStyle(Paint.Style.FILL);
-            canvas.drawCircle(cx, cy, dialR, dialBgPaint);
+            canvas.drawCircle(cx + dialParallaxX * 0.5f, cy + dialParallaxY * 0.5f, dialR, dialBgPaint);
 
-            // 4. ROTATING 3D COMPASS ROSE & AZIMUTH CALIBRATION DIAL
+            // Concentric Gauge Reticle Track
+            Paint reticleTrack = new Paint(Paint.ANTI_ALIAS_FLAG);
+            reticleTrack.setStyle(Paint.Style.STROKE);
+            reticleTrack.setColor(0x3338BDF8);
+            reticleTrack.setStrokeWidth(dpf(1f));
+            canvas.drawCircle(cx + dialParallaxX * 0.5f, cy + dialParallaxY * 0.5f, dialR * 0.72f, reticleTrack);
+
+            // 4. LAYER 3: ROTATING 3D COMPASS ROSE & AZIMUTH CALIBRATION DIAL
             canvas.save();
+            canvas.translate(dialParallaxX * 0.5f, dialParallaxY * 0.5f);
             canvas.rotate(-currentAzimuth, cx, cy);
 
             // 8-Point Faceted Compass Rose Star
@@ -1626,7 +1640,7 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
                 canvas.drawLine(x1, y1, x2, y2, tickPaint);
 
                 if (isCardinal || isSemiCardinal || (deg % 30 == 0)) {
-                    float rText = rInner - dpf(10f);
+                    float rText = rInner - dpf(9.5f);
                     float tx = (float) (cx + Math.cos(rad) * rText);
                     float ty = (float) (cy + Math.sin(rad) * rText) + dpf(3.5f);
 
@@ -1648,13 +1662,16 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
             }
             canvas.restore();
 
-            // 5. 3D FLOATING FACETED DIAMOND NEEDLE
+            // 5. LAYER 4: 3D FLOATING FACETED DIAMOND NEEDLE
             float nLen = dialR - dpf(22f);
             float nWidth = dpf(8.5f);
 
-            // 3D Needle Drop Shadow on Dial
+            // 3D Needle Drop Shadow on Dial (Translates dynamically with tilt)
+            float needleShadowX = shadowOffX * 0.5f;
+            float needleShadowY = shadowOffY * 0.5f;
+
             canvas.save();
-            canvas.translate(shadowOffX * 0.6f, shadowOffY * 0.6f);
+            canvas.translate(needleShadowX, needleShadowY);
             path.reset();
             path.moveTo(cx, cy - nLen);
             path.lineTo(cx + nWidth, cy);
@@ -1714,30 +1731,39 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
             centerHubPaint.setShader(rubyGrad);
             canvas.drawCircle(cx, cy, dpf(4f), centerHubPaint);
 
-            // 6. CENTER SPIRIT LEVEL CROSSHAIR & BUBBLE
-            float levelX = cx - tiltRoll * 1.0f;
-            float levelY = cy + tiltPitch * 1.0f;
+            // 6. LAYER 5: 3D INTEGRATED SPIRIT LEVEL & FLUID BUBBLE
+            float levelX = cx - tiltRoll * 0.9f;
+            float levelY = cy + tiltPitch * 0.9f;
+            boolean isLevel = (Math.abs(tiltRoll) <= 1.5f && Math.abs(tiltPitch) <= 1.5f);
+
+            levelerPaint.setColor(isLevel ? 0xCC10B981 : 0x5538BDF8);
             canvas.drawCircle(cx, cy, dpf(14f), levelerPaint);
-            canvas.drawLine(cx - dpf(18f), cy, cx + dpf(18f), cy, levelerPaint);
-            canvas.drawLine(cx, cy - dpf(18f), cx, cy + dpf(18f), levelerPaint);
+            canvas.drawCircle(cx, cy, dpf(28f), levelerPaint);
+            canvas.drawLine(cx - dpf(22f), cy, cx + dpf(22f), cy, levelerPaint);
+            canvas.drawLine(cx, cy - dpf(22f), cx, cy + dpf(22f), levelerPaint);
 
             Paint bubblePaint = new Paint(Paint.ANTI_ALIAS_FLAG);
-            bubblePaint.setColor(0x8838BDF8);
+            bubblePaint.setColor(isLevel ? 0xFF10B981 : 0xCC38BDF8);
             bubblePaint.setStyle(Paint.Style.FILL);
-            canvas.drawCircle(levelX, levelY, dpf(3.5f), bubblePaint);
+            canvas.drawCircle(levelX, levelY, dpf(3.8f), bubblePaint);
 
-            // 7. 3D CURVED SAPPHIRE GLASS LENS WITH DYNAMIC SPECULAR HIGHLIGHT (BB10 Look)
-            float glareX = cx - tiltRoll * 1.5f;
-            float glareY = cy - r * 0.45f + tiltPitch * 1.5f;
+            Paint bubbleShine = new Paint(Paint.ANTI_ALIAS_FLAG);
+            bubbleShine.setColor(0xCCFFFFFF);
+            bubbleShine.setStyle(Paint.Style.FILL);
+            canvas.drawCircle(levelX - dpf(1f), levelY - dpf(1f), dpf(1.4f), bubbleShine);
+
+            // 7. LAYER 6: 3D CURVED SAPPHIRE CRYSTAL LENS & SPECULAR GLARE SWEEP
+            float glareX = cx - tiltRoll * 1.8f;
+            float glareY = cy - r * 0.35f + tiltPitch * 1.8f;
             LinearGradient glareGrad = new LinearGradient(
                 glareX, glareY - dialR * 0.45f, glareX, glareY + dialR * 0.45f,
-                new int[]{0x55FFFFFF, 0x1AFFFFFF, 0x00FFFFFF},
+                new int[]{0x66FFFFFF, 0x1AFFFFFF, 0x00FFFFFF},
                 new float[]{0f, 0.4f, 1f},
                 Shader.TileMode.CLAMP
             );
             glassGlarePaint.setShader(glareGrad);
             glassGlarePaint.setStyle(Paint.Style.FILL);
-            RectF glareOval = new RectF(cx - dialR * 0.8f, cy - dialR * 0.85f, cx + dialR * 0.8f, cy + dialR * 0.1f);
+            RectF glareOval = new RectF(cx - dialR * 0.85f, cy - dialR * 0.88f, cx + dialR * 0.85f, cy + dialR * 0.15f);
             canvas.drawOval(glareOval, glassGlarePaint);
 
             canvas.restore();
@@ -1801,11 +1827,29 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
             rawAzimuthDegrees = (float) Math.toDegrees(orientation[0]);
             if (rawAzimuthDegrees < 0) rawAzimuthDegrees += 360f;
             hasNewHeading = true;
+
+            // Full 3D Spatial Gyro Tilt (Pitch = X-axis, Roll = Y-axis)
+            float targetPitch = (float) Math.toDegrees(orientation[1]);
+            float targetRoll = (float) Math.toDegrees(orientation[2]);
+            smoothedTiltPitch += (targetPitch - smoothedTiltPitch) * 0.25f;
+            smoothedTiltRoll += (targetRoll - smoothedTiltRoll) * 0.25f;
+            if (activeCompassView != null) activeCompassView.invalidate();
         } else if (event.sensor.getType() == Sensor.TYPE_ACCELEROMETER) {
             System.arraycopy(event.values, 0, lastAccel, 0, 3);
             hasAccel = true;
             if (activeHoloCard != null) activeHoloCard.invalidate();
             if (activeLevelerView != null) activeLevelerView.invalidate();
+
+            if (rotationSensor == null) {
+                float ax = event.values[0];
+                float ay = event.values[1];
+                float az = event.values[2];
+                float accRoll = (float) Math.toDegrees(Math.atan2(-ax, Math.sqrt(ay * ay + az * az)));
+                float accPitch = (float) Math.toDegrees(Math.atan2(ay, az));
+                smoothedTiltPitch += (accPitch - smoothedTiltPitch) * 0.20f;
+                smoothedTiltRoll += (accRoll - smoothedTiltRoll) * 0.20f;
+            }
+            if (activeCompassView != null) activeCompassView.invalidate();
 
             // 🔦 Robust Double-Chop Gesture (High-Pass acceleration delta)
             final float alpha = 0.8f;
