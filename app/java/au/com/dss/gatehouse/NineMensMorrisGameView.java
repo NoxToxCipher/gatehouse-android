@@ -28,23 +28,26 @@ public class NineMensMorrisGameView extends View {
 
     private StatusListener statusListener;
     private final Paint boardBgPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
-    private final Paint goldBorderPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
-    private final Paint goldDetailPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
-    private final Paint conduitShadowPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
-    private final Paint conduitPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
-    private final Paint conduitGlowPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
-    private final Paint millBeamGoldPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
-    private final Paint millBeamCyanPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
-    private final Paint millBeamGlowPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
-    private final Paint nodeSocketOuterPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
-    private final Paint nodeSocketInnerPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+    private final Paint ironBracketPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+    private final Paint ironRivetPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+    private final Paint plankSeamShadow = new Paint(Paint.ANTI_ALIAS_FLAG);
+    private final Paint plankSeamLight = new Paint(Paint.ANTI_ALIAS_FLAG);
+    private final Paint chiselShadowPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+    private final Paint chiselRidgePaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+    private final Paint chiselCenterPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+    private final Paint millBrandPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+    private final Paint millBrandGlowPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+    private final Paint socketDimpleInnerPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+    private final Paint socketDimpleRimPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final Paint shadowPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final Paint piecePaint = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final Paint pieceRimPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+    private final Paint latheRingPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+    private final Paint lathePipPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final Paint shinePaint = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final Paint selectGlowPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final Paint strikeReticlePaint = new Paint(Paint.ANTI_ALIAS_FLAG);
-    private final Paint targetPipPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+    private final Paint chalkPipPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final Paint textPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final RectF rect = new RectF();
 
@@ -93,50 +96,59 @@ public class NineMensMorrisGameView extends View {
         setClickable(true);
         setFocusable(true);
 
-        goldBorderPaint.setColor(0xFFEAB308);
-        goldBorderPaint.setStyle(Paint.Style.STROKE);
-        goldBorderPaint.setStrokeWidth(dpf(2f));
+        ironBracketPaint.setColor(0xFF1E1C1A);
+        ironBracketPaint.setStyle(Paint.Style.STROKE);
+        ironBracketPaint.setStrokeWidth(dpf(3f));
 
-        goldDetailPaint.setColor(0xFFCA8A04);
-        goldDetailPaint.setStyle(Paint.Style.STROKE);
-        goldDetailPaint.setStrokeWidth(dpf(1f));
+        ironRivetPaint.setColor(0xFF8C857B);
+        ironRivetPaint.setStyle(Paint.Style.FILL);
 
-        conduitShadowPaint.setColor(0xFF040812);
-        conduitShadowPaint.setStyle(Paint.Style.STROKE);
-        conduitShadowPaint.setStrokeWidth(dpf(8f));
+        plankSeamShadow.setColor(0xFF120703);
+        plankSeamShadow.setStyle(Paint.Style.STROKE);
+        plankSeamShadow.setStrokeWidth(dpf(1.8f));
 
-        conduitPaint.setColor(0xFFEAB308);
-        conduitPaint.setStyle(Paint.Style.STROKE);
-        conduitPaint.setStrokeWidth(dpf(2.8f));
+        plankSeamLight.setColor(0x22FFFFFF);
+        plankSeamLight.setStyle(Paint.Style.STROKE);
+        plankSeamLight.setStrokeWidth(dpf(0.8f));
 
-        conduitGlowPaint.setColor(0x33EAB308);
-        conduitGlowPaint.setStyle(Paint.Style.STROKE);
-        conduitGlowPaint.setStrokeWidth(dpf(6.5f));
+        chiselShadowPaint.setColor(0xFF140803);
+        chiselShadowPaint.setStyle(Paint.Style.STROKE);
+        chiselShadowPaint.setStrokeWidth(dpf(5.5f));
 
-        millBeamGoldPaint.setColor(0xFFF59E0B);
-        millBeamGoldPaint.setStyle(Paint.Style.STROKE);
-        millBeamGoldPaint.setStrokeWidth(dpf(4.2f));
+        chiselRidgePaint.setColor(0xFF5A351C);
+        chiselRidgePaint.setStyle(Paint.Style.STROKE);
+        chiselRidgePaint.setStrokeWidth(dpf(2.4f));
 
-        millBeamCyanPaint.setColor(0xFF00E5FF);
-        millBeamCyanPaint.setStyle(Paint.Style.STROKE);
-        millBeamCyanPaint.setStrokeWidth(dpf(4.2f));
+        chiselCenterPaint.setColor(0xFF8A552F);
+        chiselCenterPaint.setStyle(Paint.Style.STROKE);
+        chiselCenterPaint.setStrokeWidth(dpf(1f));
 
-        millBeamGlowPaint.setStyle(Paint.Style.STROKE);
-        millBeamGlowPaint.setStrokeWidth(dpf(11f));
+        millBrandPaint.setColor(0xFFF59E0B);
+        millBrandPaint.setStyle(Paint.Style.STROKE);
+        millBrandPaint.setStrokeWidth(dpf(3.8f));
 
-        nodeSocketOuterPaint.setColor(0xFFCA8A04);
-        nodeSocketOuterPaint.setStyle(Paint.Style.STROKE);
-        nodeSocketOuterPaint.setStrokeWidth(dpf(1.6f));
+        millBrandGlowPaint.setColor(0x66EA580C);
+        millBrandGlowPaint.setStyle(Paint.Style.STROKE);
+        millBrandGlowPaint.setStrokeWidth(dpf(10f));
 
-        nodeSocketInnerPaint.setColor(0xFF0C1425);
-        nodeSocketInnerPaint.setStyle(Paint.Style.FILL);
+        socketDimpleInnerPaint.setColor(0xFF160A04);
+        socketDimpleInnerPaint.setStyle(Paint.Style.FILL);
+
+        socketDimpleRimPaint.setColor(0xFF523018);
+        socketDimpleRimPaint.setStyle(Paint.Style.STROKE);
+        socketDimpleRimPaint.setStrokeWidth(dpf(1.4f));
 
         shadowPaint.setColor(0x99000000);
         shadowPaint.setStyle(Paint.Style.FILL);
 
-        pieceRimPaint.setColor(0xFFE2E8F0);
+        pieceRimPaint.setColor(0xFF8B6C43);
         pieceRimPaint.setStyle(Paint.Style.STROKE);
-        pieceRimPaint.setStrokeWidth(dpf(1.4f));
+        pieceRimPaint.setStrokeWidth(dpf(1.2f));
+
+        latheRingPaint.setStyle(Paint.Style.STROKE);
+        latheRingPaint.setStrokeWidth(dpf(1.2f));
+
+        lathePipPaint.setStyle(Paint.Style.FILL);
 
         shinePaint.setColor(0xAAFFFFFF);
         shinePaint.setStyle(Paint.Style.FILL);
@@ -148,12 +160,12 @@ public class NineMensMorrisGameView extends View {
         strikeReticlePaint.setStyle(Paint.Style.STROKE);
         strikeReticlePaint.setStrokeWidth(dpf(2.2f));
 
-        targetPipPaint.setColor(0xAAFFD166);
-        targetPipPaint.setStyle(Paint.Style.FILL);
+        chalkPipPaint.setColor(0xCCFDE047);
+        chalkPipPaint.setStyle(Paint.Style.FILL);
 
-        textPaint.setColor(0xFFE2E8F0);
+        textPaint.setColor(0xFFE2D6BE);
         textPaint.setTextAlign(Paint.Align.CENTER);
-        textPaint.setTypeface(Typeface.create(Typeface.MONOSPACE, Typeface.BOLD));
+        textPaint.setTypeface(Typeface.create(Typeface.SERIF, Typeface.BOLD));
 
         resetGame();
     }
@@ -393,10 +405,10 @@ public class NineMensMorrisGameView extends View {
             return;
         }
 
-        String turn = whiteTurn ? "🟡 Your Turn (Gold)" : "🔵 Bot Turn (Cyan)";
-        String phase = mustRemoveOpponent ? "· ⚔️ MILL FORMED! Tap enemy piece to remove"
-                     : (whiteUnplaced > 0 ? ("· Placing (" + whiteUnplaced + " left)") : "· Moving along lines");
-        statusListener.onStatusChanged(turn + " " + phase, 0xFFFFD166);
+        String turn = whiteTurn ? "⚪ Your Turn (Bone)" : "⚫ Bot Turn (Ebony)";
+        String phase = mustRemoveOpponent ? "· ⚔️ MILL FORMED! Tap enemy piece to strike"
+                     : (whiteUnplaced > 0 ? ("· Placing (" + whiteUnplaced + " in reserve)") : "· Sliding along chiseled grooves");
+        statusListener.onStatusChanged(turn + " " + phase, 0xFFFDE047);
     }
 
     @Override
@@ -405,9 +417,9 @@ public class NineMensMorrisGameView extends View {
         if (event.getActionMasked() == MotionEvent.ACTION_DOWN && whiteTurn) {
             float w = getWidth();
             float h = getHeight();
-            float size = Math.min(w, h - dpf(28f));
+            float size = Math.min(w, h - dpf(32f));
             float startX = (w - size) / 2f;
-            float startY = (h - dpf(28f) - size) / 2f + dpf(8f);
+            float startY = (h - dpf(32f) - size) / 2f + dpf(8f);
 
             float ex = event.getX();
             float ey = event.getY();
@@ -486,22 +498,58 @@ public class NineMensMorrisGameView extends View {
         int h = getHeight();
         if (w <= 0 || h <= 0) return;
 
-        // Rich Imperial Slate Canvas with Radial Illumination
+        // 1. Weathered Havana Tavern Mahogany & Dark Oak Table Plank
         rect.set(0, 0, w, h);
-        boardBgPaint.setShader(new LinearGradient(0, 0, w, h, 0xFF0B101D, 0xFF182238, Shader.TileMode.CLAMP));
+        boardBgPaint.setShader(new LinearGradient(0, 0, w, h, 0xFF3D2214, 0xFF24130A, Shader.TileMode.CLAMP));
         canvas.drawRoundRect(rect, dpf(16f), dpf(16f), boardBgPaint);
 
-        rect.set(dpf(2.5f), dpf(2.5f), w - dpf(2.5f), h - dpf(2.5f));
-        canvas.drawRoundRect(rect, dpf(14f), dpf(14f), goldBorderPaint);
+        // Vertical Wood Plank Grain Seams
+        float p1 = w * 0.33f;
+        float p2 = w * 0.67f;
+        canvas.drawLine(p1, 0, p1, h, plankSeamShadow);
+        canvas.drawLine(p1 + dpf(1f), 0, p1 + dpf(1f), h, plankSeamLight);
+        canvas.drawLine(p2, 0, p2, h, plankSeamShadow);
+        canvas.drawLine(p2 + dpf(1f), 0, p2 + dpf(1f), h, plankSeamLight);
 
-        rect.set(dpf(5.5f), dpf(5.5f), w - dpf(5.5f), h - dpf(5.5f));
-        canvas.drawRoundRect(rect, dpf(11f), dpf(11f), goldDetailPaint);
+        // Chiseled Outer Wood Inlay Margin
+        rect.set(dpf(6f), dpf(6f), w - dpf(6f), h - dpf(6f));
+        Paint woodBorder = new Paint(Paint.ANTI_ALIAS_FLAG);
+        woodBorder.setColor(0xFF5A351C);
+        woodBorder.setStyle(Paint.Style.STROKE);
+        woodBorder.setStrokeWidth(dpf(1.6f));
+        canvas.drawRoundRect(rect, dpf(12f), dpf(12f), woodBorder);
+
+        // 4 Wrought-Iron L-Corner Brackets with Forged Rivets (Black Flag Style)
+        float bLen = dpf(20f);
+        float bThick = dpf(3.5f);
+        float bPad = dpf(3f);
+        ironBracketPaint.setStrokeWidth(bThick);
+
+        // Top-Left L-bracket
+        canvas.drawLine(bPad, bPad, bPad + bLen, bPad, ironBracketPaint);
+        canvas.drawLine(bPad, bPad, bPad, bPad + bLen, ironBracketPaint);
+        canvas.drawCircle(bPad + dpf(6f), bPad + dpf(6f), dpf(1.8f), ironRivetPaint);
+
+        // Top-Right L-bracket
+        canvas.drawLine(w - bPad, bPad, w - bPad - bLen, bPad, ironBracketPaint);
+        canvas.drawLine(w - bPad, bPad, w - bPad, bPad + bLen, ironBracketPaint);
+        canvas.drawCircle(w - bPad - dpf(6f), bPad + dpf(6f), dpf(1.8f), ironRivetPaint);
+
+        // Bottom-Left L-bracket
+        canvas.drawLine(bPad, h - bPad, bPad + bLen, h - bPad, ironBracketPaint);
+        canvas.drawLine(bPad, h - bPad, bPad, h - bPad - bLen, ironBracketPaint);
+        canvas.drawCircle(bPad + dpf(6f), h - bPad - dpf(6f), dpf(1.8f), ironRivetPaint);
+
+        // Bottom-Right L-bracket
+        canvas.drawLine(w - bPad, h - bPad, w - bPad - bLen, h - bPad, ironBracketPaint);
+        canvas.drawLine(w - bPad, h - bPad, w - bPad, h - bPad - bLen, ironBracketPaint);
+        canvas.drawCircle(w - bPad - dpf(6f), h - bPad - dpf(6f), dpf(1.8f), ironRivetPaint);
 
         float size = Math.min(w, h - dpf(32f));
         float startX = (w - size) / 2f;
         float startY = (h - dpf(32f) - size) / 2f + dpf(8f);
 
-        // 1. Draw 3 Concentric Deep Recessed Conduit Grooves
+        // 2. Chiseled Intaglio Grooves for 3 Concentric Squares
         for (int sq = 0; sq < 3; sq++) {
             int offset = sq * 8;
             for (int i = 0; i < 8; i++) {
@@ -510,25 +558,25 @@ public class NineMensMorrisGameView extends View {
                 float y1 = startY + NODES[offset + i][1] * size;
                 float x2 = startX + NODES[next][0] * size;
                 float y2 = startY + NODES[next][1] * size;
-                canvas.drawLine(x1, y1, x2, y2, conduitShadowPaint);
-                canvas.drawLine(x1, y1, x2, y2, conduitGlowPaint);
-                canvas.drawLine(x1, y1, x2, y2, conduitPaint);
+                canvas.drawLine(x1, y1, x2, y2, chiselShadowPaint);
+                canvas.drawLine(x1, y1, x2, y2, chiselRidgePaint);
+                canvas.drawLine(x1, y1, x2, y2, chiselCenterPaint);
             }
         }
 
-        // 2. Draw Cross Connecting Conduits
+        // 3. Chiseled Cross Connecting Grooves
         int[][] cross = {{1, 9}, {9, 17}, {3, 11}, {11, 19}, {5, 13}, {13, 21}, {7, 15}, {15, 23}};
         for (int[] c : cross) {
             float x1 = startX + NODES[c[0]][0] * size;
             float y1 = startY + NODES[c[0]][1] * size;
             float x2 = startX + NODES[c[1]][0] * size;
             float y2 = startY + NODES[c[1]][1] * size;
-            canvas.drawLine(x1, y1, x2, y2, conduitShadowPaint);
-            canvas.drawLine(x1, y1, x2, y2, conduitGlowPaint);
-            canvas.drawLine(x1, y1, x2, y2, conduitPaint);
+            canvas.drawLine(x1, y1, x2, y2, chiselShadowPaint);
+            canvas.drawLine(x1, y1, x2, y2, chiselRidgePaint);
+            canvas.drawLine(x1, y1, x2, y2, chiselCenterPaint);
         }
 
-        // 3. Draw Active Mill Laser Energy Beams
+        // 4. Branded Pirate Ember Glow for Completed Active Mills
         for (int[] m : MILLS) {
             int c = board[m[0]];
             if (c != 0 && board[m[1]] == c && board[m[2]] == c) {
@@ -539,17 +587,17 @@ public class NineMensMorrisGameView extends View {
                 float x2 = startX + NODES[m[2]][0] * size;
                 float y2 = startY + NODES[m[2]][1] * size;
 
-                millBeamGlowPaint.setColor(c == 1 ? 0x55F59E0B : 0x5500E5FF);
-                canvas.drawLine(x0, y0, x1, y1, millBeamGlowPaint);
-                canvas.drawLine(x1, y1, x2, y2, millBeamGlowPaint);
+                millBrandGlowPaint.setColor(c == 1 ? 0x66F59E0B : 0x6638BDF8);
+                canvas.drawLine(x0, y0, x1, y1, millBrandGlowPaint);
+                canvas.drawLine(x1, y1, x2, y2, millBrandGlowPaint);
 
-                Paint laserP = (c == 1 ? millBeamGoldPaint : millBeamCyanPaint);
-                canvas.drawLine(x0, y0, x1, y1, laserP);
-                canvas.drawLine(x1, y1, x2, y2, laserP);
+                millBrandPaint.setColor(c == 1 ? 0xFFF59E0B : 0xFF38BDF8);
+                canvas.drawLine(x0, y0, x1, y1, millBrandPaint);
+                canvas.drawLine(x1, y1, x2, y2, millBrandPaint);
             }
         }
 
-        // 4. Draw 24 Inlaid Brass & Obsidian Sockets with 3D Spheres
+        // 5. 24 Carved Lathe Wood Sockets with Authentic AC4 Counters
         float socketR = dpf(8f);
         float pieceR = dpf(12.5f);
 
@@ -557,18 +605,18 @@ public class NineMensMorrisGameView extends View {
             float nx = startX + NODES[i][0] * size;
             float ny = startY + NODES[i][1] * size;
 
-            // Inlaid Brass Socket Depth
-            canvas.drawCircle(nx, ny, socketR, nodeSocketInnerPaint);
-            canvas.drawCircle(nx, ny, socketR, nodeSocketOuterPaint);
-            canvas.drawCircle(nx, ny, dpf(2f), goldDetailPaint);
+            // Carved Lathe Wood Dimple
+            canvas.drawCircle(nx, ny, socketR, socketDimpleInnerPaint);
+            canvas.drawCircle(nx, ny, socketR, socketDimpleRimPaint);
+            canvas.drawCircle(nx, ny, dpf(2f), chiselRidgePaint);
 
-            // Valid Target Pip Beacon
+            // Valid Target Pip Beacon (Warm Tavern Candlelit Chalk)
             if (isLegalTarget(i)) {
-                canvas.drawCircle(nx, ny, dpf(4.5f), targetPipPaint);
+                canvas.drawCircle(nx, ny, dpf(4.5f), chalkPipPaint);
                 canvas.drawCircle(nx, ny, dpf(2f), shinePaint);
             }
 
-            // Selected Piece Illumination & Corner Brackets
+            // Selected Piece Highlight
             if (i == selectedIndex) {
                 canvas.drawCircle(nx, ny, pieceR * 1.45f, selectGlowPaint);
                 Paint tick = new Paint(Paint.ANTI_ALIAS_FLAG);
@@ -588,14 +636,14 @@ public class NineMensMorrisGameView extends View {
 
             int val = board[i];
             if (val == 1) {
-                draw3DMarble(canvas, nx, ny, pieceR, true);
+                drawAuthenticTurnedCounter(canvas, nx, ny, pieceR, true);
             } else if (val == 2) {
-                draw3DMarble(canvas, nx, ny, pieceR, false);
-                // Strike Reticle when targetable for removal
+                drawAuthenticTurnedCounter(canvas, nx, ny, pieceR, false);
+                // Crossed Cutlass Strike Reticle when targetable for removal
                 if (isTargetableForRemoval(i)) {
                     float rr = pieceR * 1.35f;
                     canvas.drawCircle(nx, ny, rr, strikeReticlePaint);
-                    // 4 Crosshair Ticks
+                    // 4 Crosshair Strike Ticks
                     canvas.drawLine(nx, ny - rr - dpf(3f), nx, ny - rr + dpf(3f), strikeReticlePaint);
                     canvas.drawLine(nx, ny + rr - dpf(3f), nx, ny + rr + dpf(3f), strikeReticlePaint);
                     canvas.drawLine(nx - rr - dpf(3f), ny, nx - rr + dpf(3f), ny, strikeReticlePaint);
@@ -604,32 +652,42 @@ public class NineMensMorrisGameView extends View {
             }
         }
 
-        // Bottom Telemetry Bar
+        // 6. Bottom Antique Parchment Score Bar
         textPaint.setTextSize(dpf(10f));
-        canvas.drawText("🟡 Gold: " + whiteAlive + " (" + whiteUnplaced + " in reserve)   |   🔵 Cyan: " + blackAlive + " (" + blackUnplaced + " in reserve)", w / 2f, h - dpf(9f), textPaint);
+        canvas.drawText("⚪ Bone Pieces: " + whiteAlive + " (" + whiteUnplaced + " in reserve)   |   ⚫ Dark Wood: " + blackAlive + " (" + blackUnplaced + " in reserve)", w / 2f, h - dpf(9f), textPaint);
     }
 
-    private void draw3DMarble(Canvas canvas, float cx, float cy, float r, boolean isGold) {
-        // Deep ambient drop shadow
+    private void drawAuthenticTurnedCounter(Canvas canvas, float cx, float cy, float r, boolean isBone) {
+        // Deep ambient table drop shadow
         canvas.drawCircle(cx + dpf(1.8f), cy + dpf(2.4f), r, shadowPaint);
 
         RadialGradient grad = new RadialGradient(
             cx - r * 0.3f, cy - r * 0.3f, r * 1.3f,
-            isGold ? new int[]{0xFFFFFFF5, 0xFFFDE047, 0xFFD97706, 0xFF451A03}
-                   : new int[]{0xFFF0FDF4, 0xFF38BDF8, 0xFF0284C7, 0xFF031628},
+            isBone ? new int[]{0xFFFFFDF7, 0xFFF2E6CD, 0xFFDFCB9F, 0xFF8B6C43}
+                   : new int[]{0xFF4A3E37, 0xFF2E2520, 0xFF181310, 0xFF0A0706},
             null, Shader.TileMode.CLAMP
         );
         piecePaint.setShader(grad);
         canvas.drawCircle(cx, cy, r, piecePaint);
 
-        // Filigree Rim (Gold or Silver)
-        Paint rim = new Paint(Paint.ANTI_ALIAS_FLAG);
-        rim.setColor(isGold ? 0xCCFDE047 : 0xCCE0F2FE);
-        rim.setStyle(Paint.Style.STROKE);
-        rim.setStrokeWidth(dpf(1.4f));
-        canvas.drawCircle(cx, cy, r, rim);
+        // Chiseled Outer Lathe Ring
+        latheRingPaint.setColor(isBone ? 0x66785E3B : 0x55000000);
+        canvas.drawCircle(cx, cy, r * 0.72f, latheRingPaint);
 
-        // Specular Curved Flare
-        canvas.drawCircle(cx - r * 0.35f, cy - r * 0.35f, r * 0.32f, shinePaint);
+        // Chiseled Inner Lathe Ring
+        canvas.drawCircle(cx, cy, r * 0.42f, latheRingPaint);
+
+        // Center Lathe Pip
+        lathePipPaint.setColor(isBone ? 0x88785E3B : 0x88000000);
+        canvas.drawCircle(cx, cy, dpf(1.8f), lathePipPaint);
+
+        // Outer Turned Wood/Bone Bevel Contour
+        pieceRimPaint.setColor(isBone ? 0x888B6C43 : 0x881A1410);
+        canvas.drawCircle(cx, cy, r, pieceRimPaint);
+
+        // Specular Ivory Sheen (Soft Arc)
+        if (isBone) {
+            canvas.drawCircle(cx - r * 0.35f, cy - r * 0.35f, r * 0.28f, shinePaint);
+        }
     }
 }
