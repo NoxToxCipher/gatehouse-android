@@ -51,6 +51,13 @@ public class BadukGameView extends View {
     private final RectF boardRect = new RectF();
     private final Random rng = new Random();
 
+    // Pre-allocated high performance rendering paints (zero GC jitter)
+    private final boolean[][] atariMap = new boolean[19][19];
+    private final Paint blackStoneBasePaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+    private final Paint blackStoneHlPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+    private final Paint whiteStoneBasePaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+    private final Paint whiteStoneHlPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+
     private int boardSize = 9; // 9, 13, 19
     private int[][] board = new int[19][19];
     private final List<int[][]> history = new ArrayList<>();
@@ -139,7 +146,45 @@ public class BadukGameView extends View {
         territoryWhitePaint.setColor(0x66F8FAFC);
         territoryWhitePaint.setStyle(Paint.Style.FILL);
 
+        blackStoneBasePaint.setColor(0xFF111827);
+        blackStoneBasePaint.setStyle(Paint.Style.FILL);
+
+        blackStoneHlPaint.setColor(0xFF374151);
+        blackStoneHlPaint.setStyle(Paint.Style.FILL);
+
+        whiteStoneBasePaint.setColor(0xFFF1F5F9);
+        whiteStoneBasePaint.setStyle(Paint.Style.FILL);
+
+        whiteStoneHlPaint.setColor(0xFFFFFFFF);
+        whiteStoneHlPaint.setStyle(Paint.Style.FILL);
+
         resetGame();
+    }
+
+    private void updateAtariMap() {
+        for (int y = 0; y < 19; y++) {
+            for (int x = 0; x < 19; x++) atariMap[y][x] = false;
+        }
+        boolean[][] visited = new boolean[boardSize][boardSize];
+        for (int y = 0; y < boardSize; y++) {
+            for (int x = 0; x < boardSize; x++) {
+                int val = board[y][x];
+                if (val != 0 && !visited[y][x]) {
+                    boolean[][] groupVisited = new boolean[boardSize][boardSize];
+                    int libs = countGroupLiberties(x, y, val, groupVisited);
+                    if (libs == 1) {
+                        for (int gy = 0; gy < boardSize; gy++) {
+                            for (int gx = 0; gx < boardSize; gx++) {
+                                if (groupVisited[gy][gx]) {
+                                    visited[gy][gx] = true;
+                                    atariMap[gy][gx] = true;
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
     }
 
     public void setStatusListener(StatusListener l) {
@@ -182,6 +227,7 @@ public class BadukGameView extends View {
         gameOver = false;
         puzzleSolved = false;
         showTerritory = false;
+        updateAtariMap();
         updateStatus();
         invalidate();
     }
@@ -799,7 +845,7 @@ public class BadukGameView extends View {
         if (event.getActionMasked() == MotionEvent.ACTION_DOWN) {
             float w = getWidth();
             float h = getHeight();
-            float pad = dpf(20f);
+            float pad = dpf(22f); // Harmonized with onDraw (zero coordinate jump/jitter)
             float size = Math.min(w, h) - pad * 2;
             float startX = (w - size) / 2f;
             float startY = (h - size) / 2f;
@@ -889,30 +935,6 @@ public class BadukGameView extends View {
         // Draw 3D Bi-convex Stones (Nachiguro Slate & Hyuga Clamshell)
         float stoneR = cellSize * 0.47f;
 
-        // Atari Alert Aura Detection
-        boolean[][] visited = new boolean[boardSize][boardSize];
-        for (int y = 0; y < boardSize; y++) {
-            for (int x = 0; x < boardSize; x++) {
-                int val = board[y][x];
-                if (val != 0 && !visited[y][x]) {
-                    boolean[][] groupVisited = new boolean[boardSize][boardSize];
-                    int libs = countGroupLiberties(x, y, val, groupVisited);
-                    if (libs == 1) {
-                        for (int gy = 0; gy < boardSize; gy++) {
-                            for (int gx = 0; gx < boardSize; gx++) {
-                                if (groupVisited[gy][gx]) {
-                                    visited[gy][gx] = true;
-                                    float acx = startX + gx * cellSize;
-                                    float acy = startY + gy * cellSize;
-                                    canvas.drawCircle(acx, acy, stoneR + dpf(2.2f), atariGlowPaint);
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        }
-
         for (int y = 0; y < boardSize; y++) {
             for (int x = 0; x < boardSize; x++) {
                 int val = board[y][x];
@@ -921,31 +943,26 @@ public class BadukGameView extends View {
                 float cx = startX + x * cellSize;
                 float cy = startY + y * cellSize;
 
+                // Atari Warning Aura (precalculated, zero allocation)
+                if (atariMap[y][x]) {
+                    canvas.drawCircle(cx, cy, stoneR + dpf(2.5f), atariGlowPaint);
+                }
+
                 // Contact Shadow
                 canvas.drawCircle(cx + dpf(1.5f), cy + dpf(2.5f), stoneR, shadowPaint);
 
-                if (val == 1) { // Matte Nachiguro Slate
-                    RadialGradient blackGrad = new RadialGradient(
-                        cx - stoneR * 0.35f, cy - stoneR * 0.35f, stoneR * 1.3f,
-                        new int[]{0xFF4B5563, 0xFF1F2937, 0xFF0B0F17},
-                        null, Shader.TileMode.CLAMP
-                    );
-                    stone3dPaint.setShader(blackGrad);
-                    canvas.drawCircle(cx, cy, stoneR, stone3dPaint);
-                    canvas.drawCircle(cx - stoneR * 0.35f, cy - stoneR * 0.35f, stoneR * 0.24f, stoneShinePaint);
+                if (val == 1) { // Matte Nachiguro Slate (Bi-convex 3D layered)
+                    canvas.drawCircle(cx, cy, stoneR, blackStoneBasePaint);
+                    canvas.drawCircle(cx - stoneR * 0.30f, cy - stoneR * 0.30f, stoneR * 0.48f, blackStoneHlPaint);
+                    canvas.drawCircle(cx - stoneR * 0.35f, cy - stoneR * 0.35f, stoneR * 0.22f, stoneShinePaint);
                 } else if (val == 2) { // Hyuga Clamshell Pearl
-                    RadialGradient whiteGrad = new RadialGradient(
-                        cx - stoneR * 0.35f, cy - stoneR * 0.35f, stoneR * 1.3f,
-                        new int[]{0xFFFFFFFF, 0xFFF8FAFC, 0xFFCBD5E1, 0xFF94A3B8},
-                        null, Shader.TileMode.CLAMP
-                    );
-                    stone3dPaint.setShader(whiteGrad);
-                    canvas.drawCircle(cx, cy, stoneR, stone3dPaint);
+                    canvas.drawCircle(cx, cy, stoneR, whiteStoneBasePaint);
                     canvas.drawCircle(cx, cy, stoneR, stoneRimPaint);
-                    canvas.drawCircle(cx - stoneR * 0.35f, cy - stoneR * 0.35f, stoneR * 0.28f, stoneShinePaint);
+                    canvas.drawCircle(cx - stoneR * 0.28f, cy - stoneR * 0.28f, stoneR * 0.46f, whiteStoneHlPaint);
+                    canvas.drawCircle(cx - stoneR * 0.35f, cy - stoneR * 0.35f, stoneR * 0.24f, stoneShinePaint);
                 }
 
-                // Last Move Indicator
+                // Last Move Indicator Ring
                 if (x == lastMoveX && y == lastMoveY) {
                     canvas.drawCircle(cx, cy, stoneR * 0.5f, lastMovePaint);
                 }
@@ -963,8 +980,10 @@ public class BadukGameView extends View {
             canvas.drawCircle(hcx, hcy, stoneR * 0.4f, hintFill);
         }
 
-        // Draw Live Territory Control Pips
-        drawTerritoryMarkers(canvas, startX, startY, cellSize);
+        // Draw Live Territory Control Pips if enabled
+        if (showTerritory) {
+            drawTerritoryMarkers(canvas, startX, startY, cellSize);
+        }
     }
 
     public void showHint() {
