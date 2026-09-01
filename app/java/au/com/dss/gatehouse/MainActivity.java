@@ -165,6 +165,8 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
     private ScrollView scrollContacts;
     private ScrollView scrollHandbook;
     private ScrollView scrollTools;
+    private ScrollView scrollSettings;
+    private View settingsContent;
     private float currentTabFloat = 0f;
     private ValueAnimator tabSlideAnimator;
     private float pageSwipeDownX = 0f;
@@ -394,6 +396,7 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
             case 0: return scrollPatrol;
             case 1: return scrollContacts;
             case 2: return scrollTools;
+            case 3: return scrollSettings;
             default: return scrollPatrol;
         }
     }
@@ -1090,7 +1093,7 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
                             isPageSwiping = false;
                             getParent().requestDisallowInterceptTouchEvent(false);
                             float totalDx = ev.getX() - pageSwipeDownX;
-                            if (totalDx < -w * 0.18f && currentTab < 2) {
+                            if (totalDx < -w * 0.18f && currentTab < 3) {
                                 animateTabToPosition(currentTab + 1);
                             } else if (totalDx > w * 0.18f && currentTab > 0) {
                                 animateTabToPosition(currentTab - 1);
@@ -1146,6 +1149,16 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
         scrollTools.addView(toolsContent);
         tabPagerFrame.addView(scrollTools);
 
+        // --- PAGE 3: ⚙️ SETTINGS VIEW ---
+        scrollSettings = new ScrollView(this);
+        scrollSettings.setBackgroundColor(colBg);
+        scrollSettings.setVerticalScrollBarEnabled(false);
+        scrollSettings.setLayoutParams(new FrameLayout.LayoutParams(
+                FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT));
+        settingsContent = buildSettingsTab();
+        scrollSettings.addView(settingsContent);
+        tabPagerFrame.addView(scrollSettings);
+
         // 🔮 FLUID CYBER GLOW FAST-SCROLLER OVERLAY
         scrollIndicator = new CyberGlowScrollBarView(this);
         FrameLayout.LayoutParams silp = new FrameLayout.LayoutParams(
@@ -1176,6 +1189,7 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
         scrollPatrol.setOnScrollChangeListener(scrollListener);
         scrollContacts.setOnScrollChangeListener(scrollListener);
         scrollTools.setOnScrollChangeListener(scrollListener);
+        scrollSettings.setOnScrollChangeListener(scrollListener);
 
         screenLayout.addView(tabPagerFrame);
 
@@ -3388,7 +3402,7 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
 
     
     public void applyTabScrollPosition(float pos) {
-        currentTabFloat = Math.max(0f, Math.min(2f, pos));
+        currentTabFloat = Math.max(0f, Math.min(3f, pos));
         if (animatedTabBar != null) {
             animatedTabBar.setIndicatorFloat(currentTabFloat);
         }
@@ -3396,7 +3410,7 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
         int w = tabPagerFrame.getWidth();
         if (w <= 0) return;
 
-        final ScrollView[] pages = {scrollPatrol, scrollContacts, scrollTools};
+        final ScrollView[] pages = {scrollPatrol, scrollContacts, scrollTools, scrollSettings};
         for (int i = 0; i < pages.length; i++) {
             ScrollView p = pages[i];
             if (p == null) continue;
@@ -3421,7 +3435,7 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
         if (tabSlideAnimator != null && tabSlideAnimator.isRunning()) {
             tabSlideAnimator.cancel();
         }
-        final int target = Math.max(0, Math.min(2, targetTab));
+        final int target = Math.max(0, Math.min(3, targetTab));
         currentTab = target;
         if (animatedTabBar != null) {
             animatedTabBar.animateToTab(target);
@@ -3542,6 +3556,9 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
 
             // Hero Card: Tester Feedback Hub
             container.addView(buildTesterFeedbackCard());
+
+            // Hero Card: Live Aussie Sports Radar (NRL, Super Rugby, AFL)
+            container.addView(buildAussieSportsCard());
 
             LinearLayout rHub = new LinearLayout(this);
             rHub.setOrientation(LinearLayout.HORIZONTAL);
@@ -5745,35 +5762,51 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
     }
 
     private void showFuelPriceDialog() {
-        final LinearLayout box = dialogContainer("⛽ Fuel Price Radar", "3 CLOSEST STATIONS", 0xFFF59E0B);
+        final LinearLayout box = dialogContainer("⛽ Fuel Price Radar", "LIVE LOCAL TELEMETRY & 3 CLOSEST STATIONS", 0xFFF59E0B);
         final FuelPriceManager fpm = FuelPriceManager.getInstance(this);
 
-        // Guard Favorite Callout Banner
-        LinearLayout bannerCard = new LinearLayout(this);
-        bannerCard.setOrientation(LinearLayout.VERTICAL);
-        bannerCard.setBackground(rounded(0xFF1E293B, dp(12)));
-        bannerCard.setPadding(dp(14), dp(12), dp(14), dp(12));
-        LinearLayout.LayoutParams bclp = new LinearLayout.LayoutParams(
+        // 1. Hero Price Cycle Bento Indicator
+        LinearLayout cycleCard = new LinearLayout(this);
+        cycleCard.setOrientation(LinearLayout.VERTICAL);
+        cycleCard.setBackground(rounded(0xFF1E293B, dp(12)));
+        cycleCard.setPadding(dp(14), dp(12), dp(14), dp(12));
+        LinearLayout.LayoutParams cclp = new LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
-        bclp.bottomMargin = dp(12);
-        bannerCard.setLayoutParams(bclp);
+        cclp.bottomMargin = dp(10);
+        cycleCard.setLayoutParams(cclp);
 
-        TextView favTitle = new TextView(this);
-        favTitle.setText("⭐ GUARD FAVOURITE: OOM ENERGY KINGSTON");
-        favTitle.setTextColor(0xFFFFD166);
-        favTitle.setTextSize(12);
-        favTitle.setTypeface(Typeface.create(Typeface.MONOSPACE, Typeface.BOLD));
-        bannerCard.addView(favTitle);
+        LinearLayout cycleHeader = new LinearLayout(this);
+        cycleHeader.setOrientation(LinearLayout.HORIZONTAL);
+        cycleHeader.setGravity(Gravity.CENTER_VERTICAL);
 
-        TextView favDesc = new TextView(this);
-        favDesc.setText("📍 122 Kingston Rd (0.8km) · Lowest fuel price on the route home. Dispatches heads-up alert 30 min before shift finish.");
-        favDesc.setTextColor(colPale);
-        favDesc.setTextSize(12);
-        favDesc.setPadding(0, dp(4), 0, 0);
-        bannerCard.addView(favDesc);
-        box.addView(bannerCard);
+        TextView cycleTitle = new TextView(this);
+        cycleTitle.setText("📉 QLD PRICE CYCLE: CHEAP / TROUGH");
+        cycleTitle.setTextColor(0xFF10B981);
+        cycleTitle.setTextSize(12);
+        cycleTitle.setTypeface(Typeface.create(Typeface.MONOSPACE, Typeface.BOLD));
+        LinearLayout.LayoutParams ctlp = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
+        cycleTitle.setLayoutParams(ctlp);
+        cycleHeader.addView(cycleTitle);
 
-        // Station Cards Container
+        TextView cycleBadge = new TextView(this);
+        cycleBadge.setText("BEST TIME TO FILL");
+        cycleBadge.setTextColor(0xFF0F172A);
+        cycleBadge.setTextSize(9);
+        cycleBadge.setTypeface(Typeface.DEFAULT_BOLD);
+        cycleBadge.setPadding(dp(6), dp(2), dp(6), dp(2));
+        cycleBadge.setBackground(rounded(0xFF10B981, dp(4)));
+        cycleHeader.addView(cycleBadge);
+        cycleCard.addView(cycleHeader);
+
+        TextView cycleDesc = new TextView(this);
+        cycleDesc.setText("📍 Logan / Kingston corridor is currently at the bottom of the fuel cycle. Automated alert dispatches 30 min before shift finish.");
+        cycleDesc.setTextColor(colPale);
+        cycleDesc.setTextSize(11.5f);
+        cycleDesc.setPadding(0, dp(4), 0, 0);
+        cycleCard.addView(cycleDesc);
+        box.addView(cycleCard);
+
+        // 2. Station Cards Container
         final LinearLayout stationsContainer = new LinearLayout(this);
         stationsContainer.setOrientation(LinearLayout.VERTICAL);
         box.addView(stationsContainer);
@@ -5782,17 +5815,18 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
             public void run() {
                 stationsContainer.removeAllViews();
                 List<FuelPriceManager.FuelStation> list = fpm.getStations();
-                for (FuelPriceManager.FuelStation s : list) {
+                for (final FuelPriceManager.FuelStation s : list) {
                     LinearLayout sCard = new LinearLayout(MainActivity.this);
                     sCard.setOrientation(LinearLayout.VERTICAL);
-                    sCard.setBackground(rounded(colPanel, dp(12)));
+                    sCard.setBackground(rounded(colPanel, dp(14)));
                     sCard.setPadding(dp(14), dp(12), dp(14), dp(12));
+                    sCard.setElevation(dp(2));
                     LinearLayout.LayoutParams slp = new LinearLayout.LayoutParams(
                             LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
                     slp.bottomMargin = dp(10);
                     sCard.setLayoutParams(slp);
 
-                    // Top Header Row (Name + Distance + Favorite Pill)
+                    // Top Header Row (Name + Distance + Favorite/Cheapest Badge)
                     LinearLayout hRow = new LinearLayout(MainActivity.this);
                     hRow.setOrientation(LinearLayout.HORIZONTAL);
                     hRow.setGravity(Gravity.CENTER_VERTICAL);
@@ -5805,6 +5839,21 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
                     LinearLayout.LayoutParams nlp = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
                     nameTxt.setLayoutParams(nlp);
                     hRow.addView(nameTxt);
+
+                    if (s.isGuardFavorite) {
+                        TextView cheapBadge = new TextView(MainActivity.this);
+                        cheapBadge.setText("CHEAPEST");
+                        cheapBadge.setTextColor(0xFF0F172A);
+                        cheapBadge.setTextSize(9);
+                        cheapBadge.setTypeface(Typeface.DEFAULT_BOLD);
+                        cheapBadge.setPadding(dp(6), dp(2), dp(6), dp(2));
+                        cheapBadge.setBackground(rounded(0xFFFFD166, dp(4)));
+                        LinearLayout.LayoutParams cblp = new LinearLayout.LayoutParams(
+                                LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+                        cblp.rightMargin = dp(6);
+                        cheapBadge.setLayoutParams(cblp);
+                        hRow.addView(cheapBadge);
+                    }
 
                     TextView distPill = new TextView(MainActivity.this);
                     distPill.setText(String.format(Locale.US, "%.1f km", s.distanceKm));
@@ -5831,8 +5880,37 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
                     pGrid.addView(buildFuelPriceChip("P98", s.priceP98, colPale));
                     pGrid.addView(buildFuelPriceChip("Diesel", s.priceDiesel, 0xFFFFD166));
                     pGrid.addView(buildFuelPriceChip("E10", s.priceE10, colMuted));
-
                     sCard.addView(pGrid);
+
+                    // 1-Tap GPS Navigation Button
+                    TextView btnNav = new TextView(MainActivity.this);
+                    btnNav.setText("🗺️ Drive to Station (Google Maps)");
+                    btnNav.setTextColor(colCyan);
+                    btnNav.setTextSize(11f);
+                    btnNav.setTypeface(Typeface.DEFAULT_BOLD);
+                    btnNav.setGravity(Gravity.CENTER);
+                    btnNav.setPadding(0, dp(8), 0, dp(4));
+                    btnNav.setBackground(rounded(colPanel2, dp(8)));
+                    LinearLayout.LayoutParams nlpBtn = new LinearLayout.LayoutParams(
+                            LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+                    nlpBtn.topMargin = dp(8);
+                    btnNav.setLayoutParams(nlpBtn);
+                    btnNav.setOnClickListener(new View.OnClickListener() {
+                        public void onClick(View v) {
+                            hapticClick();
+                            try {
+                                Uri gmmIntentUri = Uri.parse("geo:0,0?q=" + Uri.encode(s.name + ", " + s.address));
+                                Intent mapIntent = new Intent(Intent.ACTION_VIEW, gmmIntentUri);
+                                mapIntent.setPackage("com.google.android.apps.maps");
+                                startActivity(mapIntent);
+                            } catch (Exception e) {
+                                Intent webMap = new Intent(Intent.ACTION_VIEW, Uri.parse("https://maps.google.com/?q=" + Uri.encode(s.name + ", " + s.address)));
+                                startActivity(webMap);
+                            }
+                        }
+                    });
+                    sCard.addView(btnNav);
+
                     stationsContainer.addView(sCard);
                 }
             }
@@ -9633,12 +9711,37 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
             container.addView(contactCard("Fire Brigade (Loganlea)", "Loganlea 3884 2550 · Woodridge 3287 8730", "0738842550", "FIRE STN", 0xFFF59E0B, "🚒"));
         }
 
-        // 4. 🛡️ SITE GATEHOUSE & SECURITY
+        // 4. 🛡️ SITE GATEHOUSE & SECURITY (With Live Deputy Roster Contacts Search)
         if (showAll || "SECURITY".equalsIgnoreCase(contactsActiveFilter)) {
-            container.addView(contactsSectionHeader("🛡️ SITE GATEHOUSE & SECURITY OPS", colEmerald));
+            container.addView(contactsSectionHeader("🛡️ SITE GATEHOUSE & ROSTER GUARDS (PHONE SYNCED)", colEmerald));
             container.addView(contactCard("Gatehouse Site Cell Phone", "Hume Kingston After Hours Duty Mobile", "0478352551", "DUTY PHONE", colEmerald, "📱"));
-            container.addView(contactCard("Officer Lochran Doherty", "G.J.G. Security · Static Guard LIC #41207", "0404530014", "ON SITE (TONIGHT)", colEmerald, "🛡️"));
-            container.addView(contactCard("Petrea Doherty", "G.J.G. Security Services Pty Ltd", "0401371724", "SECURITY OPS", colEmerald, "📞"));
+
+            // Dynamic Deputy Roster Guards with Device Contacts Matching
+            DeputyApi.DeputyRosterResult roster = new DeputyApi(this).loadCachedResult();
+            if (roster == null) roster = new DeputyApi(this).createSampleFallback();
+            java.util.Set<String> processedGuards = new java.util.HashSet<>();
+            if (roster != null && roster.weekShifts != null) {
+                for (DeputyApi.DeputyShift s : roster.weekShifts) {
+                    if (s.guardName != null && !s.guardName.isEmpty() && !processedGuards.contains(s.guardName.toLowerCase(Locale.US))) {
+                        processedGuards.add(s.guardName.toLowerCase(Locale.US));
+                        PhoneContactMatch match = lookupPhoneContact(s.guardName);
+                        String phone = match.hasMatch && match.phoneNumber != null ? match.phoneNumber : (s.guardName.toLowerCase(Locale.US).contains("lochran") ? "0404530014" : "0478352551");
+                        String badge = (s.guardName.toLowerCase(Locale.US).contains("lochran")) ? "ON SITE (TONIGHT)" : ("ROSTER: " + s.status);
+                        container.addView(contactCard(s.guardName, "Deputy Roster · Static Security Guard", phone, badge, colEmerald, "🛡️"));
+                    }
+                }
+            }
+
+            if (!processedGuards.contains("lochran doherty")) {
+                PhoneContactMatch match = lookupPhoneContact("Lochran Doherty");
+                String phone = match.hasMatch && match.phoneNumber != null ? match.phoneNumber : "0404530014";
+                container.addView(contactCard("Officer Lochran Doherty", "G.J.G. Security · Static Guard LIC #41207", phone, "ON SITE (TONIGHT)", colEmerald, "🛡️"));
+            }
+            if (!processedGuards.contains("petrea doherty")) {
+                PhoneContactMatch match = lookupPhoneContact("Petrea Doherty");
+                String phone = match.hasMatch && match.phoneNumber != null ? match.phoneNumber : "0401371724";
+                container.addView(contactCard("Petrea Doherty", "G.J.G. Security Services Pty Ltd", phone, "SECURITY OPS", colEmerald, "📞"));
+            }
         }
 
         // 5. 🏭 HUME DOORS AFTER HOURS CONTACTS
@@ -9800,8 +9903,28 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
         actionCol.setGravity(Gravity.CENTER_VERTICAL);
         actionCol.setPadding(dp(8), 0, 0, 0);
 
-        final boolean isMobile = phoneDisplay.startsWith("04");
+        final boolean isMobile = phoneDisplay.startsWith("04") || phoneDisplay.startsWith("+614");
         if (isMobile) {
+            TextView btnWa = new TextView(this);
+            btnWa.setText("WA");
+            btnWa.setTextColor(0xFF25D366);
+            btnWa.setTextSize(11f);
+            btnWa.setTypeface(Typeface.DEFAULT_BOLD);
+            btnWa.setPadding(dp(10), dp(6), dp(10), dp(6));
+            btnWa.setBackground(rounded(0x2225D366, dp(6)));
+            LinearLayout.LayoutParams walp = new LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+            walp.rightMargin = dp(6);
+            btnWa.setLayoutParams(walp);
+            btnWa.setOnClickListener(new View.OnClickListener() {
+                public void onClick(View v) {
+                    hapticClick();
+                    registerActivity();
+                    openWhatsAppChat(phoneDisplay, "Hi " + name + ", Gatehouse here regarding your shift.");
+                }
+            });
+            actionCol.addView(btnWa);
+
             TextView btnSms = new TextView(this);
             btnSms.setText("SMS");
             btnSms.setTextColor(colCyan);
@@ -9871,6 +9994,65 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
         return raw;
     }
 
+    private void openWhatsAppChat(String phone, String text) {
+        try {
+            String cleanPhone = phone.replaceAll("[^0-9]", "");
+            if (cleanPhone.startsWith("04")) {
+                cleanPhone = "61" + cleanPhone.substring(1);
+            }
+            Uri uri = Uri.parse("https://wa.me/" + cleanPhone + (text != null ? ("?text=" + Uri.encode(text)) : ""));
+            Intent waIntent = new Intent(Intent.ACTION_VIEW, uri);
+            waIntent.setPackage("com.whatsapp");
+            try {
+                startActivity(waIntent);
+            } catch (Exception notInstalled) {
+                Intent webIntent = new Intent(Intent.ACTION_VIEW, uri);
+                startActivity(webIntent);
+            }
+        } catch (Exception e) {
+            Toast.makeText(this, "Could not open WhatsApp", Toast.LENGTH_SHORT).show();
+        }
+    }
+
+    public static class PhoneContactMatch {
+        public String displayName;
+        public String phoneNumber;
+        public boolean hasMatch;
+    }
+
+    private PhoneContactMatch lookupPhoneContact(String guardName) {
+        PhoneContactMatch result = new PhoneContactMatch();
+        result.displayName = guardName;
+        result.hasMatch = false;
+        if (guardName == null || guardName.trim().isEmpty()) return result;
+
+        try {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M &&
+                    checkSelfPermission(android.Manifest.permission.READ_CONTACTS) == android.content.pm.PackageManager.PERMISSION_GRANTED) {
+                String[] parts = guardName.trim().split(" ");
+                String firstName = parts[0];
+                Uri uri = android.provider.ContactsContract.CommonDataKinds.Phone.CONTENT_URI;
+                String[] projection = {
+                    android.provider.ContactsContract.CommonDataKinds.Phone.DISPLAY_NAME,
+                    android.provider.ContactsContract.CommonDataKinds.Phone.NUMBER
+                };
+                String selection = android.provider.ContactsContract.CommonDataKinds.Phone.DISPLAY_NAME + " LIKE ?";
+                String[] selectionArgs = {"%" + firstName + "%"};
+
+                android.database.Cursor cursor = getContentResolver().query(uri, projection, selection, selectionArgs, null);
+                if (cursor != null) {
+                    if (cursor.moveToFirst()) {
+                        result.displayName = cursor.getString(cursor.getColumnIndexOrThrow(android.provider.ContactsContract.CommonDataKinds.Phone.DISPLAY_NAME));
+                        result.phoneNumber = cursor.getString(cursor.getColumnIndexOrThrow(android.provider.ContactsContract.CommonDataKinds.Phone.NUMBER));
+                        result.hasMatch = true;
+                    }
+                    cursor.close();
+                }
+            }
+        } catch (Throwable ignored) {}
+        return result;
+    }
+
     private void dialNumber(String raw) {
         try {
             Intent intent = new Intent(Intent.ACTION_DIAL);
@@ -9885,6 +10067,542 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
     private void rebuildCurrentScreen() {
         buildUi();
         refresh();
+    }
+
+    private String sportsActiveFilter = "ALL";
+
+    private LinearLayout buildAussieSportsCard() {
+        final LinearLayout card = new LinearLayout(this);
+        card.setOrientation(LinearLayout.VERTICAL);
+        card.setBackground(rounded(colPanel, dp(16)));
+        card.setPadding(dp(14), dp(14), dp(14), dp(14));
+        card.setElevation(dp(3));
+        LinearLayout.LayoutParams clp = new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+        clp.bottomMargin = dp(12);
+        card.setLayoutParams(clp);
+
+        // Header Row: Title + Live Badge
+        LinearLayout topRow = new LinearLayout(this);
+        topRow.setOrientation(LinearLayout.HORIZONTAL);
+        topRow.setGravity(Gravity.CENTER_VERTICAL);
+
+        TextView title = new TextView(this);
+        title.setText("🏉 AUSSIE SPORTS RADAR");
+        title.setTextColor(colAccent);
+        title.setTextSize(12);
+        title.setTypeface(Typeface.create(Typeface.MONOSPACE, Typeface.BOLD));
+        LinearLayout.LayoutParams tlp = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
+        title.setLayoutParams(tlp);
+        topRow.addView(title);
+
+        TextView subBadge = new TextView(this);
+        subBadge.setText("NRL · UNION · AFL");
+        subBadge.setTextColor(colMuted);
+        subBadge.setTextSize(9.5f);
+        subBadge.setTypeface(Typeface.MONOSPACE);
+        subBadge.setPadding(dp(6), dp(2), dp(6), dp(2));
+        subBadge.setBackground(rounded(colPanel2, dp(4)));
+        topRow.addView(subBadge);
+
+        card.addView(topRow);
+
+        // Filter Strip (ALL, NRL, UNION, AFL)
+        HorizontalScrollView filterScroll = new HorizontalScrollView(this);
+        filterScroll.setHorizontalScrollBarEnabled(false);
+        filterScroll.setPadding(0, dp(8), 0, dp(6));
+
+        final LinearLayout filterRow = new LinearLayout(this);
+        filterRow.setOrientation(LinearLayout.HORIZONTAL);
+
+        final String[][] leagueFilters = {
+            {"ALL", "🔥 ALL MATCHES"},
+            {"NRL", "🏉 NRL"},
+            {"RUGBY_UNION", "🏉 RUGBY UNION"},
+            {"AFL", "🏉 AFL"}
+        };
+
+        final LinearLayout matchesContainer = new LinearLayout(this);
+        matchesContainer.setOrientation(LinearLayout.VERTICAL);
+
+        final List<TextView> filterChips = new ArrayList<>();
+        for (final String[] f : leagueFilters) {
+            final String fKey = f[0];
+            final String fLabel = f[1];
+            final TextView chip = new TextView(this);
+            chip.setText(fLabel);
+            chip.setTextSize(10.5f);
+            chip.setTypeface(Typeface.DEFAULT_BOLD);
+            chip.setPadding(dp(10), dp(5), dp(10), dp(5));
+
+            boolean sel = sportsActiveFilter.equalsIgnoreCase(fKey);
+            chip.setTextColor(sel ? 0xFF0F172A : colPale);
+            chip.setBackground(rounded(sel ? 0xFFFFD166 : colPanel2, dp(10)));
+
+            LinearLayout.LayoutParams plp = new LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+            plp.rightMargin = dp(4);
+            chip.setLayoutParams(plp);
+
+            chip.setOnClickListener(new View.OnClickListener() {
+                public void onClick(View v) {
+                    hapticClick();
+                    sportsActiveFilter = fKey;
+                    for (int i = 0; i < leagueFilters.length; i++) {
+                        boolean s = leagueFilters[i][0].equalsIgnoreCase(sportsActiveFilter);
+                        filterChips.get(i).setTextColor(s ? 0xFF0F172A : colPale);
+                        filterChips.get(i).setBackground(rounded(s ? 0xFFFFD166 : colPanel2, dp(10)));
+                    }
+                    populateSportsMatches(matchesContainer);
+                }
+            });
+            filterChips.add(chip);
+            filterRow.addView(chip);
+        }
+        filterScroll.addView(filterRow);
+        card.addView(filterScroll);
+
+        card.addView(matchesContainer);
+        populateSportsMatches(matchesContainer);
+
+        // Footer Refresh Row
+        LinearLayout footRow = new LinearLayout(this);
+        footRow.setOrientation(LinearLayout.HORIZONTAL);
+        footRow.setGravity(Gravity.CENTER_VERTICAL);
+        footRow.setPadding(0, dp(8), 0, 0);
+
+        TextView refreshBtn = new TextView(this);
+        refreshBtn.setText("↻ Refresh Live Scores");
+        refreshBtn.setTextColor(colCyan);
+        refreshBtn.setTextSize(11);
+        refreshBtn.setTypeface(Typeface.DEFAULT_BOLD);
+        refreshBtn.setPadding(dp(10), dp(6), dp(10), dp(6));
+        refreshBtn.setBackground(rounded(colPanel2, dp(8)));
+        refreshBtn.setOnClickListener(new View.OnClickListener() {
+            public void onClick(View v) {
+                hapticHeavyClick();
+                AussieSportsTrackerManager.getInstance(MainActivity.this).fetchScoresAsync(new AussieSportsTrackerManager.SportsCallback() {
+                    @Override
+                    public void onDataLoaded(List<AussieSportsTrackerManager.SportsMatch> matches) {
+                        runOnUiThread(new Runnable() {
+                            public void run() {
+                                populateSportsMatches(matchesContainer);
+                                Toast.makeText(MainActivity.this, "✓ Live scores updated", Toast.LENGTH_SHORT).show();
+                            }
+                        });
+                    }
+                    @Override
+                    public void onError(String msg) {
+                        runOnUiThread(new Runnable() {
+                            public void run() {
+                                Toast.makeText(MainActivity.this, "Scores: " + msg, Toast.LENGTH_SHORT).show();
+                            }
+                        });
+                    }
+                });
+            }
+        });
+        footRow.addView(refreshBtn);
+
+        TextView tvGuideNote = new TextView(this);
+        tvGuideNote.setText("Nine · Fox League · Kayo · 7 · Stan");
+        tvGuideNote.setTextColor(colQuiet);
+        tvGuideNote.setTextSize(10);
+        tvGuideNote.setGravity(Gravity.RIGHT);
+        tvGuideNote.setTypeface(Typeface.MONOSPACE);
+        LinearLayout.LayoutParams glp = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
+        tvGuideNote.setLayoutParams(glp);
+        footRow.addView(tvGuideNote);
+
+        card.addView(footRow);
+        return card;
+    }
+
+    private void populateSportsMatches(LinearLayout container) {
+        container.removeAllViews();
+        List<AussieSportsTrackerManager.SportsMatch> list = AussieSportsTrackerManager.getInstance(this).getCachedMatches();
+
+        int count = 0;
+        for (AussieSportsTrackerManager.SportsMatch m : list) {
+            if (!"ALL".equalsIgnoreCase(sportsActiveFilter)) {
+                if (!m.league.name().equalsIgnoreCase(sportsActiveFilter)) continue;
+            }
+            container.addView(buildSportsMatchRow(m));
+            count++;
+        }
+
+        if (count == 0) {
+            TextView empty = new TextView(this);
+            empty.setText("No matches scheduled in this category today.");
+            empty.setTextColor(colMuted);
+            empty.setTextSize(11);
+            empty.setPadding(dp(8), dp(12), dp(8), dp(12));
+            container.addView(empty);
+        }
+    }
+
+    private View buildSportsMatchRow(final AussieSportsTrackerManager.SportsMatch m) {
+        LinearLayout row = new LinearLayout(this);
+        row.setOrientation(LinearLayout.VERTICAL);
+        row.setBackground(rounded(0xFF0F172A, dp(10)));
+        row.setPadding(dp(10), dp(10), dp(10), dp(10));
+        LinearLayout.LayoutParams rlp = new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+        rlp.bottomMargin = dp(6);
+        row.setLayoutParams(rlp);
+
+        // Header Line: League + Status Clock + Broadcast TV
+        LinearLayout hLine = new LinearLayout(this);
+        hLine.setOrientation(LinearLayout.HORIZONTAL);
+        hLine.setGravity(Gravity.CENTER_VERTICAL);
+
+        TextView lBadge = new TextView(this);
+        lBadge.setText(m.league.label);
+        lBadge.setTextColor(m.league.color);
+        lBadge.setTextSize(10f);
+        lBadge.setTypeface(Typeface.create(Typeface.MONOSPACE, Typeface.BOLD));
+        hLine.addView(lBadge);
+
+        TextView sBadge = new TextView(this);
+        sBadge.setText(m.status == AussieSportsTrackerManager.MatchStatus.LIVE ? ("● " + m.clock) : m.clock);
+        sBadge.setTextColor(m.status.color);
+        sBadge.setTextSize(10f);
+        sBadge.setTypeface(Typeface.DEFAULT_BOLD);
+        sBadge.setPadding(dp(6), dp(1), dp(6), dp(1));
+        sBadge.setBackground(rounded(m.status == AussieSportsTrackerManager.MatchStatus.LIVE ? 0x33EF4444 : colPanel2, dp(4)));
+        LinearLayout.LayoutParams slp = new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+        slp.leftMargin = dp(6);
+        sBadge.setLayoutParams(slp);
+        hLine.addView(sBadge);
+
+        TextView tvTxt = new TextView(this);
+        tvTxt.setText("📺 " + m.broadcastTv);
+        tvTxt.setTextColor(colMuted);
+        tvTxt.setTextSize(9.5f);
+        tvTxt.setGravity(Gravity.RIGHT);
+        LinearLayout.LayoutParams tlp = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
+        tvTxt.setLayoutParams(tlp);
+        hLine.addView(tvTxt);
+
+        row.addView(hLine);
+
+        // Teams & Score Clash Line
+        LinearLayout mLine = new LinearLayout(this);
+        mLine.setOrientation(LinearLayout.HORIZONTAL);
+        mLine.setGravity(Gravity.CENTER_VERTICAL);
+        mLine.setPadding(0, dp(6), 0, dp(4));
+
+        // Home Team
+        LinearLayout homeCol = new LinearLayout(this);
+        homeCol.setOrientation(LinearLayout.VERTICAL);
+        LinearLayout.LayoutParams hclp = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
+        homeCol.setLayoutParams(hclp);
+
+        TextView hName = new TextView(this);
+        hName.setText(m.homeTeam);
+        hName.setTextColor(colPale);
+        hName.setTextSize(13f);
+        hName.setTypeface(Typeface.DEFAULT_BOLD);
+        homeCol.addView(hName);
+
+        TextView hShort = new TextView(this);
+        hShort.setText(m.homeShort);
+        hShort.setTextColor(colMuted);
+        hShort.setTextSize(9.5f);
+        hShort.setTypeface(Typeface.MONOSPACE);
+        homeCol.addView(hShort);
+        mLine.addView(homeCol);
+
+        // Score Center Block
+        LinearLayout scoreBox = new LinearLayout(this);
+        scoreBox.setOrientation(LinearLayout.HORIZONTAL);
+        scoreBox.setGravity(Gravity.CENTER);
+        scoreBox.setBackground(rounded(colPanel, dp(6)));
+        scoreBox.setPadding(dp(12), dp(4), dp(12), dp(4));
+
+        TextView scoreTxt = new TextView(this);
+        if (m.status == AussieSportsTrackerManager.MatchStatus.UPCOMING) {
+            scoreTxt.setText("VS");
+            scoreTxt.setTextColor(colQuiet);
+        } else {
+            scoreTxt.setText(m.homeScore + " - " + m.awayScore);
+            scoreTxt.setTextColor(m.status == AussieSportsTrackerManager.MatchStatus.LIVE ? 0xFFFFD166 : colPale);
+        }
+        scoreTxt.setTextSize(15f);
+        scoreTxt.setTypeface(Typeface.create(Typeface.MONOSPACE, Typeface.BOLD));
+        scoreBox.addView(scoreTxt);
+        mLine.addView(scoreBox);
+
+        // Away Team
+        LinearLayout awayCol = new LinearLayout(this);
+        awayCol.setOrientation(LinearLayout.VERTICAL);
+        awayCol.setGravity(Gravity.RIGHT);
+        LinearLayout.LayoutParams aclp = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
+        awayCol.setLayoutParams(aclp);
+
+        TextView aName = new TextView(this);
+        aName.setText(m.awayTeam);
+        aName.setTextColor(colPale);
+        aName.setTextSize(13f);
+        aName.setGravity(Gravity.RIGHT);
+        aName.setTypeface(Typeface.DEFAULT_BOLD);
+        awayCol.addView(aName);
+
+        TextView aShort = new TextView(this);
+        aShort.setText(m.awayShort);
+        aShort.setTextColor(colMuted);
+        aShort.setTextSize(9.5f);
+        aShort.setGravity(Gravity.RIGHT);
+        aShort.setTypeface(Typeface.MONOSPACE);
+        awayCol.addView(aShort);
+        mLine.addView(awayCol);
+
+        row.addView(mLine);
+
+        // Venue & Date Subtitle
+        TextView vTxt = new TextView(this);
+        vTxt.setText("📍 " + m.venue + " · " + m.matchDateStr + " (" + m.roundName + ")");
+        vTxt.setTextColor(colQuiet);
+        vTxt.setTextSize(10f);
+        row.addView(vTxt);
+
+        return row;
+    }
+
+    private LinearLayout buildSettingsTab() {
+        final LinearLayout container = new LinearLayout(this);
+        container.setOrientation(LinearLayout.VERTICAL);
+        container.setPadding(0, dp(4), 0, dp(56));
+
+        // 1. Settings Header Card
+        container.addView(formSectionLabel("⚙️ GATEHOUSE CONFIGURATION & PREFERENCES"));
+
+        // 2. Active Display Theme Selector
+        LinearLayout themeCard = new LinearLayout(this);
+        themeCard.setOrientation(LinearLayout.VERTICAL);
+        themeCard.setBackground(rounded(colPanel, dp(14)));
+        themeCard.setPadding(dp(14), dp(14), dp(14), dp(14));
+        LinearLayout.LayoutParams tclp = new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+        tclp.bottomMargin = dp(12);
+        themeCard.setLayoutParams(tclp);
+
+        TextView tTitle = new TextView(this);
+        tTitle.setText("🎨 ACTIVE DISPLAY THEME");
+        tTitle.setTextColor(colAccent);
+        tTitle.setTextSize(11f);
+        tTitle.setTypeface(Typeface.create(Typeface.MONOSPACE, Typeface.BOLD));
+        tTitle.setPadding(0, 0, 0, dp(8));
+        themeCard.addView(tTitle);
+
+        final String[][] themes = {
+            {"OLED Gold (Default)", "AMOLED zero-power black & warm gold accents", String.valueOf(THEME_GOLD)},
+            {"0-Lux Red", "Night vision preservation & zero light bleed", String.valueOf(THEME_RED)},
+            {"NVG Phosphor Green", "High-contrast night perimeter surveillance", String.valueOf(THEME_NVG)},
+            {"Cyber Violet", "Low-glare indoor gatehouse console", String.valueOf(THEME_VIOLET)}
+        };
+
+        for (int i = 0; i < themes.length; i++) {
+            final int themeId = Integer.parseInt(themes[i][2]);
+            final boolean isSelected = (activeTheme == themeId);
+
+            final LinearLayout row = new LinearLayout(this);
+            row.setOrientation(LinearLayout.HORIZONTAL);
+            row.setGravity(Gravity.CENTER_VERTICAL);
+            row.setBackground(rounded(isSelected ? 0x22FFD166 : colPanel2, dp(10)));
+            row.setPadding(dp(12), dp(10), dp(12), dp(10));
+            LinearLayout.LayoutParams rlp = new LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+            rlp.bottomMargin = dp(6);
+            row.setLayoutParams(rlp);
+
+            final TextView radio = new TextView(this);
+            radio.setText(isSelected ? "🔘" : "⚪");
+            radio.setTextSize(16);
+            radio.setPadding(0, 0, dp(10), 0);
+            row.addView(radio);
+
+            LinearLayout textCol = new LinearLayout(this);
+            textCol.setOrientation(LinearLayout.VERTICAL);
+            LinearLayout.LayoutParams txclp = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
+            textCol.setLayoutParams(txclp);
+
+            TextView title = new TextView(this);
+            title.setText(themes[i][0]);
+            title.setTextColor(isSelected ? colAccent : colPale);
+            title.setTextSize(13);
+            title.setTypeface(Typeface.DEFAULT_BOLD);
+            textCol.addView(title);
+
+            TextView desc = new TextView(this);
+            desc.setText(themes[i][1]);
+            desc.setTextColor(colMuted);
+            desc.setTextSize(10.5f);
+            textCol.addView(desc);
+            row.addView(textCol);
+
+            row.setOnClickListener(new View.OnClickListener() {
+                public void onClick(View v) {
+                    hapticClick();
+                    if (activeTheme != themeId) {
+                        activeTheme = themeId;
+                        applyThemeTokens();
+                        rebuildCurrentScreen();
+                    }
+                }
+            });
+            themeCard.addView(row);
+        }
+        container.addView(themeCard);
+
+        // 3. Officer Credential Vault & QLD Security Licence
+        container.addView(formSectionLabel("🪪 OFFICER CREDENTIALS & SECURITY LICENCE"));
+        final LicenceVerificationManager.LicenceStatus licStatus = LicenceVerificationManager.getLicenceStatus(this);
+        LinearLayout licCard = new LinearLayout(this);
+        licCard.setOrientation(LinearLayout.VERTICAL);
+        licCard.setBackground(rounded(colPanel, dp(14)));
+        licCard.setPadding(dp(14), dp(14), dp(14), dp(14));
+        LinearLayout.LayoutParams lclp = new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+        lclp.bottomMargin = dp(12);
+        licCard.setLayoutParams(lclp);
+
+        LinearLayout licHeader = new LinearLayout(this);
+        licHeader.setOrientation(LinearLayout.HORIZONTAL);
+        licHeader.setGravity(Gravity.CENTER_VERTICAL);
+
+        TextView licTitle = new TextView(this);
+        licTitle.setText("Officer Lochran Doherty (LIC #" + licStatus.licenceNumber + ")");
+        licTitle.setTextColor(colPale);
+        licTitle.setTextSize(13);
+        licTitle.setTypeface(Typeface.DEFAULT_BOLD);
+        LinearLayout.LayoutParams ltlp = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
+        licTitle.setLayoutParams(ltlp);
+        licHeader.addView(licTitle);
+
+        TextView licBadge = new TextView(this);
+        licBadge.setText(licStatus.statusBadgeText);
+        licBadge.setTextColor(licStatus.statusColor);
+        licBadge.setTextSize(10);
+        licBadge.setTypeface(Typeface.MONOSPACE);
+        licBadge.setPadding(dp(6), dp(2), dp(6), dp(2));
+        licBadge.setBackground(rounded(licStatus.statusBgColor, dp(4)));
+        licHeader.addView(licBadge);
+        licCard.addView(licHeader);
+
+        TextView licDesc = new TextView(this);
+        licDesc.setText("Static Security Guard · QLD Class 1 · Verified with Fair Trading QLD.\nTap below to inspect 3D holographic certificate & audit timeline.");
+        licDesc.setTextColor(colMuted);
+        licDesc.setTextSize(11f);
+        licDesc.setPadding(0, dp(4), 0, dp(8));
+        licCard.addView(licDesc);
+
+        TextView btnOpenVault = actionButton("🪪 Inspect Credential Vault", colPanel2, colAccent);
+        btnOpenVault.setOnClickListener(new View.OnClickListener() {
+            public void onClick(View v) {
+                hapticClick();
+                showOfficerCredentialVaultDialog();
+            }
+        });
+        licCard.addView(btnOpenVault);
+        container.addView(licCard);
+
+        // 4. Terminal Hardware Profile
+        container.addView(formSectionLabel("📱 TERMINAL HARDWARE & SYSTEM STATUS"));
+        container.addView(terminalProfileCard());
+
+        // 5. Deputy Sync & OTA Updates Suite
+        LinearLayout syncCard = new LinearLayout(this);
+        syncCard.setOrientation(LinearLayout.VERTICAL);
+        syncCard.setBackground(rounded(colPanel, dp(14)));
+        syncCard.setPadding(dp(14), dp(14), dp(14), dp(14));
+        LinearLayout.LayoutParams sclp = new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+        sclp.bottomMargin = dp(12);
+        syncCard.setLayoutParams(sclp);
+
+        TextView sTitle = new TextView(this);
+        sTitle.setText("🔄 DEPUTY BUSINESS & OTA SYSTEM SYNC");
+        sTitle.setTextColor(colCyan);
+        sTitle.setTextSize(11f);
+        sTitle.setTypeface(Typeface.create(Typeface.MONOSPACE, Typeface.BOLD));
+        sTitle.setPadding(0, 0, 0, dp(8));
+        syncCard.addView(sTitle);
+
+        LinearLayout rSyncBtns = new LinearLayout(this);
+        rSyncBtns.setOrientation(LinearLayout.HORIZONTAL);
+
+        TextView btnSyncDeputy = actionButton("🔄 Sync Deputy Roster", colPanel2, colCyan);
+        btnSyncDeputy.setOnClickListener(new View.OnClickListener() {
+            public void onClick(View v) {
+                hapticHeavyClick();
+                new DeputyApi(MainActivity.this).syncRoster(new DeputyApi.ApiCallback<DeputyApi.DeputyRosterResult>() {
+                    @Override
+                    public void onSuccess(DeputyApi.DeputyRosterResult result) {
+                        runOnUiThread(new Runnable() {
+                            public void run() {
+                                Toast.makeText(MainActivity.this, "✓ Deputy roster sync completed", Toast.LENGTH_SHORT).show();
+                            }
+                        });
+                    }
+                    @Override
+                    public void onError(final String errorMessage) {
+                        runOnUiThread(new Runnable() {
+                            public void run() {
+                                Toast.makeText(MainActivity.this, "Deputy sync: " + errorMessage, Toast.LENGTH_SHORT).show();
+                            }
+                        });
+                    }
+                });
+            }
+        });
+        LinearLayout.LayoutParams dslp = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
+        dslp.rightMargin = dp(4);
+        btnSyncDeputy.setLayoutParams(dslp);
+        rSyncBtns.addView(btnSyncDeputy);
+
+        TextView btnOta = actionButton("⚡ Check OTA Update", colPanel2, colEmerald);
+        btnOta.setOnClickListener(new View.OnClickListener() {
+            public void onClick(View v) {
+                hapticHeavyClick();
+                AutoUpdateManager.checkForUpdateAsync(MainActivity.this, true, new AutoUpdateManager.UpdateCheckCallback() {
+                    @Override
+                    public void onUpdateFound(final String newSha, final long bytes) {
+                        runOnUiThread(new Runnable() {
+                            public void run() {
+                                banner.setText("✓ New update found (" + (newSha.length() > 8 ? newSha.substring(0, 8) : newSha) + ") · Installing");
+                                banner.setVisibility(View.VISIBLE);
+                            }
+                        });
+                    }
+                    @Override
+                    public void onNoUpdateAvailable() {
+                        runOnUiThread(new Runnable() {
+                            public void run() {
+                                Toast.makeText(MainActivity.this, "✓ Gatehouse is up to date (v" + AutoUpdateManager.getAppVersion(MainActivity.this) + ")", Toast.LENGTH_SHORT).show();
+                            }
+                        });
+                    }
+                    @Override
+                    public void onError(final String message) {
+                        runOnUiThread(new Runnable() {
+                            public void run() {
+                                Toast.makeText(MainActivity.this, "Update: " + message, Toast.LENGTH_SHORT).show();
+                            }
+                        });
+                    }
+                });
+            }
+        });
+        LinearLayout.LayoutParams otalp = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
+        otalp.leftMargin = dp(4);
+        btnOta.setLayoutParams(otalp);
+        rSyncBtns.addView(btnOta);
+        syncCard.addView(rSyncBtns);
+        container.addView(syncCard);
+
+        return container;
     }
 
     private void showSettingsDialog() {
@@ -18898,7 +19616,7 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
         }
 
         public void setIndicatorFloat(float f) {
-            this.indicatorFloat = Math.max(0f, Math.min(2f, f));
+            this.indicatorFloat = Math.max(0f, Math.min(3f, f));
             invalidate();
         }
 
@@ -18939,10 +19657,11 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
                         isDragging = true;
                     }
                     if (isDragging) {
-                        float frac = Math.max(0f, Math.min(2f, (event.getX() / (w * 0.75f)) * 2f));
+                        float segW = w / 4f;
+                        float frac = Math.max(0f, Math.min(3f, (event.getX() - segW * 0.5f) / segW));
                         indicatorFloat = frac;
-                        int nearestTab = (int) Math.min(2, Math.max(0, Math.floor(event.getX() / (w / 4f))));
-                        if (nearestTab != lastHapticTab && nearestTab <= 2) {
+                        int nearestTab = (int) Math.min(3, Math.max(0, Math.floor(event.getX() / segW)));
+                        if (nearestTab != lastHapticTab) {
                             lastHapticTab = nearestTab;
                             MainActivity.this.hapticTick();
                         }
@@ -18955,17 +19674,11 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
                 case MotionEvent.ACTION_CANCEL:
                     if (getParent() != null) getParent().requestDisallowInterceptTouchEvent(false);
                     int tappedTab = (int) Math.min(3, Math.max(0, Math.floor(event.getX() / (w / 4f))));
-                    if (!isDragging && tappedTab == 3) {
-                        MainActivity.this.hapticClick();
-                        MainActivity.this.showSettingsDialog();
-                        invalidate();
-                        return true;
-                    }
                     int finalTab;
                     if (!isDragging) {
-                        finalTab = Math.min(2, tappedTab);
+                        finalTab = tappedTab;
                     } else {
-                        finalTab = (int) Math.min(2, Math.max(0, Math.round(indicatorFloat)));
+                        finalTab = (int) Math.min(3, Math.max(0, Math.round(indicatorFloat)));
                     }
                     MainActivity.this.animateTabToPosition(finalTab);
                     invalidate();
@@ -19616,6 +20329,14 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
                     toolsContent = buildToolsTab();
                     scrollTools.addView(toolsContent);
                     scrollTools.setBackgroundColor(colBg);
+                }
+                break;
+            case 3:
+                if (scrollSettings != null) {
+                    scrollSettings.removeAllViews();
+                    settingsContent = buildSettingsTab();
+                    scrollSettings.addView(settingsContent);
+                    scrollSettings.setBackgroundColor(colBg);
                 }
                 break;
         }
