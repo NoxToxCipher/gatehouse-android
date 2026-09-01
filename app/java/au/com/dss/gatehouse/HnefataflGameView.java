@@ -39,6 +39,9 @@ public class HnefataflGameView extends View {
     private final Paint pieceShinePaint = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final Paint selectGlowPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final Paint targetDotPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+    private final Paint goldDetailPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+    private final Paint moveGlowPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+    private final Paint rivetPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final Paint runeTextPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final RectF rect = new RectF();
     private final RectF tileRect = new RectF();
@@ -61,7 +64,18 @@ public class HnefataflGameView extends View {
 
         goldBorderPaint.setColor(0xFFEAB308);
         goldBorderPaint.setStyle(Paint.Style.STROKE);
-        goldBorderPaint.setStrokeWidth(dpf(1.8f));
+        goldBorderPaint.setStrokeWidth(dpf(2f));
+
+        goldDetailPaint.setColor(0xFFCA8A04);
+        goldDetailPaint.setStyle(Paint.Style.STROKE);
+        goldDetailPaint.setStrokeWidth(dpf(1f));
+
+        moveGlowPaint.setColor(0xFFFDE047);
+        moveGlowPaint.setStyle(Paint.Style.STROKE);
+        moveGlowPaint.setStrokeWidth(dpf(2.5f));
+
+        rivetPaint.setColor(0xFFCBD5E1);
+        rivetPaint.setStyle(Paint.Style.FILL);
 
         shadowPaint.setColor(0x99000000);
         shadowPaint.setStyle(Paint.Style.FILL);
@@ -419,11 +433,29 @@ public class HnefataflGameView extends View {
 
                 if (c == selectedX && r == selectedY) {
                     canvas.drawRect(tileRect, selectGlowPaint);
+                    // Selected Corner Ticks
+                    Paint tick = new Paint(Paint.ANTI_ALIAS_FLAG);
+                    tick.setColor(0xFFFFD166);
+                    tick.setStrokeWidth(dpf(1.8f));
+                    float tLen = dpf(5f);
+                    canvas.drawLine(tileRect.left, tileRect.top, tileRect.left + tLen, tileRect.top, tick);
+                    canvas.drawLine(tileRect.left, tileRect.top, tileRect.left, tileRect.top + tLen, tick);
+                    canvas.drawLine(tileRect.right, tileRect.top, tileRect.right - tLen, tileRect.top, tick);
+                    canvas.drawLine(tileRect.right, tileRect.top, tileRect.right, tileRect.top + tLen, tick);
+                    canvas.drawLine(tileRect.left, tileRect.bottom, tileRect.left + tLen, tileRect.bottom, tick);
+                    canvas.drawLine(tileRect.left, tileRect.bottom, tileRect.left, tileRect.bottom - tLen, tick);
+                    canvas.drawLine(tileRect.right, tileRect.bottom, tileRect.right - tLen, tileRect.bottom, tick);
+                    canvas.drawLine(tileRect.right, tileRect.bottom, tileRect.right, tileRect.bottom - tLen, tick);
                 }
 
                 char p = board[r][c];
                 float cx = left + cellSize / 2f;
                 float cy = top + cellSize / 2f;
+
+                boolean isCurrentSide = defendersTurn ? (p == 'D' || p == 'K') : (p == 'A');
+                if (isCurrentSide && selectedX == -1) {
+                    canvas.drawCircle(cx, cy, pieceR + dpf(2f), moveGlowPaint);
+                }
 
                 if (p == 'A') drawVikingShield(canvas, cx, cy, pieceR, 0xFFEF4444, 0xFF7F1D1D);
                 else if (p == 'D') drawVikingShield(canvas, cx, cy, pieceR, 0xFF38BDF8, 0xFF0369A1);
@@ -440,6 +472,7 @@ public class HnefataflGameView extends View {
     }
 
     private void drawVikingShield(Canvas canvas, float cx, float cy, float r, int lightCol, int darkCol) {
+        // Deep drop shadow
         canvas.drawCircle(cx + dpf(1.5f), cy + dpf(2f), r, shadowPaint);
 
         RadialGradient grad = new RadialGradient(
@@ -449,10 +482,37 @@ public class HnefataflGameView extends View {
         );
         piecePaint.setShader(grad);
         canvas.drawCircle(cx, cy, r, piecePaint);
+
+        // Wood Plank Lines
+        Paint plankLine = new Paint(Paint.ANTI_ALIAS_FLAG);
+        plankLine.setColor(0x44000000);
+        plankLine.setStrokeWidth(dpf(1f));
+        canvas.drawLine(cx - r * 0.9f, cy - r * 0.38f, cx + r * 0.9f, cy - r * 0.38f, plankLine);
+        canvas.drawLine(cx - r * 0.9f, cy + r * 0.38f, cx + r * 0.9f, cy + r * 0.38f, plankLine);
+        canvas.drawLine(cx - r, cy, cx + r, cy, plankLine);
+
+        // Outer Forged Rim
         canvas.drawCircle(cx, cy, r, pieceRimPaint);
 
-        canvas.drawCircle(cx, cy, r * 0.35f, pieceRimPaint);
-        canvas.drawCircle(cx - r * 0.1f, cy - r * 0.1f, r * 0.15f, pieceShinePaint);
+        // Central Steel Shield Boss
+        RadialGradient bossGrad = new RadialGradient(
+            cx - r * 0.1f, cy - r * 0.1f, r * 0.45f,
+            new int[]{0xFFFFFFFF, 0xFF94A3B8, 0xFF334155},
+            null, Shader.TileMode.CLAMP
+        );
+        Paint bossPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+        bossPaint.setShader(bossGrad);
+        canvas.drawCircle(cx, cy, r * 0.36f, bossPaint);
+        canvas.drawCircle(cx, cy, r * 0.36f, pieceRimPaint);
+
+        // 4 Iron Rivets
+        float rivetDist = r * 0.65f;
+        canvas.drawCircle(cx, cy - rivetDist, dpf(1.5f), rivetPaint);
+        canvas.drawCircle(cx, cy + rivetDist, dpf(1.5f), rivetPaint);
+        canvas.drawCircle(cx - rivetDist, cy, dpf(1.5f), rivetPaint);
+        canvas.drawCircle(cx + rivetDist, cy, dpf(1.5f), rivetPaint);
+
+        canvas.drawCircle(cx - r * 0.12f, cy - r * 0.12f, r * 0.12f, pieceShinePaint);
     }
 
     private void drawGoldenKing(Canvas canvas, float cx, float cy, float r) {
@@ -467,7 +527,32 @@ public class HnefataflGameView extends View {
         canvas.drawCircle(cx, cy, r, piecePaint);
         canvas.drawCircle(cx, cy, r, goldBorderPaint);
 
-        runeTextPaint.setTextSize(r * 1.2f);
-        canvas.drawText("👑", cx, cy + r * 0.42f, runeTextPaint);
+        // Royal Braided Gold Ring
+        Paint innerRim = new Paint(Paint.ANTI_ALIAS_FLAG);
+        innerRim.setColor(0xFFFDE047);
+        innerRim.setStyle(Paint.Style.STROKE);
+        innerRim.setStrokeWidth(dpf(1.2f));
+        canvas.drawCircle(cx, cy, r * 0.72f, innerRim);
+
+        // Center Ruby Cabochon Core
+        RadialGradient rubyGrad = new RadialGradient(
+            cx - r * 0.1f, cy - r * 0.1f, r * 0.4f,
+            new int[]{0xFFFCA5A5, 0xFFDC2626, 0xFF7F1D1D},
+            null, Shader.TileMode.CLAMP
+        );
+        Paint rubyPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+        rubyPaint.setShader(rubyGrad);
+        canvas.drawCircle(cx, cy, r * 0.36f, rubyPaint);
+        canvas.drawCircle(cx, cy, r * 0.36f, goldBorderPaint);
+
+        // 4 Gold Boss Studs
+        float sDist = r * 0.54f;
+        canvas.drawCircle(cx, cy - sDist, dpf(1.8f), innerRim);
+        canvas.drawCircle(cx, cy + sDist, dpf(1.8f), innerRim);
+        canvas.drawCircle(cx - sDist, cy, dpf(1.8f), innerRim);
+        canvas.drawCircle(cx + sDist, cy, dpf(1.8f), innerRim);
+
+        runeTextPaint.setTextSize(r * 0.9f);
+        canvas.drawText("👑", cx, cy + r * 0.32f, runeTextPaint);
     }
 }
