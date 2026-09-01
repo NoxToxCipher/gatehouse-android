@@ -208,6 +208,10 @@ public class ConnectFourGameView extends View {
             dropAnimator.cancel();
         }
 
+        try {
+            RecreationAudioSynth.playBadukStoneClack();
+        } catch (Exception ignored) {}
+
         dropAnimator = ValueAnimator.ofFloat(0f, 1f);
         dropAnimator.setDuration(duration);
         dropAnimator.setInterpolator(new BounceInterpolator());
@@ -225,11 +229,16 @@ public class ConnectFourGameView extends View {
                 isDropping = false;
 
                 try {
+                    RecreationAudioSynth.playChessPieceThud(false);
                     performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP);
                 } catch (Exception ignored) {}
 
                 if (checkWin(finalTargetRow, col, color)) {
                     gameOver = true;
+                    try {
+                        RecreationAudioSynth.playTetrisLineClear();
+                        performHapticFeedback(HapticFeedbackConstants.CONFIRM);
+                    } catch (Exception ignored) {}
                     if (statusListener != null) {
                         if (playerTurn) {
                             statusListener.onStatusChanged("🏆 4-IN-A-ROW VICTORY! Strategic alignment.", 0xFF10B981);

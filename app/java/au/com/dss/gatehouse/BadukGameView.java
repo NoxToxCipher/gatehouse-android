@@ -83,6 +83,11 @@ public class BadukGameView extends View {
     private int hintY = -1;
     private final Paint hintPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
 
+    // Interactive Endgame Territory Scoring Mode & Dead Stone Tracking
+    private boolean isScoringMode = false;
+    private final boolean[][] deadStones = new boolean[19][19];
+    private final Paint deadStoneCrossPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+
     // Stone Placement Descent & Wood Impact Clack Ripple Animation
     private int animStoneX = -1;
     private int animStoneY = -1;
@@ -104,6 +109,42 @@ public class BadukGameView extends View {
     // Joseki & Classical Opening Pattern Recognition
     private String detectedOpening = null;
     private long detectedOpeningTime = 0;
+
+    public void toggleScoringMode() {
+        isScoringMode = !isScoringMode;
+        showTerritory = isScoringMode;
+        if (isScoringMode) {
+            try { performHapticFeedback(HapticFeedbackConstants.LONG_PRESS); } catch (Exception ignored) {}
+            if (statusListener != null) {
+                statusListener.onStatusChanged("⚖️ Scoring Mode: Tap dead stones to mark as removed", 0xFFEAB308);
+            }
+        } else {
+            updateStatus();
+        }
+        invalidate();
+    }
+
+    public boolean isScoringMode() {
+        return isScoringMode;
+    }
+
+    public String getScoreSummary() {
+        int bTerr = countTerritory(1);
+        int wTerr = countTerritory(2);
+        for (int r = 0; r < boardSize; r++) {
+            for (int c = 0; c < boardSize; c++) {
+                if (deadStones[r][c]) {
+                    if (board[r][c] == 1) wTerr += 2;
+                    else if (board[r][c] == 2) bTerr += 2;
+                }
+            }
+        }
+        int bTotal = bTerr + blackCaptures;
+        float wTotal = wTerr + whiteCaptures + (boardSize == 19 ? 7.5f : 6.5f);
+        return String.format("⚫ Black: %d pts (Terr %d + Cap %d)\n⚪ White: %.1f pts (Terr %d + Cap %d + Komi %.1f)\n\nResult: %s",
+                bTotal, bTerr, blackCaptures, wTotal, wTerr, whiteCaptures, (boardSize == 19 ? 7.5f : 6.5f),
+                (bTotal > wTotal ? "Black wins by " + String.format("%.1f", bTotal - wTotal) + " pts" : "White wins by " + String.format("%.1f", wTotal - bTotal) + " pts"));
+    }
 
     public void setDifficultyTier(int tier) {
         this.difficultyTier = Math.max(0, Math.min(2, tier));
@@ -970,7 +1011,7 @@ public class BadukGameView extends View {
 
     @Override
     public boolean onTouchEvent(MotionEvent event) {
-        if (gameOver) return false;
+        if (gameOver && !isScoringMode) return false;
         int action = event.getActionMasked();
         if (action == MotionEvent.ACTION_DOWN || action == MotionEvent.ACTION_MOVE) {
             if (getParent() != null) getParent().requestDisallowInterceptTouchEvent(true);
@@ -988,8 +1029,20 @@ public class BadukGameView extends View {
             int gy = Math.round((event.getY() - startY) / cellSize);
 
             if (gx >= 0 && gx < boardSize && gy >= 0 && gy < boardSize) {
-                playMove(gx, gy);
-                return true;
+                if (isScoringMode) {
+                    if (board[gy][gx] != 0) {
+                        deadStones[gy][gx] = !deadStones[gy][gx];
+                        try { performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP); } catch (Exception ignored) {}
+                        if (statusListener != null) {
+                            statusListener.onStatusChanged(getScoreSummary().replace("\n\n", " · ").replace("\n", " | "), 0xFF10B981);
+                        }
+                        invalidate();
+                        return true;
+                    }
+                } else {
+                    playMove(gx, gy);
+                    return true;
+                }
             }
         }
         return super.onTouchEvent(event);
@@ -1098,7 +1151,7 @@ public class BadukGameView extends View {
                     shadowPaint.setAlpha(0x99);
 
                     // 3D Stone at elevated position
-                    drawSingleStone(canvas, cx, cy + animOffsetY, curR, val);
+                    drawSingleStone(canvas, cx, cy + animOffsetY, curR, val, deadStones[y][x]);
 
                     // Last Move Ring fade-in
                     if (p > 0.6f) {
@@ -1112,7 +1165,7 @@ public class BadukGameView extends View {
                         canvas.drawCircle(cx, cy, stoneR + dpf(2.5f), atariGlowPaint);
                     }
                     canvas.drawCircle(cx + dpf(1.5f), cy + dpf(2.5f), stoneR, shadowPaint);
-                    drawSingleStone(canvas, cx, cy, stoneR, val);
+                    drawSingleStone(canvas, cx, cy, stoneR, val, deadStones[y][x]);
 
                     if (x == lastMoveX && y == lastMoveY) {
                         canvas.drawCircle(cx, cy, stoneR * 0.5f, lastMovePaint);
@@ -1432,16 +1485,28 @@ public class BadukGameView extends View {
         }
     }
 
-    private void drawSingleStone(Canvas canvas, float cx, float cy, float r, int val) {
+    private void drawSingleStone(Canvas canvas, float cx, float cy, float r, int val, boolean isDead) {
         if (val == 1) { // Matte Nachiguro Slate (Bi-convex 3D layered)
+            if (isDead) blackStoneBasePaint.setAlpha(110);
             canvas.drawCircle(cx, cy, r, blackStoneBasePaint);
             canvas.drawCircle(cx - r * 0.30f, cy - r * 0.30f, r * 0.48f, blackStoneHlPaint);
             canvas.drawCircle(cx - r * 0.35f, cy - r * 0.35f, r * 0.22f, stoneShinePaint);
+            blackStoneBasePaint.setAlpha(255);
         } else if (val == 2) { // Hyuga Clamshell Pearl
+            if (isDead) whiteStoneBasePaint.setAlpha(110);
             canvas.drawCircle(cx, cy, r, whiteStoneBasePaint);
             canvas.drawCircle(cx, cy, r, stoneRimPaint);
             canvas.drawCircle(cx - r * 0.28f, cy - r * 0.28f, r * 0.46f, whiteStoneHlPaint);
             canvas.drawCircle(cx - r * 0.35f, cy - r * 0.35f, r * 0.24f, stoneShinePaint);
+            whiteStoneBasePaint.setAlpha(255);
+        }
+        if (isDead) {
+            float crossR = r * 0.55f;
+            deadStoneCrossPaint.setColor(0xFFEF4444);
+            deadStoneCrossPaint.setStyle(Paint.Style.STROKE);
+            deadStoneCrossPaint.setStrokeWidth(dpf(2.0f));
+            canvas.drawLine(cx - crossR, cy - crossR, cx + crossR, cy + crossR, deadStoneCrossPaint);
+            canvas.drawLine(cx + crossR, cy - crossR, cx - crossR, cy + crossR, deadStoneCrossPaint);
         }
     }
 
