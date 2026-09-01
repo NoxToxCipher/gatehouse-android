@@ -15118,6 +15118,19 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
 
         topBar.addView(titleCol);
 
+        final TextView btnViewMode = new TextView(this);
+        btnViewMode.setText(logbookRuledViewMode ? "📖 LEDGER" : "📜 FEED");
+        btnViewMode.setTextColor(logbookRuledViewMode ? 0xFFFDE047 : colCyan);
+        btnViewMode.setTextSize(9.5f);
+        btnViewMode.setTypeface(Typeface.create(Typeface.MONOSPACE, Typeface.BOLD));
+        btnViewMode.setPadding(dp(8), dp(4), dp(8), dp(4));
+        btnViewMode.setBackground(rounded(logbookRuledViewMode ? 0x33FDE047 : 0x2206B6D4, dp(6)));
+        LinearLayout.LayoutParams vmlp = new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+        vmlp.rightMargin = dp(4);
+        btnViewMode.setLayoutParams(vmlp);
+        topBar.addView(btnViewMode);
+
         TextView btnRefresh = new TextView(this);
         btnRefresh.setText("↻");
         btnRefresh.setTextColor(colPale);
@@ -15363,6 +15376,18 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
             }
         });
 
+        btnViewMode.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                hapticHeavyClick();
+                logbookRuledViewMode = !logbookRuledViewMode;
+                btnViewMode.setText(logbookRuledViewMode ? "📖 LEDGER" : "📜 FEED");
+                btnViewMode.setTextColor(logbookRuledViewMode ? 0xFFFDE047 : colCyan);
+                btnViewMode.setBackground(rounded(logbookRuledViewMode ? 0x33FDE047 : 0x2206B6D4, dp(6)));
+                if (refreshContent[0] != null) refreshContent[0].run();
+            }
+        });
+
         // =========================================================================
         // 5. MAIN TIMELINE LEDGER & REFRESH LOGIC
         // =========================================================================
@@ -15370,7 +15395,11 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
             @Override
             public void run() {
                 mainBodyContainer.removeAllViews();
-                mainBodyContainer.addView(buildLogbookFeedView());
+                if (logbookRuledViewMode) {
+                    mainBodyContainer.addView(buildLogbookRuledSheetView(isCarbonCopyMode));
+                } else {
+                    mainBodyContainer.addView(buildLogbookFeedView());
+                }
             }
         };
         refreshContent[0].run();
@@ -15686,6 +15715,14 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
                     rightCard.addView(attachRow);
                 }
 
+                rightCard.setOnClickListener(new View.OnClickListener() {
+                    @Override
+                    public void onClick(View v) {
+                        hapticClick();
+                        showLogEntryDetailSheet(entry);
+                    }
+                });
+
                 timelineRow.addView(rightCard);
                 container.addView(timelineRow);
             }
@@ -15693,6 +15730,159 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
 
         sv.addView(container);
         return sv;
+    }
+
+    private void showLogEntryDetailSheet(final LogbookManager.LogEntry entry) {
+        if (entry == null) return;
+        final LinearLayout box = dialogContainer("Occurrence Inspection", "TIMELINE RECORD", entry.categoryColor);
+
+        // Header Meta Card
+        LinearLayout metaCard = new LinearLayout(this);
+        metaCard.setOrientation(LinearLayout.HORIZONTAL);
+        metaCard.setGravity(Gravity.CENTER_VERTICAL);
+        metaCard.setBackground(rounded(0xFF1E293B, dp(12)));
+        metaCard.setPadding(dp(12), dp(10), dp(12), dp(10));
+        LinearLayout.LayoutParams mclp = new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+        mclp.bottomMargin = dp(10);
+        metaCard.setLayoutParams(mclp);
+
+        TextView tvCatIco = new TextView(this);
+        tvCatIco.setText(entry.categoryIcon);
+        tvCatIco.setTextSize(22f);
+        tvCatIco.setPadding(0, 0, dp(10), 0);
+        metaCard.addView(tvCatIco);
+
+        LinearLayout metaCol = new LinearLayout(this);
+        metaCol.setOrientation(LinearLayout.VERTICAL);
+        LinearLayout.LayoutParams mcolLp = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
+        metaCol.setLayoutParams(mcolLp);
+
+        TextView tvCatTitle = new TextView(this);
+        tvCatTitle.setText(entry.categoryLabel.toUpperCase(Locale.US));
+        tvCatTitle.setTextColor(entry.categoryColor);
+        tvCatTitle.setTextSize(12f);
+        tvCatTitle.setTypeface(Typeface.create(Typeface.MONOSPACE, Typeface.BOLD));
+        metaCol.addView(tvCatTitle);
+
+        TextView tvTimeMeta = new TextView(this);
+        tvTimeMeta.setText(entry.timeStr + " · " + entry.shiftDateStr);
+        tvTimeMeta.setTextColor(0xFF94A3B8);
+        tvTimeMeta.setTextSize(10.5f);
+        tvTimeMeta.setTypeface(Typeface.create(Typeface.MONOSPACE, Typeface.NORMAL));
+        metaCol.addView(tvTimeMeta);
+        metaCard.addView(metaCol);
+
+        TextView tvGuardSig = new TextView(this);
+        tvGuardSig.setText("🛡️ " + entry.guardName);
+        tvGuardSig.setTextColor(colCyan);
+        tvGuardSig.setTextSize(10.5f);
+        tvGuardSig.setTypeface(Typeface.create(Typeface.MONOSPACE, Typeface.BOLD));
+        tvGuardSig.setPadding(dp(8), dp(4), dp(8), dp(4));
+        tvGuardSig.setBackground(rounded(0x2200E5FF, dp(6)));
+        metaCard.addView(tvGuardSig);
+        box.addView(metaCard);
+
+        // Occurrence Text Body
+        LinearLayout bodyCard = new LinearLayout(this);
+        bodyCard.setOrientation(LinearLayout.VERTICAL);
+        bodyCard.setBackground(rounded(0xFF0F172A, dp(12)));
+        bodyCard.setPadding(dp(14), dp(12), dp(14), dp(12));
+        LinearLayout.LayoutParams bclp = new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+        bclp.bottomMargin = dp(10);
+        bodyCard.setLayoutParams(bclp);
+
+        TextView tvText = new TextView(this);
+        tvText.setText(entry.text);
+        tvText.setTextColor(colPale);
+        tvText.setTextSize(13.5f);
+        tvText.setTypeface(Typeface.DEFAULT_BOLD);
+        tvText.setLineSpacing(dp(2), 1.15f);
+        bodyCard.addView(tvText);
+        box.addView(bodyCard);
+
+        // Attachments Preview if any
+        if (!entry.photoHashSnippet.isEmpty() || !entry.regoPlate.isEmpty()) {
+            LinearLayout attachBox = new LinearLayout(this);
+            attachBox.setOrientation(LinearLayout.HORIZONTAL);
+            attachBox.setPadding(0, 0, 0, dp(10));
+
+            if (!entry.photoHashSnippet.isEmpty()) {
+                TextView btnPhoto = new TextView(this);
+                btnPhoto.setText("📷 PHOTO EVIDENCE #" + entry.photoHashSnippet);
+                btnPhoto.setTextColor(0xFFA855F7);
+                btnPhoto.setTextSize(11f);
+                btnPhoto.setTypeface(Typeface.create(Typeface.MONOSPACE, Typeface.BOLD));
+                btnPhoto.setPadding(dp(10), dp(6), dp(10), dp(6));
+                btnPhoto.setBackground(rounded(0x28A855F7, dp(8)));
+                btnPhoto.setOnClickListener(new View.OnClickListener() {
+                    @Override
+                    public void onClick(View v) {
+                        hapticClick();
+                        showPhotoExpandModal(entry.photoHashSnippet, entry.text, entry.timeStr);
+                    }
+                });
+                attachBox.addView(btnPhoto);
+            }
+
+            if (!entry.regoPlate.isEmpty()) {
+                TextView tvPlate = new TextView(this);
+                tvPlate.setText("🚗 PLATE " + entry.regoPlate);
+                tvPlate.setTextColor(0xFFF59E0B);
+                tvPlate.setTextSize(11f);
+                tvPlate.setTypeface(Typeface.create(Typeface.MONOSPACE, Typeface.BOLD));
+                tvPlate.setPadding(dp(10), dp(6), dp(10), dp(6));
+                tvPlate.setBackground(rounded(0x28F59E0B, dp(8)));
+                LinearLayout.LayoutParams plp = new LinearLayout.LayoutParams(
+                        LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+                plp.leftMargin = dp(6);
+                tvPlate.setLayoutParams(plp);
+                attachBox.addView(tvPlate);
+            }
+            box.addView(attachBox);
+        }
+
+        final Dialog dlg = createDialogSheet(box);
+
+        // Action Buttons Row
+        LinearLayout btnRow = new LinearLayout(this);
+        btnRow.setOrientation(LinearLayout.HORIZONTAL);
+        btnRow.setPadding(0, dp(4), 0, 0);
+
+        TextView btnCopy = actionButton("📋 Copy Occurrence", colLine, colCyan);
+        btnCopy.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                hapticHeavyClick();
+                String copyText = "[" + entry.timeStr + " - " + entry.shiftDateStr + "] " +
+                        entry.categoryLabel + " (" + entry.guardName + "): " + entry.text;
+                android.content.ClipboardManager cm = (android.content.ClipboardManager) getSystemService(android.content.Context.CLIPBOARD_SERVICE);
+                if (cm != null) {
+                    cm.setPrimaryClip(android.content.ClipData.newPlainText("Log Occurrence", copyText));
+                    Toast.makeText(MainActivity.this, "📋 Occurrence copied to clipboard", Toast.LENGTH_SHORT).show();
+                }
+            }
+        });
+        LinearLayout.LayoutParams cplp = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1.2f);
+        cplp.rightMargin = dp(4);
+        btnCopy.setLayoutParams(cplp);
+        btnRow.addView(btnCopy);
+
+        TextView btnClose = actionButton("Close", colLine, colPale);
+        btnClose.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                hapticClick();
+                dlg.dismiss();
+            }
+        });
+        LinearLayout.LayoutParams clp = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 0.8f);
+        btnClose.setLayoutParams(clp);
+        btnRow.addView(btnClose);
+
+        box.addView(btnRow);
+        dlg.show();
     }
 
     private View buildLogbookRuledSheetView(final boolean carbonMode) {
