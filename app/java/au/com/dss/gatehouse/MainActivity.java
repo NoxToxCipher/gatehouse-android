@@ -2679,63 +2679,6 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
             });
             box.addView(btnAllNormal);
 
-            box.addView(formSectionLabel("SYSTEM STATUS & FAULTS"));
-            final ArrayList<String> selectedConditions = new ArrayList<String>();
-            selectedConditions.add("✓ All 3 Gauges In-Spec (1,200 PSI Normal)");
-
-            final String[] lot16Options = {
-                "✓ All 3 Gauges In-Spec (1,200 PSI Normal)",
-                "⚠️ Line Pressure Low (< 1,000 PSI)",
-                "🚨 Critical Pressure Drop (< 800 PSI)",
-                "⚠️ Booster Line Surge (> 1,350 PSI)",
-                "⚠️ Minor Valve / Pipe Fitting Weep Noted"
-            };
-
-            final ArrayList<TextView> condViews = new ArrayList<TextView>();
-            for (int i = 0; i < lot16Options.length; i++) {
-                final String opt = lot16Options[i];
-                final TextView item = new TextView(this);
-                item.setText(opt);
-                item.setTextSize(13);
-                item.setPadding(dp(14), dp(10), dp(14), dp(10));
-
-                final boolean isAllClear = i == 0;
-                updateCheckItemStyle(item, selectedConditions.contains(opt), isAllClear);
-
-                LinearLayout.LayoutParams il = new LinearLayout.LayoutParams(
-                        LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
-                il.bottomMargin = dp(6);
-                item.setLayoutParams(il);
-
-                item.setOnClickListener(new View.OnClickListener() {
-                    public void onClick(View v) {
-                        hapticClick();
-                        if (isAllClear) {
-                            selectedConditions.clear();
-                            selectedConditions.add(lot16Options[0]);
-                        } else {
-                            selectedConditions.remove(lot16Options[0]);
-                            if (selectedConditions.contains(opt)) {
-                                selectedConditions.remove(opt);
-                            } else {
-                                selectedConditions.add(opt);
-                            }
-                            if (selectedConditions.isEmpty()) {
-                                selectedConditions.add(lot16Options[0]);
-                            }
-                        }
-                        for (int k = 0; k < condViews.size(); k++) {
-                            TextView tv = condViews.get(k);
-                            String o = lot16Options[k];
-                            updateCheckItemStyle(tv, selectedConditions.contains(o), k == 0);
-                        }
-                    }
-                });
-
-                condViews.add(item);
-                box.addView(item);
-            }
-
             final Dialog dlg = createDialogSheet(box);
 
             LinearLayout btnRow = new LinearLayout(this);
@@ -2751,7 +2694,7 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
             });
             btnRow.addView(btnCancel);
 
-            TextView btnSave = actionButton("✓ Log 3 Gauges", colAccent, colAccentInk);
+            TextView btnSave = actionButton("✓ Commit 3 Gauges", colAccent, colAccentInk);
             btnSave.setOnClickListener(new View.OnClickListener() {
                 public void onClick(View v) {
                     hapticHeavyClick();
@@ -2766,15 +2709,18 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
                     }
                     list.add(new PressureRecord(nowMinutes(), avgPsi));
 
-                    StringBuilder sb = new StringBuilder();
-                    sb.append("Lot 16 FS Inside: [Main: ").append(gaugePressures[0])
-                      .append(" PSI, Riser: ").append(gaugePressures[1])
-                      .append(" PSI, Booster: ").append(gaugePressures[2]).append(" PSI] ");
-                    for (int k = 0; k < selectedConditions.size(); k++) {
-                        if (k > 0) sb.append(", ");
-                        sb.append(selectedConditions.get(k));
-                    }
-                    String line = sb.toString();
+                    boolean allNormal = gaugePressures[0] >= 1100 && gaugePressures[0] <= 1350 &&
+                                        gaugePressures[1] >= 1100 && gaugePressures[1] <= 1350 &&
+                                        gaugePressures[2] >= 1100 && gaugePressures[2] <= 1350;
+
+                    String autoStatus = allNormal ? "✓ All 3 In-Spec (1,200 PSI Nominal)" :
+                            ("Main: " + getAutoPressureStatus(gaugePressures[0]) + ", " +
+                             "Riser: " + getAutoPressureStatus(gaugePressures[1]) + ", " +
+                             "Booster: " + getAutoPressureStatus(gaugePressures[2]));
+
+                    String line = "Lot 16 FS Inside: [Main: " + gaugePressures[0] + " PSI, Riser: " + gaugePressures[1] +
+                                  " PSI, Booster: " + gaugePressures[2] + " PSI] · " + autoStatus;
+
                     if (!oneLine(line)) {
                         banner.setText("notes must be one line");
                         banner.setVisibility(View.VISIBLE);
@@ -2890,107 +2836,7 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
             }
             box.addView(presRow);
 
-            final Dialog[] activeDlg = new Dialog[1];
-
-            final TextView btnQuickLog = actionButton("💾 Quick Log Pressure (1200 PSI)", colAccent, colAccentInk);
-            LinearLayout.LayoutParams qlp = new LinearLayout.LayoutParams(
-                    LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
-            qlp.topMargin = dp(4);
-            qlp.bottomMargin = dp(10);
-            btnQuickLog.setLayoutParams(qlp);
-
-            pressureField.addTextChangedListener(new TextWatcher() {
-                public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
-                public void onTextChanged(CharSequence s, int start, int before, int count) {}
-                public void afterTextChanged(Editable s) {
-                    String p = s.toString().trim();
-                    btnQuickLog.setText("💾 Quick Log Pressure (" + (p.isEmpty() ? "0" : p) + " PSI)");
-                }
-            });
-
-            btnQuickLog.setOnClickListener(new View.OnClickListener() {
-                public void onClick(View v) {
-                    hapticHeavyClick();
-                    registerActivity();
-                    String pVal = pressureField.getText().toString().trim();
-                    int pNum = 1200;
-                    try { pNum = Integer.parseInt(pVal); } catch (Exception e) {}
-
-                    ArrayList<PressureRecord> list = pressureHistory.get(name);
-                    if (list == null) {
-                        list = new ArrayList<PressureRecord>();
-                        pressureHistory.put(name, list);
-                    }
-                    list.add(new PressureRecord(nowMinutes(), pNum));
-
-                    note(Core.TOPIC_ROUTINE, "[GAUGE READING] " + name + ": " + pNum + " PSI (Manual Pressure Log)");
-                    banner.setText("✓ " + name + " " + pNum + " PSI committed to Ada chain");
-                    banner.setVisibility(View.VISIBLE);
-                    Toast.makeText(MainActivity.this, "✓ " + pNum + " PSI recorded into shift logbook", Toast.LENGTH_SHORT).show();
-                    if (activeDlg[0] != null) activeDlg[0].dismiss();
-                }
-            });
-            box.addView(btnQuickLog);
-
-            box.addView(formSectionLabel("SYSTEM STATUS & FAULTS"));
-            final ArrayList<String> selectedConditions = new ArrayList<String>();
-            selectedConditions.add("✓ Pressure Normal (1,200 PSI In Spec)");
-
-            final String[] singleOptions = {
-                "✓ Pressure Normal (1,200 PSI In Spec)",
-                "⚠️ Low Pressure Warning (< 1,000 PSI)",
-                "🚨 Critical Pressure Loss (< 800 PSI)",
-                "⚠️ Diesel Booster Fuel Tank Below 75%",
-                "⚠️ Minor Valve / Pipe Fitting Weep Noted"
-            };
-
-            final ArrayList<TextView> condViews = new ArrayList<TextView>();
-            for (int i = 0; i < singleOptions.length; i++) {
-                final String opt = singleOptions[i];
-                final TextView item = new TextView(this);
-                item.setText(opt);
-                item.setTextSize(13);
-                item.setPadding(dp(14), dp(10), dp(14), dp(10));
-
-                final boolean isAllClear = i == 0;
-                updateCheckItemStyle(item, selectedConditions.contains(opt), isAllClear);
-
-                LinearLayout.LayoutParams il = new LinearLayout.LayoutParams(
-                        LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
-                il.bottomMargin = dp(6);
-                item.setLayoutParams(il);
-
-                item.setOnClickListener(new View.OnClickListener() {
-                    public void onClick(View v) {
-                        hapticClick();
-                        if (isAllClear) {
-                            selectedConditions.clear();
-                            selectedConditions.add(singleOptions[0]);
-                        } else {
-                            selectedConditions.remove(singleOptions[0]);
-                            if (selectedConditions.contains(opt)) {
-                                selectedConditions.remove(opt);
-                            } else {
-                                selectedConditions.add(opt);
-                            }
-                            if (selectedConditions.isEmpty()) {
-                                selectedConditions.add(singleOptions[0]);
-                            }
-                        }
-                        for (int k = 0; k < condViews.size(); k++) {
-                            TextView tv = condViews.get(k);
-                            String o = singleOptions[k];
-                            updateCheckItemStyle(tv, selectedConditions.contains(o), k == 0);
-                        }
-                    }
-                });
-
-                condViews.add(item);
-                box.addView(item);
-            }
-
             final Dialog dlg = createDialogSheet(box);
-            activeDlg[0] = dlg;
 
             LinearLayout btnRow = new LinearLayout(this);
             btnRow.setOrientation(LinearLayout.HORIZONTAL);
@@ -3005,7 +2851,7 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
             });
             btnRow.addView(btnCancel);
 
-            TextView btnSave = actionButton("✓ Log System Check", colAccent, colAccentInk);
+            TextView btnSave = actionButton("✓ Commit Pressure", colAccent, colAccentInk);
             btnSave.setOnClickListener(new View.OnClickListener() {
                 public void onClick(View v) {
                     hapticHeavyClick();
@@ -3023,13 +2869,9 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
                     }
                     list.add(new PressureRecord(nowMinutes(), pNum));
 
-                    StringBuilder sb = new StringBuilder();
-                    sb.append(name).append(": [").append(pNum).append(" PSI] ");
-                    for (int k = 0; k < selectedConditions.size(); k++) {
-                        if (k > 0) sb.append(", ");
-                        sb.append(selectedConditions.get(k));
-                    }
-                    String line = sb.toString();
+                    String autoStatus = getAutoPressureStatus(pNum);
+                    String line = name + ": [" + pNum + " PSI] · " + autoStatus;
+
                     if (!oneLine(line)) {
                         banner.setText("notes must be one line");
                         banner.setVisibility(View.VISIBLE);
@@ -3043,6 +2885,13 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
             box.addView(btnRow);
             dlg.show();
         }
+    }
+
+    private String getAutoPressureStatus(int psi) {
+        if (psi < 800) return "🚨 Critical Drop (< 800 PSI)";
+        if (psi < 1100) return "⚠️ Low / Jack-Up Required (< 1,000 PSI)";
+        if (psi <= 1350) return "✓ Nominal In-Spec (1,200 PSI Optimal)";
+        return "⚠️ High Surge (> 1,350 PSI)";
     }
 
     private LinearLayout buildChronographSection() {
