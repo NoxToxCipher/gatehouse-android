@@ -257,6 +257,7 @@ public class GatehouseDynamicIslandOverlay {
             btnNav.setOnClickListener(new View.OnClickListener() {
                 @Override
                 public void onClick(View v) {
+                    hideIsland();
                     try {
                         Uri gmmIntentUri = Uri.parse("geo:0,0?q=" + Uri.encode(currentNavAddress));
                         Intent mapIntent = new Intent(Intent.ACTION_VIEW, gmmIntentUri);

@@ -6328,15 +6328,22 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
                 double minPrice = 999.0;
                 FuelPriceManager.FuelStation cheapestStn = null;
 
-                for (FuelPriceManager.FuelStation s : list) {
-                    double p = getStationPriceForGrade(s, selectedGrade[0]);
-                    if (p < minPrice) {
-                        minPrice = p;
-                        cheapestStn = s;
+                List<FuelPriceManager.FuelStation> sortedList = new ArrayList<FuelPriceManager.FuelStation>(list);
+                java.util.Collections.sort(sortedList, new java.util.Comparator<FuelPriceManager.FuelStation>() {
+                    @Override
+                    public int compare(FuelPriceManager.FuelStation a, FuelPriceManager.FuelStation b) {
+                        double pa = getStationPriceForGrade(a, selectedGrade[0]);
+                        double pb = getStationPriceForGrade(b, selectedGrade[0]);
+                        return Double.compare(pa, pb);
                     }
+                });
+
+                if (!sortedList.isEmpty()) {
+                    cheapestStn = sortedList.get(0);
+                    minPrice = getStationPriceForGrade(cheapestStn, selectedGrade[0]);
                 }
 
-                for (final FuelPriceManager.FuelStation s : list) {
+                for (final FuelPriceManager.FuelStation s : sortedList) {
                     double thisPrice = getStationPriceForGrade(s, selectedGrade[0]);
                     boolean isCheapest = (s == cheapestStn || Math.abs(thisPrice - minPrice) < 0.05);
 
