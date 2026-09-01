@@ -232,6 +232,12 @@ public class LogbookManager {
         saveToStorage();
     }
 
+    public synchronized void appendAddendumToEntry(LogEntry targetEntry, String addendumText) {
+        if (targetEntry == null || addendumText == null || addendumText.trim().isEmpty()) return;
+        targetEntry.text = targetEntry.text + "\n" + addendumText.trim();
+        saveToStorage();
+    }
+
     public synchronized ShiftRecord getCurrentShift() {
         if (currentShift == null) ensureCurrentShift();
         return currentShift;

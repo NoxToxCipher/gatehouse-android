@@ -15450,7 +15450,7 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
             @Override
             public void onClick(View v) {
                 hapticHeavyClick();
-                exportCurrentShiftStatement(logMgr);
+                showExportFormatSheet(logMgr);
             }
         });
         row2.addView(btnExport);
@@ -16257,22 +16257,45 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
         sv.addView(container);
         rootFrame.addView(sv);
 
-        // Floating Jump to Latest Button
+        // Floating Fast-Navigation Dock
         if (entries.size() > 5) {
-            final TextView btnJump = new TextView(this);
+            LinearLayout floatNav = new LinearLayout(this);
+            floatNav.setOrientation(LinearLayout.HORIZONTAL);
+            floatNav.setElevation(dp(8));
+            FrameLayout.LayoutParams jlp = new FrameLayout.LayoutParams(
+                    FrameLayout.LayoutParams.WRAP_CONTENT, FrameLayout.LayoutParams.WRAP_CONTENT);
+            jlp.gravity = Gravity.BOTTOM | Gravity.END;
+            jlp.bottomMargin = dp(8);
+            jlp.rightMargin = dp(8);
+            floatNav.setLayoutParams(jlp);
+
+            TextView btnTop = new TextView(this);
+            btnTop.setText("⬆ FILTERS");
+            btnTop.setTextColor(0xFF0F172A);
+            btnTop.setTextSize(9.5f);
+            btnTop.setTypeface(Typeface.create(Typeface.MONOSPACE, Typeface.BOLD));
+            btnTop.setPadding(dp(10), dp(5), dp(10), dp(5));
+            btnTop.setBackground(rounded(colAccent, dp(14)));
+            btnTop.setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View v) {
+                    hapticClick();
+                    sv.fullScroll(ScrollView.FOCUS_UP);
+                }
+            });
+            LinearLayout.LayoutParams tlp = new LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+            tlp.rightMargin = dp(4);
+            btnTop.setLayoutParams(tlp);
+            floatNav.addView(btnTop);
+
+            TextView btnJump = new TextView(this);
             btnJump.setText("⬇ LATEST");
             btnJump.setTextColor(0xFF0F172A);
             btnJump.setTextSize(9.5f);
             btnJump.setTypeface(Typeface.create(Typeface.MONOSPACE, Typeface.BOLD));
             btnJump.setPadding(dp(10), dp(5), dp(10), dp(5));
             btnJump.setBackground(rounded(colCyan, dp(14)));
-            btnJump.setElevation(dp(6));
-            FrameLayout.LayoutParams jlp = new FrameLayout.LayoutParams(
-                    FrameLayout.LayoutParams.WRAP_CONTENT, FrameLayout.LayoutParams.WRAP_CONTENT);
-            jlp.gravity = Gravity.BOTTOM | Gravity.END;
-            jlp.bottomMargin = dp(8);
-            jlp.rightMargin = dp(8);
-            btnJump.setLayoutParams(jlp);
             btnJump.setOnClickListener(new View.OnClickListener() {
                 @Override
                 public void onClick(View v) {
@@ -16280,7 +16303,9 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
                     sv.fullScroll(ScrollView.FOCUS_DOWN);
                 }
             });
-            rootFrame.addView(btnJump);
+            floatNav.addView(btnJump);
+
+            rootFrame.addView(floatNav);
         }
 
         return rootFrame;
@@ -16441,9 +16466,31 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
         btnFlagFollowUp.setLayoutParams(flp);
         actionToolbar.addView(btnFlagFollowUp);
 
+        final Dialog[] detailDlg = new Dialog[1];
+
+        TextView btnAppendAddendum = new TextView(this);
+        btnAppendAddendum.setText("✏️ Addendum");
+        btnAppendAddendum.setTextColor(colEmerald);
+        btnAppendAddendum.setTextSize(9.5f);
+        btnAppendAddendum.setTypeface(Typeface.create(Typeface.MONOSPACE, Typeface.BOLD));
+        btnAppendAddendum.setPadding(dp(8), dp(4), dp(8), dp(4));
+        btnAppendAddendum.setBackground(rounded(0x2210B981, dp(6)));
+        btnAppendAddendum.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                hapticClick();
+                if (detailDlg[0] != null) detailDlg[0].dismiss();
+                showAddendumSheet(entry);
+            }
+        });
+        LinearLayout.LayoutParams alp = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
+        alp.leftMargin = dp(6);
+        btnAppendAddendum.setLayoutParams(alp);
+        actionToolbar.addView(btnAppendAddendum);
+
         box.addView(actionToolbar);
 
-        final Dialog dlg = createDialogSheet(box);
+        detailDlg[0] = createDialogSheet(box);
 
         // Action Buttons Row
         LinearLayout btnRow = new LinearLayout(this);
@@ -16474,7 +16521,7 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
             @Override
             public void onClick(View v) {
                 hapticClick();
-                dlg.dismiss();
+                if (detailDlg[0] != null) detailDlg[0].dismiss();
             }
         });
         LinearLayout.LayoutParams clp = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 0.8f);
@@ -16482,11 +16529,50 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
         btnRow.addView(btnClose);
 
         box.addView(btnRow);
-        dlg.show();
+        detailDlg[0].show();
     }
 
-    private void exportCurrentShiftStatement(LogbookManager logMgr) {
-        showExportFormatSheet(logMgr);
+    private void showAddendumSheet(final LogbookManager.LogEntry entry) {
+        if (entry == null) return;
+        final LinearLayout box = dialogContainer("Officer Occurrence Addendum", "LEGAL AMENDMENT", colEmerald);
+
+        TextView tvOrig = new TextView(this);
+        tvOrig.setText("ORIGINAL (" + entry.timeStr + "): " + entry.text);
+        tvOrig.setTextColor(colMuted);
+        tvOrig.setTextSize(10f);
+        tvOrig.setTypeface(Typeface.MONOSPACE);
+        tvOrig.setPadding(dp(10), dp(8), dp(10), dp(8));
+        tvOrig.setBackground(rounded(0xFF1E293B, dp(8)));
+        LinearLayout.LayoutParams olp = new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+        olp.bottomMargin = dp(8);
+        tvOrig.setLayoutParams(olp);
+        box.addView(tvOrig);
+
+        final EditText etAddendum = modernInputField("Enter official addendum details / amendment note...");
+        box.addView(etAddendum);
+
+        final Dialog dlg = createDialogSheet(box);
+
+        TextView btnSave = actionButton("✓ Append & Seal Addendum", colEmerald, 0xFF0F172A);
+        btnSave.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                String txt = etAddendum.getText() != null ? etAddendum.getText().toString().trim() : "";
+                if (txt.isEmpty()) {
+                    Toast.makeText(MainActivity.this, "Please enter addendum text", Toast.LENGTH_SHORT).show();
+                    return;
+                }
+                hapticSealThud();
+                String timeNow = new SimpleDateFormat("HH:mm", Locale.US).format(new Date());
+                String addendumFormatted = "[ADDENDUM " + timeNow + " L.DOHERTY #41207] " + txt;
+                LogbookManager.getInstance(MainActivity.this).appendAddendumToEntry(entry, addendumFormatted);
+                Toast.makeText(MainActivity.this, "✓ Addendum appended & sealed", Toast.LENGTH_SHORT).show();
+                dlg.dismiss();
+            }
+        });
+        box.addView(btnSave);
+        dlg.show();
     }
 
     private void showExportFormatSheet(final LogbookManager logMgr) {
