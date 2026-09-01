@@ -224,6 +224,7 @@ public class RoyalUrGameView extends View {
         if (!waitingForRoll || isRolling) return;
         isRolling = true;
         try {
+            RecreationAudioSynth.playDiceRoll();
             performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP);
         } catch (Exception ignored) {}
 
@@ -349,6 +350,7 @@ public class RoyalUrGameView extends View {
                     if (currentTurn == 0) blackPiecesUnentered++;
                     else whitePiecesUnentered++;
                     try {
+                        RecreationAudioSynth.playChessPieceThud(true);
                         performHapticFeedback(HapticFeedbackConstants.LONG_PRESS);
                     } catch (Exception ignored) {}
                     break;
