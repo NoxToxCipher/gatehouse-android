@@ -357,8 +357,8 @@ public class ConnectFourGameView extends View {
 
     private void updateStatus() {
         if (statusListener == null || gameOver) return;
-        String turn = playerTurn ? "🟡 Your Turn (Gold)" : "🔵 Bot Turn (Cyan)";
-        statusListener.onStatusChanged(turn + " · 7×6 Connect Four", 0xFFFFD166);
+        String turn = playerTurn ? "🔴 Your Turn (Red)" : "🟡 Bot Turn (Yellow AI)";
+        statusListener.onStatusChanged(turn + " · 7×6 Connect Four", playerTurn ? 0xFFEF4444 : 0xFFF59E0B);
     }
 
     @Override
@@ -385,9 +385,9 @@ public class ConnectFourGameView extends View {
         int h = getHeight();
         if (w <= 0 || h <= 0) return;
 
-        // Cyber Sapphire Acrylic Cabinet Frame
+        // Luxury Obsidian & Cobalt Acrylic Cabinet Frame
         rect.set(0, 0, w, h);
-        cabinetFramePaint.setShader(new LinearGradient(0, 0, w, h, 0xFF0284C7, 0xFF082F49, Shader.TileMode.CLAMP));
+        cabinetFramePaint.setShader(new LinearGradient(0, 0, w, h, 0xFF162544, 0xFF0B1224, Shader.TileMode.CLAMP));
         canvas.drawRoundRect(rect, dpf(16f), dpf(16f), cabinetFramePaint);
 
         rect.set(dpf(2.5f), dpf(2.5f), w - dpf(2.5f), h - dpf(2.5f));
@@ -401,12 +401,13 @@ public class ConnectFourGameView extends View {
         float rowH = (h - dpf(16f)) / 6f;
         float holeR = Math.min(colW, rowH) * 0.40f;
 
-        // Top Column Drop Guides
+        // Top Column Drop Guides (Active Player Indicator)
         if (playerTurn && !isDropping && !gameOver) {
+            columnGuidePaint.setColor(0xCCEF4444);
             for (int c = 0; c < 7; c++) {
                 if (grid[0][c] == 0) {
                     float cx = pad + c * colW + colW / 2f;
-                    canvas.drawCircle(cx, dpf(5.5f), dpf(2.2f), columnGuidePaint);
+                    canvas.drawCircle(cx, dpf(5.5f), dpf(2.6f), columnGuidePaint);
                 }
             }
         }
@@ -422,8 +423,8 @@ public class ConnectFourGameView extends View {
                 canvas.drawCircle(cx, cy, holeR, slotShadowPaint);
                 canvas.drawCircle(cx, cy, holeR + dpf(0.8f), slotRimPaint);
 
-                if (val == 1) draw3DToken(canvas, cx, cy, holeR * 0.92f, true);
-                else if (val == 2) draw3DToken(canvas, cx, cy, holeR * 0.92f, false);
+                if (val == 1) draw3DToken(canvas, cx, cy, holeR * 0.92f, false); // 1 = Red
+                else if (val == 2) draw3DToken(canvas, cx, cy, holeR * 0.92f, true); // 2 = Yellow
             }
         }
 
@@ -434,7 +435,7 @@ public class ConnectFourGameView extends View {
             float targetY = dpf(8f) + droppingTargetRow * rowH + rowH / 2f;
             float currentY = topY + (targetY - topY) * droppingProgress;
 
-            draw3DToken(canvas, cx, currentY, holeR * 0.92f, droppingColor == 1);
+            draw3DToken(canvas, cx, currentY, holeR * 0.92f, droppingColor == 2);
         }
 
         // Draw Winning Glowing Laser Line & Victory Sparkler Stars
@@ -487,7 +488,7 @@ public class ConnectFourGameView extends View {
         }
     }
 
-    private void draw3DToken(Canvas canvas, float cx, float cy, float r, boolean isGold) {
+    private void draw3DToken(Canvas canvas, float cx, float cy, float r, boolean isYellow) {
         // Deep shadow
         Paint dropShadow = new Paint(Paint.ANTI_ALIAS_FLAG);
         dropShadow.setColor(0x99000000);
@@ -495,8 +496,8 @@ public class ConnectFourGameView extends View {
 
         RadialGradient grad = new RadialGradient(
             cx - r * 0.3f, cy - r * 0.3f, r * 1.3f,
-            isGold ? new int[]{0xFFFFFFF5, 0xFFFDE047, 0xFFD97706, 0xFF78350F}
-                   : new int[]{0xFFF0FDF4, 0xFF38BDF8, 0xFF0284C7, 0xFF082F49},
+            isYellow ? new int[]{0xFFFFFFF5, 0xFFFDE047, 0xFFD97706, 0xFF78350F} // 🟡 Brilliant Sunburst Yellow
+                     : new int[]{0xFFFFF1F2, 0xFFFF4D6D, 0xFFDC2626, 0xFF7F1D1D}, // 🔴 Vibrant Crimson Ruby Red
             null, Shader.TileMode.CLAMP
         );
         tokenPaint.setShader(grad);
@@ -504,13 +505,13 @@ public class ConnectFourGameView extends View {
         canvas.drawCircle(cx, cy, r, tokenRimPaint);
 
         // Concentric Coin Lathe Rings
-        tokenGroovePaint.setColor(isGold ? 0x6678350F : 0x66082F49);
+        tokenGroovePaint.setColor(isYellow ? 0x6678350F : 0x667F1D1D);
         canvas.drawCircle(cx, cy, r * 0.65f, tokenGroovePaint);
         canvas.drawCircle(cx, cy, r * 0.35f, tokenGroovePaint);
 
         // Center Star / Emboss Stud
         Paint centerStud = new Paint(Paint.ANTI_ALIAS_FLAG);
-        centerStud.setColor(isGold ? 0xFFFEF08A : 0xFFBAE6FD);
+        centerStud.setColor(isYellow ? 0xFFFEF08A : 0xFFFCA5A5);
         canvas.drawCircle(cx, cy, dpf(1.8f), centerStud);
 
         canvas.drawCircle(cx - r * 0.35f, cy - r * 0.35f, r * 0.28f, tokenShinePaint);

@@ -5620,11 +5620,11 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
     // =========================================================================
 
     private void showConnectFourGameDialog() {
-        final LinearLayout box = dialogContainer("🔴🟡 Connect 4", "7×6 GRAVITY SOLVER", 0xFFF59E0B);
+        final LinearLayout box = dialogContainer("🔴🟡 Connect 4", "7×6 GRAVITY SOLVER", 0xFFEF4444);
 
         final TextView statusLbl = new TextView(this);
-        statusLbl.setText("🟡 Your Turn (Gold) · Tap column to drop");
-        statusLbl.setTextColor(colPale);
+        statusLbl.setText("🔴 Your Turn (Red) · Tap column to drop");
+        statusLbl.setTextColor(0xFFEF4444);
         statusLbl.setTextSize(13);
         statusLbl.setTypeface(Typeface.create(Typeface.MONOSPACE, Typeface.BOLD));
         statusLbl.setPadding(0, dp(4), 0, dp(8));
