@@ -15429,8 +15429,9 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
 
                 // 1. Tonight Pill
                 final boolean isTonight = "CURRENT".equalsIgnoreCase(logbookSelectedShiftId) || (shifts.size() > 0 && shifts.get(0).shiftId.equals(logbookSelectedShiftId));
+                final int tonightCount = shifts.size() > 0 ? shifts.get(0).entries.size() : 0;
                 TextView chipTonight = new TextView(MainActivity.this);
-                chipTonight.setText("🌙 TONIGHT (ACTIVE)");
+                chipTonight.setText("🌙 TONIGHT (" + tonightCount + ")");
                 chipTonight.setTextColor(isTonight ? 0xFF080D1A : colCyan);
                 chipTonight.setTextSize(10f);
                 chipTonight.setTypeface(Typeface.create(Typeface.MONOSPACE, Typeface.BOLD));
@@ -15457,7 +15458,7 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
                     final LogbookManager.ShiftRecord s = shifts.get(i);
                     final boolean isSelected = s.shiftId.equals(logbookSelectedShiftId);
                     TextView chip = new TextView(MainActivity.this);
-                    chip.setText("📅 " + s.shortDateStr);
+                    chip.setText("📅 " + s.shortDateStr + " (" + s.entries.size() + ")");
                     chip.setTextColor(isSelected ? 0xFF080D1A : colPale);
                     chip.setTextSize(10f);
                     chip.setTypeface(Typeface.create(Typeface.MONOSPACE, Typeface.BOLD));
@@ -15483,7 +15484,7 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
                 // 3. All Archives Pill
                 final boolean allSelected = "ALL".equalsIgnoreCase(logbookSelectedShiftId);
                 TextView chipAll = new TextView(MainActivity.this);
-                chipAll.setText("📚 ALL (" + logMgr.getAllEntriesChronological(false).size() + ")");
+                chipAll.setText("📚 ALL ARCHIVES (" + logMgr.getAllEntriesChronological(false).size() + ")");
                 chipAll.setTextColor(allSelected ? colAccentInk : colMuted);
                 chipAll.setTextSize(10f);
                 chipAll.setTypeface(Typeface.create(Typeface.MONOSPACE, Typeface.BOLD));
@@ -15584,7 +15585,11 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
         };
 
         final LogbookManager logMgrInstance = logMgr;
-        final Runnable buildCatPills = new Runnable() {
+        final Runnable[] buildCatPills = new Runnable[1];
+        final Runnable[] buildTimePills = new Runnable[1];
+        final Runnable[] updateActiveFilterStrip = new Runnable[1];
+
+        buildCatPills[0] = new Runnable() {
             @Override
             public void run() {
                 catRow.removeAllViews();
@@ -15605,8 +15610,14 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
                         @Override
                         public void onClick(View v) {
                             hapticClick();
-                            logbookSelectedCategory = catId;
-                            run();
+                            if (isSelected && !catId.equalsIgnoreCase("ALL")) {
+                                logbookSelectedCategory = "ALL";
+                            } else {
+                                logbookSelectedCategory = catId;
+                            }
+                            buildCatPills[0].run();
+                            if (buildTimePills[0] != null) buildTimePills[0].run();
+                            if (updateActiveFilterStrip[0] != null) updateActiveFilterStrip[0].run();
                             if (refreshContent[0] != null) refreshContent[0].run();
                         }
                     });
@@ -15618,7 +15629,7 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
                 }
             }
         };
-        buildCatPills.run();
+        buildCatPills[0].run();
         catHsv.addView(catRow);
         searchBox.addView(catHsv);
 
@@ -15636,7 +15647,7 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
                 {"DAWN", "🌄 Dawn (02-06)"}
         };
 
-        final Runnable buildTimePills = new Runnable() {
+        buildTimePills[0] = new Runnable() {
             @Override
             public void run() {
                 timeRow.removeAllViews();
@@ -15657,8 +15668,14 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
                         @Override
                         public void onClick(View v) {
                             hapticClick();
-                            logbookSelectedTimeBucket = tbId;
-                            run();
+                            if (isSelected && !tbId.equalsIgnoreCase("ALL")) {
+                                logbookSelectedTimeBucket = "ALL";
+                            } else {
+                                logbookSelectedTimeBucket = tbId;
+                            }
+                            buildTimePills[0].run();
+                            if (buildCatPills[0] != null) buildCatPills[0].run();
+                            if (updateActiveFilterStrip[0] != null) updateActiveFilterStrip[0].run();
                             if (refreshContent[0] != null) refreshContent[0].run();
                         }
                     });
@@ -15670,7 +15687,7 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
                 }
             }
         };
-        buildTimePills.run();
+        buildTimePills[0].run();
         timeHsv.addView(timeRow);
         searchBox.addView(timeHsv);
 
@@ -15702,7 +15719,7 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
         activeFilterStrip.addView(btnResetAll);
         searchBox.addView(activeFilterStrip);
 
-        final Runnable updateActiveFilterStrip = new Runnable() {
+        updateActiveFilterStrip[0] = new Runnable() {
             @Override
             public void run() {
                 boolean hasCat = !logbookSelectedCategory.equalsIgnoreCase("ALL");
@@ -15729,13 +15746,13 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
                 logbookSelectedTimeBucket = "ALL";
                 logbookSearchQuery = "";
                 searchField.setText("");
-                buildCatPills.run();
-                buildTimePills.run();
-                updateActiveFilterStrip.run();
+                buildCatPills[0].run();
+                buildTimePills[0].run();
+                updateActiveFilterStrip[0].run();
                 if (refreshContent[0] != null) refreshContent[0].run();
             }
         });
-        updateActiveFilterStrip.run();
+        updateActiveFilterStrip[0].run();
 
         contentCard.addView(searchBox);
 
@@ -15745,9 +15762,9 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
                 hapticClick();
                 logMgr.syncFromCore(Core.entryCount());
                 buildShiftSegment.run();
-                buildCatPills.run();
-                buildTimePills.run();
-                updateActiveFilterStrip.run();
+                if (buildCatPills[0] != null) buildCatPills[0].run();
+                if (buildTimePills[0] != null) buildTimePills[0].run();
+                if (updateActiveFilterStrip[0] != null) updateActiveFilterStrip[0].run();
                 if (refreshContent[0] != null) refreshContent[0].run();
                 Toast.makeText(MainActivity.this, "✓ Logbook ledger synced", Toast.LENGTH_SHORT).show();
             }
