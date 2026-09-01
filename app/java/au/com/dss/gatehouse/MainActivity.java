@@ -3736,6 +3736,9 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
         if (showAll || "GAMES".equalsIgnoreCase(toolsActiveFilter)) {
             container.addView(sectionHeader("🎮 OFFICER RECREATION & BOARD GAMES (8)", null));
 
+            // Hero Off-Grid BLE Mesh Osmosis Leaderboard
+            container.addView(buildRecreationLeaderboardCard());
+
             LinearLayout rGames1 = new LinearLayout(this);
             rGames1.setOrientation(LinearLayout.HORIZONTAL);
             rGames1.addView(buildGameCard("⚪⚫", "Baduk (Go)", "MCTS · DAN", colAccent, "Tsumego puzzles, Dan AI & territory score engine", "⚡ MCTS ROLLOUT · 9×9 & 19×19", new View.OnClickListener() {
@@ -3792,6 +3795,241 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
             }));
             container.addView(rGames4);
         }
+    }
+
+    private View buildRecreationLeaderboardCard() {
+        final RippleCardFrameLayout rippleCard = new RippleCardFrameLayout(this, 18f, colAccent);
+        android.graphics.drawable.GradientDrawable bg = new android.graphics.drawable.GradientDrawable(
+            android.graphics.drawable.GradientDrawable.Orientation.TL_BR,
+            new int[]{0xFF1C2234, 0xFF0F1424}
+        );
+        bg.setCornerRadius(dp(18));
+        bg.setStroke(dp(1), 0x33F59E0B);
+        rippleCard.setBackground(bg);
+
+        LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+        lp.setMargins(dp(5), dp(4), dp(5), dp(10));
+        rippleCard.setLayoutParams(lp);
+
+        LinearLayout box = new LinearLayout(this);
+        box.setOrientation(LinearLayout.VERTICAL);
+        box.setPadding(dp(14), dp(13), dp(14), dp(13));
+
+        // Top Row: Trophy Pod + Title + Osmosis Badge
+        LinearLayout top = new LinearLayout(this);
+        top.setOrientation(LinearLayout.HORIZONTAL);
+        top.setGravity(Gravity.CENTER_VERTICAL);
+
+        FrameLayout iconBox = new FrameLayout(this);
+        iconBox.setBackground(rounded(0x33F59E0B, dp(12)));
+        LinearLayout.LayoutParams iblp = new LinearLayout.LayoutParams(dp(44), dp(44));
+        iconBox.setLayoutParams(iblp);
+
+        TextView tvIco = new TextView(this);
+        tvIco.setText("🏆");
+        tvIco.setTextSize(20);
+        tvIco.setGravity(Gravity.CENTER);
+        iconBox.addView(tvIco);
+        top.addView(iconBox);
+
+        LinearLayout titleCol = new LinearLayout(this);
+        titleCol.setOrientation(LinearLayout.VERTICAL);
+        titleCol.setPadding(dp(10), 0, 0, 0);
+        LinearLayout.LayoutParams tclp = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
+        titleCol.setLayoutParams(tclp);
+
+        TextView tTitle = new TextView(this);
+        tTitle.setText("Officer Recreation Leaderboard");
+        tTitle.setTextColor(0xFFFFFFFF);
+        tTitle.setTextSize(14f);
+        tTitle.setTypeface(Typeface.DEFAULT_BOLD);
+        titleCol.addView(tTitle);
+
+        TextView tSub = new TextView(this);
+        tSub.setText("🥇 #1 Lochran Doherty · 48 Wins (2240 ELO)");
+        tSub.setTextColor(colAccent);
+        tSub.setTextSize(11f);
+        tSub.setTypeface(Typeface.create(Typeface.MONOSPACE, Typeface.BOLD));
+        titleCol.addView(tSub);
+        top.addView(titleCol);
+
+        TextView badge = new TextView(this);
+        badge.setText("● BLE OSMOSIS");
+        badge.setTextColor(colEmerald);
+        badge.setTextSize(8.5f);
+        badge.setTypeface(Typeface.MONOSPACE);
+        badge.setPadding(dp(8), dp(4), dp(8), dp(4));
+        badge.setBackground(rounded(0x2810B981, dp(7)));
+        top.addView(badge);
+
+        box.addView(top);
+
+        TextView desc = new TextView(this);
+        desc.setText("100% off-grid tournament scoring · Scores sync passively via BLE mesh as officers pass Kingston Gatehouse & Lot 16 Hut relay phones.");
+        desc.setTextColor(0xFF94A3B8);
+        desc.setTextSize(11f);
+        desc.setPadding(0, dp(8), 0, 0);
+        box.addView(desc);
+
+        rippleCard.setOnClickListener(new View.OnClickListener() {
+            public void onClick(View v) {
+                hapticHeavyClick();
+                showRecreationLeaderboardDialog();
+            }
+        });
+        rippleCard.addView(box);
+        return rippleCard;
+    }
+
+    private void showRecreationLeaderboardDialog() {
+        hapticHeavyClick();
+        final LinearLayout box = dialogContainer("🏆 Recreation Leaderboard", "BLE MESH OSMOSIS SYNC · OFF-GRID", colAccent);
+        final RecreationLeaderboardManager mgr = RecreationLeaderboardManager.getInstance(this);
+
+        // 1. Mesh Daemon Status Card
+        LinearLayout statusCard = new LinearLayout(this);
+        statusCard.setOrientation(LinearLayout.HORIZONTAL);
+        statusCard.setGravity(Gravity.CENTER_VERTICAL);
+        statusCard.setBackground(rounded(colPanel2, dp(12)));
+        statusCard.setPadding(dp(12), dp(10), dp(12), dp(10));
+        LinearLayout.LayoutParams scp = new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+        scp.bottomMargin = dp(10);
+        statusCard.setLayoutParams(scp);
+
+        TextView sTitle = new TextView(this);
+        sTitle.setText("🟢 BLE OSMOSIS: PASSIVE ACTIVE");
+        sTitle.setTextColor(colEmerald);
+        sTitle.setTextSize(11f);
+        sTitle.setTypeface(Typeface.create(Typeface.MONOSPACE, Typeface.BOLD));
+        LinearLayout.LayoutParams stl = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
+        sTitle.setLayoutParams(stl);
+        statusCard.addView(sTitle);
+
+        TextView pCount = new TextView(this);
+        pCount.setText("4 HUT ANCHORS");
+        pCount.setTextColor(colAccent);
+        pCount.setTextSize(9.5f);
+        pCount.setTypeface(Typeface.MONOSPACE);
+        pCount.setPadding(dp(8), dp(3), dp(8), dp(3));
+        pCount.setBackground(rounded(colPanel3, dp(6)));
+        statusCard.addView(pCount);
+        box.addView(statusCard);
+
+        // 2. Leaderboard Roster Cards
+        java.util.List<RecreationLeaderboardManager.OfficerScoreRecord> list = mgr.getLeaderboard();
+        for (int i = 0; i < list.size(); i++) {
+            RecreationLeaderboardManager.OfficerScoreRecord r = list.get(i);
+            LinearLayout card = new LinearLayout(this);
+            card.setOrientation(LinearLayout.VERTICAL);
+            card.setBackground(rounded(0xFF131B2B, dp(12)));
+            card.setPadding(dp(12), dp(10), dp(12), dp(10));
+            LinearLayout.LayoutParams clp = new LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+            clp.bottomMargin = dp(6);
+            card.setLayoutParams(clp);
+
+            // Row 1: Rank Badge + Officer Name + Wins
+            LinearLayout r1 = new LinearLayout(this);
+            r1.setOrientation(LinearLayout.HORIZONTAL);
+            r1.setGravity(Gravity.CENTER_VERTICAL);
+
+            String rankIcon = (i == 0 ? "🥇" : (i == 1 ? "🥈" : (i == 2 ? "🥉" : "#" + (i + 1))));
+            int rankColor = (i == 0 ? 0xFFFFD166 : (i == 1 ? 0xFFE2E8F0 : (i == 2 ? 0xFFF59E0B : 0xFF94A3B8)));
+
+            TextView rankTv = new TextView(this);
+            rankTv.setText(rankIcon);
+            rankTv.setTextColor(rankColor);
+            rankTv.setTextSize(14f);
+            rankTv.setTypeface(Typeface.DEFAULT_BOLD);
+            rankTv.setPadding(0, 0, dp(8), 0);
+            r1.addView(rankTv);
+
+            TextView nameTv = new TextView(this);
+            nameTv.setText(r.officerName);
+            nameTv.setTextColor(0xFFFFFFFF);
+            nameTv.setTextSize(13f);
+            nameTv.setTypeface(Typeface.DEFAULT_BOLD);
+            LinearLayout.LayoutParams nlp = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
+            nameTv.setLayoutParams(nlp);
+            r1.addView(nameTv);
+
+            TextView winTv = new TextView(this);
+            winTv.setText(r.totalWins + " WINS");
+            winTv.setTextColor(colAccent);
+            winTv.setTextSize(12f);
+            winTv.setTypeface(Typeface.create(Typeface.MONOSPACE, Typeface.BOLD));
+            r1.addView(winTv);
+
+            card.addView(r1);
+
+            // Row 2: Ratings Breakdown & Anchor Hut Tag
+            LinearLayout r2 = new LinearLayout(this);
+            r2.setOrientation(LinearLayout.HORIZONTAL);
+            r2.setGravity(Gravity.CENTER_VERTICAL);
+            r2.setPadding(0, dp(4), 0, 0);
+
+            TextView statsTv = new TextView(this);
+            statsTv.setText("Chess: " + r.chessElo + " ELO · Baduk: " + r.badukDanRank + "-Dan · Ur: " + r.urWins + " · Senet: " + r.senetWins);
+            statsTv.setTextColor(0xFF94A3B8);
+            statsTv.setTextSize(10f);
+            LinearLayout.LayoutParams stlp = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
+            statsTv.setLayoutParams(stlp);
+            r2.addView(statsTv);
+
+            TextView hutTag = new TextView(this);
+            hutTag.setText(r.anchorHut);
+            hutTag.setTextColor(colCyan);
+            hutTag.setTextSize(8.5f);
+            hutTag.setTypeface(Typeface.MONOSPACE);
+            hutTag.setPadding(dp(6), dp(2), dp(6), dp(2));
+            hutTag.setBackground(rounded(0x2200E5FF, dp(4)));
+            r2.addView(hutTag);
+
+            card.addView(r2);
+            box.addView(card);
+        }
+
+        final Dialog dlg = createDialogSheet(box);
+
+        // Action Buttons Row
+        LinearLayout btnRow = new LinearLayout(this);
+        btnRow.setOrientation(LinearLayout.HORIZONTAL);
+        btnRow.setPadding(0, dp(8), 0, 0);
+
+        final TextView btnPulse = actionButton("⚡ Pulse BLE Osmosis Sync", colAccent, colAccentInk);
+        btnPulse.setOnClickListener(new View.OnClickListener() {
+            public void onClick(View v) {
+                hapticHeavyClick();
+                btnPulse.setText("🔄 Syncing over BLE...");
+                mgr.triggerBleOsmosisPulse(new RecreationLeaderboardManager.OsmosisPulseCallback() {
+                    @Override
+                    public void onSyncComplete(int syncedPeers, int mergedScores, String statusMessage) {
+                        btnPulse.setText("✓ BLE Osmosis Synced");
+                        Toast.makeText(MainActivity.this, statusMessage, Toast.LENGTH_SHORT).show();
+                    }
+                });
+            }
+        });
+        LinearLayout.LayoutParams blp1 = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1.2f);
+        blp1.rightMargin = dp(6);
+        btnPulse.setLayoutParams(blp1);
+        btnRow.addView(btnPulse);
+
+        TextView btnClose = actionButton("✓ Close", colPanel2, colPale);
+        btnClose.setOnClickListener(new View.OnClickListener() {
+            public void onClick(View v) {
+                hapticClick();
+                dlg.dismiss();
+            }
+        });
+        LinearLayout.LayoutParams blp2 = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 0.8f);
+        btnClose.setLayoutParams(blp2);
+        btnRow.addView(btnClose);
+
+        box.addView(btnRow);
+        dlg.show();
     }
 
     private View buildGameCard(String iconGlyph, String titleStr, String badgeStr, int badgeCol, String descStr, String metaSpecs, final View.OnClickListener onClick) {
