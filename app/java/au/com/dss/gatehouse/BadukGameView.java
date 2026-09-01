@@ -1100,8 +1100,14 @@ public class BadukGameView extends View {
             canvas.drawLine(px, startY, px, startY + size, gridLinePaint);
 
             String colName = String.valueOf((char) ('A' + (i >= 8 ? i + 1 : i)));
+            // Top and Bottom Column Labels
             canvas.drawText(colName, px, startY - dpf(6f), coordTextPaint);
-            canvas.drawText(String.valueOf(boardSize - i), startX - dpf(9f), py + dpf(3f), coordTextPaint);
+            canvas.drawText(colName, px, startY + size + dpf(12f), coordTextPaint);
+
+            // Left and Right Row Numbers
+            String rowName = String.valueOf(boardSize - i);
+            canvas.drawText(rowName, startX - dpf(9f), py + dpf(3.5f), coordTextPaint);
+            canvas.drawText(rowName, startX + size + dpf(9f), py + dpf(3.5f), coordTextPaint);
         }
 
         // Draw Hoshi Star Points

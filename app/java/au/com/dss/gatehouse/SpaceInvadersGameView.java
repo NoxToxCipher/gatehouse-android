@@ -264,9 +264,25 @@ public class SpaceInvadersGameView extends View {
         int h = getHeight();
 
         if (action == MotionEvent.ACTION_DOWN || action == MotionEvent.ACTION_MOVE) {
-            // Touch anywhere to move cannon horizontally
+            // Check touch controls at bottom
+            if (ey > h - dpf(30f)) {
+                if (ex >= w - dpf(130f) && ex <= w - dpf(92f)) {
+                    playerTargetX = Math.max(dpf(24f), playerTargetX - dpf(18f));
+                    try { performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP); } catch (Exception ignored) {}
+                    return true;
+                } else if (ex >= w - dpf(88f) && ex <= w - dpf(46f)) {
+                    fireLaser();
+                    return true;
+                } else if (ex >= w - dpf(42f) && ex <= w - dpf(6f)) {
+                    playerTargetX = Math.min(w - dpf(24f), playerTargetX + dpf(18f));
+                    try { performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP); } catch (Exception ignored) {}
+                    return true;
+                }
+            }
+
+            // Touch / drag anywhere on upper screen to steer cannon
             playerTargetX = Math.max(dpf(24f), Math.min(w - dpf(24f), ex));
-            if (action == MotionEvent.ACTION_DOWN && ey < h - dpf(55f)) {
+            if (action == MotionEvent.ACTION_DOWN && ey < h - dpf(45f)) {
                 fireLaser();
             }
             return true;
@@ -366,6 +382,43 @@ public class SpaceInvadersGameView extends View {
         for (int i = 0; i < playerLives; i++) {
             drawMiniCannon(canvas, dpf(14f) + i * dpf(18f), h - dpf(12f));
         }
+
+        // Retro Touch Control Badges
+        Paint ctrlBg = new Paint(Paint.ANTI_ALIAS_FLAG);
+        ctrlBg.setColor(0x2210B981);
+        Paint ctrlBorder = new Paint(Paint.ANTI_ALIAS_FLAG);
+        ctrlBorder.setColor(0x6610B981);
+        ctrlBorder.setStyle(Paint.Style.STROKE);
+        ctrlBorder.setStrokeWidth(dpf(1.2f));
+        Paint ctrlText = new Paint(Paint.ANTI_ALIAS_FLAG);
+        ctrlText.setColor(0xFF34D399);
+        ctrlText.setTextSize(dpf(9f));
+        ctrlText.setTypeface(Typeface.create(Typeface.MONOSPACE, Typeface.BOLD));
+        ctrlText.setTextAlign(Paint.Align.CENTER);
+
+        // Left button
+        RectF lRect = new RectF(w - dpf(130f), h - dpf(20f), w - dpf(92f), h - dpf(4f));
+        canvas.drawRoundRect(lRect, dpf(4f), dpf(4f), ctrlBg);
+        canvas.drawRoundRect(lRect, dpf(4f), dpf(4f), ctrlBorder);
+        canvas.drawText("◀", lRect.centerX(), lRect.centerY() + dpf(3f), ctrlText);
+
+        // Fire button
+        RectF fRect = new RectF(w - dpf(88f), h - dpf(20f), w - dpf(46f), h - dpf(4f));
+        ctrlBg.setColor(0x33EF4444);
+        ctrlBorder.setColor(0x88EF4444);
+        ctrlText.setColor(0xFFF43F5E);
+        canvas.drawRoundRect(fRect, dpf(4f), dpf(4f), ctrlBg);
+        canvas.drawRoundRect(fRect, dpf(4f), dpf(4f), ctrlBorder);
+        canvas.drawText("⚡ FIRE", fRect.centerX(), fRect.centerY() + dpf(3f), ctrlText);
+
+        // Right button
+        RectF rRect = new RectF(w - dpf(42f), h - dpf(20f), w - dpf(6f), h - dpf(4f));
+        ctrlBg.setColor(0x2210B981);
+        ctrlBorder.setColor(0x6610B981);
+        ctrlText.setColor(0xFF34D399);
+        canvas.drawRoundRect(rRect, dpf(4f), dpf(4f), ctrlBg);
+        canvas.drawRoundRect(rRect, dpf(4f), dpf(4f), ctrlBorder);
+        canvas.drawText("▶", rRect.centerX(), rRect.centerY() + dpf(3f), ctrlText);
 
         postInvalidateOnAnimation();
     }
