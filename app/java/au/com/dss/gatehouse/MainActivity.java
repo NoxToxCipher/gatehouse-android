@@ -6588,7 +6588,7 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
         });
         btnRow.addView(btnRefresh);
 
-        TextView btnTestNotif = actionButton("🔔 Test Alert", colPanel2, colCyan);
+        TextView btnTestNotif = actionButton("🔔 Alert", colPanel2, colCyan);
         btnTestNotif.setOnClickListener(new View.OnClickListener() {
             public void onClick(View v) {
                 hapticClick();
@@ -6596,10 +6596,23 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
                 Toast.makeText(MainActivity.this, "✓ Shift-end fuel notification dispatched", Toast.LENGTH_SHORT).show();
             }
         });
-        LinearLayout.LayoutParams tlp = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
+        LinearLayout.LayoutParams tlp = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 0.9f);
         tlp.leftMargin = dp(6);
         btnTestNotif.setLayoutParams(tlp);
         btnRow.addView(btnTestNotif);
+
+        TextView btnIsland = actionButton("🏝️ Island", 0xFF10B981, 0xFF0F172A);
+        btnIsland.setOnClickListener(new View.OnClickListener() {
+            public void onClick(View v) {
+                hapticHeavyClick();
+                GatehouseIslandManager.getInstance(MainActivity.this).showFuelIsland(168.9, 6.0, 30);
+                Toast.makeText(MainActivity.this, "✓ Dynamic Island pill projected (Xiaomi / OxygenOS)", Toast.LENGTH_SHORT).show();
+            }
+        });
+        LinearLayout.LayoutParams ilp = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
+        ilp.leftMargin = dp(6);
+        btnIsland.setLayoutParams(ilp);
+        btnRow.addView(btnIsland);
 
         TextView btnClose = actionButton("Close", colLine, colPale);
         btnClose.setOnClickListener(new View.OnClickListener() {
@@ -6608,7 +6621,7 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
                 dlg.dismiss();
             }
         });
-        LinearLayout.LayoutParams clp = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 0.8f);
+        LinearLayout.LayoutParams clp = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 0.7f);
         clp.leftMargin = dp(6);
         btnClose.setLayoutParams(clp);
         btnRow.addView(btnClose);
@@ -19622,7 +19635,11 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
     protected void onNewIntent(Intent intent) {
         super.onNewIntent(intent);
         setIntent(intent);
-        if (intent != null && DeputyNotifier.ACTION_OPEN_DEPUTY.equals(intent.getAction())) {
+        if (intent != null && GatehouseIslandManager.ACTION_DISMISS_ISLAND.equals(intent.getAction())) {
+            GatehouseIslandManager.getInstance(this).dismissCapsule();
+        } else if (intent != null && FuelPriceManager.ACTION_OPEN_FUEL.equals(intent.getAction())) {
+            showFuelPriceDialog();
+        } else if (intent != null && DeputyNotifier.ACTION_OPEN_DEPUTY.equals(intent.getAction())) {
             openDeputy(true);
         } else if (intent != null && intent.getBooleanExtra("open_satellite_radar", false)) {
             showSatelliteRadarDialog();

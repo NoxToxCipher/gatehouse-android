@@ -320,6 +320,10 @@ public class FuelPriceManager {
                     .setAutoCancel(true);
 
             nm.notify(3001, builder.build());
+
+            // Project Dynamic Island / Live Capsule to Xiaomi HyperOS & Fluid Cloud
+            double oomP = (oom != null ? oom.priceUlp91 : 168.9);
+            GatehouseIslandManager.getInstance(context).showFuelIsland(oomP, 6.0, minutesRemaining);
         } catch (Exception e) {
             Log.e(TAG, "Error posting fuel notification: " + e.getMessage(), e);
         }
