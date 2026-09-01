@@ -139,21 +139,59 @@ public class BadukGameView extends View {
         return isScoringMode;
     }
 
+    private float customKomi = 6.5f;
+    private boolean isChineseRules = false;
+
+    public void toggleRules() {
+        isChineseRules = !isChineseRules;
+        customKomi = isChineseRules ? 7.5f : 6.5f;
+        try { performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK); } catch (Exception ignored) {}
+        if (statusListener != null) {
+            statusListener.onStatusChanged((isChineseRules ? "📜 Chinese Area Rules (7.5 Komi)" : "📜 Japanese Territory Rules (6.5 Komi)"), 0xFFEAB308);
+        }
+        updateStatus();
+        invalidate();
+    }
+
+    public boolean isChineseRules() {
+        return isChineseRules;
+    }
+
+    public float getKomi() {
+        return customKomi;
+    }
+
+    private int countStones(int playerColor) {
+        int c = 0;
+        for (int r = 0; r < boardSize; r++) {
+            for (int col = 0; col < boardSize; col++) {
+                if (board[r][col] == playerColor && !deadStones[r][col]) c++;
+            }
+        }
+        return c;
+    }
+
     public String getScoreSummary() {
         int bTerr = countTerritory(1);
         int wTerr = countTerritory(2);
+        int bStones = 0, wStones = 0;
         for (int r = 0; r < boardSize; r++) {
             for (int c = 0; c < boardSize; c++) {
                 if (deadStones[r][c]) {
                     if (board[r][c] == 1) wTerr += 2;
                     else if (board[r][c] == 2) bTerr += 2;
+                } else if (isChineseRules) {
+                    if (board[r][c] == 1) bStones++;
+                    else if (board[r][c] == 2) wStones++;
                 }
             }
         }
-        int bTotal = bTerr + blackCaptures;
-        float wTotal = wTerr + whiteCaptures + (boardSize == 19 ? 7.5f : 6.5f);
-        return String.format("⚫ Black: %d pts (Terr %d + Cap %d)\n⚪ White: %.1f pts (Terr %d + Cap %d + Komi %.1f)\n\nResult: %s",
-                bTotal, bTerr, blackCaptures, wTotal, wTerr, whiteCaptures, (boardSize == 19 ? 7.5f : 6.5f),
+        int bTotal = isChineseRules ? (bTerr + bStones) : (bTerr + blackCaptures);
+        float wTotal = (isChineseRules ? (wTerr + wStones) : (wTerr + whiteCaptures)) + customKomi;
+        return String.format("⚫ Black: %d pts (%s %d + %s %d)\n⚪ White: %.1f pts (%s %d + %s %d + Komi %.1f)\n\nRules: %s · Result: %s",
+                bTotal, (isChineseRules ? "Terr" : "Terr"), bTerr, (isChineseRules ? "Stones" : "Cap"), (isChineseRules ? bStones : blackCaptures),
+                wTotal, (isChineseRules ? "Terr" : "Terr"), wTerr, (isChineseRules ? "Stones" : "Cap"), (isChineseRules ? wStones : whiteCaptures), customKomi,
+                (isChineseRules ? "Chinese Area" : "Japanese Territory"),
                 (bTotal > wTotal ? "Black wins by " + String.format("%.1f", bTotal - wTotal) + " pts" : "White wins by " + String.format("%.1f", wTotal - bTotal) + " pts"));
     }
 
@@ -524,8 +562,8 @@ public class BadukGameView extends View {
         } else {
             int blackTerritory = countTerritory(1);
             int whiteTerritory = countTerritory(2);
-            float blackTotal = blackTerritory + blackCaptures;
-            float whiteTotal = whiteTerritory + whiteCaptures + 6.5f;
+            float blackTotal = isChineseRules ? (blackTerritory + countStones(1)) : (blackTerritory + blackCaptures);
+            float whiteTotal = (isChineseRules ? (whiteTerritory + countStones(2)) : (whiteTerritory + whiteCaptures)) + customKomi;
 
             String leadStr = (blackTotal > whiteTotal)
                     ? String.format(java.util.Locale.US, "● Black +%.1f", (blackTotal - whiteTotal))

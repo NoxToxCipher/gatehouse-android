@@ -391,6 +391,10 @@ public class BackgammonGameView extends View {
         availableDice.remove((Integer) dieVal);
 
         if (whiteOff == 15 || blackOff == 15) {
+            try {
+                RecreationAudioSynth.playTetrisLineClear();
+                performHapticFeedback(HapticFeedbackConstants.CONFIRM);
+            } catch (Exception ignored) {}
             updateStatus();
             invalidate();
             return true;

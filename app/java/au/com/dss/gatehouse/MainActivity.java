@@ -5108,6 +5108,28 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
         btnNumbers.setLayoutParams(nblp);
         bottomRow.addView(btnNumbers);
 
+        final TextView btnRulesKomi = actionButton("📜 JP 6.5", colPanel2, 0xFFFFD166);
+        btnRulesKomi.setOnClickListener(new View.OnClickListener() {
+            public void onClick(View v) {
+                hapticClick();
+                badukView.toggleRules();
+                if (badukView.isChineseRules()) {
+                    btnRulesKomi.setText("📜 CN 7.5");
+                    btnRulesKomi.setBackground(rounded(0xFFFFD166, dp(8)));
+                    btnRulesKomi.setTextColor(0xFF0F172A);
+                } else {
+                    btnRulesKomi.setText("📜 JP 6.5");
+                    btnRulesKomi.setBackground(rounded(colPanel2, dp(8)));
+                    btnRulesKomi.setTextColor(0xFFFFD166);
+                }
+            }
+        });
+        LinearLayout.LayoutParams rklp = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 0.9f);
+        rklp.leftMargin = dp(2);
+        rklp.rightMargin = dp(2);
+        btnRulesKomi.setLayoutParams(rklp);
+        bottomRow.addView(btnRulesKomi);
+
         TextView btnSgf = actionButton("📋 SGF", colPanel2, colCyan);
         btnSgf.setOnClickListener(new View.OnClickListener() {
             public void onClick(View v) {
