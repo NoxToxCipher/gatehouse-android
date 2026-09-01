@@ -30,12 +30,18 @@ public class ChessGameView extends View {
     private final Paint darkSquarePaint = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final Paint lightSquarePaint = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final Paint goldBorderPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+    private final Paint goldDetailPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final Paint selectGlowPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+    private final Paint lastMovePaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+    private final Paint checkGlowPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final Paint targetDotPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+    private final Paint targetRingPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final Paint textPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+    private final Paint coordPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final Paint whitePiecePaint = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final Paint blackPiecePaint = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final Paint shadowPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+    private final Paint pieceRimPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final RectF rect = new RectF();
     private final RectF squareRect = new RectF();
 
@@ -64,33 +70,56 @@ public class ChessGameView extends View {
 
         goldBorderPaint.setColor(0xFFEAB308);
         goldBorderPaint.setStyle(Paint.Style.STROKE);
-        goldBorderPaint.setStrokeWidth(dpf(1.8f));
+        goldBorderPaint.setStrokeWidth(dpf(2f));
 
-        darkSquarePaint.setColor(0xFF1E293B);
-        lightSquarePaint.setColor(0xFF334155);
+        goldDetailPaint.setColor(0xFFCA8A04);
+        goldDetailPaint.setStyle(Paint.Style.STROKE);
+        goldDetailPaint.setStrokeWidth(dpf(1f));
 
-        selectGlowPaint.setColor(0x88FFD166);
+        darkSquarePaint.setColor(0xFF78482A);
+        lightSquarePaint.setColor(0xFFECE0C8);
+
+        selectGlowPaint.setColor(0x66FFD166);
         selectGlowPaint.setStyle(Paint.Style.FILL);
+
+        lastMovePaint.setColor(0x44F59E0B);
+        lastMovePaint.setStyle(Paint.Style.FILL);
+
+        checkGlowPaint.setColor(0x77EF4444);
+        checkGlowPaint.setStyle(Paint.Style.FILL);
 
         targetDotPaint.setColor(0xFFFFD166);
         targetDotPaint.setStyle(Paint.Style.FILL);
+
+        targetRingPaint.setColor(0xCCEF4444);
+        targetRingPaint.setStyle(Paint.Style.STROKE);
+        targetRingPaint.setStrokeWidth(dpf(2.5f));
 
         textPaint.setColor(0xFF94A3B8);
         textPaint.setTextSize(dpf(8.5f));
         textPaint.setTextAlign(Paint.Align.CENTER);
         textPaint.setTypeface(Typeface.create(Typeface.MONOSPACE, Typeface.BOLD));
 
-        whitePiecePaint.setColor(0xFFFFFFFF);
+        coordPaint.setColor(0xFFCA8A04);
+        coordPaint.setTextSize(dpf(9f));
+        coordPaint.setTextAlign(Paint.Align.CENTER);
+        coordPaint.setTypeface(Typeface.create(Typeface.MONOSPACE, Typeface.BOLD));
+
+        whitePiecePaint.setColor(0xFFFFFDF5);
         whitePiecePaint.setTextAlign(Paint.Align.CENTER);
         whitePiecePaint.setTypeface(Typeface.DEFAULT_BOLD);
 
-        blackPiecePaint.setColor(0xFF0F172A);
+        blackPiecePaint.setColor(0xFF181512);
         blackPiecePaint.setTextAlign(Paint.Align.CENTER);
         blackPiecePaint.setTypeface(Typeface.DEFAULT_BOLD);
 
-        shadowPaint.setColor(0x99000000);
+        shadowPaint.setColor(0x88000000);
         shadowPaint.setTextAlign(Paint.Align.CENTER);
         shadowPaint.setTypeface(Typeface.DEFAULT_BOLD);
+
+        pieceRimPaint.setColor(0xAAFFD166);
+        pieceRimPaint.setTextAlign(Paint.Align.CENTER);
+        pieceRimPaint.setTypeface(Typeface.DEFAULT_BOLD);
 
         resetGame();
     }
@@ -448,14 +477,75 @@ public class ChessGameView extends View {
         executeMove(best[0], best[1], best[2], best[3]);
     }
 
+    private Point findKing(boolean isWhite) {
+        char kChar = isWhite ? 'K' : 'k';
+        for (int r = 0; r < 8; r++) {
+            for (int c = 0; c < 8; c++) {
+                if (board[r][c] == kChar) return new Point(c, r);
+            }
+        }
+        return null;
+    }
+
+    private boolean isKingInCheck(boolean isWhite) {
+        Point k = findKing(isWhite);
+        if (k == null) return false;
+        for (int r = 0; r < 8; r++) {
+            for (int c = 0; c < 8; c++) {
+                char p = board[r][c];
+                if (p != '.' && (isWhite ? isBlackPiece(p) : isWhitePiece(p))) {
+                    if (canPieceAttack(c, r, k.x, k.y)) return true;
+                }
+            }
+        }
+        return false;
+    }
+
+    private boolean canPieceAttack(int fx, int fy, int tx, int ty) {
+        char p = board[fy][fx];
+        char lower = Character.toLowerCase(p);
+        boolean isWhite = isWhitePiece(p);
+
+        if (lower == 'p') {
+            int dir = isWhite ? -1 : 1;
+            return (ty == fy + dir && (tx == fx - 1 || tx == fx + 1));
+        } else if (lower == 'n') {
+            int dx = Math.abs(tx - fx);
+            int dy = Math.abs(ty - fy);
+            return (dx == 1 && dy == 2) || (dx == 2 && dy == 1);
+        } else if (lower == 'k') {
+            return Math.abs(tx - fx) <= 1 && Math.abs(ty - fy) <= 1;
+        } else if (lower == 'b' || lower == 'r' || lower == 'q') {
+            boolean straight = (fx == tx || fy == ty);
+            boolean diag = (Math.abs(tx - fx) == Math.abs(ty - fy));
+            if (lower == 'b' && !diag) return false;
+            if (lower == 'r' && !straight) return false;
+            if (lower == 'q' && !straight && !diag) return false;
+
+            int stepX = Integer.compare(tx, fx);
+            int stepY = Integer.compare(ty, fy);
+            int cx = fx + stepX;
+            int cy = fy + stepY;
+            while (cx != tx || cy != ty) {
+                if (board[cy][cx] != '.') return false;
+                cx += stepX;
+                cy += stepY;
+            }
+            return true;
+        }
+        return false;
+    }
+
     @Override
     public boolean onTouchEvent(MotionEvent event) {
         if (gameOver) return false;
         if (event.getActionMasked() == MotionEvent.ACTION_DOWN) {
             float w = getWidth();
             float h = getHeight();
-            float pad = dpf(8f);
-            float size = Math.min(w, h) - pad * 2;
+            float margin = dpf(14f);
+            float pad = dpf(4f);
+            float totalPadding = margin + pad;
+            float size = Math.min(w, h) - totalPadding * 2f;
             float startX = (w - size) / 2f;
             float startY = (h - size) / 2f;
             float cellSize = size / 8f;
@@ -494,22 +584,48 @@ public class ChessGameView extends View {
         int h = getHeight();
         if (w <= 0 || h <= 0) return;
 
+        // Rich Walnut / Obsidian Masterpiece Frame
         rect.set(0, 0, w, h);
-        boardBgPaint.setShader(new LinearGradient(0, 0, w, h, 0xFF0B132B, 0xFF1C2541, Shader.TileMode.CLAMP));
+        boardBgPaint.setShader(new LinearGradient(0, 0, w, h, 0xFF140F0B, 0xFF2A1C12, Shader.TileMode.CLAMP));
         canvas.drawRoundRect(rect, dpf(16f), dpf(16f), boardBgPaint);
 
         rect.set(dpf(2.5f), dpf(2.5f), w - dpf(2.5f), h - dpf(2.5f));
         canvas.drawRoundRect(rect, dpf(14f), dpf(14f), goldBorderPaint);
 
-        float pad = dpf(8f);
-        float size = Math.min(w, h) - pad * 2;
+        float margin = dpf(14f);
+        float pad = dpf(4f);
+        float totalPadding = margin + pad;
+        float size = Math.min(w, h) - totalPadding * 2f;
         float startX = (w - size) / 2f;
         float startY = (h - size) / 2f;
         float cellSize = size / 8f;
 
+        // Inner Board Inlay Line
+        rect.set(startX - dpf(2f), startY - dpf(2f), startX + size + dpf(2f), startY + size + dpf(2f));
+        canvas.drawRect(rect, goldDetailPaint);
+
+        // Draw Rank (1-8) & File (a-h) Margin Labels
+        String[] files = {"a", "b", "c", "d", "e", "f", "g", "h"};
+        for (int i = 0; i < 8; i++) {
+            float fcx = startX + i * cellSize + cellSize / 2f;
+            canvas.drawText(files[i], fcx, startY - dpf(3.5f), coordPaint);
+            canvas.drawText(files[i], fcx, startY + size + margin - dpf(2f), coordPaint);
+
+            float rcy = startY + i * cellSize + cellSize / 2f + dpf(3f);
+            String rank = String.valueOf(8 - i);
+            canvas.drawText(rank, startX - dpf(7.5f), rcy, coordPaint);
+            canvas.drawText(rank, startX + size + dpf(7.5f), rcy, coordPaint);
+        }
+
         whitePiecePaint.setTextSize(cellSize * 0.78f);
         blackPiecePaint.setTextSize(cellSize * 0.78f);
         shadowPaint.setTextSize(cellSize * 0.78f);
+        pieceRimPaint.setTextSize(cellSize * 0.78f);
+
+        Point whiteKing = findKing(true);
+        Point blackKing = findKing(false);
+        boolean whiteInCheck = isKingInCheck(true);
+        boolean blackInCheck = isKingInCheck(false);
 
         for (int r = 0; r < 8; r++) {
             for (int c = 0; c < 8; c++) {
@@ -520,8 +636,42 @@ public class ChessGameView extends View {
                 boolean isDark = (r + c) % 2 == 1;
                 canvas.drawRect(squareRect, isDark ? darkSquarePaint : lightSquarePaint);
 
+                // Subtle Square Relief Border
+                if (!isDark) {
+                    Paint bevel = new Paint(Paint.ANTI_ALIAS_FLAG);
+                    bevel.setColor(0x33FFFFFF);
+                    bevel.setStrokeWidth(dpf(1f));
+                    canvas.drawLine(left, top, left + cellSize, top, bevel);
+                    canvas.drawLine(left, top, left, top + cellSize, bevel);
+                }
+
+                // Last Move Highlight
+                if ((c == lastFromX && r == lastFromY) || (c == lastToX && r == lastToY)) {
+                    canvas.drawRect(squareRect, lastMovePaint);
+                }
+
+                // King In Check Highlight
+                if ((whiteInCheck && whiteKing != null && whiteKing.x == c && whiteKing.y == r) ||
+                    (blackInCheck && blackKing != null && blackKing.x == c && blackKing.y == r)) {
+                    canvas.drawRect(squareRect, checkGlowPaint);
+                }
+
+                // Selected Square Glow
                 if (c == selectedX && r == selectedY) {
                     canvas.drawRect(squareRect, selectGlowPaint);
+                    // Selected Corner Ticks
+                    Paint tick = new Paint(Paint.ANTI_ALIAS_FLAG);
+                    tick.setColor(0xFFFFD166);
+                    tick.setStrokeWidth(dpf(2f));
+                    float tLen = dpf(6f);
+                    canvas.drawLine(left, top, left + tLen, top, tick);
+                    canvas.drawLine(left, top, left, top + tLen, tick);
+                    canvas.drawLine(left + cellSize, top, left + cellSize - tLen, top, tick);
+                    canvas.drawLine(left + cellSize, top, left + cellSize, top + tLen, tick);
+                    canvas.drawLine(left, top + cellSize, left + tLen, top + cellSize, tick);
+                    canvas.drawLine(left, top + cellSize, left, top + cellSize - tLen, tick);
+                    canvas.drawLine(left + cellSize, top + cellSize, left + cellSize - tLen, top + cellSize, tick);
+                    canvas.drawLine(left + cellSize, top + cellSize, left + cellSize, top + cellSize - tLen, tick);
                 }
 
                 char p = board[r][c];
@@ -529,8 +679,18 @@ public class ChessGameView extends View {
                     String glyph = getPieceGlyph(p);
                     float cx = left + cellSize / 2f;
                     float cy = top + cellSize * 0.76f;
-                    canvas.drawText(glyph, cx + dpf(1.2f), cy + dpf(1.8f), shadowPaint);
-                    canvas.drawText(glyph, cx, cy, isWhitePiece(p) ? whitePiecePaint : blackPiecePaint);
+                    boolean isWhite = isWhitePiece(p);
+
+                    // Drop Shadow & 3D Depth
+                    canvas.drawText(glyph, cx + dpf(1.5f), cy + dpf(2.2f), shadowPaint);
+
+                    if (isWhite) {
+                        canvas.drawText(glyph, cx, cy, whitePiecePaint);
+                    } else {
+                        // Subtle golden hairline for obsidian black piece
+                        canvas.drawText(glyph, cx + dpf(0.5f), cy + dpf(0.5f), pieceRimPaint);
+                        canvas.drawText(glyph, cx, cy, blackPiecePaint);
+                    }
                 }
             }
         }
@@ -539,8 +699,16 @@ public class ChessGameView extends View {
         for (Point m : validMoves) {
             float cx = startX + m.x * cellSize + cellSize / 2f;
             float cy = startY + m.y * cellSize + cellSize / 2f;
-            canvas.drawCircle(cx, cy, dpf(5f), targetDotPaint);
-            canvas.drawCircle(cx, cy, dpf(2.5f), whitePiecePaint);
+            char targetPiece = board[m.y][m.x];
+
+            if (targetPiece == '.') {
+                // Empty destination pip
+                canvas.drawCircle(cx, cy, dpf(4.5f), targetDotPaint);
+                canvas.drawCircle(cx, cy, dpf(2f), whitePiecePaint);
+            } else {
+                // Capture target ring
+                canvas.drawCircle(cx, cy, cellSize * 0.40f, targetRingPaint);
+            }
         }
     }
 }
