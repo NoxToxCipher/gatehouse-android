@@ -189,6 +189,7 @@ public class BackgammonGameView extends View {
         if (!waitingForRoll) return;
         history.add(new HistoryState(points, whiteBar, blackBar, whiteOff, blackOff, whiteTurn, waitingForRoll, availableDice, lastDie1, lastDie2));
         try {
+            RecreationAudioSynth.playDiceRoll();
             performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP);
         } catch (Exception ignored) {}
 
@@ -284,13 +285,17 @@ public class BackgammonGameView extends View {
                     points[toPoint] = 0;
                     blackBar++;
                     try {
+                        RecreationAudioSynth.playChessPieceThud(true);
                         performHapticFeedback(HapticFeedbackConstants.LONG_PRESS);
                     } catch (Exception ignored) {}
+                } else {
+                    try { RecreationAudioSynth.playChessPieceThud(false); } catch (Exception ignored) {}
                 }
                 points[toPoint]++;
             } else {
                 if (!canBearOff(true)) return false;
                 whiteOff++;
+                try { RecreationAudioSynth.playBadukStoneClack(); } catch (Exception ignored) {}
             }
 
             if (fromPoint == -1) whiteBar--;
@@ -305,13 +310,17 @@ public class BackgammonGameView extends View {
                     points[toPoint] = 0;
                     whiteBar++;
                     try {
+                        RecreationAudioSynth.playChessPieceThud(true);
                         performHapticFeedback(HapticFeedbackConstants.LONG_PRESS);
                     } catch (Exception ignored) {}
+                } else {
+                    try { RecreationAudioSynth.playChessPieceThud(false); } catch (Exception ignored) {}
                 }
                 points[toPoint]--;
             } else {
                 if (!canBearOff(false)) return false;
                 blackOff++;
+                try { RecreationAudioSynth.playBadukStoneClack(); } catch (Exception ignored) {}
             }
 
             if (fromPoint == -1) blackBar--;

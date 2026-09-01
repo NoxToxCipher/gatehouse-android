@@ -9777,34 +9777,56 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
 
         // 4. 🛡️ SITE GATEHOUSE & SECURITY (With Live Deputy Roster Contacts Search)
         if (showAll || "SECURITY".equalsIgnoreCase(contactsActiveFilter)) {
-            container.addView(contactsSectionHeader("🛡️ SITE GATEHOUSE & ROSTER GUARDS (PHONE SYNCED)", colEmerald));
+            container.addView(contactsSectionHeader("🛡️ SITE GATEHOUSE & SECURITY PERSONNEL", colEmerald));
+
+            // Explicit Priority Guard Hierarchy: 1. Petrea Doherty -> 2. Lochran Doherty -> 3. Claren Doherty
+            java.util.Set<String> processedGuards = new java.util.HashSet<>();
+
+            // 1. Petrea Doherty (Operations & Control)
+            PhoneContactMatch matchPetrea = lookupPhoneContact("Petrea Doherty");
+            String phonePetrea = (matchPetrea.hasMatch && matchPetrea.phoneNumber != null) ? matchPetrea.phoneNumber : "0401371724";
+            container.addView(contactCard("Petrea Doherty", "G.J.G. Security Services Pty Ltd · Operations & Control", phonePetrea, "SECURITY OPS", colEmerald, "📞"));
+            processedGuards.add("petrea");
+            processedGuards.add("petrea doherty");
+
+            // 2. Officer Lochran Doherty (Me)
+            PhoneContactMatch matchLochran = lookupPhoneContact("Lochran Doherty");
+            String phoneLochran = (matchLochran.hasMatch && matchLochran.phoneNumber != null) ? matchLochran.phoneNumber : "0480749075";
+            container.addView(contactCard("Officer Lochran Doherty", "G.J.G. Security · Static Guard LIC #41207", phoneLochran, "ON SITE (TONIGHT)", colEmerald, "🛡️"));
+            processedGuards.add("lochran");
+            processedGuards.add("lochran doherty");
+
+            // 3. Officer Claren Doherty
+            PhoneContactMatch matchClaren = lookupPhoneContact("Claren Doherty");
+            if (!matchClaren.hasMatch) matchClaren = lookupPhoneContact("Claren Scott Doherty");
+            if (!matchClaren.hasMatch) matchClaren = lookupPhoneContact("Claren");
+            String phoneClaren = (matchClaren.hasMatch && matchClaren.phoneNumber != null) ? matchClaren.phoneNumber : "0478352551";
+            container.addView(contactCard("Officer Claren Doherty", "G.J.G. Security · Security Guard LIC #4611218", phoneClaren, "SECURITY GUARD", colEmerald, "🛡️"));
+            processedGuards.add("claren");
+            processedGuards.add("claren doherty");
+            processedGuards.add("claren scott doherty");
+
+            // 4. Gatehouse Site Duty Mobile
             container.addView(contactCard("Gatehouse Site Cell Phone", "Hume Kingston After Hours Duty Mobile", "0478352551", "DUTY PHONE", colEmerald, "📱"));
 
-            // Dynamic Deputy Roster Guards with Device Contacts Matching
+            // 5. Additional Deputy Rostered Guards
             DeputyApi.DeputyRosterResult roster = new DeputyApi(this).loadCachedResult();
             if (roster == null) roster = new DeputyApi(this).createSampleFallback();
-            java.util.Set<String> processedGuards = new java.util.HashSet<>();
             if (roster != null && roster.weekShifts != null) {
                 for (DeputyApi.DeputyShift s : roster.weekShifts) {
-                    if (s.guardName != null && !s.guardName.isEmpty() && !processedGuards.contains(s.guardName.toLowerCase(Locale.US))) {
-                        processedGuards.add(s.guardName.toLowerCase(Locale.US));
-                        PhoneContactMatch match = lookupPhoneContact(s.guardName);
-                        String phone = match.hasMatch && match.phoneNumber != null ? match.phoneNumber : (s.guardName.toLowerCase(Locale.US).contains("lochran") ? "0480749075" : "0478352551");
-                        String badge = (s.guardName.toLowerCase(Locale.US).contains("lochran")) ? "ON SITE (TONIGHT)" : ("ROSTER: " + s.status);
-                        container.addView(contactCard(s.guardName, "Deputy Roster · Static Security Guard", phone, badge, colEmerald, "🛡️"));
+                    if (s.guardName != null && !s.guardName.isEmpty()) {
+                        String lower = s.guardName.toLowerCase(Locale.US).trim();
+                        if (lower.contains("petrea") || lower.contains("lochran") || lower.contains("claren")) {
+                            continue;
+                        }
+                        if (!processedGuards.contains(lower)) {
+                            processedGuards.add(lower);
+                            PhoneContactMatch match = lookupPhoneContact(s.guardName);
+                            String phone = (match.hasMatch && match.phoneNumber != null) ? match.phoneNumber : "0478352551";
+                            container.addView(contactCard(s.guardName, "Deputy Roster · Static Security Guard", phone, "ROSTER: " + s.status, colEmerald, "🛡️"));
+                        }
                     }
                 }
-            }
-
-            if (!processedGuards.contains("lochran doherty")) {
-                PhoneContactMatch match = lookupPhoneContact("Lochran Doherty");
-                String phone = match.hasMatch && match.phoneNumber != null ? match.phoneNumber : "0480749075";
-                container.addView(contactCard("Officer Lochran Doherty", "G.J.G. Security · Static Guard LIC #41207", phone, "ON SITE (TONIGHT)", colEmerald, "🛡️"));
-            }
-            if (!processedGuards.contains("petrea doherty")) {
-                PhoneContactMatch match = lookupPhoneContact("Petrea Doherty");
-                String phone = match.hasMatch && match.phoneNumber != null ? match.phoneNumber : "0401371724";
-                container.addView(contactCard("Petrea Doherty", "G.J.G. Security Services Pty Ltd", phone, "SECURITY OPS", colEmerald, "📞"));
             }
         }
 
