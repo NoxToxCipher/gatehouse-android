@@ -14931,6 +14931,7 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
     private Dialog activeLogbookDialog = null;
     private String logbookSelectedShiftId = "ALL";
     private String logbookSelectedCategory = "ALL";
+    private String logbookSelectedTimeBucket = "ALL";
     private String logbookSearchQuery = "";
     private boolean logbookRuledViewMode = false;
 
@@ -15567,6 +15568,59 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
         buildCatPills.run();
         catHsv.addView(catRow);
         searchBox.addView(catHsv);
+
+        // Time Bucket Presets inside search box
+        HorizontalScrollView timeHsv = new HorizontalScrollView(this);
+        timeHsv.setHorizontalScrollBarEnabled(false);
+        final LinearLayout timeRow = new LinearLayout(this);
+        timeRow.setOrientation(LinearLayout.HORIZONTAL);
+        timeRow.setPadding(0, dp(4), 0, 0);
+
+        final String[][] timeBuckets = {
+                {"ALL", "🌅 All Hours"},
+                {"EVENING", "🌆 Evening (18-22)"},
+                {"NIGHT", "🌌 Night (22-02)"},
+                {"DAWN", "🌄 Dawn (02-06)"}
+        };
+
+        final Runnable buildTimePills = new Runnable() {
+            @Override
+            public void run() {
+                timeRow.removeAllViews();
+                for (final String[] tb : timeBuckets) {
+                    final String tbId = tb[0];
+                    final String tbLabel = tb[1];
+                    final boolean isSelected = tbId.equalsIgnoreCase(logbookSelectedTimeBucket);
+                    final int count = logMgrInstance.filterEntries(logbookSelectedShiftId, logbookSelectedCategory, "", tbId).size();
+
+                    TextView chip = new TextView(MainActivity.this);
+                    chip.setText(tbLabel + " (" + count + ")");
+                    chip.setTextColor(isSelected ? 0xFF0F172A : 0xFF94A3B8);
+                    chip.setTextSize(9f);
+                    chip.setTypeface(Typeface.create(Typeface.MONOSPACE, Typeface.BOLD));
+                    chip.setPadding(dp(7), dp(3), dp(7), dp(3));
+                    chip.setBackground(rounded(isSelected ? 0xFF38BDF8 : 0x18FFFFFF, dp(5)));
+                    chip.setOnClickListener(new View.OnClickListener() {
+                        @Override
+                        public void onClick(View v) {
+                            hapticClick();
+                            logbookSelectedTimeBucket = tbId;
+                            run();
+                            if (refreshContent[0] != null) refreshContent[0].run();
+                        }
+                    });
+                    LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(
+                            LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+                    lp.rightMargin = dp(4);
+                    chip.setLayoutParams(lp);
+                    timeRow.addView(chip);
+                }
+            }
+        };
+        buildTimePills.run();
+        timeHsv.addView(timeRow);
+        searchBox.addView(timeHsv);
+
         contentCard.addView(searchBox);
 
         btnRefresh.setOnClickListener(new View.OnClickListener() {
@@ -15576,6 +15630,7 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
                 logMgr.syncFromCore(Core.entryCount());
                 buildShiftSegment.run();
                 buildCatPills.run();
+                buildTimePills.run();
                 if (refreshContent[0] != null) refreshContent[0].run();
                 Toast.makeText(MainActivity.this, "✓ Logbook ledger synced", Toast.LENGTH_SHORT).show();
             }
@@ -15744,7 +15799,7 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
 
         LogbookManager logMgr = LogbookManager.getInstance(this);
         List<LogbookManager.LogEntry> entries = logMgr.filterEntries(
-                logbookSelectedShiftId, logbookSelectedCategory, logbookSearchQuery);
+                logbookSelectedShiftId, logbookSelectedCategory, logbookSearchQuery, logbookSelectedTimeBucket);
 
         if (entries.isEmpty()) {
             LinearLayout emptyBox = new LinearLayout(this);
@@ -15795,12 +15850,30 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
                     tvCal.setTextSize(11f);
                     plaque.addView(tvCal);
 
+                    int shiftLogsCount = 0;
+                    for (LogbookManager.LogEntry le : entries) {
+                        if (le.shiftDateStr.equals(currentGroupHeader)) shiftLogsCount++;
+                    }
+
                     TextView tvShiftTitle = new TextView(this);
                     tvShiftTitle.setText(currentGroupHeader + " · 🛡️ " + entry.guardName.toUpperCase(Locale.US));
                     tvShiftTitle.setTextColor(colAccent);
                     tvShiftTitle.setTextSize(10.5f);
                     tvShiftTitle.setTypeface(Typeface.create(Typeface.MONOSPACE, Typeface.BOLD));
                     plaque.addView(tvShiftTitle);
+
+                    TextView tvCountBadge = new TextView(this);
+                    tvCountBadge.setText(shiftLogsCount + " LOGS");
+                    tvCountBadge.setTextColor(colCyan);
+                    tvCountBadge.setTextSize(9f);
+                    tvCountBadge.setTypeface(Typeface.create(Typeface.MONOSPACE, Typeface.BOLD));
+                    tvCountBadge.setPadding(dp(6), dp(2), dp(6), dp(2));
+                    tvCountBadge.setBackground(rounded(0x2800E5FF, dp(4)));
+                    LinearLayout.LayoutParams cblp = new LinearLayout.LayoutParams(
+                            LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+                    cblp.leftMargin = dp(8);
+                    tvCountBadge.setLayoutParams(cblp);
+                    plaque.addView(tvCountBadge);
 
                     headerRow.addView(plaque);
                     container.addView(headerRow);

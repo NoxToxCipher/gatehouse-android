@@ -265,10 +265,15 @@ public class LogbookManager {
     }
 
     public synchronized List<LogEntry> filterEntries(String shiftIdFilter, String categoryFilter, String query) {
+        return filterEntries(shiftIdFilter, categoryFilter, query, "ALL");
+    }
+
+    public synchronized List<LogEntry> filterEntries(String shiftIdFilter, String categoryFilter, String query, String timeBucketFilter) {
         List<LogEntry> results = new ArrayList<>();
         String q = query != null ? query.trim().toLowerCase(Locale.US) : "";
         boolean filterShift = shiftIdFilter != null && !shiftIdFilter.equalsIgnoreCase("ALL");
         boolean filterCat = categoryFilter != null && !categoryFilter.equalsIgnoreCase("ALL");
+        boolean filterTime = timeBucketFilter != null && !timeBucketFilter.equalsIgnoreCase("ALL");
 
         for (ShiftRecord s : shiftRecords) {
             if (filterShift && !s.shiftId.equals(shiftIdFilter)) {
@@ -277,6 +282,22 @@ public class LogbookManager {
             for (LogEntry e : s.entries) {
                 if (filterCat && !e.category.equalsIgnoreCase(categoryFilter)) {
                     continue;
+                }
+                if (filterTime) {
+                    int m = e.occurredMin;
+                    if (m <= 0 && e.timeStr != null && e.timeStr.length() >= 5) {
+                        try {
+                            String[] parts = e.timeStr.split(":");
+                            m = Integer.parseInt(parts[0]) * 60 + Integer.parseInt(parts[1]);
+                        } catch (Exception ignored) {}
+                    }
+                    if ("EVENING".equalsIgnoreCase(timeBucketFilter) && !(m >= 1080 && m < 1320)) {
+                        continue;
+                    } else if ("NIGHT".equalsIgnoreCase(timeBucketFilter) && !(m >= 1320 || m < 120)) {
+                        continue;
+                    } else if ("DAWN".equalsIgnoreCase(timeBucketFilter) && !(m >= 120 && m < 360)) {
+                        continue;
+                    }
                 }
                 if (!q.isEmpty()) {
                     boolean match = e.text.toLowerCase(Locale.US).contains(q)
