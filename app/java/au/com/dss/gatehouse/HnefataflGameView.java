@@ -207,11 +207,13 @@ public class HnefataflGameView extends View {
         board[fromY][fromX] = '.';
 
         try {
+            RecreationAudioSynth.playChessPieceThud(false);
             performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP);
         } catch (Exception ignored) {}
 
         if (p == 'K' && ((toX == 0 || toX == 10) && (toY == 0 || toY == 10))) {
             gameOver = true;
+            try { RecreationAudioSynth.playBadukStoneClack(); } catch (Exception ignored) {}
             if (statusListener != null) {
                 statusListener.onStatusChanged("🏆 NORSE VICTORY! King reached sanctuary fort.", 0xFF10B981);
             }
@@ -276,6 +278,7 @@ public class HnefataflGameView extends View {
                     if (farMatches) {
                         board[midY][midX] = '.';
                         try {
+                            RecreationAudioSynth.playChessPieceThud(true);
                             performHapticFeedback(HapticFeedbackConstants.LONG_PRESS);
                         } catch (Exception ignored) {}
                     }

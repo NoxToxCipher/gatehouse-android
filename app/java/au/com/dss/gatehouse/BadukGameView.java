@@ -14,6 +14,8 @@ import android.view.HapticFeedbackConstants;
 import android.view.MotionEvent;
 import android.view.View;
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Comparator;
 import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
@@ -1092,6 +1094,11 @@ public class BadukGameView extends View {
             drawTerritoryMarkers(canvas, startX, startY, cellSize);
         }
 
+        // Draw KataGo Candidate Move Bubbles if heatmap/analysis active
+        if (showHeatmap) {
+            drawKataGoCandidateBubbles(canvas, startX, startY, cellSize);
+        }
+
         // Draw Floating Capture Toast Badge (if active)
         long toastElapsed = System.currentTimeMillis() - captureToastStartTime;
         if (captureToastText != null && toastElapsed < CAPTURE_TOAST_DURATION_MS) {
@@ -1289,6 +1296,56 @@ public class BadukGameView extends View {
         if (w != -1) { validNeighbors++; if (w == target) count++; }
         if (e != -1) { validNeighbors++; if (e == target) count++; }
         return validNeighbors >= 3 && count == validNeighbors;
+    }
+
+    private void drawKataGoCandidateBubbles(Canvas canvas, float startX, float startY, float cellSize) {
+        if (!showHeatmap || gameOver || mode == 1) return;
+        List<CandidateMove> candidates = new ArrayList<>();
+        for (int y = 0; y < boardSize; y++) {
+            for (int x = 0; x < boardSize; x++) {
+                if (board[y][x] != 0) continue;
+                board[y][x] = currentTurn;
+                boolean[][] vTest = new boolean[boardSize][boardSize];
+                int testLibs = countGroupLiberties(x, y, currentTurn, vTest);
+                board[y][x] = 0;
+                if (testLibs <= 1) continue;
+                float s = evaluateShapeScore(x, y);
+                candidates.add(new CandidateMove(x, y, s));
+            }
+        }
+        Collections.sort(candidates, new Comparator<CandidateMove>() {
+            public int compare(CandidateMove a, CandidateMove b) {
+                return Float.compare(b.shapeScore, a.shapeScore);
+            }
+        });
+        int topN = Math.min(3, candidates.size());
+        Paint bubblePaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+        Paint bubbleTextPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+        bubbleTextPaint.setTypeface(Typeface.create(Typeface.MONOSPACE, Typeface.BOLD));
+        bubbleTextPaint.setTextAlign(Paint.Align.CENTER);
+
+        for (int i = 0; i < topN; i++) {
+            CandidateMove cm = candidates.get(i);
+            float cx = startX + cm.x * cellSize;
+            float cy = startY + cm.y * cellSize;
+            float bubbleR = cellSize * 0.40f;
+
+            if (i == 0) {
+                bubblePaint.setColor(0xDD10B981); // Emerald Best Move (A)
+                bubbleTextPaint.setColor(0xFFFFFFFF);
+            } else if (i == 1) {
+                bubblePaint.setColor(0xDD38BDF8); // Electric Azure 2nd (B)
+                bubbleTextPaint.setColor(0xFF0F172A);
+            } else {
+                bubblePaint.setColor(0xDDF59E0B); // Amber 3rd (C)
+                bubbleTextPaint.setColor(0xFF0F172A);
+            }
+
+            canvas.drawCircle(cx, cy, bubbleR, bubblePaint);
+            bubbleTextPaint.setTextSize(Math.max(dpf(7.5f), cellSize * 0.38f));
+            String rank = (i == 0) ? "A" : (i == 1 ? "B" : "C");
+            canvas.drawText(rank, cx, cy + dpf(3.5f), bubbleTextPaint);
+        }
     }
 
     private void drawSingleStone(Canvas canvas, float cx, float cy, float r, int val) {
