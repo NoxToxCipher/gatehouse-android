@@ -71,6 +71,7 @@ public class AdsbSkyRadarService {
         public double bearingDeg;
         public AircraftCategory category;
         public boolean isSpecial;
+        public boolean isLive;
         public String alertSummary;
         public long lastSeenMs;
     }
@@ -144,7 +145,8 @@ public class AdsbSkyRadarService {
 
                     TrackedAircraft topAlert = null;
                     for (TrackedAircraft ac : results) {
-                        if (ac.isSpecial && ac.distanceNm <= geofenceRadiusNm && ac.altitudeFt <= altitudeCapFt) {
+                        // NEVER notify for simulated / fallback tracks
+                        if (ac.isLive && ac.isSpecial && ac.distanceNm <= geofenceRadiusNm && ac.altitudeFt <= altitudeCapFt) {
                             if (!notifiedHexes.contains(ac.hex)) {
                                 notifiedHexes.add(ac.hex);
                                 topAlert = ac;
@@ -256,8 +258,7 @@ public class AdsbSkyRadarService {
             t.headingDeg = ac.optInt("track", 0);
             t.lastSeenMs = System.currentTimeMillis();
 
-            if (t.lat == 0.0 || t.lon == 0.0) return null;
-
+            t.isLive = true;
             computeKinematics(t);
             classifyAircraft(t);
             return t;
@@ -482,6 +483,18 @@ public class AdsbSkyRadarService {
         if (nm != null) {
             nm.notify(ac.hex.hashCode(), builder.build());
         }
+    }
+
+    public void cancelAllAlerts() {
+        try {
+            NotificationManager nm = (NotificationManager) appContext.getSystemService(Context.NOTIFICATION_SERVICE);
+            if (nm != null) {
+                nm.cancel("7CF8B1".hashCode()); // 1638202861
+                nm.cancel("7C429A".hashCode()); // 1637987598
+                nm.cancel("7C8801".hashCode()); // 1638620493
+                nm.cancel("7C1102".hashCode()); // 1638078226
+            }
+        } catch (Exception ignored) {}
     }
 
     public static String getBearingCompassStr(double deg) {

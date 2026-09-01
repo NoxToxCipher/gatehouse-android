@@ -461,6 +461,7 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
         commitAll();
         updateDiagnostics();
         FireRadarManager.initChannels(this);
+        FireRadarManager.cancelMockAndStaleNotifications(this);
         refreshFireRadar();
         AirspaceRadarManager.initChannels(this);
         refreshAirspaceRadar();
@@ -523,6 +524,7 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
         }
 
         // Start ADS-B Sky Watch Geofence Alert Monitor
+        AdsbSkyRadarService.get(this).cancelAllAlerts();
         AdsbSkyRadarService.get(this).startMonitoring();
     }
 

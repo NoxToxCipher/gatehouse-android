@@ -174,6 +174,7 @@ public class FireRadarManager {
         public double windDirDeg = 160.0;
         public double windGustKmh = 22.0;
         public long lastUpdatedTs = System.currentTimeMillis();
+        public boolean isLiveFeed = false;
         public String weatherSummary = "24.5°C · SSE 14.5 km/h";
 
         public boolean hasFiresWithin10Km() {
@@ -422,7 +423,7 @@ public class FireRadarManager {
     }
 
     private static void evaluateLightningThresholds(Context context, FireRadarSnapshot snapshot) {
-        if (context == null || snapshot == null) return;
+        if (context == null || snapshot == null || !snapshot.isLiveFeed) return;
 
         double proxThresh = snapshot.proximityThresholdKm;
         int qtyThresh = snapshot.quantityThreshold;
@@ -513,7 +514,7 @@ public class FireRadarManager {
     }
 
     private static void evaluateHailWarning(Context context, FireRadarSnapshot snapshot) {
-        if (context == null || snapshot == null || !snapshot.hasHailWarning) return;
+        if (context == null || snapshot == null || !snapshot.isLiveFeed || !snapshot.hasHailWarning) return;
         SharedPreferences prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE);
         long lastNotif = prefs.getLong(KEY_LAST_HAIL_NOTIFIED_TS, 0);
         long now = System.currentTimeMillis();
@@ -666,12 +667,22 @@ public class FireRadarManager {
         FireDangerRating oldRating = FireDangerRating.fromString(lastRatingStr);
         if (oldRating != newRating) {
             prefs.edit().putString(KEY_LAST_DANGER_RATING, newRating.name()).apply();
-            dispatchDangerRatingNotification(context, newRating, oldRating);
+            // Only notify if danger rating escalated to HIGH, EXTREME or CATASTROPHIC
+            if (newRating == FireDangerRating.HIGH || newRating == FireDangerRating.EXTREME || newRating == FireDangerRating.CATASTROPHIC) {
+                dispatchDangerRatingNotification(context, newRating, oldRating);
+            }
         }
     }
 
     private static void checkAndNotifyLocalFire(Context context, FireIncident inc, double windSpeed, String windDir) {
         if (context == null || inc == null) return;
+        // Never notify for simulated, fallback, or minor controlled burns / advice
+        if (inc.id == null || inc.id.startsWith("QFES-LOGAN") || "CONTROLLED".equalsIgnoreCase(inc.alertLevel) || "ADVICE".equalsIgnoreCase(inc.alertLevel)) {
+            return;
+        }
+        // Only notify for EMERGENCY_WARNING or WATCH_AND_ACT within 5km radius
+        if (inc.distanceKm > 5.0) return;
+
         SharedPreferences prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE);
         String key = KEY_LAST_NOTIFIED_INCIDENT + inc.id;
         boolean alreadyNotified = prefs.getBoolean(key, false);
@@ -679,6 +690,24 @@ public class FireRadarManager {
             prefs.edit().putBoolean(key, true).apply();
             dispatchLocalFireNotification(context, inc, windSpeed, windDir);
         }
+    }
+
+    public static void cancelMockAndStaleNotifications(Context context) {
+        if (context == null) return;
+        try {
+            NotificationManager nm = (NotificationManager) context.getSystemService(Context.NOTIFICATION_SERVICE);
+            if (nm != null) {
+                nm.cancel(9001);
+                nm.cancel(8888);
+                nm.cancel(8889);
+                nm.cancel(9002 + "QFES-LOGAN-01".hashCode());
+                nm.cancel(9002 + "QFES-LOGAN-02".hashCode());
+                nm.cancel(1638202861);
+                nm.cancel(1637987598);
+                nm.cancel(1638620493);
+                nm.cancel(1638078226);
+            }
+        } catch (Exception ignored) {}
     }
 
     private static void dispatchDangerRatingNotification(Context context, FireDangerRating newRating, FireDangerRating oldRating) {
