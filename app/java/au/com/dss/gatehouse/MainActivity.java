@@ -156,6 +156,8 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
     public static final int THEME_RED = 1;
     public static final int THEME_NVG = 2;
     public static final int THEME_VIOLET = 3;
+    public static final int THEME_DAYLIGHT = 4;
+    public static final int THEME_DESERT_SAND = 5;
 
     private int activeTheme = THEME_GOLD;
     private int currentTab = 0;
@@ -738,14 +740,18 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
     }
 
     private static final int[][] THEME_PALETTES = {
-        // THEME_GOLD (0)
-        { 0xFF080C14, 0xFF101724, 0xFF182234, 0xFF1E2B40, 0xFF121B28, 0xFFE5A93C, 0xFF000000, 0x1AE5A93C, 0xFFF3F6FA, 0xFF94A3B8, 0xFF5B6B82, 0xFF10B981, 0x2210B981, 0xFFEF4444, 0x24EF4444, 0xFF06B6D4, 0x2406B6D4 },
-        // THEME_RED (1)
-        { 0xFF0D0303, 0xFF170606, 0xFF220909, 0xFF3D1212, 0xFF240A0A, 0xFFFF3333, 0xFF000000, 0x22FF3333, 0xFFFF8A8A, 0xFFC45555, 0xFF7A3333, 0xFFFF5555, 0x26FF5555, 0xFFFF1111, 0x33FF1111, 0xFFFF4444, 0x28FF4444 },
-        // THEME_NVG (2)
-        { 0xFF021206, 0xFF041E0A, 0xFF062A0F, 0xFF0A4418, 0xFF062B10, 0xFF00FF66, 0xFF000000, 0x2200FF66, 0xFFE0FFE8, 0xFF55DD77, 0xFF228844, 0xFF00FF66, 0x2600FF66, 0xFFFF5555, 0x24FF5555, 0xFF00FFCC, 0x2400FFCC },
-        // THEME_VIOLET (3)
-        { 0xFF0B0414, 0xFF140822, 0xFF1F0C35, 0xFF351559, 0xFF220C3A, 0xFFC084FC, 0xFF000000, 0x22C084FC, 0xFFF3E8FF, 0xFFA855F7, 0xFF6B21A8, 0xFF10B981, 0x2210B981, 0xFFF43F5E, 0x24F43F5E, 0xFF38BDF8, 0x2438BDF8 }
+        // THEME_GOLD (0) - AMOLED True Black & Warm Gold
+        { 0xFF080C14, 0xFF101724, 0xFF182234, 0xFF1E2B40, 0xFF121B28, 0xFFE5A93C, 0xFF000000, 0x1AE5A93C, 0xFFF3F6FA, 0xFF94A3B8, 0xFF5B6B82, 0xFF10B981, 0x2210B981, 0xFFEF4444, 0x24EF4444, 0xFF06B6D4, 0x2406B6D4, 0xFF000000 },
+        // THEME_RED (1) - 0-Lux Red Preservation
+        { 0xFF0D0303, 0xFF170606, 0xFF220909, 0xFF3D1212, 0xFF240A0A, 0xFFFF3333, 0xFF000000, 0x22FF3333, 0xFFFF8A8A, 0xFFC45555, 0xFF7A3333, 0xFFFF5555, 0x26FF5555, 0xFFFF1111, 0x33FF1111, 0xFFFF4444, 0x28FF4444, 0xFF000000 },
+        // THEME_NVG (2) - Phosphor Night Perimeter Green
+        { 0xFF021206, 0xFF041E0A, 0xFF062A0F, 0xFF0A4418, 0xFF062B10, 0xFF00FF66, 0xFF000000, 0x2200FF66, 0xFFE0FFE8, 0xFF55DD77, 0xFF228844, 0xFF00FF66, 0x2600FF66, 0xFFFF5555, 0x24FF5555, 0xFF00FFCC, 0x2400FFCC, 0xFF000000 },
+        // THEME_VIOLET (3) - Cyber Violet Console
+        { 0xFF0B0414, 0xFF140822, 0xFF1F0C35, 0xFF351559, 0xFF220C3A, 0xFFC084FC, 0xFF000000, 0x22C084FC, 0xFFF3E8FF, 0xFFA855F7, 0xFF6B21A8, 0xFF10B981, 0x2210B981, 0xFFF43F5E, 0x24F43F5E, 0xFF38BDF8, 0x2438BDF8, 0xFF000000 },
+        // THEME_DAYLIGHT (4) - Daylight Executive (Crisp White & Deep Royal Amber)
+        { 0xFFFFFFFF, 0xFFF1F5F9, 0xFFE2E8F0, 0xFF94A3B8, 0xFFCBD5E1, 0xFFD97706, 0xFFFFFFFF, 0x33D97706, 0xFF0F172A, 0xFF334155, 0xFF64748B, 0xFF059669, 0x26059669, 0xFFDC2626, 0x26DC2626, 0xFF0284C7, 0x260284C7, 0xFFF8FAFC },
+        // THEME_DESERT_SAND (5) - Desert Sand (Warm Parchment & Bronze)
+        { 0xFFFFFDF9, 0xFFF4ECE2, 0xFFE8DCCB, 0xFFA89580, 0xFFC8B7A4, 0xFFB45309, 0xFFFFFFFF, 0x33B45309, 0xFF1C1917, 0xFF44403C, 0xFF78716C, 0xFF15803D, 0x2615803D, 0xFFB91C1C, 0x26B91C1C, 0xFF0369A1, 0x260369A1, 0xFFFAF8F5 }
     };
 
     public static int lerpColor(int c1, int c2, float f) {
@@ -759,12 +765,11 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
     }
 
     public void applyDynamicColorMorph(float themeFloat) {
-        float clamped = Math.max(0f, Math.min(3f, themeFloat));
+        float clamped = Math.max(0f, Math.min(5f, themeFloat));
         int i1 = (int) Math.floor(clamped);
-        int i2 = Math.min(3, i1 + 1);
+        int i2 = Math.min(5, i1 + 1);
         float f = clamped - i1;
 
-        colBg = 0xFF000000;
         colPanel = lerpColor(THEME_PALETTES[i1][0], THEME_PALETTES[i2][0], f);
         colPanel2 = lerpColor(THEME_PALETTES[i1][1], THEME_PALETTES[i2][1], f);
         colPanel3 = lerpColor(THEME_PALETTES[i1][2], THEME_PALETTES[i2][2], f);
@@ -782,6 +787,7 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
         colCrimsonSoft = lerpColor(THEME_PALETTES[i1][14], THEME_PALETTES[i2][14], f);
         colCyan = lerpColor(THEME_PALETTES[i1][15], THEME_PALETTES[i2][15], f);
         colCyanSoft = lerpColor(THEME_PALETTES[i1][16], THEME_PALETTES[i2][16], f);
+        colBg = lerpColor(THEME_PALETTES[i1][17], THEME_PALETTES[i2][17], f);
 
         if (root != null) root.setBackgroundColor(colBg);
         if (rootFrame != null) rootFrame.setBackgroundColor(colBg);
@@ -789,6 +795,28 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
         if (scrollContacts != null) scrollContacts.setBackgroundColor(colBg);
         if (scrollHandbook != null) scrollHandbook.setBackgroundColor(colBg);
         if (scrollTools != null) scrollTools.setBackgroundColor(colBg);
+        if (scrollSettings != null) scrollSettings.setBackgroundColor(colBg);
+
+        // Auto-configure light vs dark status bar and nav bar icons
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            try {
+                View decor = getWindow().getDecorView();
+                int flags = decor.getSystemUiVisibility();
+                boolean isLight = (activeTheme == THEME_DAYLIGHT || activeTheme == THEME_DESERT_SAND);
+                if (isLight) {
+                    flags |= View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR;
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                        flags |= View.SYSTEM_UI_FLAG_LIGHT_NAVIGATION_BAR;
+                    }
+                } else {
+                    flags &= ~View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR;
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                        flags &= ~View.SYSTEM_UI_FLAG_LIGHT_NAVIGATION_BAR;
+                    }
+                }
+                decor.setSystemUiVisibility(flags);
+            } catch (Throwable ignored) {}
+        }
 
         if (animatedThemeBar != null) animatedThemeBar.invalidate();
         if (animatedTabBar != null) animatedTabBar.invalidate();
@@ -1481,6 +1509,8 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
         pill.addView(themeSwitchButton("0-Lux Red", THEME_RED));
         pill.addView(themeSwitchButton("NVG Green", THEME_NVG));
         pill.addView(themeSwitchButton("Cyber Violet", THEME_VIOLET));
+        pill.addView(themeSwitchButton("☀️ Daylight", THEME_DAYLIGHT));
+        pill.addView(themeSwitchButton("🏜️ Desert Sand", THEME_DESERT_SAND));
 
         hsv.addView(pill);
         modeBar.addView(hsv);
@@ -10400,7 +10430,9 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
             {"OLED Gold (Default)", "AMOLED zero-power black & warm gold accents", String.valueOf(THEME_GOLD)},
             {"0-Lux Red", "Night vision preservation & zero light bleed", String.valueOf(THEME_RED)},
             {"NVG Phosphor Green", "High-contrast night perimeter surveillance", String.valueOf(THEME_NVG)},
-            {"Cyber Violet", "Low-glare indoor gatehouse console", String.valueOf(THEME_VIOLET)}
+            {"Cyber Violet", "Low-glare indoor gatehouse console", String.valueOf(THEME_VIOLET)},
+            {"☀️ Daylight Executive", "Crisp high-contrast daylight silver, white & royal amber", String.valueOf(THEME_DAYLIGHT)},
+            {"🏜️ Desert Sand", "Warm linen parchment & deep bronze daylight theme", String.valueOf(THEME_DESERT_SAND)}
         };
 
         for (int i = 0; i < themes.length; i++) {
@@ -10410,7 +10442,7 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
             final LinearLayout row = new LinearLayout(this);
             row.setOrientation(LinearLayout.HORIZONTAL);
             row.setGravity(Gravity.CENTER_VERTICAL);
-            row.setBackground(rounded(isSelected ? 0x22FFD166 : colPanel2, dp(10)));
+            row.setBackground(rounded(isSelected ? colAccentSoft : colPanel2, dp(10)));
             row.setPadding(dp(12), dp(10), dp(12), dp(10));
             LinearLayout.LayoutParams rlp = new LinearLayout.LayoutParams(
                     LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
@@ -10614,7 +10646,9 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
             {"OLED Gold (Default)", "AMOLED zero-power black & warm gold accents", String.valueOf(THEME_GOLD)},
             {"0-Lux Red", "Night vision preservation & zero light bleed", String.valueOf(THEME_RED)},
             {"NVG Phosphor Green", "High-contrast night perimeter surveillance", String.valueOf(THEME_NVG)},
-            {"Cyber Violet", "Low-glare indoor gatehouse console", String.valueOf(THEME_VIOLET)}
+            {"Cyber Violet", "Low-glare indoor gatehouse console", String.valueOf(THEME_VIOLET)},
+            {"☀️ Daylight Executive", "Crisp high-contrast daylight silver, white & royal amber", String.valueOf(THEME_DAYLIGHT)},
+            {"🏜️ Desert Sand", "Warm linen parchment & deep bronze daylight theme", String.valueOf(THEME_DESERT_SAND)}
         };
 
         final Dialog dlg = createDialogSheet(box);
@@ -10626,7 +10660,7 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
             final LinearLayout row = new LinearLayout(this);
             row.setOrientation(LinearLayout.HORIZONTAL);
             row.setGravity(Gravity.CENTER_VERTICAL);
-            row.setBackground(rounded(isSelected ? 0x22FFD166 : colPanel2, dp(10)));
+            row.setBackground(rounded(isSelected ? colAccentSoft : colPanel2, dp(10)));
             row.setPadding(dp(12), dp(10), dp(12), dp(10));
             LinearLayout.LayoutParams rlp = new LinearLayout.LayoutParams(
                     LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
@@ -19352,8 +19386,8 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
         private final RectF bgRect = new RectF();
         private final RectF chipRect = new RectF();
 
-        private final String[] themeNames = {"GOLD", "AMBER", "MATRIX", "SLATE"};
-        private final int[] themeColors = {0xFFFFD166, 0xFFFF3333, 0xFF00FF66, 0xFFC084FC};
+        private final String[] themeNames = {"GOLD", "RED", "NVG", "VIOLET", "DAY", "SAND"};
+        private final int[] themeColors = {0xFFFFD166, 0xFFFF3333, 0xFF00FF66, 0xFFC084FC, 0xFFD97706, 0xFFB45309};
         public float indicatorFloat = (float) activeTheme;
         private ValueAnimator indAnimator;
         private boolean isThemeScrubbing = false;
@@ -19376,14 +19410,14 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
         }
 
         public void setIndicatorFloat(float f) {
-            this.indicatorFloat = Math.max(0f, Math.min(3f, f));
+            this.indicatorFloat = Math.max(0f, Math.min(5f, f));
             invalidate();
         }
 
         public int getInterpolatedThemeColor(float pos) {
-            float clamped = Math.max(0f, Math.min(3f, pos));
+            float clamped = Math.max(0f, Math.min(5f, pos));
             int idx1 = (int) Math.floor(clamped);
-            int idx2 = Math.min(3, idx1 + 1);
+            int idx2 = Math.min(5, idx1 + 1);
             float f = clamped - idx1;
             return MainActivity.lerpColor(themeColors[idx1], themeColors[idx2], f);
         }
@@ -19421,7 +19455,7 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
                     if (getParent() != null) getParent().requestDisallowInterceptTouchEvent(true);
                     if (indAnimator != null && indAnimator.isRunning()) indAnimator.cancel();
                     isThemeScrubbing = true;
-                    float targetDown = Math.max(0f, Math.min(3f, (event.getX() / w) * 4f - 0.5f));
+                    float targetDown = Math.max(0f, Math.min(5f, (event.getX() / w) * 6f - 0.5f));
                     indicatorFloat = targetDown;
                     lastHapticIndex = Math.round(targetDown);
                     MainActivity.this.applyDynamicColorMorph(targetDown);
@@ -19429,9 +19463,9 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
                     return true;
 
                 case MotionEvent.ACTION_MOVE:
-                    float targetMove = Math.max(0f, Math.min(3f, (event.getX() / w) * 4f - 0.5f));
+                    float targetMove = Math.max(0f, Math.min(5f, (event.getX() / w) * 6f - 0.5f));
                     indicatorFloat = targetMove;
-                    int nearestTheme = Math.max(0, Math.min(3, Math.round(targetMove)));
+                    int nearestTheme = Math.max(0, Math.min(5, Math.round(targetMove)));
                     if (nearestTheme != lastHapticIndex) {
                         lastHapticIndex = nearestTheme;
                         MainActivity.this.hapticTick();
@@ -19444,7 +19478,7 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
                 case MotionEvent.ACTION_CANCEL:
                     if (getParent() != null) getParent().requestDisallowInterceptTouchEvent(false);
                     isThemeScrubbing = false;
-                    final int finalTheme = Math.max(0, Math.min(3, Math.round(indicatorFloat)));
+                    final int finalTheme = Math.max(0, Math.min(5, Math.round(indicatorFloat)));
                     animateToTheme(finalTheme);
                     if (finalTheme != activeTheme) {
                         activeTheme = finalTheme;
@@ -19466,7 +19500,7 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
             bgPaint.setColor(colPanel);
             canvas.drawRoundRect(bgRect, dp(12), dp(12), bgPaint);
 
-            float segW = w / 4f;
+            float segW = w / 6f;
             float pad = dpf(2.5f);
             float chipX = indicatorFloat * segW + pad;
             float chipW = segW - pad * 2;
@@ -19484,14 +19518,14 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
                 canvas.drawRoundRect(chipRect, dp(9), dp(9), chipGlowPaint);
             }
 
-            labelPaint.setTextSize(dpf(9f));
-            float textY = h / 2f + dpf(3.2f);
+            labelPaint.setTextSize(dpf(8f));
+            float textY = h / 2f + dpf(3f);
 
-            for (int i = 0; i < 4; i++) {
+            for (int i = 0; i < 6; i++) {
                 float tx = i * segW + segW / 2f;
                 float dist = Math.abs(indicatorFloat - i);
                 if (dist < 0.5f) {
-                    labelPaint.setColor(0xFF000000);
+                    labelPaint.setColor(colAccentInk);
                 } else {
                     labelPaint.setColor(colMuted);
                 }
