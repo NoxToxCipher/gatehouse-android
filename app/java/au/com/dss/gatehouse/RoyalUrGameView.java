@@ -77,6 +77,35 @@ public class RoyalUrGameView extends View {
         false, true
     };
 
+    private static class HistoryState {
+        final int[] whitePieces;
+        final int[] blackPieces;
+        final int whitePiecesOff;
+        final int blackPiecesOff;
+        final int whitePiecesUnentered;
+        final int blackPiecesUnentered;
+        final int currentTurn;
+        final int currentRoll;
+        final boolean waitingForRoll;
+        final boolean[] lastDiceFaces;
+
+        HistoryState(int[] wp, int[] bp, int wOff, int bOff, int wUn, int bUn, int turn, int roll, boolean wait, boolean[] dice) {
+            this.whitePieces = wp.clone();
+            this.blackPieces = bp.clone();
+            this.whitePiecesOff = wOff;
+            this.blackPiecesOff = bOff;
+            this.whitePiecesUnentered = wUn;
+            this.blackPiecesUnentered = bUn;
+            this.currentTurn = turn;
+            this.currentRoll = roll;
+            this.waitingForRoll = wait;
+            this.lastDiceFaces = dice.clone();
+        }
+    }
+
+    private final java.util.List<HistoryState> history = new java.util.ArrayList<>();
+    private final Paint moveGlowPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+
     private float dpf(float v) {
         return v * getResources().getDisplayMetrics().density;
     }
@@ -110,6 +139,10 @@ public class RoyalUrGameView extends View {
         pieceShinePaint.setColor(0xAAFFFFFF);
         pieceShinePaint.setStyle(Paint.Style.FILL);
 
+        moveGlowPaint.setColor(0xFFFDE047);
+        moveGlowPaint.setStyle(Paint.Style.STROKE);
+        moveGlowPaint.setStrokeWidth(dpf(2.5f));
+
         textPaint.setColor(0xFFE2E8F0);
         textPaint.setTextAlign(Paint.Align.CENTER);
         textPaint.setTypeface(Typeface.create(Typeface.MONOSPACE, Typeface.BOLD));
@@ -129,7 +162,31 @@ public class RoyalUrGameView extends View {
         updateStatus();
     }
 
+    private void saveHistory() {
+        history.add(new HistoryState(whitePieces, blackPieces, whitePiecesOff, blackPiecesOff, whitePiecesUnentered, blackPiecesUnentered, currentTurn, currentRoll, waitingForRoll, lastDiceFaces));
+        if (history.size() > 50) history.remove(0);
+    }
+
+    public void undoMove() {
+        if (history.isEmpty()) return;
+        HistoryState state = history.remove(history.size() - 1);
+        System.arraycopy(state.whitePieces, 0, whitePieces, 0, 7);
+        System.arraycopy(state.blackPieces, 0, blackPieces, 0, 7);
+        whitePiecesOff = state.whitePiecesOff;
+        blackPiecesOff = state.blackPiecesOff;
+        whitePiecesUnentered = state.whitePiecesUnentered;
+        blackPiecesUnentered = state.blackPiecesUnentered;
+        currentTurn = state.currentTurn;
+        currentRoll = state.currentRoll;
+        waitingForRoll = state.waitingForRoll;
+        System.arraycopy(state.lastDiceFaces, 0, lastDiceFaces, 0, 4);
+        try { performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP); } catch (Exception ignored) {}
+        updateStatus();
+        invalidate();
+    }
+
     public void resetGame() {
+        history.clear();
         currentTurn = 0;
         currentRoll = -1;
         waitingForRoll = true;
@@ -206,8 +263,26 @@ public class RoyalUrGameView extends View {
         return false;
     }
 
+    private boolean isPieceMovable(int pieceIdx) {
+        if (waitingForRoll || currentRoll <= 0 || currentTurn != 0) return false;
+        int pos = whitePieces[pieceIdx];
+        if (pos == 14) return false;
+        int nextPos = (pos == -1) ? currentRoll - 1 : pos + currentRoll;
+        if (nextPos > 14) return false;
+        for (int j = 0; j < 7; j++) {
+            if (whitePieces[j] == nextPos) return false;
+        }
+        if (nextPos == 7) {
+            for (int j = 0; j < 7; j++) {
+                if (blackPieces[j] == 7) return false;
+            }
+        }
+        return true;
+    }
+
     private void makeMove(int pieceIdx) {
         if (waitingForRoll || currentRoll <= 0) return;
+        if (currentTurn == 0) saveHistory();
         int[] myPieces = (currentTurn == 0) ? whitePieces : blackPieces;
         int[] oppPieces = (currentTurn == 0) ? blackPieces : whitePieces;
 
@@ -348,25 +423,19 @@ public class RoyalUrGameView extends View {
     @Override
     public boolean onTouchEvent(MotionEvent event) {
         if (event.getActionMasked() == MotionEvent.ACTION_DOWN) {
-            float w = getWidth();
-            float h = getHeight();
+            float ex = event.getX();
+            float ey = event.getY();
+            int w = getWidth();
+            int h = getHeight();
             float pad = dpf(10f);
             float cellW = (w - pad * 2) / 8f;
             float cellH = (h - dpf(64f)) / 3f;
 
-            float ex = event.getX();
-            float ey = event.getY();
-
-            if (ey > h - dpf(54f)) {
+            if (ey >= h - dpf(56f)) {
                 if (waitingForRoll && currentTurn == 0) {
                     rollDice();
                     return true;
                 }
-            }
-
-            if (waitingForRoll && currentTurn == 0) {
-                rollDice();
-                return true;
             }
 
             if (!waitingForRoll && currentTurn == 0 && currentRoll > 0) {
@@ -378,7 +447,7 @@ public class RoyalUrGameView extends View {
                     if (pos >= 0 && pos < 14) {
                         int pr = WHITE_PATH[pos][0];
                         int pc = WHITE_PATH[pos][1];
-                        if (pr == r && pc == c) {
+                        if (pr == r && pc == c && isPieceMovable(i)) {
                             makeMove(i);
                             return true;
                         }
@@ -386,7 +455,7 @@ public class RoyalUrGameView extends View {
                 }
                 if (whitePiecesUnentered > 0) {
                     for (int i = 0; i < 7; i++) {
-                        if (whitePieces[i] == -1) {
+                        if (whitePieces[i] == -1 && isPieceMovable(i)) {
                             makeMove(i);
                             return true;
                         }
@@ -455,6 +524,9 @@ public class RoyalUrGameView extends View {
                 int c = WHITE_PATH[wp][1];
                 float cx = pad + c * cellW + cellW / 2f;
                 float cy = dpf(8f) + r * cellH + cellH / 2f;
+                if (currentTurn == 0 && !waitingForRoll && currentRoll > 0 && isPieceMovable(i)) {
+                    canvas.drawCircle(cx, cy, pieceR + dpf(3.5f), moveGlowPaint);
+                }
                 drawSumerianPiece(canvas, cx, cy, pieceR, true);
             }
 
@@ -541,28 +613,77 @@ public class RoyalUrGameView extends View {
     }
 
     private void drawTetrahedralDie(Canvas canvas, float cx, float cy, float size, boolean isMarked) {
+        float topX = cx;
+        float topY = cy - size;
+        float rightX = cx + size * 1.05f;
+        float rightY = cy + size * 0.7f;
+        float leftX = cx - size * 1.05f;
+        float leftY = cy + size * 0.7f;
+        float midX = cx;
+        float midY = cy + size * 0.25f;
+
+        // Shadow under die
+        canvas.drawOval(new RectF(cx - size * 1.1f, cy + size * 0.5f, cx + size * 1.1f, cy + size * 0.95f), shadowPaint);
+
+        Paint leftFacet = new Paint(Paint.ANTI_ALIAS_FLAG);
+        leftFacet.setColor(isMarked ? 0xFFF59E0B : 0xFF334155);
+        leftFacet.setStyle(Paint.Style.FILL);
+
+        Paint rightFacet = new Paint(Paint.ANTI_ALIAS_FLAG);
+        rightFacet.setColor(isMarked ? 0xFFD97706 : 0xFF1E293B);
+        rightFacet.setStyle(Paint.Style.FILL);
+
+        Paint bottomFacet = new Paint(Paint.ANTI_ALIAS_FLAG);
+        bottomFacet.setColor(isMarked ? 0xFFB45309 : 0xFF0F172A);
+        bottomFacet.setStyle(Paint.Style.FILL);
+
+        // Left Face
         dicePath.reset();
-        dicePath.moveTo(cx, cy - size);
-        dicePath.lineTo(cx + size, cy + size * 0.75f);
-        dicePath.lineTo(cx - size, cy + size * 0.75f);
+        dicePath.moveTo(topX, topY);
+        dicePath.lineTo(leftX, leftY);
+        dicePath.lineTo(midX, midY);
         dicePath.close();
+        canvas.drawPath(dicePath, leftFacet);
 
-        Paint diePaint = new Paint(Paint.ANTI_ALIAS_FLAG);
-        diePaint.setColor(isMarked ? 0xFFF59E0B : 0xFF334155);
-        diePaint.setStyle(Paint.Style.FILL);
-        canvas.drawPath(dicePath, diePaint);
+        // Right Face
+        dicePath.reset();
+        dicePath.moveTo(topX, topY);
+        dicePath.lineTo(rightX, rightY);
+        dicePath.lineTo(midX, midY);
+        dicePath.close();
+        canvas.drawPath(dicePath, rightFacet);
 
+        // Bottom Face
+        dicePath.reset();
+        dicePath.moveTo(leftX, leftY);
+        dicePath.lineTo(rightX, rightY);
+        dicePath.lineTo(midX, midY);
+        dicePath.close();
+        canvas.drawPath(dicePath, bottomFacet);
+
+        // Ridge Wireframe & Bevel Edges
         Paint dieEdge = new Paint(Paint.ANTI_ALIAS_FLAG);
-        dieEdge.setColor(0xFFE2E8F0);
+        dieEdge.setColor(isMarked ? 0xFFFEF08A : 0xFF64748B);
         dieEdge.setStyle(Paint.Style.STROKE);
-        dieEdge.setStrokeWidth(dpf(1.6f));
-        canvas.drawPath(dicePath, dieEdge);
+        dieEdge.setStrokeWidth(dpf(1.4f));
+
+        canvas.drawLine(topX, topY, leftX, leftY, dieEdge);
+        canvas.drawLine(topX, topY, rightX, rightY, dieEdge);
+        canvas.drawLine(topX, topY, midX, midY, dieEdge);
+        canvas.drawLine(leftX, leftY, midX, midY, dieEdge);
+        canvas.drawLine(rightX, rightY, midX, midY, dieEdge);
+        canvas.drawLine(leftX, leftY, rightX, rightY, dieEdge);
 
         if (isMarked) {
-            Paint tip = new Paint(Paint.ANTI_ALIAS_FLAG);
-            tip.setColor(0xFFFFFFFF);
-            tip.setStyle(Paint.Style.FILL);
-            canvas.drawCircle(cx, cy - size * 0.58f, dpf(3.2f), tip);
+            Paint pipGlow = new Paint(Paint.ANTI_ALIAS_FLAG);
+            pipGlow.setColor(0xFFFFD166);
+            pipGlow.setStyle(Paint.Style.FILL);
+            canvas.drawCircle(topX, topY + dpf(3f), dpf(3.2f), pipGlow);
+
+            Paint pipCore = new Paint(Paint.ANTI_ALIAS_FLAG);
+            pipCore.setColor(0xFFFFFFFF);
+            pipCore.setStyle(Paint.Style.FILL);
+            canvas.drawCircle(topX, topY + dpf(3f), dpf(1.8f), pipCore);
         }
     }
 }

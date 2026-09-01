@@ -4386,7 +4386,7 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
         ctrlRow.setOrientation(LinearLayout.HORIZONTAL);
         ctrlRow.setPadding(0, dp(8), 0, 0);
 
-        TextView btnRoll = actionButton("🎲 Roll Dice", colAccent, colAccentInk);
+        TextView btnRoll = actionButton("🎲 Roll", colAccent, colAccentInk);
         btnRoll.setOnClickListener(new View.OnClickListener() {
             public void onClick(View v) {
                 hapticClick();
@@ -4398,14 +4398,27 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
         btnRoll.setLayoutParams(rlp1);
         ctrlRow.addView(btnRoll);
 
-        TextView btnReset = actionButton("↻ New Game", colLine, colPale);
+        TextView btnUndo = actionButton("↶ Undo", colLine, colPale);
+        btnUndo.setOnClickListener(new View.OnClickListener() {
+            public void onClick(View v) {
+                hapticClick();
+                urView.undoMove();
+            }
+        });
+        LinearLayout.LayoutParams ulp = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
+        ulp.leftMargin = dp(2);
+        ulp.rightMargin = dp(2);
+        btnUndo.setLayoutParams(ulp);
+        ctrlRow.addView(btnUndo);
+
+        TextView btnReset = actionButton("↻ Reset", colLine, colPale);
         btnReset.setOnClickListener(new View.OnClickListener() {
             public void onClick(View v) {
                 hapticClick();
                 urView.resetGame();
             }
         });
-        LinearLayout.LayoutParams rlp2 = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 0.8f);
+        LinearLayout.LayoutParams rlp2 = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
         rlp2.leftMargin = dp(4);
         btnReset.setLayoutParams(rlp2);
         ctrlRow.addView(btnReset);
