@@ -14481,9 +14481,55 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
         box.addView(formSectionLabel("TOPIC CATEGORY"));
         box.addView(buildChipGroup(tags, selectedTag, true, colAccent));
 
-        box.addView(formSectionLabel("NOTE DETAILS"));
+        box.addView(formSectionLabel("QUICK TEMPLATES"));
+        HorizontalScrollView quickHsv = new HorizontalScrollView(this);
+        quickHsv.setHorizontalScrollBarEnabled(false);
+        LinearLayout quickRow = new LinearLayout(this);
+        quickRow.setOrientation(LinearLayout.HORIZONTAL);
+        quickRow.setPadding(0, 0, 0, dp(6));
+
+        final String[] quickSnippets = {
+                "Perimeter fence line verified secure · No breaches",
+                "Gate A & Gate B heavy padlocks verified locked",
+                "Sawmill factory floor clear · Roller doors secured",
+                "Fire pump booster 1,200 PSI verified nominal",
+                "Hazardous chemical cage locked · Spill kits ready",
+                "Contractor delivery departed · Escorted off site",
+                "Civil dawn site sweep complete · Visibility nominal"
+        };
+
         final EditText noteField = modernInputField("Type shift observation, contractor movements, padlocks, fuel...");
         noteField.setMinLines(3);
+
+        for (final String snippet : quickSnippets) {
+            TextView qPill = new TextView(this);
+            qPill.setText("⚡ " + snippet);
+            qPill.setTextColor(colCyan);
+            qPill.setTextSize(10f);
+            qPill.setTypeface(Typeface.create(Typeface.MONOSPACE, Typeface.BOLD));
+            qPill.setPadding(dp(8), dp(4), dp(8), dp(4));
+            qPill.setBackground(rounded(0x2200E5FF, dp(6)));
+            qPill.setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View v) {
+                    hapticClick();
+                    String curr = noteField.getText().toString().trim();
+                    if (!curr.isEmpty()) curr += " · ";
+                    curr += snippet;
+                    noteField.setText(curr);
+                    noteField.setSelection(curr.length());
+                }
+            });
+            LinearLayout.LayoutParams qlp = new LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+            qlp.rightMargin = dp(4);
+            qPill.setLayoutParams(qlp);
+            quickRow.addView(qPill);
+        }
+        quickHsv.addView(quickRow);
+        box.addView(quickHsv);
+
+        box.addView(formSectionLabel("NOTE DETAILS"));
         box.addView(noteField);
 
         final Dialog dlg = createDialogSheet(box);
@@ -15145,14 +15191,17 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
         // 2. LIVE OFFICER SHIFT COMMAND CARD
         // =========================================================================
         LinearLayout shiftCard = new LinearLayout(this);
-        shiftCard.setOrientation(LinearLayout.HORIZONTAL);
-        shiftCard.setGravity(Gravity.CENTER_VERTICAL);
+        shiftCard.setOrientation(LinearLayout.VERTICAL);
         shiftCard.setBackground(rounded(0xFF1E293B, dp(10)));
-        shiftCard.setPadding(dp(10), dp(8), dp(10), dp(8));
+        shiftCard.setPadding(dp(12), dp(8), dp(12), dp(8));
         LinearLayout.LayoutParams sclp = new LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
         sclp.bottomMargin = dp(6);
         shiftCard.setLayoutParams(sclp);
+
+        LinearLayout scTop = new LinearLayout(this);
+        scTop.setOrientation(LinearLayout.HORIZONTAL);
+        scTop.setGravity(Gravity.CENTER_VERTICAL);
 
         TextView tvOfficer = new TextView(this);
         tvOfficer.setText("🛡️ L. DOHERTY #41207");
@@ -15161,14 +15210,30 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
         tvOfficer.setTypeface(Typeface.create(Typeface.MONOSPACE, Typeface.BOLD));
         LinearLayout.LayoutParams oflp = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
         tvOfficer.setLayoutParams(oflp);
-        shiftCard.addView(tvOfficer);
+        scTop.addView(tvOfficer);
 
         TextView tvShiftTime = new TextView(this);
         tvShiftTime.setText("🌙 18:00 → 06:00 · ACTIVE");
         tvShiftTime.setTextColor(colCyan);
         tvShiftTime.setTextSize(9.5f);
         tvShiftTime.setTypeface(Typeface.create(Typeface.MONOSPACE, Typeface.BOLD));
-        shiftCard.addView(tvShiftTime);
+        scTop.addView(tvShiftTime);
+        shiftCard.addView(scTop);
+
+        // Telemetry Row
+        int numPatrols = logMgr.filterEntries("ALL", "PATROL", "").size();
+        int numLots = logMgr.filterEntries("ALL", "LOT_LOCKUP", "").size();
+        int numPumps = logMgr.filterEntries("ALL", "FIRE_PUMP", "").size();
+        int numRegos = logMgr.filterEntries("ALL", "VEHICLE_REGO", "").size();
+        int numPhotos = logMgr.filterEntries("ALL", "PHOTO", "").size();
+
+        TextView tvTelemetry = new TextView(this);
+        tvTelemetry.setText("📊 METRICS: " + numPatrols + " Patrols · " + numLots + " Lots · " + numPumps + " Pumps · " + numRegos + " Regos · " + numPhotos + " Photos");
+        tvTelemetry.setTextColor(0xFF94A3B8);
+        tvTelemetry.setTextSize(9f);
+        tvTelemetry.setTypeface(Typeface.create(Typeface.MONOSPACE, Typeface.NORMAL));
+        tvTelemetry.setPadding(0, dp(4), 0, 0);
+        shiftCard.addView(tvTelemetry);
 
         contentCard.addView(shiftCard);
 
