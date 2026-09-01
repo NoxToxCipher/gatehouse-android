@@ -7,6 +7,7 @@ import android.app.PendingIntent;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
+import android.net.Uri;
 import android.os.Build;
 import android.util.Log;
 import org.json.JSONArray;
@@ -259,7 +260,6 @@ public class FuelPriceManager {
             NotificationManager nm = (NotificationManager) context.getSystemService(Context.NOTIFICATION_SERVICE);
             if (nm == null) return;
 
-            FuelStation cheapest = getCheapestStation();
             FuelStation oom = null;
             for (FuelStation s : stations) {
                 if (s.isGuardFavorite) {
@@ -280,6 +280,14 @@ public class FuelPriceManager {
                     PendingIntent.FLAG_UPDATE_CURRENT | (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M ? PendingIntent.FLAG_IMMUTABLE : 0)
             );
 
+            Intent navIntent = new Intent(Intent.ACTION_VIEW, Uri.parse("https://maps.google.com/?q=" + Uri.encode("OOM Energy Kingston, 122 Kingston Rd, Kingston QLD")));
+            PendingIntent navPi = PendingIntent.getActivity(
+                    context,
+                    3002,
+                    navIntent,
+                    PendingIntent.FLAG_UPDATE_CURRENT | (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M ? PendingIntent.FLAG_IMMUTABLE : 0)
+            );
+
             int icon = context.getResources().getIdentifier("ic_stat_gatehouse", "drawable", context.getPackageName());
             if (icon == 0) icon = context.getApplicationInfo().icon;
 
@@ -290,20 +298,25 @@ public class FuelPriceManager {
                 builder = new Notification.Builder(context);
             }
 
-            String oomPriceStr = String.format(Locale.US, "%.1f¢/L", (oom != null ? oom.priceUlp91 : 168.9));
-            String title = "⛽ Shift Ends in " + minutesRemaining + "m · OOM " + oomPriceStr + " (Guard Pick)";
-            String body = "1. OOM Kingston: " + oomPriceStr + " (0.8km - Cheapest)\n" +
-                          "2. 7-Eleven: 174.9¢/L (1.3km)\n" +
-                          "3. Ampol: 176.9¢/L (2.1km)\n" +
-                          "⭐ OOM is currently 6.0¢ cheaper. Best fill-up point on route home.";
+            String oomPrice = String.format(Locale.US, "%.1f¢", (oom != null ? oom.priceUlp91 : 168.9));
+            String title = "⛽ Fuel Radar · Shift Ends in " + minutesRemaining + "m";
+            String summary = "⭐ OOM " + oomPrice + " (0.8km) · Save 6.0¢/L";
+
+            StringBuilder body = new StringBuilder();
+            body.append("🟢 OOM Kingston — ").append(oomPrice).append(" (0.8 km) · Lowest\n");
+            body.append("⚪ 7-Eleven — 174.9¢ (1.3 km)\n");
+            body.append("⚪ Ampol — 176.9¢ (2.1 km)\n");
+            body.append("💰 Save $3.60 on a 60L fill vs 7-Eleven");
 
             builder.setSmallIcon(icon)
                     .setColor(0xFFF59E0B)
                     .setContentTitle(title)
-                    .setContentText("OOM Kingston: " + oomPriceStr + " · 6.0¢ cheaper than 7-Eleven")
-                    .setSubText("DOHERTY SECURITY · FUEL RADAR")
-                    .setStyle(new Notification.BigTextStyle().bigText(body))
+                    .setContentText(summary)
+                    .setSubText("Kingston Corridor")
+                    .setStyle(new Notification.BigTextStyle().bigText(body.toString()))
                     .setContentIntent(pi)
+                    .addAction(0, "🗺️ Drive to OOM", navPi)
+                    .addAction(0, "📊 Open Radar", pi)
                     .setAutoCancel(true);
 
             nm.notify(3001, builder.build());
