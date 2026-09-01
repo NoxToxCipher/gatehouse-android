@@ -6270,8 +6270,24 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
         final LinearLayout box = dialogContainer("⛽ Fuel Price Radar", "LIVE LOCAL TELEMETRY & 3 CLOSEST STATIONS", 0xFFF59E0B);
         final FuelPriceManager fpm = FuelPriceManager.getInstance(this);
 
-        // 1. Hero Price Cycle Bento Indicator
-        LinearLayout cycleCard = new LinearLayout(this);
+        final String[] selectedGrade = {"ULP 91"}; // "ULP 91", "P98", "Diesel", "E10"
+
+        // 1. Fuel Grade Selector Tabs Strip
+        HorizontalScrollView gradeHsv = new HorizontalScrollView(this);
+        gradeHsv.setHorizontalScrollBarEnabled(false);
+        final LinearLayout gradeRow = new LinearLayout(this);
+        gradeRow.setOrientation(LinearLayout.HORIZONTAL);
+        gradeRow.setPadding(0, 0, 0, dp(8));
+
+        final String[][] fuelGrades = {
+                {"ULP 91", "⛽ ULP 91"},
+                {"P98", "🏎️ Premium 98"},
+                {"Diesel", "🚜 Diesel"},
+                {"E10", "🌽 Unleaded E10"}
+        };
+
+        // 2. Hero Price Cycle Bento Indicator
+        final LinearLayout cycleCard = new LinearLayout(this);
         cycleCard.setOrientation(LinearLayout.VERTICAL);
         cycleCard.setBackground(rounded(0xFF1E293B, dp(12)));
         cycleCard.setPadding(dp(14), dp(12), dp(14), dp(12));
@@ -6280,79 +6296,139 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
         cclp.bottomMargin = dp(10);
         cycleCard.setLayoutParams(cclp);
 
-        LinearLayout cycleHeader = new LinearLayout(this);
-        cycleHeader.setOrientation(LinearLayout.HORIZONTAL);
-        cycleHeader.setGravity(Gravity.CENTER_VERTICAL);
-
-        TextView cycleTitle = new TextView(this);
-        cycleTitle.setText("📉 QLD PRICE CYCLE: CHEAP / TROUGH");
-        cycleTitle.setTextColor(0xFF10B981);
-        cycleTitle.setTextSize(12);
-        cycleTitle.setTypeface(Typeface.create(Typeface.MONOSPACE, Typeface.BOLD));
-        LinearLayout.LayoutParams ctlp = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
-        cycleTitle.setLayoutParams(ctlp);
-        cycleHeader.addView(cycleTitle);
-
-        TextView cycleBadge = new TextView(this);
-        cycleBadge.setText("BEST TIME TO FILL");
-        cycleBadge.setTextColor(0xFF0F172A);
-        cycleBadge.setTextSize(9);
-        cycleBadge.setTypeface(Typeface.DEFAULT_BOLD);
-        cycleBadge.setPadding(dp(6), dp(2), dp(6), dp(2));
-        cycleBadge.setBackground(rounded(0xFF10B981, dp(4)));
-        cycleHeader.addView(cycleBadge);
-        cycleCard.addView(cycleHeader);
-
-        TextView cycleDesc = new TextView(this);
-        cycleDesc.setText("📍 Logan / Kingston corridor is currently at the bottom of the fuel cycle. Automated alert dispatches 30 min before shift finish.");
-        cycleDesc.setTextColor(colPale);
-        cycleDesc.setTextSize(11.5f);
-        cycleDesc.setPadding(0, dp(4), 0, 0);
-        cycleCard.addView(cycleDesc);
-        box.addView(cycleCard);
-
-        // 2. Station Cards Container
+        // 3. Station Cards Container
         final LinearLayout stationsContainer = new LinearLayout(this);
         stationsContainer.setOrientation(LinearLayout.VERTICAL);
-        box.addView(stationsContainer);
 
-        Runnable populateStations = new Runnable() {
+        final Runnable refreshFuelView = new Runnable() {
+            @Override
             public void run() {
-                stationsContainer.removeAllViews();
+                // Rebuild Grade Tabs
+                gradeRow.removeAllViews();
+                for (final String[] fg : fuelGrades) {
+                    final String gradeKey = fg[0];
+                    final String gradeLabel = fg[1];
+                    final boolean isSel = gradeKey.equalsIgnoreCase(selectedGrade[0]);
+
+                    TextView tab = new TextView(MainActivity.this);
+                    tab.setText(gradeLabel);
+                    tab.setTextColor(isSel ? 0xFF0F172A : colPale);
+                    tab.setTextSize(10.5f);
+                    tab.setTypeface(Typeface.create(Typeface.MONOSPACE, Typeface.BOLD));
+                    tab.setPadding(dp(10), dp(5), dp(10), dp(5));
+                    tab.setBackground(rounded(isSel ? 0xFFF59E0B : 0x22FFFFFF, dp(8)));
+                    tab.setOnClickListener(new View.OnClickListener() {
+                        @Override
+                        public void onClick(View v) {
+                            hapticClick();
+                            selectedGrade[0] = gradeKey;
+                            run();
+                        }
+                    });
+                    LinearLayout.LayoutParams tlp = new LinearLayout.LayoutParams(
+                            LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+                    tlp.rightMargin = dp(6);
+                    tab.setLayoutParams(tlp);
+                    gradeRow.addView(tab);
+                }
+
+                // Update Hero Bento Card
+                cycleCard.removeAllViews();
                 List<FuelPriceManager.FuelStation> list = fpm.getStations();
+                double minPrice = 999.0;
+                double maxPrice = 0.0;
+                FuelPriceManager.FuelStation cheapestStn = null;
+
+                for (FuelPriceManager.FuelStation s : list) {
+                    double p = getStationPriceForGrade(s, selectedGrade[0]);
+                    if (p < minPrice) {
+                        minPrice = p;
+                        cheapestStn = s;
+                    }
+                    if (p > maxPrice) {
+                        maxPrice = p;
+                    }
+                }
+
+                double brisbaneBenchmark = getBrisbaneBenchmark(selectedGrade[0]);
+                double savingOn60L = (maxPrice - minPrice) * 0.60;
+                double diffVsMetro = minPrice - brisbaneBenchmark;
+
+                LinearLayout cycleHeader = new LinearLayout(MainActivity.this);
+                cycleHeader.setOrientation(LinearLayout.HORIZONTAL);
+                cycleHeader.setGravity(Gravity.CENTER_VERTICAL);
+
+                TextView cycleTitle = new TextView(MainActivity.this);
+                cycleTitle.setText("📉 QLD PRICE CYCLE: BOTTOM TROUGH");
+                cycleTitle.setTextColor(0xFF10B981);
+                cycleTitle.setTextSize(11.5f);
+                cycleTitle.setTypeface(Typeface.create(Typeface.MONOSPACE, Typeface.BOLD));
+                LinearLayout.LayoutParams ctlp = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
+                cycleTitle.setLayoutParams(ctlp);
+                cycleHeader.addView(cycleTitle);
+
+                TextView cycleBadge = new TextView(MainActivity.this);
+                cycleBadge.setText("BEST TIME TO FILL");
+                cycleBadge.setTextColor(0xFF0F172A);
+                cycleBadge.setTextSize(9);
+                cycleBadge.setTypeface(Typeface.DEFAULT_BOLD);
+                cycleBadge.setPadding(dp(6), dp(2), dp(6), dp(2));
+                cycleBadge.setBackground(rounded(0xFF10B981, dp(4)));
+                cycleHeader.addView(cycleBadge);
+                cycleCard.addView(cycleHeader);
+
+                TextView cycleDesc = new TextView(MainActivity.this);
+                String savingStr = String.format(Locale.US, "Save $%.2f on 60L", savingOn60L);
+                String metroDiffStr = (diffVsMetro <= 0 ? String.format(Locale.US, "-%.1f¢ vs Metro Avg", Math.abs(diffVsMetro)) : String.format(Locale.US, "+%.1f¢ vs Metro Avg", diffVsMetro));
+                cycleDesc.setText("📍 " + selectedGrade[0] + " Lowest: " + String.format(Locale.US, "%.1f¢/L", minPrice) + " (" + (cheapestStn != null ? cheapestStn.brand : "OOM") + ") · " + savingStr + " · " + metroDiffStr);
+                cycleDesc.setTextColor(colPale);
+                cycleDesc.setTextSize(11f);
+                cycleDesc.setPadding(0, dp(4), 0, 0);
+                cycleCard.addView(cycleDesc);
+
+                // Populate Stations
+                stationsContainer.removeAllViews();
                 for (final FuelPriceManager.FuelStation s : list) {
+                    double thisPrice = getStationPriceForGrade(s, selectedGrade[0]);
+                    boolean isCheapestForGrade = Math.abs(thisPrice - minPrice) < 0.05;
+
                     LinearLayout sCard = new LinearLayout(MainActivity.this);
                     sCard.setOrientation(LinearLayout.VERTICAL);
-                    sCard.setBackground(rounded(colPanel, dp(14)));
+                    android.graphics.drawable.GradientDrawable scBg = new android.graphics.drawable.GradientDrawable(
+                            android.graphics.drawable.GradientDrawable.Orientation.TL_BR,
+                            isCheapestForGrade ? new int[]{0xFF1E2F38, 0xFF112028} : new int[]{0xFF1E293B, 0xFF131B2B}
+                    );
+                    scBg.setCornerRadius(dp(14));
+                    scBg.setStroke(dp(isCheapestForGrade ? 2 : 1), isCheapestForGrade ? 0xFF10B981 : 0x28FFFFFF);
+                    sCard.setBackground(scBg);
                     sCard.setPadding(dp(14), dp(12), dp(14), dp(12));
-                    sCard.setElevation(dp(2));
                     LinearLayout.LayoutParams slp = new LinearLayout.LayoutParams(
                             LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
                     slp.bottomMargin = dp(10);
                     sCard.setLayoutParams(slp);
 
-                    // Top Header Row (Name + Distance + Favorite/Cheapest Badge)
+                    // Top Header Row (Name + Distance + Badges)
                     LinearLayout hRow = new LinearLayout(MainActivity.this);
                     hRow.setOrientation(LinearLayout.HORIZONTAL);
                     hRow.setGravity(Gravity.CENTER_VERTICAL);
 
                     TextView nameTxt = new TextView(MainActivity.this);
-                    nameTxt.setText((s.isGuardFavorite ? "⭐ " : "⛽ ") + s.name);
-                    nameTxt.setTextColor(s.isGuardFavorite ? 0xFFFFD166 : colCyan);
-                    nameTxt.setTextSize(14);
+                    nameTxt.setText((isCheapestForGrade ? "⭐ " : "⛽ ") + s.name);
+                    nameTxt.setTextColor(isCheapestForGrade ? 0xFF10B981 : colCyan);
+                    nameTxt.setTextSize(13.5f);
                     nameTxt.setTypeface(Typeface.DEFAULT_BOLD);
                     LinearLayout.LayoutParams nlp = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
                     nameTxt.setLayoutParams(nlp);
                     hRow.addView(nameTxt);
 
-                    if (s.isGuardFavorite) {
+                    if (isCheapestForGrade) {
                         TextView cheapBadge = new TextView(MainActivity.this);
                         cheapBadge.setText("CHEAPEST");
                         cheapBadge.setTextColor(0xFF0F172A);
                         cheapBadge.setTextSize(9);
                         cheapBadge.setTypeface(Typeface.DEFAULT_BOLD);
                         cheapBadge.setPadding(dp(6), dp(2), dp(6), dp(2));
-                        cheapBadge.setBackground(rounded(0xFFFFD166, dp(4)));
+                        cheapBadge.setBackground(rounded(0xFF10B981, dp(4)));
                         LinearLayout.LayoutParams cblp = new LinearLayout.LayoutParams(
                                 LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT);
                         cblp.rightMargin = dp(6);
@@ -6360,20 +6436,21 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
                         hRow.addView(cheapBadge);
                     }
 
+                    int driveMins = Math.max(1, (int) Math.round(s.distanceKm * 2.2));
                     TextView distPill = new TextView(MainActivity.this);
-                    distPill.setText(String.format(Locale.US, "%.1f km", s.distanceKm));
+                    distPill.setText("⏱️ " + driveMins + "m · " + String.format(Locale.US, "%.1f km", s.distanceKm));
                     distPill.setTextColor(colPale);
-                    distPill.setTextSize(10);
+                    distPill.setTextSize(9.5f);
                     distPill.setTypeface(Typeface.MONOSPACE);
                     distPill.setPadding(dp(6), dp(2), dp(6), dp(2));
-                    distPill.setBackground(rounded(colPanel2, dp(6)));
+                    distPill.setBackground(rounded(0xFF0F172A, dp(6)));
                     hRow.addView(distPill);
                     sCard.addView(hRow);
 
                     TextView addrTxt = new TextView(MainActivity.this);
                     addrTxt.setText(s.address);
                     addrTxt.setTextColor(colMuted);
-                    addrTxt.setTextSize(11);
+                    addrTxt.setTextSize(10.5f);
                     addrTxt.setPadding(0, dp(2), 0, dp(8));
                     sCard.addView(addrTxt);
 
@@ -6381,21 +6458,21 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
                     LinearLayout pGrid = new LinearLayout(MainActivity.this);
                     pGrid.setOrientation(LinearLayout.HORIZONTAL);
 
-                    pGrid.addView(buildFuelPriceChip("ULP 91", s.priceUlp91, s.isGuardFavorite ? 0xFF10B981 : 0xFF38BDF8));
-                    pGrid.addView(buildFuelPriceChip("P98", s.priceP98, colPale));
-                    pGrid.addView(buildFuelPriceChip("Diesel", s.priceDiesel, 0xFFFFD166));
-                    pGrid.addView(buildFuelPriceChip("E10", s.priceE10, colMuted));
+                    pGrid.addView(buildFuelPriceChip("ULP 91", s.priceUlp91, selectedGrade[0].equals("ULP 91"), s.isGuardFavorite ? 0xFF10B981 : 0xFF38BDF8));
+                    pGrid.addView(buildFuelPriceChip("P98", s.priceP98, selectedGrade[0].equals("P98"), colPale));
+                    pGrid.addView(buildFuelPriceChip("Diesel", s.priceDiesel, selectedGrade[0].equals("Diesel"), 0xFFFFD166));
+                    pGrid.addView(buildFuelPriceChip("E10", s.priceE10, selectedGrade[0].equals("E10"), colMuted));
                     sCard.addView(pGrid);
 
                     // 1-Tap GPS Navigation Button
                     TextView btnNav = new TextView(MainActivity.this);
-                    btnNav.setText("🗺️ Drive to Station (Google Maps)");
+                    btnNav.setText("🗺️ Drive to " + s.brand + " (Google Maps Route)");
                     btnNav.setTextColor(colCyan);
                     btnNav.setTextSize(11f);
                     btnNav.setTypeface(Typeface.DEFAULT_BOLD);
                     btnNav.setGravity(Gravity.CENTER);
-                    btnNav.setPadding(0, dp(8), 0, dp(4));
-                    btnNav.setBackground(rounded(colPanel2, dp(8)));
+                    btnNav.setPadding(0, dp(7), 0, dp(5));
+                    btnNav.setBackground(rounded(0xFF0F172A, dp(8)));
                     LinearLayout.LayoutParams nlpBtn = new LinearLayout.LayoutParams(
                             LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
                     nlpBtn.topMargin = dp(8);
@@ -6421,7 +6498,12 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
             }
         };
 
-        populateStations.run();
+        gradeHsv.addView(gradeRow);
+        box.addView(gradeHsv);
+        box.addView(cycleCard);
+        box.addView(stationsContainer);
+
+        refreshFuelView.run();
 
         final Dialog dlg = createDialogSheet(box);
 
@@ -6438,6 +6520,7 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
                     public void onPricesUpdated(List<FuelPriceManager.FuelStation> stations) {
                         runOnUiThread(new Runnable() {
                             public void run() {
+                                refreshFuelView.run();
                                 Toast.makeText(MainActivity.this, "✓ Live QLD fuel prices updated", Toast.LENGTH_SHORT).show();
                             }
                         });
@@ -6476,11 +6559,31 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
         dlg.show();
     }
 
-    private LinearLayout buildFuelPriceChip(String fuelType, double priceCents, int color) {
+    private double getStationPriceForGrade(FuelPriceManager.FuelStation s, String grade) {
+        if ("P98".equalsIgnoreCase(grade)) return s.priceP98;
+        if ("Diesel".equalsIgnoreCase(grade)) return s.priceDiesel;
+        if ("E10".equalsIgnoreCase(grade)) return s.priceE10;
+        return s.priceUlp91;
+    }
+
+    private double getBrisbaneBenchmark(String grade) {
+        if ("P98".equalsIgnoreCase(grade)) return 191.9;
+        if ("Diesel".equalsIgnoreCase(grade)) return 182.9;
+        if ("E10".equalsIgnoreCase(grade)) return 171.9;
+        return 175.4;
+    }
+
+    private LinearLayout buildFuelPriceChip(String fuelType, double priceCents, boolean isSelectedGrade, int color) {
         LinearLayout chip = new LinearLayout(this);
         chip.setOrientation(LinearLayout.VERTICAL);
         chip.setGravity(Gravity.CENTER);
-        chip.setBackground(rounded(0xFF0F172A, dp(8)));
+        android.graphics.drawable.GradientDrawable bg = new android.graphics.drawable.GradientDrawable();
+        bg.setCornerRadius(dp(8));
+        bg.setColor(isSelectedGrade ? 0x33F59E0B : 0xFF0F172A);
+        if (isSelectedGrade) {
+            bg.setStroke(dp(2), 0xFFF59E0B);
+        }
+        chip.setBackground(bg);
         chip.setPadding(dp(6), dp(6), dp(6), dp(6));
         LinearLayout.LayoutParams clp = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
         clp.rightMargin = dp(4);
@@ -6488,15 +6591,15 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
 
         TextView typeTxt = new TextView(this);
         typeTxt.setText(fuelType);
-        typeTxt.setTextColor(colMuted);
-        typeTxt.setTextSize(10);
+        typeTxt.setTextColor(isSelectedGrade ? 0xFFFEF08A : colMuted);
+        typeTxt.setTextSize(9.5f);
         typeTxt.setTypeface(Typeface.create(Typeface.MONOSPACE, Typeface.BOLD));
         chip.addView(typeTxt);
 
         TextView priceTxt = new TextView(this);
         priceTxt.setText(String.format(Locale.US, "%.1f¢", priceCents));
-        priceTxt.setTextColor(color);
-        priceTxt.setTextSize(12);
+        priceTxt.setTextColor(isSelectedGrade ? 0xFFFDE047 : color);
+        priceTxt.setTextSize(11.5f);
         priceTxt.setTypeface(Typeface.create(Typeface.MONOSPACE, Typeface.BOLD));
         chip.addView(priceTxt);
 
