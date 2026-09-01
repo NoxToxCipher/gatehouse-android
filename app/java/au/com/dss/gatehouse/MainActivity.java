@@ -6396,7 +6396,7 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
                     btnNav.setTypeface(Typeface.DEFAULT_BOLD);
                     btnNav.setPadding(dp(8), dp(3), dp(8), dp(3));
                     btnNav.setBackground(rounded(isCheapest ? 0xFF38BDF8 : 0xFF94A3B8, dp(6)));
-                    btnNav.setOnClickListener(new View.OnClickListener() {
+                    sCard.setOnClickListener(new View.OnClickListener() {
                         public void onClick(View v) {
                             hapticClick();
                             try {
@@ -6408,6 +6408,11 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
                                 Intent webMap = new Intent(Intent.ACTION_VIEW, Uri.parse("https://maps.google.com/?q=" + Uri.encode(s.name + ", " + s.address)));
                                 startActivity(webMap);
                             }
+                        }
+                    });
+                    btnNav.setOnClickListener(new View.OnClickListener() {
+                        public void onClick(View v) {
+                            sCard.performClick();
                         }
                     });
                     row2.addView(btnNav);
@@ -6516,6 +6521,18 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
         barCard.setGravity(Gravity.CENTER);
         barCard.setBackground(rounded(0xFFFFFFFF, dp(12)));
         barCard.setPadding(dp(16), dp(16), dp(16), dp(16));
+        barCard.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                hapticClick();
+                android.content.ClipboardManager clipboard = (android.content.ClipboardManager) getSystemService(Context.CLIPBOARD_SERVICE);
+                if (clipboard != null) {
+                    android.content.ClipData clip = android.content.ClipData.newPlainText("DSS Fleet Card", "707141207901");
+                    clipboard.setPrimaryClip(clip);
+                    Toast.makeText(MainActivity.this, "✓ Fleet Card copied to clipboard", Toast.LENGTH_SHORT).show();
+                }
+            }
+        });
 
         TextView tvBarcodeLines = new TextView(this);
         tvBarcodeLines.setText("||| | |||| | ||| || |||| | ||| |||| | |||");
@@ -6526,9 +6543,9 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
         barCard.addView(tvBarcodeLines);
 
         TextView tvCardNo = new TextView(this);
-        tvCardNo.setText("7071 •••• •••• 4120");
+        tvCardNo.setText("7071 •••• •••• 4120  (Tap to Copy)");
         tvCardNo.setTextColor(0xFF000000);
-        tvCardNo.setTextSize(12f);
+        tvCardNo.setTextSize(11f);
         tvCardNo.setTypeface(Typeface.create(Typeface.MONOSPACE, Typeface.BOLD));
         tvCardNo.setPadding(0, dp(4), 0, 0);
         barCard.addView(tvCardNo);
