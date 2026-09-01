@@ -33,12 +33,17 @@ public class ConnectFourGameView extends View {
     private StatusListener statusListener;
     private final Paint cabinetFramePaint = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final Paint goldBorderPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+    private final Paint goldDetailPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final Paint slotHolePaint = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final Paint slotShadowPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+    private final Paint slotRimPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final Paint tokenPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final Paint tokenRimPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+    private final Paint tokenGroovePaint = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final Paint tokenShinePaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+    private final Paint winGlowPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final Paint winLinePaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+    private final Paint columnGuidePaint = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final Paint textPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final RectF rect = new RectF();
 
@@ -66,24 +71,44 @@ public class ConnectFourGameView extends View {
 
         goldBorderPaint.setColor(0xFFEAB308);
         goldBorderPaint.setStyle(Paint.Style.STROKE);
-        goldBorderPaint.setStrokeWidth(dpf(1.5f));
+        goldBorderPaint.setStrokeWidth(dpf(2f));
+
+        goldDetailPaint.setColor(0xFFCA8A04);
+        goldDetailPaint.setStyle(Paint.Style.STROKE);
+        goldDetailPaint.setStrokeWidth(dpf(1f));
 
         slotHolePaint.setColor(0xFF030712);
+
         slotShadowPaint.setColor(0x99000000);
         slotShadowPaint.setStyle(Paint.Style.STROKE);
         slotShadowPaint.setStrokeWidth(dpf(2f));
 
+        slotRimPaint.setColor(0x3338BDF8);
+        slotRimPaint.setStyle(Paint.Style.STROKE);
+        slotRimPaint.setStrokeWidth(dpf(1f));
+
         tokenRimPaint.setColor(0x88FFFFFF);
         tokenRimPaint.setStyle(Paint.Style.STROKE);
-        tokenRimPaint.setStrokeWidth(dpf(1.5f));
+        tokenRimPaint.setStrokeWidth(dpf(1.2f));
+
+        tokenGroovePaint.setStyle(Paint.Style.STROKE);
+        tokenGroovePaint.setStrokeWidth(dpf(1f));
 
         tokenShinePaint.setColor(0xAAFFFFFF);
         tokenShinePaint.setStyle(Paint.Style.FILL);
 
+        winGlowPaint.setColor(0x6610B981);
+        winGlowPaint.setStrokeWidth(dpf(14f));
+        winGlowPaint.setStrokeCap(Paint.Cap.ROUND);
+        winGlowPaint.setStyle(Paint.Style.STROKE);
+
         winLinePaint.setColor(0xFF10B981);
-        winLinePaint.setStrokeWidth(dpf(6f));
+        winLinePaint.setStrokeWidth(dpf(5f));
         winLinePaint.setStrokeCap(Paint.Cap.ROUND);
         winLinePaint.setStyle(Paint.Style.STROKE);
+
+        columnGuidePaint.setColor(0x44FFD166);
+        columnGuidePaint.setStyle(Paint.Style.FILL);
 
         textPaint.setColor(0xFFE2E8F0);
         textPaint.setTextAlign(Paint.Align.CENTER);
@@ -360,19 +385,33 @@ public class ConnectFourGameView extends View {
         int h = getHeight();
         if (w <= 0 || h <= 0) return;
 
+        // Cyber Sapphire Acrylic Cabinet Frame
         rect.set(0, 0, w, h);
-        cabinetFramePaint.setShader(new LinearGradient(0, 0, w, h, 0xFF1E3A8A, 0xFF0F172A, Shader.TileMode.CLAMP));
+        cabinetFramePaint.setShader(new LinearGradient(0, 0, w, h, 0xFF0284C7, 0xFF082F49, Shader.TileMode.CLAMP));
         canvas.drawRoundRect(rect, dpf(16f), dpf(16f), cabinetFramePaint);
 
-        rect.set(dpf(2f), dpf(2f), w - dpf(2f), h - dpf(2f));
+        rect.set(dpf(2.5f), dpf(2.5f), w - dpf(2.5f), h - dpf(2.5f));
         canvas.drawRoundRect(rect, dpf(14f), dpf(14f), goldBorderPaint);
+
+        rect.set(dpf(5.5f), dpf(5.5f), w - dpf(5.5f), h - dpf(5.5f));
+        canvas.drawRoundRect(rect, dpf(11f), dpf(11f), goldDetailPaint);
 
         float pad = dpf(10f);
         float colW = (w - pad * 2) / 7f;
         float rowH = (h - dpf(16f)) / 6f;
         float holeR = Math.min(colW, rowH) * 0.40f;
 
-        // Draw slots and placed tokens
+        // Top Column Drop Guides
+        if (playerTurn && !isDropping && !gameOver) {
+            for (int c = 0; c < 7; c++) {
+                if (grid[0][c] == 0) {
+                    float cx = pad + c * colW + colW / 2f;
+                    canvas.drawCircle(cx, dpf(5.5f), dpf(2.2f), columnGuidePaint);
+                }
+            }
+        }
+
+        // Draw 42 Cylindrical Recessed Slots & Tokens
         for (int r = 0; r < 6; r++) {
             for (int c = 0; c < 7; c++) {
                 float cx = pad + c * colW + colW / 2f;
@@ -381,6 +420,7 @@ public class ConnectFourGameView extends View {
                 int val = grid[r][c];
                 canvas.drawCircle(cx, cy, holeR, slotHolePaint);
                 canvas.drawCircle(cx, cy, holeR, slotShadowPaint);
+                canvas.drawCircle(cx, cy, holeR + dpf(0.8f), slotRimPaint);
 
                 if (val == 1) draw3DToken(canvas, cx, cy, holeR * 0.92f, true);
                 else if (val == 2) draw3DToken(canvas, cx, cy, holeR * 0.92f, false);
@@ -397,25 +437,43 @@ public class ConnectFourGameView extends View {
             draw3DToken(canvas, cx, currentY, holeR * 0.92f, droppingColor == 1);
         }
 
-        // Draw Winning Glowing Line
+        // Draw Winning Glowing Laser Line
         if (gameOver && winR1 != -1 && winR2 != -1) {
             float x1 = pad + winC1 * colW + colW / 2f;
             float y1 = dpf(8f) + winR1 * rowH + rowH / 2f;
             float x2 = pad + winC2 * colW + colW / 2f;
             float y2 = dpf(8f) + winR2 * rowH + rowH / 2f;
+            canvas.drawLine(x1, y1, x2, y2, winGlowPaint);
             canvas.drawLine(x1, y1, x2, y2, winLinePaint);
         }
     }
 
     private void draw3DToken(Canvas canvas, float cx, float cy, float r, boolean isGold) {
+        // Deep shadow
+        Paint dropShadow = new Paint(Paint.ANTI_ALIAS_FLAG);
+        dropShadow.setColor(0x99000000);
+        canvas.drawCircle(cx + dpf(1.2f), cy + dpf(1.8f), r, dropShadow);
+
         RadialGradient grad = new RadialGradient(
             cx - r * 0.3f, cy - r * 0.3f, r * 1.3f,
-            isGold ? new int[]{0xFFFFFBEB, 0xFFF59E0B, 0xFF78350F} : new int[]{0xFFE0F2FE, 0xFF0284C7, 0xFF0F172A},
+            isGold ? new int[]{0xFFFFFFF5, 0xFFFDE047, 0xFFD97706, 0xFF78350F}
+                   : new int[]{0xFFF0FDF4, 0xFF38BDF8, 0xFF0284C7, 0xFF082F49},
             null, Shader.TileMode.CLAMP
         );
         tokenPaint.setShader(grad);
         canvas.drawCircle(cx, cy, r, tokenPaint);
         canvas.drawCircle(cx, cy, r, tokenRimPaint);
-        canvas.drawCircle(cx - r * 0.35f, cy - r * 0.35f, r * 0.3f, tokenShinePaint);
+
+        // Concentric Coin Lathe Rings
+        tokenGroovePaint.setColor(isGold ? 0x6678350F : 0x66082F49);
+        canvas.drawCircle(cx, cy, r * 0.65f, tokenGroovePaint);
+        canvas.drawCircle(cx, cy, r * 0.35f, tokenGroovePaint);
+
+        // Center Star / Emboss Stud
+        Paint centerStud = new Paint(Paint.ANTI_ALIAS_FLAG);
+        centerStud.setColor(isGold ? 0xFFFEF08A : 0xFFBAE6FD);
+        canvas.drawCircle(cx, cy, dpf(1.8f), centerStud);
+
+        canvas.drawCircle(cx - r * 0.35f, cy - r * 0.35f, r * 0.28f, tokenShinePaint);
     }
 }
