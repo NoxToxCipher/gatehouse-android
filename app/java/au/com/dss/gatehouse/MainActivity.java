@@ -9757,7 +9757,7 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
                     if (s.guardName != null && !s.guardName.isEmpty() && !processedGuards.contains(s.guardName.toLowerCase(Locale.US))) {
                         processedGuards.add(s.guardName.toLowerCase(Locale.US));
                         PhoneContactMatch match = lookupPhoneContact(s.guardName);
-                        String phone = match.hasMatch && match.phoneNumber != null ? match.phoneNumber : (s.guardName.toLowerCase(Locale.US).contains("lochran") ? "0404530014" : "0478352551");
+                        String phone = match.hasMatch && match.phoneNumber != null ? match.phoneNumber : (s.guardName.toLowerCase(Locale.US).contains("lochran") ? "0480749075" : "0478352551");
                         String badge = (s.guardName.toLowerCase(Locale.US).contains("lochran")) ? "ON SITE (TONIGHT)" : ("ROSTER: " + s.status);
                         container.addView(contactCard(s.guardName, "Deputy Roster · Static Security Guard", phone, badge, colEmerald, "🛡️"));
                     }
@@ -9766,7 +9766,7 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
 
             if (!processedGuards.contains("lochran doherty")) {
                 PhoneContactMatch match = lookupPhoneContact("Lochran Doherty");
-                String phone = match.hasMatch && match.phoneNumber != null ? match.phoneNumber : "0404530014";
+                String phone = match.hasMatch && match.phoneNumber != null ? match.phoneNumber : "0480749075";
                 container.addView(contactCard("Officer Lochran Doherty", "G.J.G. Security · Static Guard LIC #41207", phone, "ON SITE (TONIGHT)", colEmerald, "🛡️"));
             }
             if (!processedGuards.contains("petrea doherty")) {
@@ -9846,73 +9846,84 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
     private LinearLayout contactCard(final String name, String subtitle, final String phoneDisplay,
                                      String badgeText, final int badgeColor, String avatarIcon) {
         LinearLayout card = new LinearLayout(this);
-        card.setOrientation(LinearLayout.HORIZONTAL);
-        card.setGravity(Gravity.CENTER_VERTICAL);
-        card.setBackground(rounded(colPanel, dp(14)));
-        card.setPadding(dp(12), dp(12), dp(12), dp(12));
+        card.setOrientation(LinearLayout.VERTICAL);
+        card.setBackground(rounded(colPanel, dp(16)));
+        card.setPadding(dp(14), dp(14), dp(14), dp(14));
         card.setElevation(dp(3));
 
         LinearLayout.LayoutParams clp = new LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
-        clp.bottomMargin = dp(8);
+        clp.bottomMargin = dp(10);
         card.setLayoutParams(clp);
 
-        // 1. Left 3D Avatar Pod (44x44dp)
+        // 1. Top Section: Avatar + Name & Subtitle + Status Badge
+        LinearLayout topRow = new LinearLayout(this);
+        topRow.setOrientation(LinearLayout.HORIZONTAL);
+        topRow.setGravity(Gravity.CENTER_VERTICAL);
+
         FrameLayout avatarFrame = new FrameLayout(this);
         avatarFrame.setBackground(rounded(colPanel2, dp(10)));
-        LinearLayout.LayoutParams aflp = new LinearLayout.LayoutParams(dp(42), dp(42));
+        LinearLayout.LayoutParams aflp = new LinearLayout.LayoutParams(dp(44), dp(44));
         aflp.rightMargin = dp(12);
         avatarFrame.setLayoutParams(aflp);
 
         TextView aIcon = new TextView(this);
         aIcon.setText(avatarIcon);
-        aIcon.setTextSize(18);
+        aIcon.setTextSize(20);
         aIcon.setGravity(Gravity.CENTER);
         avatarFrame.addView(aIcon);
-        card.addView(avatarFrame);
+        topRow.addView(avatarFrame);
 
-        // 2. Middle Contact Information
         LinearLayout infoCol = new LinearLayout(this);
         infoCol.setOrientation(LinearLayout.VERTICAL);
         LinearLayout.LayoutParams iclp = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
         infoCol.setLayoutParams(iclp);
 
-        LinearLayout topRow = new LinearLayout(this);
-        topRow.setOrientation(LinearLayout.HORIZONTAL);
-        topRow.setGravity(Gravity.CENTER_VERTICAL);
-
         TextView nameTxt = new TextView(this);
         nameTxt.setText(name);
         nameTxt.setTextColor(colPale);
-        nameTxt.setTextSize(14f);
+        nameTxt.setTextSize(14.5f);
         nameTxt.setTypeface(Typeface.DEFAULT_BOLD);
-        LinearLayout.LayoutParams nlp = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
-        nameTxt.setLayoutParams(nlp);
-        topRow.addView(nameTxt);
-
-        TextView badge = new TextView(this);
-        badge.setText(badgeText);
-        badge.setTextColor(badgeColor);
-        badge.setTextSize(9f);
-        badge.setTypeface(Typeface.MONOSPACE);
-        badge.setPadding(dp(6), dp(2), dp(6), dp(2));
-        badge.setBackground(rounded(colPanel2, dp(4)));
-        topRow.addView(badge);
-        infoCol.addView(topRow);
+        nameTxt.setSingleLine(true);
+        nameTxt.setEllipsize(android.text.TextUtils.TruncateAt.END);
+        infoCol.addView(nameTxt);
 
         TextView subTxt = new TextView(this);
         subTxt.setText(subtitle);
         subTxt.setTextColor(colMuted);
         subTxt.setTextSize(11f);
-        subTxt.setPadding(0, dp(2), 0, dp(4));
+        subTxt.setSingleLine(true);
+        subTxt.setEllipsize(android.text.TextUtils.TruncateAt.END);
+        subTxt.setPadding(0, dp(1), 0, 0);
         infoCol.addView(subTxt);
 
+        topRow.addView(infoCol);
+
+        if (badgeText != null && !badgeText.isEmpty()) {
+            TextView badge = new TextView(this);
+            badge.setText(badgeText);
+            badge.setTextColor(badgeColor);
+            badge.setTextSize(9.5f);
+            badge.setTypeface(Typeface.create(Typeface.MONOSPACE, Typeface.BOLD));
+            badge.setPadding(dp(7), dp(3), dp(7), dp(3));
+            badge.setBackground(rounded(colPanel2, dp(6)));
+            LinearLayout.LayoutParams blp = new LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+            blp.leftMargin = dp(8);
+            badge.setLayoutParams(blp);
+            topRow.addView(badge);
+        }
+
+        card.addView(topRow);
+
+        // 2. Middle Row: Formatted Phone Number with 1-Tap Copy
         final String formattedNum = formatPhoneNumber(phoneDisplay);
         TextView numTxt = new TextView(this);
         numTxt.setText("📞 " + formattedNum);
         numTxt.setTextColor(colAccent);
-        numTxt.setTextSize(12f);
+        numTxt.setTextSize(12.5f);
         numTxt.setTypeface(Typeface.create(Typeface.MONOSPACE, Typeface.BOLD));
+        numTxt.setPadding(0, dp(8), 0, dp(4));
         numTxt.setOnClickListener(new View.OnClickListener() {
             public void onClick(View v) {
                 hapticClick();
@@ -9926,46 +9937,47 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
                 } catch (Exception ignored) {}
             }
         });
-        infoCol.addView(numTxt);
-        card.addView(infoCol);
+        card.addView(numTxt);
 
-        // 3. Right Action Suite (SMS + CALL)
-        LinearLayout actionCol = new LinearLayout(this);
-        actionCol.setOrientation(LinearLayout.HORIZONTAL);
-        actionCol.setGravity(Gravity.CENTER_VERTICAL);
-        actionCol.setPadding(dp(8), 0, 0, 0);
+        // 3. Bottom Action Suite (Full Width: WhatsApp, SMS, Call)
+        LinearLayout actionRow = new LinearLayout(this);
+        actionRow.setOrientation(LinearLayout.HORIZONTAL);
+        actionRow.setGravity(Gravity.CENTER_VERTICAL);
+        actionRow.setPadding(0, dp(6), 0, 0);
 
         final boolean isMobile = phoneDisplay.startsWith("04") || phoneDisplay.startsWith("+614");
         if (isMobile) {
+            // WhatsApp Action Pill with Official Brand Green
             TextView btnWa = new TextView(this);
-            btnWa.setText("WA");
-            btnWa.setTextColor(0xFF25D366);
-            btnWa.setTextSize(11f);
+            btnWa.setText("💬 WhatsApp");
+            btnWa.setTextColor(0xFFFFFFFF);
+            btnWa.setTextSize(11.5f);
             btnWa.setTypeface(Typeface.DEFAULT_BOLD);
-            btnWa.setPadding(dp(10), dp(6), dp(10), dp(6));
-            btnWa.setBackground(rounded(0x2225D366, dp(6)));
-            LinearLayout.LayoutParams walp = new LinearLayout.LayoutParams(
-                    LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+            btnWa.setGravity(Gravity.CENTER);
+            btnWa.setPadding(dp(8), dp(9), dp(8), dp(9));
+            btnWa.setBackground(rounded(0xFF25D366, dp(8)));
+            LinearLayout.LayoutParams walp = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1.25f);
             walp.rightMargin = dp(6);
             btnWa.setLayoutParams(walp);
             btnWa.setOnClickListener(new View.OnClickListener() {
                 public void onClick(View v) {
-                    hapticClick();
+                    hapticHeavyClick();
                     registerActivity();
                     openWhatsAppChat(phoneDisplay, "Hi " + name + ", Gatehouse here regarding your shift.");
                 }
             });
-            actionCol.addView(btnWa);
+            actionRow.addView(btnWa);
 
+            // SMS Action Pill
             TextView btnSms = new TextView(this);
-            btnSms.setText("SMS");
+            btnSms.setText("✉️ SMS");
             btnSms.setTextColor(colCyan);
-            btnSms.setTextSize(11f);
+            btnSms.setTextSize(11.5f);
             btnSms.setTypeface(Typeface.DEFAULT_BOLD);
-            btnSms.setPadding(dp(10), dp(6), dp(10), dp(6));
-            btnSms.setBackground(rounded(colPanel2, dp(6)));
-            LinearLayout.LayoutParams slp = new LinearLayout.LayoutParams(
-                    LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+            btnSms.setGravity(Gravity.CENTER);
+            btnSms.setPadding(dp(8), dp(9), dp(8), dp(9));
+            btnSms.setBackground(rounded(colPanel2, dp(8)));
+            LinearLayout.LayoutParams slp = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 0.95f);
             slp.rightMargin = dp(6);
             btnSms.setLayoutParams(slp);
             btnSms.setOnClickListener(new View.OnClickListener() {
@@ -9980,26 +9992,51 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
                     } catch (Exception ignored) {}
                 }
             });
-            actionCol.addView(btnSms);
+            actionRow.addView(btnSms);
+
+            // Call Action Pill
+            TextView btnCall = new TextView(this);
+            btnCall.setText("📞 Call");
+            btnCall.setTextColor(colAccentInk);
+            btnCall.setTextSize(11.5f);
+            btnCall.setTypeface(Typeface.DEFAULT_BOLD);
+            btnCall.setGravity(Gravity.CENTER);
+            btnCall.setPadding(dp(8), dp(9), dp(8), dp(9));
+            btnCall.setBackground(rounded(colAccent, dp(8)));
+            LinearLayout.LayoutParams cllp = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1.0f);
+            btnCall.setLayoutParams(cllp);
+            btnCall.setOnClickListener(new View.OnClickListener() {
+                public void onClick(View v) {
+                    hapticHeavyClick();
+                    registerActivity();
+                    dialNumber(phoneDisplay);
+                }
+            });
+            actionRow.addView(btnCall);
+        } else {
+            // Landline / Emergency Call
+            TextView btnCall = new TextView(this);
+            btnCall.setText(phoneDisplay.equals("000") ? "🚨 CALL TRIPLE ZERO (000)" : ("📞 CALL " + formattedNum));
+            btnCall.setTextColor(phoneDisplay.equals("000") ? 0xFFFFFFFF : colAccentInk);
+            btnCall.setTextSize(12f);
+            btnCall.setTypeface(Typeface.DEFAULT_BOLD);
+            btnCall.setGravity(Gravity.CENTER);
+            btnCall.setPadding(dp(12), dp(10), dp(12), dp(10));
+            btnCall.setBackground(rounded(phoneDisplay.equals("000") ? colCrimson : colAccent, dp(8)));
+            LinearLayout.LayoutParams cllp = new LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+            btnCall.setLayoutParams(cllp);
+            btnCall.setOnClickListener(new View.OnClickListener() {
+                public void onClick(View v) {
+                    hapticHeavyClick();
+                    registerActivity();
+                    dialNumber(phoneDisplay);
+                }
+            });
+            actionRow.addView(btnCall);
         }
 
-        TextView btnCall = new TextView(this);
-        btnCall.setText(phoneDisplay.equals("000") ? "000" : "CALL");
-        btnCall.setTextColor(phoneDisplay.equals("000") ? 0xFFFFFFFF : colAccentInk);
-        btnCall.setTextSize(11f);
-        btnCall.setTypeface(Typeface.DEFAULT_BOLD);
-        btnCall.setPadding(dp(12), dp(6), dp(12), dp(6));
-        btnCall.setBackground(rounded(phoneDisplay.equals("000") ? colCrimson : colAccent, dp(6)));
-        btnCall.setOnClickListener(new View.OnClickListener() {
-            public void onClick(View v) {
-                hapticHeavyClick();
-                registerActivity();
-                dialNumber(phoneDisplay);
-            }
-        });
-        actionCol.addView(btnCall);
-        card.addView(actionCol);
-
+        card.addView(actionRow);
         return card;
     }
 
