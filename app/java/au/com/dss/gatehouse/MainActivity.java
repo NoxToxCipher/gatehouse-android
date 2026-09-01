@@ -3739,13 +3739,13 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
 
             LinearLayout rGames1 = new LinearLayout(this);
             rGames1.setOrientation(LinearLayout.HORIZONTAL);
-            rGames1.addView(buildCompactToolTile("⚪⚫", "Baduk (Go)", "9×9 MCTS", colAccent, "Tsumego puzzles & MCTS bot", new View.OnClickListener() {
+            rGames1.addView(buildCompactToolTile("⚪⚫", "Baduk (Go)", "MCTS · DAN", colAccent, "Tsumego puzzles, Dan AI & territory score engine", new View.OnClickListener() {
                 public void onClick(View v) {
                     hapticHeavyClick();
                     showBadukGameDialog();
                 }
             }));
-            rGames1.addView(buildCompactToolTile("♟️", "Grandmaster Chess", "8×8 CHESS", colCyan, "Endgame puzzles & Stockfish AI", new View.OnClickListener() {
+            rGames1.addView(buildCompactToolTile("♟️", "Grandmaster Chess", "ELO 2200", colCyan, "Captured graveyard, advantage bar & Stockfish AI", new View.OnClickListener() {
                 public void onClick(View v) {
                     hapticHeavyClick();
                     showChessGameDialog();
@@ -3755,13 +3755,13 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
 
             LinearLayout rGames2 = new LinearLayout(this);
             rGames2.setOrientation(LinearLayout.HORIZONTAL);
-            rGames2.addView(buildCompactToolTile("🏺", "Royal Game of Ur", "2600 BCE", colAccent, "Sumerian 4-dice race & combat", new View.OnClickListener() {
+            rGames2.addView(buildCompactToolTile("🏺", "Royal Game of Ur", "2600 BCE", colAccent, "3D animated pyramid dice & Sumerian combat", new View.OnClickListener() {
                 public void onClick(View v) {
                     hapticHeavyClick();
                     showRoyalUrGameDialog();
                 }
             }));
-            rGames2.addView(buildCompactToolTile("🪲", "Egyptian Senet", "3100 BCE", 0xFFFDE047, "30-square underworld race", new View.OnClickListener() {
+            rGames2.addView(buildCompactToolTile("🪲", "Egyptian Senet", "3100 BCE", 0xFFFDE047, "3D hieroglyphic stick casting & underworld race", new View.OnClickListener() {
                 public void onClick(View v) {
                     hapticHeavyClick();
                     showSenetGameDialog();
@@ -3771,13 +3771,13 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
 
             LinearLayout rGames3 = new LinearLayout(this);
             rGames3.setOrientation(LinearLayout.HORIZONTAL);
-            rGames3.addView(buildCompactToolTile("🐺", "Viking Hnefatafl", "11×11 TAFL", colCrimson, "King's escape vs siege horde", new View.OnClickListener() {
+            rGames3.addView(buildCompactToolTile("🐺", "Viking Hnefatafl", "11×11 TAFL", colCrimson, "King's escape route tracers & corner fort victory", new View.OnClickListener() {
                 public void onClick(View v) {
                     hapticHeavyClick();
                     showHnefataflGameDialog();
                 }
             }));
-            rGames3.addView(buildCompactToolTile("🎲", "Backgammon", "24 POINTS", colEmerald, "Pip counter & bearing off", new View.OnClickListener() {
+            rGames3.addView(buildCompactToolTile("🎲", "Backgammon", "24 POINTS", colEmerald, "Pip equity counter & 3D checker stacks", new View.OnClickListener() {
                 public void onClick(View v) {
                     hapticHeavyClick();
                     showBackgammonGameDialog();
@@ -3787,13 +3787,13 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
 
             LinearLayout rGames4 = new LinearLayout(this);
             rGames4.setOrientation(LinearLayout.HORIZONTAL);
-            rGames4.addView(buildCompactToolTile("🏛️", "Nine Men's Morris", "1400 BCE", colCyan, "Concentric squares & mills", new View.OnClickListener() {
+            rGames4.addView(buildCompactToolTile("🏛️", "Nine Men's Morris", "1400 BCE", colCyan, "Concentric intaglio mills & 3-piece flying phase", new View.OnClickListener() {
                 public void onClick(View v) {
                     hapticHeavyClick();
                     showNineMensMorrisGameDialog();
                 }
             }));
-            rGames4.addView(buildCompactToolTile("🔴🟡", "Connect 4", "7×6 GRAVITY", 0xFFF59E0B, "4-in-a-row physics drop solver", new View.OnClickListener() {
+            rGames4.addView(buildCompactToolTile("🔴🟡", "Connect 4", "7×6 ACRYLIC", 0xFFF59E0B, "Gravity drop physics & victory star sparklers", new View.OnClickListener() {
                 public void onClick(View v) {
                     hapticHeavyClick();
                     showConnectFourGameDialog();
@@ -3807,15 +3807,16 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
         final int glowCol = (badgeCol != 0 ? badgeCol : colCyan);
         final RippleCardFrameLayout rippleTile = new RippleCardFrameLayout(this, 16f, glowCol);
         rippleTile.setBackground(rounded(0xFF131B2B, dp(16)));
-        LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
+        LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.MATCH_PARENT, 1f);
         lp.setMargins(dp(5), dp(5), dp(5), dp(5));
         rippleTile.setLayoutParams(lp);
 
         final LinearLayout tile = new LinearLayout(this);
         tile.setOrientation(LinearLayout.VERTICAL);
         tile.setPadding(dp(14), dp(14), dp(14), dp(14));
+        tile.setMinimumHeight(dp(132));
         tile.setLayoutParams(new FrameLayout.LayoutParams(
-                FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.WRAP_CONTENT));
+                FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT));
 
         // Top Row: Squircle Bento Icon Pod + Badge Pill
         LinearLayout top = new LinearLayout(this);
@@ -3864,6 +3865,8 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
         title.setTextColor(0xFFFFFFFF);
         title.setTextSize(13.5f);
         title.setTypeface(Typeface.DEFAULT_BOLD);
+        title.setSingleLine(true);
+        title.setEllipsize(android.text.TextUtils.TruncateAt.END);
         LinearLayout.LayoutParams tlp = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
         title.setLayoutParams(tlp);
         titleRow.addView(title);
@@ -3881,6 +3884,9 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
         desc.setText(descStr);
         desc.setTextColor(0xFF94A3B8);
         desc.setTextSize(11f);
+        desc.setLines(2);
+        desc.setMaxLines(2);
+        desc.setEllipsize(android.text.TextUtils.TruncateAt.END);
         desc.setLineSpacing(dp(1), 1f);
         tile.addView(desc);
 
