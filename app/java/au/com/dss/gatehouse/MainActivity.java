@@ -4246,7 +4246,7 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
 
         final ChessGameView chessView = new ChessGameView(this);
         LinearLayout.LayoutParams cvl = new LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT, dp(320));
+                LinearLayout.LayoutParams.MATCH_PARENT, dp(330));
         chessView.setLayoutParams(cvl);
         box.addView(chessView);
 

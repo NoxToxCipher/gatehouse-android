@@ -402,6 +402,7 @@ public class ChessGameView extends View {
             }
         }
 
+        boolean isCapture = (board[toY][toX] != '.');
         saveState();
 
         char mover = board[fromY][fromX];
@@ -412,7 +413,11 @@ public class ChessGameView extends View {
         board[fromY][fromX] = '.';
 
         try {
-            performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP);
+            if (isCapture) {
+                performHapticFeedback(HapticFeedbackConstants.LONG_PRESS);
+            } else {
+                performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP);
+            }
         } catch (Exception ignored) {}
 
         lastFromX = fromX;
@@ -709,6 +714,114 @@ public class ChessGameView extends View {
                 // Capture target ring
                 canvas.drawCircle(cx, cy, cellSize * 0.40f, targetRingPaint);
             }
+        }
+
+        // Live Captured Pieces Graveyard & Material Advantage Bar
+        drawCapturedGraveyard(canvas, w, h, startX, startY, size);
+    }
+
+    private void drawCapturedGraveyard(Canvas canvas, float w, float h, float startX, float startY, float size) {
+        MaterialInfo info = calculateMaterial();
+        float graveTextSize = dpf(9.5f);
+        textPaint.setTextSize(graveTextSize);
+        textPaint.setTypeface(Typeface.DEFAULT_BOLD);
+
+        // Top Graveyard: Black pieces captured by White (Shown in top frame margin)
+        float topGraveY = startY - dpf(1.5f);
+        if (startY > dpf(18f)) topGraveY = dpf(11f);
+        float curX = startX + dpf(2f);
+
+        for (char p : info.blackCaptured) {
+            String g = getPieceGlyph(p);
+            canvas.drawText(g, curX, topGraveY, blackPiecePaint);
+            curX += dpf(11f);
+        }
+
+        // White material advantage badge
+        int whiteAdv = info.whiteScore - info.blackScore;
+        if (whiteAdv > 0) {
+            Paint advPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+            advPaint.setColor(0xFFFFD166);
+            advPaint.setTextSize(dpf(8.5f));
+            advPaint.setTypeface(Typeface.create(Typeface.MONOSPACE, Typeface.BOLD));
+            canvas.drawText("+" + whiteAdv, curX + dpf(4f), topGraveY - dpf(1f), advPaint);
+        }
+
+        // Bottom Graveyard: White pieces captured by Black (Shown in bottom frame margin)
+        float botGraveY = startY + size + dpf(12f);
+        if (botGraveY > h - dpf(3f)) botGraveY = h - dpf(4f);
+        float curBotX = startX + dpf(2f);
+
+        for (char p : info.whiteCaptured) {
+            String g = getPieceGlyph(p);
+            canvas.drawText(g, curBotX, botGraveY, whitePiecePaint);
+            curBotX += dpf(11f);
+        }
+
+        // Black material advantage badge
+        int blackAdv = info.blackScore - info.whiteScore;
+        if (blackAdv > 0) {
+            Paint advPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+            advPaint.setColor(0xFF38BDF8);
+            advPaint.setTextSize(dpf(8.5f));
+            advPaint.setTypeface(Typeface.create(Typeface.MONOSPACE, Typeface.BOLD));
+            canvas.drawText("+" + blackAdv, curBotX + dpf(4f), botGraveY - dpf(1f), advPaint);
+        }
+    }
+
+    private static class MaterialInfo {
+        final List<Character> whiteCaptured = new ArrayList<>();
+        final List<Character> blackCaptured = new ArrayList<>();
+        int whiteScore = 0;
+        int blackScore = 0;
+    }
+
+    private MaterialInfo calculateMaterial() {
+        MaterialInfo info = new MaterialInfo();
+        int[] initialWhite = new int[256];
+        int[] initialBlack = new int[256];
+        initialWhite['P'] = 8; initialWhite['N'] = 2; initialWhite['B'] = 2; initialWhite['R'] = 2; initialWhite['Q'] = 1;
+        initialBlack['p'] = 8; initialBlack['n'] = 2; initialBlack['b'] = 2; initialBlack['r'] = 2; initialBlack['q'] = 1;
+
+        int[] currentWhite = new int[256];
+        int[] currentBlack = new int[256];
+
+        for (int r = 0; r < 8; r++) {
+            for (int c = 0; c < 8; c++) {
+                char p = board[r][c];
+                if (p != '.') {
+                    if (isWhitePiece(p)) {
+                        currentWhite[p]++;
+                        info.whiteScore += getPieceValue(p);
+                    } else {
+                        currentBlack[p]++;
+                        info.blackScore += getPieceValue(p);
+                    }
+                }
+            }
+        }
+
+        char[] orderWhite = {'Q', 'R', 'B', 'N', 'P'};
+        char[] orderBlack = {'q', 'r', 'b', 'n', 'p'};
+
+        for (char p : orderWhite) {
+            int missing = initialWhite[p] - currentWhite[p];
+            for (int k = 0; k < missing; k++) info.whiteCaptured.add(p);
+        }
+        for (char p : orderBlack) {
+            int missing = initialBlack[p] - currentBlack[p];
+            for (int k = 0; k < missing; k++) info.blackCaptured.add(p);
+        }
+        return info;
+    }
+
+    private int getPieceValue(char p) {
+        switch (Character.toLowerCase(p)) {
+            case 'q': return 9;
+            case 'r': return 5;
+            case 'b': case 'n': return 3;
+            case 'p': return 1;
+            default: return 0;
         }
     }
 }
