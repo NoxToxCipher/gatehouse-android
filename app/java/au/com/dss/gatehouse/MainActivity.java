@@ -5098,30 +5098,10 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
 
         box.addView(replayRow);
 
-        final Dialog dlg = createDialogSheet(box);
-
-        LinearLayout bottomRow = new LinearLayout(this);
-        bottomRow.setOrientation(LinearLayout.HORIZONTAL);
-        bottomRow.setPadding(0, dp(8), 0, 0);
-
-        final TextView btnScoring = actionButton("⚖️ Score", colPanel2, 0xFFEAB308);
-        btnScoring.setOnClickListener(new View.OnClickListener() {
-            public void onClick(View v) {
-                hapticClick();
-                badukView.toggleScoringMode();
-                if (badukView.isScoringMode()) {
-                    btnScoring.setBackground(rounded(0xFFEAB308, dp(8)));
-                    btnScoring.setTextColor(0xFF0F172A);
-                } else {
-                    btnScoring.setBackground(rounded(colPanel2, dp(8)));
-                    btnScoring.setTextColor(0xFFEAB308);
-                }
-            }
-        });
-        LinearLayout.LayoutParams sclp = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1.0f);
-        sclp.rightMargin = dp(2);
-        btnScoring.setLayoutParams(sclp);
-        bottomRow.addView(btnScoring);
+        // 5. Analysis & Rules Tool Row (Heatmap, Move #, Rules/Komi, Clock)
+        LinearLayout analysisRow = new LinearLayout(this);
+        analysisRow.setOrientation(LinearLayout.HORIZONTAL);
+        analysisRow.setPadding(0, dp(5), 0, 0);
 
         final TextView btnHeatmap = actionButton("🗺️ Heatmap", colPanel2, 0xFF10B981);
         btnHeatmap.setOnClickListener(new View.OnClickListener() {
@@ -5137,13 +5117,10 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
                 }
             }
         });
-        LinearLayout.LayoutParams hmlp = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1.0f);
-        hmlp.leftMargin = dp(2);
-        hmlp.rightMargin = dp(2);
-        btnHeatmap.setLayoutParams(hmlp);
-        bottomRow.addView(btnHeatmap);
+        LinearLayout.LayoutParams hmlp = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
+        hmlp.rightMargin = dp(2); btnHeatmap.setLayoutParams(hmlp); analysisRow.addView(btnHeatmap);
 
-        final TextView btnNumbers = actionButton("🔢 #", colPanel2, 0xFF38BDF8);
+        final TextView btnNumbers = actionButton("🔢 Move #", colPanel2, 0xFF38BDF8);
         btnNumbers.setOnClickListener(new View.OnClickListener() {
             public void onClick(View v) {
                 hapticClick();
@@ -5157,11 +5134,8 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
                 }
             }
         });
-        LinearLayout.LayoutParams nblp = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 0.7f);
-        nblp.leftMargin = dp(2);
-        nblp.rightMargin = dp(2);
-        btnNumbers.setLayoutParams(nblp);
-        bottomRow.addView(btnNumbers);
+        LinearLayout.LayoutParams nblp = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
+        nblp.leftMargin = dp(2); nblp.rightMargin = dp(2); btnNumbers.setLayoutParams(nblp); analysisRow.addView(btnNumbers);
 
         final TextView btnRulesKomi = actionButton("📜 JP 6.5", colPanel2, 0xFFFFD166);
         btnRulesKomi.setOnClickListener(new View.OnClickListener() {
@@ -5179,11 +5153,44 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
                 }
             }
         });
-        LinearLayout.LayoutParams rklp = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 0.9f);
-        rklp.leftMargin = dp(2);
-        rklp.rightMargin = dp(2);
-        btnRulesKomi.setLayoutParams(rklp);
-        bottomRow.addView(btnRulesKomi);
+        LinearLayout.LayoutParams rklp = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
+        rklp.leftMargin = dp(2); rklp.rightMargin = dp(2); btnRulesKomi.setLayoutParams(rklp); analysisRow.addView(btnRulesKomi);
+
+        final TextView btnClock = actionButton("⏱️ Clock", colPanel2, 0xFF38BDF8);
+        btnClock.setOnClickListener(new View.OnClickListener() {
+            public void onClick(View v) {
+                hapticClick();
+                badukView.toggleTimer();
+                if (badukView.isTimerEnabled()) {
+                    btnClock.setBackground(rounded(0xFF38BDF8, dp(8)));
+                    btnClock.setTextColor(0xFF0F172A);
+                } else {
+                    btnClock.setBackground(rounded(colPanel2, dp(8)));
+                    btnClock.setTextColor(0xFF38BDF8);
+                }
+            }
+        });
+        LinearLayout.LayoutParams ctlp = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
+        ctlp.leftMargin = dp(2); btnClock.setLayoutParams(ctlp); analysisRow.addView(btnClock);
+
+        box.addView(analysisRow);
+
+        final Dialog dlg = createDialogSheet(box);
+
+        // 6. Utility & Close Action Row (Theme, SGF, Rules, Close)
+        LinearLayout bottomRow = new LinearLayout(this);
+        bottomRow.setOrientation(LinearLayout.HORIZONTAL);
+        bottomRow.setPadding(0, dp(6), 0, 0);
+
+        final TextView btnTheme = actionButton("🎨 Theme", colPanel2, 0xFFFFD166);
+        btnTheme.setOnClickListener(new View.OnClickListener() {
+            public void onClick(View v) {
+                hapticClick();
+                badukView.cycleTheme();
+            }
+        });
+        LinearLayout.LayoutParams thlp = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
+        thlp.rightMargin = dp(2); btnTheme.setLayoutParams(thlp); bottomRow.addView(btnTheme);
 
         TextView btnSgf = actionButton("📋 SGF", colPanel2, colCyan);
         btnSgf.setOnClickListener(new View.OnClickListener() {
@@ -5193,7 +5200,7 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
                 android.content.ClipboardManager cm = (android.content.ClipboardManager) getSystemService(android.content.Context.CLIPBOARD_SERVICE);
                 if (cm != null) {
                     cm.setPrimaryClip(android.content.ClipData.newPlainText("Baduk SGF", sgf));
-                    Toast.makeText(MainActivity.this, "📋 SGF Game Record Copied (Hold to Load SGF)", Toast.LENGTH_SHORT).show();
+                    Toast.makeText(MainActivity.this, "📋 SGF Copied (Hold to Load SGF)", Toast.LENGTH_SHORT).show();
                 }
             }
         });
@@ -5215,44 +5222,8 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
                 return true;
             }
         });
-        LinearLayout.LayoutParams sgflp = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 0.8f);
-        sgflp.leftMargin = dp(2);
-        sgflp.rightMargin = dp(2);
-        btnSgf.setLayoutParams(sgflp);
-        bottomRow.addView(btnSgf);
-
-        final TextView btnClock = actionButton("⏱️ Clock", colPanel2, 0xFF38BDF8);
-        btnClock.setOnClickListener(new View.OnClickListener() {
-            public void onClick(View v) {
-                hapticClick();
-                badukView.toggleTimer();
-                if (badukView.isTimerEnabled()) {
-                    btnClock.setBackground(rounded(0xFF38BDF8, dp(8)));
-                    btnClock.setTextColor(0xFF0F172A);
-                } else {
-                    btnClock.setBackground(rounded(colPanel2, dp(8)));
-                    btnClock.setTextColor(0xFF38BDF8);
-                }
-            }
-        });
-        LinearLayout.LayoutParams ctlp = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 0.9f);
-        ctlp.leftMargin = dp(2);
-        ctlp.rightMargin = dp(2);
-        btnClock.setLayoutParams(ctlp);
-        bottomRow.addView(btnClock);
-
-        final TextView btnTheme = actionButton("🎨", colPanel2, 0xFFFFD166);
-        btnTheme.setOnClickListener(new View.OnClickListener() {
-            public void onClick(View v) {
-                hapticClick();
-                badukView.cycleTheme();
-            }
-        });
-        LinearLayout.LayoutParams thlp = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 0.6f);
-        thlp.leftMargin = dp(2);
-        thlp.rightMargin = dp(2);
-        btnTheme.setLayoutParams(thlp);
-        bottomRow.addView(btnTheme);
+        LinearLayout.LayoutParams sgflp = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
+        sgflp.leftMargin = dp(2); sgflp.rightMargin = dp(2); btnSgf.setLayoutParams(sgflp); bottomRow.addView(btnSgf);
 
         TextView btnRules = actionButton("📖 Rules", colPanel2, colAccent);
         btnRules.setOnClickListener(new View.OnClickListener() {
@@ -5261,11 +5232,8 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
                 showBadukRulesDialog();
             }
         });
-        LinearLayout.LayoutParams rblp = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 0.8f);
-        rblp.leftMargin = dp(2);
-        rblp.rightMargin = dp(2);
-        btnRules.setLayoutParams(rblp);
-        bottomRow.addView(btnRules);
+        LinearLayout.LayoutParams rblp = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
+        rblp.leftMargin = dp(2); rblp.rightMargin = dp(2); btnRules.setLayoutParams(rblp); bottomRow.addView(btnRules);
 
         TextView btnClose = actionButton("Close", colLine, colPale);
         btnClose.setOnClickListener(new View.OnClickListener() {
@@ -5274,10 +5242,8 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
                 dlg.dismiss();
             }
         });
-        LinearLayout.LayoutParams cblp = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 0.7f);
-        cblp.leftMargin = dp(2);
-        btnClose.setLayoutParams(cblp);
-        bottomRow.addView(btnClose);
+        LinearLayout.LayoutParams cblp = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 0.9f);
+        cblp.leftMargin = dp(2); btnClose.setLayoutParams(cblp); bottomRow.addView(btnClose);
 
         box.addView(bottomRow);
 
