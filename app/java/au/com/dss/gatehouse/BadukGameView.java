@@ -79,11 +79,26 @@ public class BadukGameView extends View {
     private boolean showTerritory = false;
     private boolean showHeatmap = false;
     private boolean showMoveNumbers = false;
+    private int gobanTheme = 0; // 0 = Hon-Kaya, 1 = Katsura, 2 = Obsidian Gold
     private final Paint moveNumberPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
     private int difficultyTier = 1; // 0 = Apprentice (1-kyu), 1 = Master (3-dan), 2 = Grandmaster (9-dan)
     private int hintX = -1;
     private int hintY = -1;
     private final Paint hintPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+
+    public void cycleTheme() {
+        gobanTheme = (gobanTheme + 1) % 3;
+        try { performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK); } catch (Exception ignored) {}
+        if (statusListener != null) {
+            String tName = (gobanTheme == 0 ? "Hon-Kaya Wood" : (gobanTheme == 1 ? "Katsura Wood" : "Obsidian & Gold"));
+            statusListener.onStatusChanged("🎨 Goban Theme: " + tName, 0xFFFFD166);
+        }
+        invalidate();
+    }
+
+    public int getTheme() {
+        return gobanTheme;
+    }
 
     // Interactive Endgame Territory Scoring Mode & Dead Stone Tracking
     private boolean isScoringMode = false;
@@ -1389,9 +1404,11 @@ public class BadukGameView extends View {
         float h = getHeight();
         if (w <= 0 || h <= 0) return;
 
-        // Rich Japanese Hon-Kaya Wood Goban Gradient
+        // Dynamic Goban Wood Gradient Theme
+        int topCol = (gobanTheme == 0 ? 0xFFD49755 : (gobanTheme == 1 ? 0xFFB45309 : 0xFF1E293B));
+        int botCol = (gobanTheme == 0 ? 0xFFB37332 : (gobanTheme == 1 ? 0xFF78350F : 0xFF0F172A));
         boardRect.set(0, 0, w, h);
-        gobanPaint.setShader(new LinearGradient(0, 0, w, h, 0xFFD49755, 0xFFB37332, Shader.TileMode.CLAMP));
+        gobanPaint.setShader(new LinearGradient(0, 0, w, h, topCol, botCol, Shader.TileMode.CLAMP));
         canvas.drawRoundRect(boardRect, dpf(16f), dpf(16f), gobanPaint);
 
         // Fine Wood Grain Texture Lines

@@ -5233,6 +5233,19 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
         btnClock.setLayoutParams(ctlp);
         bottomRow.addView(btnClock);
 
+        final TextView btnTheme = actionButton("🎨", colPanel2, 0xFFFFD166);
+        btnTheme.setOnClickListener(new View.OnClickListener() {
+            public void onClick(View v) {
+                hapticClick();
+                badukView.cycleTheme();
+            }
+        });
+        LinearLayout.LayoutParams thlp = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 0.6f);
+        thlp.leftMargin = dp(2);
+        thlp.rightMargin = dp(2);
+        btnTheme.setLayoutParams(thlp);
+        bottomRow.addView(btnTheme);
+
         TextView btnRules = actionButton("📖 Rules", colPanel2, colAccent);
         btnRules.setOnClickListener(new View.OnClickListener() {
             public void onClick(View v) {
