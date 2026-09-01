@@ -149,15 +149,31 @@ public class GatehouseDynamicIslandOverlay {
 
         islandRoot.addView(expandedView);
 
-        // Interactive Click to Morph
-        islandRoot.setOnClickListener(new View.OnClickListener() {
+        // Gesture detector for tap-to-morph and swipe-up to dismiss
+        final android.view.GestureDetector gestureDetector = new android.view.GestureDetector(parentContainer.getContext(), new android.view.GestureDetector.SimpleOnGestureListener() {
             @Override
-            public void onClick(View v) {
+            public boolean onFling(android.view.MotionEvent e1, android.view.MotionEvent e2, float velocityX, float velocityY) {
+                if (velocityY < -150) {
+                    hideIsland();
+                    return true;
+                }
+                return false;
+            }
+            @Override
+            public boolean onSingleTapConfirmed(android.view.MotionEvent e) {
                 if (currentState == IslandState.COMPACT_PILL) {
                     expandIsland();
                 } else if (currentState == IslandState.EXPANDED_CARD) {
                     collapseIsland();
                 }
+                return true;
+            }
+        });
+
+        islandRoot.setOnTouchListener(new View.OnTouchListener() {
+            @Override
+            public boolean onTouch(View v, android.view.MotionEvent event) {
+                return gestureDetector.onTouchEvent(event);
             }
         });
 
@@ -436,14 +452,16 @@ public class GatehouseDynamicIslandOverlay {
         cancelAutoCollapse();
 
         islandRoot.animate()
+                .translationY(-dp(30))
                 .scaleX(0.1f)
                 .scaleY(0.1f)
                 .alpha(0f)
-                .setDuration(200)
+                .setDuration(220)
                 .withEndAction(new Runnable() {
                     @Override
                     public void run() {
                         islandRoot.setVisibility(View.GONE);
+                        islandRoot.setTranslationY(0);
                     }
                 })
                 .start();
