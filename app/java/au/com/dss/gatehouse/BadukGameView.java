@@ -101,6 +101,10 @@ public class BadukGameView extends View {
     private final Paint captureToastPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final Paint captureToastBgPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
 
+    // Joseki & Classical Opening Pattern Recognition
+    private String detectedOpening = null;
+    private long detectedOpeningTime = 0;
+
     public void setDifficultyTier(int tier) {
         this.difficultyTier = Math.max(0, Math.min(2, tier));
         updateStatus();
@@ -535,6 +539,7 @@ public class BadukGameView extends View {
         animStoneColor = color;
         animStartTime = System.currentTimeMillis();
 
+        evaluateOpeningPattern();
         updateStatus();
         postInvalidateOnAnimation();
 
@@ -544,6 +549,61 @@ public class BadukGameView extends View {
             }, 380);
         }
         return true;
+    }
+
+    private void evaluateOpeningPattern() {
+        if (moveList.size() < 1 || moveList.size() > 14) {
+            if (moveList.size() > 14) detectedOpening = null;
+            return;
+        }
+        if (boardSize == 19) {
+            // Check for Tengen (center)
+            if (board[9][9] == 1 && moveList.size() <= 3) {
+                detectedOpening = "🌌 Tengen (Origin of Heaven) Opening";
+                detectedOpeningTime = System.currentTimeMillis();
+                return;
+            }
+            // Check for 3-3 Invasion
+            if ((board[2][2] != 0 && (board[3][3] != 0 || board[2][3] != 0)) ||
+                (board[16][2] != 0 && (board[15][3] != 0 || board[16][3] != 0)) ||
+                (board[2][16] != 0 && (board[3][15] != 0 || board[2][15] != 0)) ||
+                (board[16][16] != 0 && (board[15][15] != 0 || board[16][15] != 0))) {
+                detectedOpening = "⚔️ San-San (3-3 Modern AI Invasion) Joseki";
+                detectedOpeningTime = System.currentTimeMillis();
+                return;
+            }
+            // Check for Komoku Keima Shimari (3-4 Knight Enclosure)
+            if ((board[2][3] != 0 && board[4][2] != 0) || (board[3][2] != 0 && board[2][4] != 0) ||
+                (board[16][3] != 0 && board[14][2] != 0) || (board[2][15] != 0 && board[4][16] != 0)) {
+                detectedOpening = "🏯 Komoku Keima Shimari (Small Knight Enclosure)";
+                detectedOpeningTime = System.currentTimeMillis();
+                return;
+            }
+            // Check for Hoshi Star Point Approach
+            if ((board[3][3] != 0 && (board[2][4] != 0 || board[4][2] != 0 || board[5][2] != 0)) ||
+                (board[15][3] != 0 && (board[16][4] != 0 || board[14][2] != 0))) {
+                detectedOpening = "🗡️ Kogei Approach (Star Point Joseki)";
+                detectedOpeningTime = System.currentTimeMillis();
+                return;
+            }
+            // Star Point (Hoshi)
+            if (board[3][3] != 0 || board[15][3] != 0 || board[3][15] != 0 || board[15][15] != 0) {
+                detectedOpening = "⭐ Hoshi (4-4 Star Point) Opening";
+                detectedOpeningTime = System.currentTimeMillis();
+                return;
+            }
+        } else if (boardSize == 9) {
+            if (board[4][4] == 1 && moveList.size() <= 2) {
+                detectedOpening = "🌌 Tengen Center Dominance (9×9)";
+                detectedOpeningTime = System.currentTimeMillis();
+                return;
+            }
+            if (board[2][2] != 0 || board[6][2] != 0 || board[2][6] != 0 || board[6][6] != 0) {
+                detectedOpening = "⭐ 3-3 Corner Claim (9×9 Joseki)";
+                detectedOpeningTime = System.currentTimeMillis();
+                return;
+            }
+        }
     }
 
     private int countGroupLiberties(int startX, int startY, int color, boolean[][] visited) {
@@ -1120,6 +1180,30 @@ public class BadukGameView extends View {
             captureToastBgPaint.setAlpha((int) (220 * (1f - tp)));
             canvas.drawRoundRect(tRect, dpf(6f), dpf(6f), captureToastBgPaint);
             canvas.drawText(captureToastText, tcx, tcy, captureToastPaint);
+            postInvalidateOnAnimation();
+        }
+
+        // Draw Joseki & Opening Pattern Recognition Banner
+        if (detectedOpening != null && (System.currentTimeMillis() - detectedOpeningTime < 6000)) {
+            float bannerW = w * 0.90f;
+            float bannerH = dpf(20f);
+            float bx = (w - bannerW) / 2f;
+            float by = dpf(8f);
+            RectF bannerRect = new RectF(bx, by, bx + bannerW, by + bannerH);
+            Paint bannerBg = new Paint(Paint.ANTI_ALIAS_FLAG);
+            bannerBg.setColor(0xEE0F172A);
+            canvas.drawRoundRect(bannerRect, dpf(6f), dpf(6f), bannerBg);
+            Paint bannerBorder = new Paint(Paint.ANTI_ALIAS_FLAG);
+            bannerBorder.setColor(0xFFEAB308);
+            bannerBorder.setStyle(Paint.Style.STROKE);
+            bannerBorder.setStrokeWidth(dpf(1.2f));
+            canvas.drawRoundRect(bannerRect, dpf(6f), dpf(6f), bannerBorder);
+            Paint bannerText = new Paint(Paint.ANTI_ALIAS_FLAG);
+            bannerText.setColor(0xFFFDE047);
+            bannerText.setTextSize(dpf(9.5f));
+            bannerText.setTypeface(Typeface.create(Typeface.MONOSPACE, Typeface.BOLD));
+            bannerText.setTextAlign(Paint.Align.CENTER);
+            canvas.drawText(detectedOpening, w / 2f, by + dpf(13.5f), bannerText);
             postInvalidateOnAnimation();
         }
 

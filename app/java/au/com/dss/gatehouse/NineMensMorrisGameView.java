@@ -249,12 +249,14 @@ public class NineMensMorrisGameView extends View {
         else blackUnplaced--;
 
         try {
+            RecreationAudioSynth.playBadukStoneClack();
             performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP);
         } catch (Exception ignored) {}
 
         if (isMill(idx, color)) {
             mustRemoveOpponent = true;
             try {
+                RecreationAudioSynth.playTetrisLineClear();
                 performHapticFeedback(HapticFeedbackConstants.LONG_PRESS);
             } catch (Exception ignored) {}
         } else {
@@ -284,12 +286,14 @@ public class NineMensMorrisGameView extends View {
         selectedIndex = -1;
 
         try {
+            RecreationAudioSynth.playChessPieceThud(false);
             performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP);
         } catch (Exception ignored) {}
 
         if (isMill(toIdx, color)) {
             mustRemoveOpponent = true;
             try {
+                RecreationAudioSynth.playTetrisLineClear();
                 performHapticFeedback(HapticFeedbackConstants.LONG_PRESS);
             } catch (Exception ignored) {}
         } else {
@@ -318,6 +322,7 @@ public class NineMensMorrisGameView extends View {
         else whiteAlive--;
 
         try {
+            RecreationAudioSynth.playChessPieceThud(true);
             performHapticFeedback(HapticFeedbackConstants.LONG_PRESS);
         } catch (Exception ignored) {}
 
