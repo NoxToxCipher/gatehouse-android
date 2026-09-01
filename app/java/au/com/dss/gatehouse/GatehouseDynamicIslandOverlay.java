@@ -51,7 +51,7 @@ public class GatehouseDynamicIslandOverlay {
     private String currentEmoji = "⛽";
     private String currentTitle = "OOM 168.9¢";
     private String currentSubtitle = "0.8km · Lowest";
-    private int currentAccentColor = 0xFFF59E0B;
+    private int currentAccentColor = 0xFF38BDF8;
     private String currentNavAddress = "OOM Energy Kingston, 122 Kingston Rd, Kingston QLD";
 
     // Standard Dimensions
@@ -107,7 +107,7 @@ public class GatehouseDynamicIslandOverlay {
         GradientDrawable pillBg = new GradientDrawable();
         pillBg.setColor(0xFF000000);
         pillBg.setCornerRadius(compactHeight / 2f);
-        pillBg.setStroke(dp(1.2f), 0xFFF59E0B);
+        pillBg.setStroke(dp(1.0f), 0x6638BDF8);
         islandRoot.setBackground(pillBg);
         islandRoot.setPadding(dp(8), dp(2), dp(8), dp(2));
 
@@ -185,7 +185,7 @@ public class GatehouseDynamicIslandOverlay {
         currentEmoji = "⛽";
         currentTitle = String.format(Locale.US, "OOM %.1f¢", oomPrice);
         currentSubtitle = String.format(Locale.US, "0.8km · Save %.1f¢/L", savingCents);
-        currentAccentColor = 0xFFF59E0B;
+        currentAccentColor = 0xFF38BDF8;
         currentNavAddress = "OOM Energy Kingston, 122 Kingston Rd, Kingston QLD";
 
         parentContainer.post(new Runnable() {
