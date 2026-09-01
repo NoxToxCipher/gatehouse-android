@@ -14410,23 +14410,74 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
             "Perimeter Secured", "Intruders Fled", "000 Police Dispatched", "Supervisor Alerted"
         };
 
+        final String[] severities = {"🟡 LOW", "🟠 MEDIUM", "🔴 HIGH", "🚨 CRITICAL"};
+        final String[] selectedSeverity = {severities[0]};
+
         final String[] selectedCat = {categories[0]};
         final ArrayList<String> selectedActions = new ArrayList<String>();
         selectedActions.add(actions[0]);
         final String[] pinnedLocation = {null};
 
-        box.addView(formSectionLabel("1. INCIDENT CATEGORY"));
+        box.addView(formSectionLabel("1. SEVERITY LEVEL"));
+        box.addView(buildChipGroup(severities, selectedSeverity, true, colCrimson));
+
+        box.addView(formSectionLabel("2. INCIDENT CATEGORY"));
         box.addView(buildChipGroup(categories, selectedCat, true, colCrimson));
 
-        box.addView(formSectionLabel("2. SITE LOCATION (TAP BLUEPRINT TO PIN)"));
-        box.addView(buildBlueprintMiniMap(pinnedLocation, null));
+        box.addView(formSectionLabel("3. QUICK SCENARIO TEMPLATES"));
+        HorizontalScrollView incHsv = new HorizontalScrollView(this);
+        incHsv.setHorizontalScrollBarEnabled(false);
+        LinearLayout incRow = new LinearLayout(this);
+        incRow.setOrientation(LinearLayout.HORIZONTAL);
+        incRow.setPadding(0, 0, 0, dp(6));
 
-        box.addView(formSectionLabel("3. ACTION TAKEN / ESCALATION"));
-        box.addView(buildMultiChipGroup(actions, selectedActions, colAccent));
+        final String[] incSnippets = {
+                "Fence breach detected at perimeter boundary · Area sealed",
+                "Intruders sighted fleeing property upon guard patrol arrival",
+                "Damaged padlock discovered on hazardous material cage",
+                "High pressure industrial water leak identified · Valve isolated",
+                "Unauthorized vehicle parked near Gate B · Rego recorded",
+                "Main pump booster alarm triggered · System inspected"
+        };
 
-        box.addView(formSectionLabel("4. NARRATIVE DETAILS"));
         final EditText detailsField = modernInputField("What occurred, suspect descriptions, damage, vehicle plates...");
         detailsField.setMinLines(3);
+
+        for (final String is : incSnippets) {
+            TextView qPill = new TextView(this);
+            qPill.setText("⚡ " + is);
+            qPill.setTextColor(colCrimson);
+            qPill.setTextSize(10f);
+            qPill.setTypeface(Typeface.create(Typeface.MONOSPACE, Typeface.BOLD));
+            qPill.setPadding(dp(8), dp(4), dp(8), dp(4));
+            qPill.setBackground(rounded(0x28EF4444, dp(6)));
+            qPill.setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View v) {
+                    hapticClick();
+                    String curr = detailsField.getText().toString().trim();
+                    if (!curr.isEmpty()) curr += " · ";
+                    curr += is;
+                    detailsField.setText(curr);
+                    detailsField.setSelection(curr.length());
+                }
+            });
+            LinearLayout.LayoutParams qlp = new LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+            qlp.rightMargin = dp(4);
+            qPill.setLayoutParams(qlp);
+            incRow.addView(qPill);
+        }
+        incHsv.addView(incRow);
+        box.addView(incHsv);
+
+        box.addView(formSectionLabel("4. SITE LOCATION (TAP BLUEPRINT TO PIN)"));
+        box.addView(buildBlueprintMiniMap(pinnedLocation, null));
+
+        box.addView(formSectionLabel("5. ACTION TAKEN / ESCALATION"));
+        box.addView(buildMultiChipGroup(actions, selectedActions, colAccent));
+
+        box.addView(formSectionLabel("6. NARRATIVE DETAILS"));
         box.addView(detailsField);
 
         final Dialog dlg = createDialogSheet(box);
@@ -14452,7 +14503,7 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
                 String det = detailsField.getText().toString().trim();
                 String actStr = selectedActions.isEmpty() ? "None" : String.join(", ", selectedActions);
                 String locTag = pinnedLocation[0] != null ? " at " + pinnedLocation[0] : "";
-                String line = "[INCIDENT: " + selectedCat[0] + locTag + "] "
+                String line = "[INCIDENT " + selectedSeverity[0] + ": " + selectedCat[0] + locTag + "] "
                             + (det.isEmpty() ? "Logged on shift" : det) + " (Action: " + actStr + ")";
                 if (!oneLine(line)) {
                     banner.setText("an entry is one line; take out line breaks");
@@ -15241,6 +15292,28 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
         scTop.addView(tvShiftTime);
         shiftCard.addView(scTop);
 
+        // Live Shift Progression & Handover Countdown
+        java.util.Calendar cal = java.util.Calendar.getInstance();
+        int curHour = cal.get(java.util.Calendar.HOUR_OF_DAY);
+        int curMin = cal.get(java.util.Calendar.MINUTE);
+        int nowMins = curHour * 60 + curMin;
+        int shiftStartMins = 18 * 60; // 18:00
+        int elapsedMins = (nowMins >= shiftStartMins) ? (nowMins - shiftStartMins) : (nowMins + 24 * 60 - shiftStartMins);
+        int shiftEndMins = 6 * 60; // 06:00
+        int remainingMins = (nowMins <= shiftEndMins) ? (shiftEndMins - nowMins) : (24 * 60 - nowMins + shiftEndMins);
+        int elH = elapsedMins / 60;
+        int elM = elapsedMins % 60;
+        int remH = remainingMins / 60;
+        int remM = remainingMins % 60;
+
+        TextView tvProg = new TextView(this);
+        tvProg.setText(String.format(Locale.US, "⏱️ %02dh %02dm Elapsed  ·  ⏳ %02dh %02dm to Handover (06:00 AM)", elH, elM, remH, remM));
+        tvProg.setTextColor(colEmerald);
+        tvProg.setTextSize(9.5f);
+        tvProg.setTypeface(Typeface.create(Typeface.MONOSPACE, Typeface.BOLD));
+        tvProg.setPadding(0, dp(3), 0, dp(2));
+        shiftCard.addView(tvProg);
+
         // Telemetry Row
         int numPatrols = logMgr.filterEntries("ALL", "PATROL", "").size();
         int numLots = logMgr.filterEntries("ALL", "LOT_LOCKUP", "").size();
@@ -15253,7 +15326,7 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
         tvTelemetry.setTextColor(0xFF94A3B8);
         tvTelemetry.setTextSize(9f);
         tvTelemetry.setTypeface(Typeface.create(Typeface.MONOSPACE, Typeface.NORMAL));
-        tvTelemetry.setPadding(0, dp(4), 0, 0);
+        tvTelemetry.setPadding(0, dp(2), 0, 0);
         shiftCard.addView(tvTelemetry);
 
         contentCard.addView(shiftCard);
