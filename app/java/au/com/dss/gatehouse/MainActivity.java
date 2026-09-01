@@ -16271,9 +16271,23 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
                 topMeta.addView(tvGuard);
                 rightCard.addView(topMeta);
 
-                // Main Text
+                // Main Text with Search Highlighting
                 TextView tvBody = new TextView(this);
-                tvBody.setText(entry.text);
+                if (!logbookSearchQuery.isEmpty() && entry.text.toLowerCase(Locale.US).contains(logbookSearchQuery.toLowerCase(Locale.US))) {
+                    android.text.SpannableString span = new android.text.SpannableString(entry.text);
+                    String lowerText = entry.text.toLowerCase(Locale.US);
+                    String lowerQuery = logbookSearchQuery.toLowerCase(Locale.US);
+                    int startIdx = lowerText.indexOf(lowerQuery);
+                    while (startIdx >= 0) {
+                        int endIdx = startIdx + lowerQuery.length();
+                        span.setSpan(new android.text.style.BackgroundColorSpan(0x66F59E0B), startIdx, endIdx, android.text.Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+                        span.setSpan(new android.text.style.ForegroundColorSpan(0xFFFEF08A), startIdx, endIdx, android.text.Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+                        startIdx = lowerText.indexOf(lowerQuery, endIdx);
+                    }
+                    tvBody.setText(span);
+                } else {
+                    tvBody.setText(entry.text);
+                }
                 tvBody.setTextColor(colPale);
                 tvBody.setTextSize(12.5f);
                 tvBody.setTypeface(Typeface.DEFAULT_BOLD);
@@ -16406,6 +16420,28 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
             btnTop.setLayoutParams(tlp);
             floatNav.addView(btnTop);
 
+            if (shifts.size() > 1) {
+                TextView btnDates = new TextView(this);
+                btnDates.setText("📅 SHIFTS");
+                btnDates.setTextColor(0xFF0F172A);
+                btnDates.setTextSize(9.5f);
+                btnDates.setTypeface(Typeface.create(Typeface.MONOSPACE, Typeface.BOLD));
+                btnDates.setPadding(dp(10), dp(5), dp(10), dp(5));
+                btnDates.setBackground(rounded(0xFFFDE047, dp(14)));
+                btnDates.setOnClickListener(new View.OnClickListener() {
+                    @Override
+                    public void onClick(View v) {
+                        hapticClick();
+                        showShiftDateJumpSheet(logMgr, refreshContent, tvSubHead);
+                    }
+                });
+                LinearLayout.LayoutParams dtlp = new LinearLayout.LayoutParams(
+                        LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+                dtlp.rightMargin = dp(4);
+                btnDates.setLayoutParams(dtlp);
+                floatNav.addView(btnDates);
+            }
+
             TextView btnJump = new TextView(this);
             btnJump.setText("⬇ LATEST");
             btnJump.setTextColor(0xFF0F172A);
@@ -16426,6 +16462,77 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
         }
 
         return rootFrame;
+    }
+
+    private void showShiftDateJumpSheet(final LogbookManager logMgr, final Runnable[] refreshContent, final TextView tvSubHead) {
+        if (logMgr == null) return;
+        final List<LogbookManager.ShiftRecord> shifts = logMgr.getAllShifts();
+        final LinearLayout box = dialogContainer("Shift Date Selector", "ARCHIVE NAVIGATION", colCyan);
+
+        TextView tvSub = new TextView(this);
+        tvSub.setText("Select a shift archive to jump directly to its occurrences:");
+        tvSub.setTextColor(colMuted);
+        tvSub.setTextSize(10.5f);
+        tvSub.setTypeface(Typeface.MONOSPACE);
+        tvSub.setPadding(0, 0, 0, dp(8));
+        box.addView(tvSub);
+
+        final Dialog dlg = createDialogSheet(box);
+
+        // 1. Tonight / Active Shift
+        TextView btnTonight = actionButton("🌙 TONIGHT (" + (shifts.size() > 0 ? shifts.get(0).entries.size() : 0) + " Logs)", colLine, colCyan);
+        btnTonight.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                hapticClick();
+                dlg.dismiss();
+                logbookSelectedShiftId = shifts.size() > 0 ? shifts.get(0).shiftId : "CURRENT";
+                if (tvSubHead != null) tvSubHead.setText(getLogbookSubtitle(logMgr));
+                if (refreshContent != null && refreshContent[0] != null) refreshContent[0].run();
+            }
+        });
+        box.addView(btnTonight);
+
+        // 2. Past Shifts
+        for (int i = 1; i < shifts.size(); i++) {
+            final LogbookManager.ShiftRecord s = shifts.get(i);
+            TextView btnShift = actionButton("📅 " + s.dateHeaderStr + " (" + s.entries.size() + " Logs)", colLine, colPale);
+            LinearLayout.LayoutParams slp = new LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+            slp.topMargin = dp(6);
+            btnShift.setLayoutParams(slp);
+            btnShift.setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View v) {
+                    hapticClick();
+                    dlg.dismiss();
+                    logbookSelectedShiftId = s.shiftId;
+                    if (tvSubHead != null) tvSubHead.setText(getLogbookSubtitle(logMgr));
+                    if (refreshContent != null && refreshContent[0] != null) refreshContent[0].run();
+                }
+            });
+            box.addView(btnShift);
+        }
+
+        // 3. All Archives
+        TextView btnAll = actionButton("📚 ALL ARCHIVES (" + logMgr.getAllEntriesChronological(false).size() + " Logs)", colLine, colAccent);
+        LinearLayout.LayoutParams alp = new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+        alp.topMargin = dp(6);
+        btnAll.setLayoutParams(alp);
+        btnAll.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                hapticClick();
+                dlg.dismiss();
+                logbookSelectedShiftId = "ALL";
+                if (tvSubHead != null) tvSubHead.setText(getLogbookSubtitle(logMgr));
+                if (refreshContent != null && refreshContent[0] != null) refreshContent[0].run();
+            }
+        });
+        box.addView(btnAll);
+
+        dlg.show();
     }
 
     private void showLogEntryDetailSheet(final LogbookManager.LogEntry entry) {
