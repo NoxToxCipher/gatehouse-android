@@ -6492,7 +6492,7 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
                     LinearLayout subRow = new LinearLayout(MainActivity.this);
                     subRow.setOrientation(LinearLayout.HORIZONTAL);
                     subRow.setGravity(Gravity.CENTER_VERTICAL);
-                    subRow.setPadding(0, dp(2), 0, dp(8));
+                    subRow.setPadding(0, dp(2), 0, dp(6));
 
                     TextView addrTxt = new TextView(MainActivity.this);
                     addrTxt.setText(s.address);
@@ -6509,6 +6509,41 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
                     tvCost.setTypeface(Typeface.create(Typeface.MONOSPACE, Typeface.BOLD));
                     subRow.addView(tvCost);
                     sCard.addView(subRow);
+
+                    // Price Advantage Sparkline Bar
+                    double spread = Math.max(1.0, maxPrice - minPrice);
+                    double offset = thisPrice - minPrice;
+                    double percent = Math.min(1.0, Math.max(0.0, offset / spread));
+
+                    LinearLayout sparkRow = new LinearLayout(MainActivity.this);
+                    sparkRow.setOrientation(LinearLayout.HORIZONTAL);
+                    sparkRow.setGravity(Gravity.CENTER_VERTICAL);
+                    sparkRow.setPadding(0, 0, 0, dp(6));
+
+                    FrameLayout track = new FrameLayout(MainActivity.this);
+                    track.setBackground(rounded(0xFF0F172A, dp(4)));
+                    LinearLayout.LayoutParams tlpSpark = new LinearLayout.LayoutParams(0, dp(6), 1f);
+                    tlpSpark.rightMargin = dp(8);
+                    track.setLayoutParams(tlpSpark);
+
+                    View bar = new View(MainActivity.this);
+                    bar.setBackground(rounded(isCheapestForGrade ? 0xFF10B981 : (offset <= 6.0 ? 0xFFF59E0B : 0xFFEF4444), dp(4)));
+                    FrameLayout.LayoutParams blp = new FrameLayout.LayoutParams(
+                            isCheapestForGrade ? FrameLayout.LayoutParams.MATCH_PARENT : Math.max(dp(12), (int) (dp(120) * percent)),
+                            FrameLayout.LayoutParams.MATCH_PARENT
+                    );
+                    bar.setLayoutParams(blp);
+                    track.addView(bar);
+                    sparkRow.addView(track);
+
+                    TextView tvAdvantage = new TextView(MainActivity.this);
+                    tvAdvantage.setText(isCheapestForGrade ? "🏆 LOWEST LOCAL PRICE" : String.format(Locale.US, "+%.1f¢/L vs Best", offset));
+                    tvAdvantage.setTextColor(isCheapestForGrade ? 0xFF10B981 : 0xFF94A3B8);
+                    tvAdvantage.setTextSize(9.5f);
+                    tvAdvantage.setTypeface(Typeface.create(Typeface.MONOSPACE, Typeface.BOLD));
+                    sparkRow.addView(tvAdvantage);
+
+                    sCard.addView(sparkRow);
 
                     // Fuel Price Grid (ULP 91, P98, Diesel, E10)
                     LinearLayout pGrid = new LinearLayout(MainActivity.this);
@@ -6559,6 +6594,62 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
         box.addView(gradeHsv);
         box.addView(tankHsv);
         box.addView(cycleCard);
+
+        // Dynamic Island Live Telemetry Feeder Strip Card
+        LinearLayout islandCard = new LinearLayout(this);
+        islandCard.setOrientation(LinearLayout.HORIZONTAL);
+        islandCard.setGravity(Gravity.CENTER_VERTICAL);
+        islandCard.setBackground(rounded(0xFF1E293B, dp(10)));
+        islandCard.setPadding(dp(12), dp(8), dp(12), dp(8));
+        LinearLayout.LayoutParams iclp = new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+        iclp.bottomMargin = dp(10);
+        islandCard.setLayoutParams(iclp);
+
+        TextView tvIslandIco = new TextView(this);
+        tvIslandIco.setText("🏝️");
+        tvIslandIco.setTextSize(18);
+        tvIslandIco.setPadding(0, 0, dp(8), 0);
+        islandCard.addView(tvIslandIco);
+
+        LinearLayout islandMeta = new LinearLayout(this);
+        islandMeta.setOrientation(LinearLayout.VERTICAL);
+        LinearLayout.LayoutParams imlp = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
+        islandMeta.setLayoutParams(imlp);
+
+        TextView tvIslandTitle = new TextView(this);
+        tvIslandTitle.setText("DYNAMIC ISLAND LIVE STREAM");
+        tvIslandTitle.setTextColor(0xFF10B981);
+        tvIslandTitle.setTextSize(10f);
+        tvIslandTitle.setTypeface(Typeface.create(Typeface.MONOSPACE, Typeface.BOLD));
+        islandMeta.addView(tvIslandTitle);
+
+        TextView tvIslandSub = new TextView(this);
+        tvIslandSub.setText("Active punch-hole stream for Xiaomi HyperOS / OxygenOS");
+        tvIslandSub.setTextColor(colMuted);
+        tvIslandSub.setTextSize(9f);
+        islandMeta.addView(tvIslandSub);
+
+        islandCard.addView(islandMeta);
+
+        TextView btnStream = new TextView(this);
+        btnStream.setText("STREAM NOW");
+        btnStream.setTextColor(0xFF0F172A);
+        btnStream.setTextSize(9f);
+        btnStream.setTypeface(Typeface.DEFAULT_BOLD);
+        btnStream.setPadding(dp(8), dp(4), dp(8), dp(4));
+        btnStream.setBackground(rounded(0xFF10B981, dp(6)));
+        btnStream.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                hapticHeavyClick();
+                GatehouseIslandManager.getInstance(MainActivity.this).showFuelIsland(168.9, 6.0, 30);
+                Toast.makeText(MainActivity.this, "✓ Dynamic Island pill projected to top cutout", Toast.LENGTH_SHORT).show();
+            }
+        });
+        islandCard.addView(btnStream);
+        box.addView(islandCard);
+
         box.addView(stationsContainer);
 
         refreshFuelView.run();
