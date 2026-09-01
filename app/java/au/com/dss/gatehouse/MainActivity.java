@@ -15170,18 +15170,10 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
         }
 
         // =========================================================================
-        // 1. UNIFIED SLEEK TOP HEADER BAR
-        // =========================================================================
-        // =========================================================================
-        // 1. UNIFIED SLEEK TOP HEADER BAR (2-Row Balanced Layout)
+        // 1. MINIMAL SLIM PINNED TOP HEADER BAR (~38dp)
         // =========================================================================
         final Runnable[] refreshContent = new Runnable[1];
 
-        LinearLayout headerContainer = new LinearLayout(this);
-        headerContainer.setOrientation(LinearLayout.VERTICAL);
-        headerContainer.setPadding(0, 0, 0, dp(4));
-
-        // Row 1: Executive Title Row
         LinearLayout row1 = new LinearLayout(this);
         row1.setOrientation(LinearLayout.HORIZONTAL);
         row1.setGravity(Gravity.CENTER_VERTICAL);
@@ -15246,554 +15238,15 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
         });
         row1.addView(btnFullscreen);
 
-        headerContainer.addView(row1);
-
-        // Row 2: Action Bar Quick Pills
-        LinearLayout row2 = new LinearLayout(this);
-        row2.setOrientation(LinearLayout.HORIZONTAL);
-        row2.setGravity(Gravity.CENTER_VERTICAL);
-        row2.setPadding(0, 0, 0, dp(4));
-
-        final TextView btnViewMode = new TextView(this);
-        btnViewMode.setText(logbookRuledViewMode ? "📖 LEDGER" : "📜 FEED");
-        btnViewMode.setTextColor(logbookRuledViewMode ? 0xFFFDE047 : colCyan);
-        btnViewMode.setTextSize(9.5f);
-        btnViewMode.setTypeface(Typeface.create(Typeface.MONOSPACE, Typeface.BOLD));
-        btnViewMode.setPadding(dp(8), dp(4), dp(8), dp(4));
-        btnViewMode.setGravity(Gravity.CENTER);
-        btnViewMode.setBackground(rounded(logbookRuledViewMode ? 0x33FDE047 : 0x2206B6D4, dp(6)));
-        LinearLayout.LayoutParams vmlp = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
-        vmlp.rightMargin = dp(4);
-        btnViewMode.setLayoutParams(vmlp);
-        row2.addView(btnViewMode);
-
-        final TextView btnExport = new TextView(this);
-        btnExport.setText("📄 EXPORT");
-        btnExport.setTextColor(0xFF38BDF8);
-        btnExport.setTextSize(9.5f);
-        btnExport.setTypeface(Typeface.create(Typeface.MONOSPACE, Typeface.BOLD));
-        btnExport.setPadding(dp(8), dp(4), dp(8), dp(4));
-        btnExport.setGravity(Gravity.CENTER);
-        btnExport.setBackground(rounded(0x2238BDF8, dp(6)));
-        LinearLayout.LayoutParams exlp = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
-        exlp.rightMargin = dp(4);
-        btnExport.setLayoutParams(exlp);
-        final LogbookManager logMgrFinal = logMgr;
-        btnExport.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                hapticHeavyClick();
-                exportCurrentShiftStatement(logMgrFinal);
-            }
-        });
-        row2.addView(btnExport);
-
-        final TextView btnSealShift = new TextView(this);
-        btnSealShift.setText("✍️ SEAL");
-        btnSealShift.setTextColor(colEmerald);
-        btnSealShift.setTextSize(9.5f);
-        btnSealShift.setTypeface(Typeface.create(Typeface.MONOSPACE, Typeface.BOLD));
-        btnSealShift.setPadding(dp(8), dp(4), dp(8), dp(4));
-        btnSealShift.setGravity(Gravity.CENTER);
-        btnSealShift.setBackground(rounded(0x2810B981, dp(6)));
-        LinearLayout.LayoutParams sslp = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
-        sslp.rightMargin = dp(4);
-        btnSealShift.setLayoutParams(sslp);
-        btnSealShift.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                hapticSealThud();
-                showShiftSealHandoverDialog(logMgrFinal, refreshContent[0]);
-            }
-        });
-        row2.addView(btnSealShift);
-
-        TextView btnRefresh = new TextView(this);
-        btnRefresh.setText("↻ SYNC");
-        btnRefresh.setTextColor(colPale);
-        btnRefresh.setTextSize(9.5f);
-        btnRefresh.setTypeface(Typeface.create(Typeface.MONOSPACE, Typeface.BOLD));
-        btnRefresh.setPadding(dp(8), dp(4), dp(8), dp(4));
-        btnRefresh.setGravity(Gravity.CENTER);
-        btnRefresh.setBackground(rounded(0x1AFFFFFF, dp(6)));
-        LinearLayout.LayoutParams rflp = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
-        btnRefresh.setLayoutParams(rflp);
-        row2.addView(btnRefresh);
-
-        headerContainer.addView(row2);
-        contentCard.addView(headerContainer);
+        contentCard.addView(row1);
 
         // =========================================================================
-        // 2. LIVE OFFICER SHIFT COMMAND CARD
+        // 2. MAIN SCROLLABLE CONTAINER & REFRESH LOGIC
         // =========================================================================
-        LinearLayout shiftCard = new LinearLayout(this);
-        shiftCard.setOrientation(LinearLayout.VERTICAL);
-        shiftCard.setBackground(rounded(0xFF1E293B, dp(10)));
-        shiftCard.setPadding(dp(12), dp(8), dp(12), dp(8));
-        LinearLayout.LayoutParams sclp = new LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
-        sclp.bottomMargin = dp(6);
-        shiftCard.setLayoutParams(sclp);
-
-        LinearLayout scTop = new LinearLayout(this);
-        scTop.setOrientation(LinearLayout.HORIZONTAL);
-        scTop.setGravity(Gravity.CENTER_VERTICAL);
-
-        TextView tvOfficer = new TextView(this);
-        tvOfficer.setText("🛡️ L. DOHERTY #41207 ↗");
-        tvOfficer.setTextColor(colAccent);
-        tvOfficer.setTextSize(10.5f);
-        tvOfficer.setTypeface(Typeface.create(Typeface.MONOSPACE, Typeface.BOLD));
-        tvOfficer.setPadding(dp(6), dp(2), dp(6), dp(2));
-        tvOfficer.setBackground(rounded(0x22F59E0B, dp(6)));
-        tvOfficer.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                hapticClick();
-                showOfficerCredentialModal();
-            }
-        });
-        scTop.addView(tvOfficer);
-
-        View space = new View(this);
-        LinearLayout.LayoutParams splp = new LinearLayout.LayoutParams(0, dp(1), 1f);
-        space.setLayoutParams(splp);
-        scTop.addView(space);
-
-        TextView tvShiftTime = new TextView(this);
-        tvShiftTime.setText("🌙 18:00 → 06:00 · ACTIVE");
-        tvShiftTime.setTextColor(colCyan);
-        tvShiftTime.setTextSize(9.5f);
-        tvShiftTime.setTypeface(Typeface.create(Typeface.MONOSPACE, Typeface.BOLD));
-        scTop.addView(tvShiftTime);
-        shiftCard.addView(scTop);
-
-        // Live Shift Progression & Handover Countdown
-        java.util.Calendar cal = java.util.Calendar.getInstance();
-        int curHour = cal.get(java.util.Calendar.HOUR_OF_DAY);
-        int curMin = cal.get(java.util.Calendar.MINUTE);
-        int nowMins = curHour * 60 + curMin;
-        int shiftStartMins = 18 * 60; // 18:00
-        int elapsedMins = (nowMins >= shiftStartMins) ? (nowMins - shiftStartMins) : (nowMins + 24 * 60 - shiftStartMins);
-        int shiftEndMins = 6 * 60; // 06:00
-        int remainingMins = (nowMins <= shiftEndMins) ? (shiftEndMins - nowMins) : (24 * 60 - nowMins + shiftEndMins);
-        int elH = elapsedMins / 60;
-        int elM = elapsedMins % 60;
-        int remH = remainingMins / 60;
-        int remM = remainingMins % 60;
-
-        TextView tvProg = new TextView(this);
-        tvProg.setText(String.format(Locale.US, "⏱️ %02dh %02dm Elapsed  ·  ⏳ %02dh %02dm to Handover (06:00 AM)", elH, elM, remH, remM));
-        tvProg.setTextColor(colEmerald);
-        tvProg.setTextSize(9.5f);
-        tvProg.setTypeface(Typeface.create(Typeface.MONOSPACE, Typeface.BOLD));
-        tvProg.setPadding(0, dp(3), 0, dp(2));
-        shiftCard.addView(tvProg);
-
-        // Telemetry Row
-        int numPatrols = logMgr.filterEntries("ALL", "PATROL", "").size();
-        int numLots = logMgr.filterEntries("ALL", "LOT_LOCKUP", "").size();
-        int numPumps = logMgr.filterEntries("ALL", "FIRE_PUMP", "").size();
-        int numRegos = logMgr.filterEntries("ALL", "VEHICLE_REGO", "").size();
-        int numPhotos = logMgr.filterEntries("ALL", "PHOTO", "").size();
-
-        TextView tvTelemetry = new TextView(this);
-        tvTelemetry.setText("📊 METRICS: " + numPatrols + " Patrols · " + numLots + " Lots · " + numPumps + " Pumps · " + numRegos + " Regos · " + numPhotos + " Photos ↗");
-        tvTelemetry.setTextColor(0xFF94A3B8);
-        tvTelemetry.setTextSize(9f);
-        tvTelemetry.setTypeface(Typeface.create(Typeface.MONOSPACE, Typeface.NORMAL));
-        tvTelemetry.setPadding(dp(6), dp(3), dp(6), dp(3));
-        tvTelemetry.setBackground(rounded(0x18FFFFFF, dp(6)));
-        final LogbookManager logMgrForMetrics = logMgr;
-        tvTelemetry.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                hapticClick();
-                showShiftMetricsModal(logMgrForMetrics);
-            }
-        });
-        shiftCard.addView(tvTelemetry);
-
-        contentCard.addView(shiftCard);
-
-        // =========================================================================
-        // 3. SEGMENTED SHIFT SELECTOR
-        // =========================================================================
-        final HorizontalScrollView shiftHsv = new HorizontalScrollView(this);
-        shiftHsv.setHorizontalScrollBarEnabled(false);
-        final LinearLayout shiftRow = new LinearLayout(this);
-        shiftRow.setOrientation(LinearLayout.HORIZONTAL);
-        shiftRow.setPadding(0, 0, 0, dp(6));
-
-        final List<LogbookManager.ShiftRecord> shifts = logMgr.getAllShifts();
         final FrameLayout mainBodyContainer = new FrameLayout(this);
         LinearLayout.LayoutParams mblp = new LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT, 0, 1f);
         mainBodyContainer.setLayoutParams(mblp);
-
-        final Runnable buildShiftSegment = new Runnable() {
-            @Override
-            public void run() {
-                shiftRow.removeAllViews();
-
-                // 1. Tonight Pill
-                final boolean isTonight = "CURRENT".equalsIgnoreCase(logbookSelectedShiftId) || (shifts.size() > 0 && shifts.get(0).shiftId.equals(logbookSelectedShiftId));
-                final int tonightCount = shifts.size() > 0 ? shifts.get(0).entries.size() : 0;
-                TextView chipTonight = new TextView(MainActivity.this);
-                chipTonight.setText("🌙 TONIGHT (" + tonightCount + ")");
-                chipTonight.setTextColor(isTonight ? 0xFF080D1A : colCyan);
-                chipTonight.setTextSize(10f);
-                chipTonight.setTypeface(Typeface.create(Typeface.MONOSPACE, Typeface.BOLD));
-                chipTonight.setPadding(dp(10), dp(5), dp(10), dp(5));
-                chipTonight.setBackground(rounded(isTonight ? colCyan : 0x2206B6D4, dp(6)));
-                chipTonight.setOnClickListener(new View.OnClickListener() {
-                    @Override
-                    public void onClick(View v) {
-                        hapticClick();
-                        logbookSelectedShiftId = shifts.size() > 0 ? shifts.get(0).shiftId : "CURRENT";
-                        tvSubHead.setText(getLogbookSubtitle(logMgr));
-                        run();
-                        if (refreshContent[0] != null) refreshContent[0].run();
-                    }
-                });
-                LinearLayout.LayoutParams tlp = new LinearLayout.LayoutParams(
-                        LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT);
-                tlp.rightMargin = dp(4);
-                chipTonight.setLayoutParams(tlp);
-                shiftRow.addView(chipTonight);
-
-                // 2. Past Shifts
-                for (int i = 1; i < shifts.size(); i++) {
-                    final LogbookManager.ShiftRecord s = shifts.get(i);
-                    final boolean isSelected = s.shiftId.equals(logbookSelectedShiftId);
-                    TextView chip = new TextView(MainActivity.this);
-                    chip.setText("📅 " + s.shortDateStr + " (" + s.entries.size() + ")");
-                    chip.setTextColor(isSelected ? 0xFF080D1A : colPale);
-                    chip.setTextSize(10f);
-                    chip.setTypeface(Typeface.create(Typeface.MONOSPACE, Typeface.BOLD));
-                    chip.setPadding(dp(10), dp(5), dp(10), dp(5));
-                    chip.setBackground(rounded(isSelected ? colEmerald : 0x1AFFFFFF, dp(6)));
-                    chip.setOnClickListener(new View.OnClickListener() {
-                        @Override
-                        public void onClick(View v) {
-                            hapticClick();
-                            logbookSelectedShiftId = s.shiftId;
-                            tvSubHead.setText(getLogbookSubtitle(logMgr));
-                            run();
-                            if (refreshContent[0] != null) refreshContent[0].run();
-                        }
-                    });
-                    LinearLayout.LayoutParams clp = new LinearLayout.LayoutParams(
-                            LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT);
-                    clp.rightMargin = dp(4);
-                    chip.setLayoutParams(clp);
-                    shiftRow.addView(chip);
-                }
-
-                // 3. All Archives Pill
-                final boolean allSelected = "ALL".equalsIgnoreCase(logbookSelectedShiftId);
-                TextView chipAll = new TextView(MainActivity.this);
-                chipAll.setText("📚 ALL ARCHIVES (" + logMgr.getAllEntriesChronological(false).size() + ")");
-                chipAll.setTextColor(allSelected ? colAccentInk : colMuted);
-                chipAll.setTextSize(10f);
-                chipAll.setTypeface(Typeface.create(Typeface.MONOSPACE, Typeface.BOLD));
-                chipAll.setPadding(dp(10), dp(5), dp(10), dp(5));
-                chipAll.setBackground(rounded(allSelected ? colAccent : 0x1AFFFFFF, dp(6)));
-                chipAll.setOnClickListener(new View.OnClickListener() {
-                    @Override
-                    public void onClick(View v) {
-                        hapticClick();
-                        logbookSelectedShiftId = "ALL";
-                        tvSubHead.setText(getLogbookSubtitle(logMgr));
-                        run();
-                        if (refreshContent[0] != null) refreshContent[0].run();
-                    }
-                });
-                shiftRow.addView(chipAll);
-            }
-        };
-        buildShiftSegment.run();
-        shiftHsv.addView(shiftRow);
-        contentCard.addView(shiftHsv);
-
-        // =========================================================================
-        // 4. ALWAYS-VISIBLE LIVE SEARCH & CATEGORY FILTER BAR
-        // =========================================================================
-        LinearLayout searchBox = new LinearLayout(this);
-        searchBox.setOrientation(LinearLayout.VERTICAL);
-        searchBox.setBackground(rounded(0xFF131C2E, dp(10)));
-        searchBox.setPadding(dp(8), dp(6), dp(8), dp(6));
-        LinearLayout.LayoutParams sblp = new LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
-        sblp.bottomMargin = dp(6);
-        searchBox.setLayoutParams(sblp);
-
-        LinearLayout searchRow = new LinearLayout(this);
-        searchRow.setOrientation(LinearLayout.HORIZONTAL);
-        searchRow.setGravity(Gravity.CENTER_VERTICAL);
-        searchRow.setBackground(rounded(0x18FFFFFF, dp(6)));
-        searchRow.setPadding(dp(8), dp(2), dp(8), dp(2));
-
-        final EditText searchField = new EditText(this);
-        searchField.setHint("🔍 Search occurrences, regos, lot checks, pumps...");
-        searchField.setHintTextColor(colMuted);
-        searchField.setTextColor(colPale);
-        searchField.setTextSize(11f);
-        searchField.setBackground(null);
-        searchField.setSingleLine(true);
-        LinearLayout.LayoutParams sflp = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
-        searchField.setLayoutParams(sflp);
-
-        final TextView btnClearSearch = new TextView(this);
-        btnClearSearch.setText("✕");
-        btnClearSearch.setTextColor(colMuted);
-        btnClearSearch.setTextSize(12f);
-        btnClearSearch.setPadding(dp(6), dp(4), dp(6), dp(4));
-        btnClearSearch.setVisibility(View.GONE);
-        btnClearSearch.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                hapticClick();
-                searchField.setText("");
-            }
-        });
-
-        searchField.addTextChangedListener(new android.text.TextWatcher() {
-            @Override
-            public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
-            @Override
-            public void onTextChanged(CharSequence s, int start, int before, int count) {
-                logbookSearchQuery = s.toString();
-                btnClearSearch.setVisibility(s.length() > 0 ? View.VISIBLE : View.GONE);
-                if (refreshContent[0] != null) refreshContent[0].run();
-            }
-            @Override
-            public void afterTextChanged(android.text.Editable s) {}
-        });
-
-        searchRow.addView(searchField);
-        searchRow.addView(btnClearSearch);
-        searchBox.addView(searchRow);
-
-        // Category Pills inside search box
-        HorizontalScrollView catHsv = new HorizontalScrollView(this);
-        catHsv.setHorizontalScrollBarEnabled(false);
-        final LinearLayout catRow = new LinearLayout(this);
-        catRow.setOrientation(LinearLayout.HORIZONTAL);
-        catRow.setPadding(0, dp(6), 0, 0);
-
-        final String[][] categories = {
-                {"ALL", "All"},
-                {"PATROL", "🛡️ Patrols"},
-                {"LOT_LOCKUP", "🏭 Lots"},
-                {"FIRE_PUMP", "💧 Pumps"},
-                {"VEHICLE_REGO", "🚗 Rego"},
-                {"PHOTO", "📷 Photos"},
-                {"INCIDENT", "⚠️ Incidents"},
-                {"HANDOVER", "🤝 Handovers"}
-        };
-
-        final LogbookManager logMgrInstance = logMgr;
-        final Runnable[] buildCatPills = new Runnable[1];
-        final Runnable[] buildTimePills = new Runnable[1];
-        final Runnable[] updateActiveFilterStrip = new Runnable[1];
-
-        buildCatPills[0] = new Runnable() {
-            @Override
-            public void run() {
-                catRow.removeAllViews();
-                for (final String[] cat : categories) {
-                    final String catId = cat[0];
-                    final String catLabel = cat[1];
-                    final boolean isSelected = catId.equalsIgnoreCase(logbookSelectedCategory);
-                    final int count = logMgrInstance.filterEntries(logbookSelectedShiftId, catId, "").size();
-
-                    TextView chip = new TextView(MainActivity.this);
-                    chip.setText(catLabel + " (" + count + ")");
-                    chip.setTextColor(isSelected ? colAccentInk : colPale);
-                    chip.setTextSize(9.5f);
-                    chip.setTypeface(Typeface.create(Typeface.MONOSPACE, Typeface.BOLD));
-                    chip.setPadding(dp(8), dp(4), dp(8), dp(4));
-                    chip.setBackground(rounded(isSelected ? colAccent : 0x22FFFFFF, dp(6)));
-                    chip.setOnClickListener(new View.OnClickListener() {
-                        @Override
-                        public void onClick(View v) {
-                            hapticClick();
-                            if (isSelected && !catId.equalsIgnoreCase("ALL")) {
-                                logbookSelectedCategory = "ALL";
-                            } else {
-                                logbookSelectedCategory = catId;
-                            }
-                            buildCatPills[0].run();
-                            if (buildTimePills[0] != null) buildTimePills[0].run();
-                            if (updateActiveFilterStrip[0] != null) updateActiveFilterStrip[0].run();
-                            if (refreshContent[0] != null) refreshContent[0].run();
-                        }
-                    });
-                    LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(
-                            LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT);
-                    lp.rightMargin = dp(4);
-                    chip.setLayoutParams(lp);
-                    catRow.addView(chip);
-                }
-            }
-        };
-        buildCatPills[0].run();
-        catHsv.addView(catRow);
-        searchBox.addView(catHsv);
-
-        // Time Bucket Presets inside search box
-        HorizontalScrollView timeHsv = new HorizontalScrollView(this);
-        timeHsv.setHorizontalScrollBarEnabled(false);
-        final LinearLayout timeRow = new LinearLayout(this);
-        timeRow.setOrientation(LinearLayout.HORIZONTAL);
-        timeRow.setPadding(0, dp(4), 0, 0);
-
-        final String[][] timeBuckets = {
-                {"ALL", "🌅 All Hours"},
-                {"EVENING", "🌆 Evening (18-22)"},
-                {"NIGHT", "🌌 Night (22-02)"},
-                {"DAWN", "🌄 Dawn (02-06)"}
-        };
-
-        buildTimePills[0] = new Runnable() {
-            @Override
-            public void run() {
-                timeRow.removeAllViews();
-                for (final String[] tb : timeBuckets) {
-                    final String tbId = tb[0];
-                    final String tbLabel = tb[1];
-                    final boolean isSelected = tbId.equalsIgnoreCase(logbookSelectedTimeBucket);
-                    final int count = logMgrInstance.filterEntries(logbookSelectedShiftId, logbookSelectedCategory, "", tbId).size();
-
-                    TextView chip = new TextView(MainActivity.this);
-                    chip.setText(tbLabel + " (" + count + ")");
-                    chip.setTextColor(isSelected ? 0xFF0F172A : 0xFF94A3B8);
-                    chip.setTextSize(9f);
-                    chip.setTypeface(Typeface.create(Typeface.MONOSPACE, Typeface.BOLD));
-                    chip.setPadding(dp(7), dp(3), dp(7), dp(3));
-                    chip.setBackground(rounded(isSelected ? 0xFF38BDF8 : 0x18FFFFFF, dp(5)));
-                    chip.setOnClickListener(new View.OnClickListener() {
-                        @Override
-                        public void onClick(View v) {
-                            hapticClick();
-                            if (isSelected && !tbId.equalsIgnoreCase("ALL")) {
-                                logbookSelectedTimeBucket = "ALL";
-                            } else {
-                                logbookSelectedTimeBucket = tbId;
-                            }
-                            buildTimePills[0].run();
-                            if (buildCatPills[0] != null) buildCatPills[0].run();
-                            if (updateActiveFilterStrip[0] != null) updateActiveFilterStrip[0].run();
-                            if (refreshContent[0] != null) refreshContent[0].run();
-                        }
-                    });
-                    LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(
-                            LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT);
-                    lp.rightMargin = dp(4);
-                    chip.setLayoutParams(lp);
-                    timeRow.addView(chip);
-                }
-            }
-        };
-        buildTimePills[0].run();
-        timeHsv.addView(timeRow);
-        searchBox.addView(timeHsv);
-
-        final LinearLayout activeFilterStrip = new LinearLayout(this);
-        activeFilterStrip.setOrientation(LinearLayout.HORIZONTAL);
-        activeFilterStrip.setGravity(Gravity.CENTER_VERTICAL);
-        activeFilterStrip.setBackground(rounded(0x22F59E0B, dp(6)));
-        activeFilterStrip.setPadding(dp(8), dp(4), dp(8), dp(4));
-        LinearLayout.LayoutParams aflp = new LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
-        aflp.topMargin = dp(4);
-        activeFilterStrip.setLayoutParams(aflp);
-
-        final TextView tvFilterSummary = new TextView(this);
-        tvFilterSummary.setTextColor(0xFFFDE047);
-        tvFilterSummary.setTextSize(9f);
-        tvFilterSummary.setTypeface(Typeface.create(Typeface.MONOSPACE, Typeface.BOLD));
-        LinearLayout.LayoutParams tslp = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
-        tvFilterSummary.setLayoutParams(tslp);
-        activeFilterStrip.addView(tvFilterSummary);
-
-        TextView btnResetAll = new TextView(this);
-        btnResetAll.setText("✕ RESET ALL");
-        btnResetAll.setTextColor(colPale);
-        btnResetAll.setTextSize(8.5f);
-        btnResetAll.setTypeface(Typeface.create(Typeface.MONOSPACE, Typeface.BOLD));
-        btnResetAll.setPadding(dp(6), dp(2), dp(6), dp(2));
-        btnResetAll.setBackground(rounded(0x44EF4444, dp(4)));
-        activeFilterStrip.addView(btnResetAll);
-        searchBox.addView(activeFilterStrip);
-
-        updateActiveFilterStrip[0] = new Runnable() {
-            @Override
-            public void run() {
-                boolean hasCat = !logbookSelectedCategory.equalsIgnoreCase("ALL");
-                boolean hasTime = !logbookSelectedTimeBucket.equalsIgnoreCase("ALL");
-                boolean hasQuery = !logbookSearchQuery.isEmpty();
-                if (hasCat || hasTime || hasQuery) {
-                    activeFilterStrip.setVisibility(View.VISIBLE);
-                    StringBuilder sb = new StringBuilder("⚡ FILTERED: ");
-                    if (hasCat) sb.append("[").append(logbookSelectedCategory).append("] ");
-                    if (hasTime) sb.append("[").append(logbookSelectedTimeBucket).append("] ");
-                    if (hasQuery) sb.append("[\"").append(logbookSearchQuery).append("\"] ");
-                    tvFilterSummary.setText(sb.toString().trim());
-                } else {
-                    activeFilterStrip.setVisibility(View.GONE);
-                }
-            }
-        };
-
-        btnResetAll.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                hapticClick();
-                logbookSelectedCategory = "ALL";
-                logbookSelectedTimeBucket = "ALL";
-                logbookSearchQuery = "";
-                searchField.setText("");
-                buildCatPills[0].run();
-                buildTimePills[0].run();
-                updateActiveFilterStrip[0].run();
-                if (refreshContent[0] != null) refreshContent[0].run();
-            }
-        });
-        updateActiveFilterStrip[0].run();
-
-        contentCard.addView(searchBox);
-
-        btnRefresh.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                hapticClick();
-                logMgr.syncFromCore(Core.entryCount());
-                buildShiftSegment.run();
-                if (buildCatPills[0] != null) buildCatPills[0].run();
-                if (buildTimePills[0] != null) buildTimePills[0].run();
-                if (updateActiveFilterStrip[0] != null) updateActiveFilterStrip[0].run();
-                if (refreshContent[0] != null) refreshContent[0].run();
-                Toast.makeText(MainActivity.this, "✓ Logbook ledger synced", Toast.LENGTH_SHORT).show();
-            }
-        });
-
-        btnViewMode.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                hapticHeavyClick();
-                logbookRuledViewMode = !logbookRuledViewMode;
-                btnViewMode.setText(logbookRuledViewMode ? "📖 LEDGER" : "📜 FEED");
-                btnViewMode.setTextColor(logbookRuledViewMode ? 0xFFFDE047 : colCyan);
-                btnViewMode.setBackground(rounded(logbookRuledViewMode ? 0x33FDE047 : 0x2206B6D4, dp(6)));
-                if (refreshContent[0] != null) refreshContent[0].run();
-            }
-        });
-
-        // =========================================================================
-        // 5. MAIN TIMELINE LEDGER & REFRESH LOGIC
-        // =========================================================================
         refreshContent[0] = new Runnable() {
             @Override
             public void run() {
@@ -15801,7 +15254,7 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
                 if (logbookRuledViewMode) {
                     mainBodyContainer.addView(buildLogbookRuledSheetView(isCarbonCopyMode));
                 } else {
-                    mainBodyContainer.addView(buildLogbookFeedView());
+                    mainBodyContainer.addView(buildLogbookFeedView(refreshContent, tvSubHead));
                 }
             }
         };
@@ -15934,7 +15387,7 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
         return btn;
     }
 
-    private View buildLogbookFeedView() {
+    private View buildLogbookFeedView(final Runnable[] refreshContent, final TextView tvSubHead) {
         FrameLayout rootFrame = new FrameLayout(this);
         rootFrame.setLayoutParams(new FrameLayout.LayoutParams(
                 FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT));
@@ -15948,7 +15401,494 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
         container.setOrientation(LinearLayout.VERTICAL);
         container.setPadding(0, dp(4), 0, dp(6));
 
-        LogbookManager logMgr = LogbookManager.getInstance(this);
+        final LogbookManager logMgr = LogbookManager.getInstance(this);
+
+        // =========================================================================
+        // 1. IN-SCROLL ACTION BAR QUICK PILLS
+        // =========================================================================
+        LinearLayout row2 = new LinearLayout(this);
+        row2.setOrientation(LinearLayout.HORIZONTAL);
+        row2.setGravity(Gravity.CENTER_VERTICAL);
+        row2.setPadding(0, 0, 0, dp(6));
+
+        final TextView btnViewMode = new TextView(this);
+        btnViewMode.setText(logbookRuledViewMode ? "📖 LEDGER" : "📜 FEED");
+        btnViewMode.setTextColor(logbookRuledViewMode ? 0xFFFDE047 : colCyan);
+        btnViewMode.setTextSize(9.5f);
+        btnViewMode.setTypeface(Typeface.create(Typeface.MONOSPACE, Typeface.BOLD));
+        btnViewMode.setPadding(dp(8), dp(4), dp(8), dp(4));
+        btnViewMode.setGravity(Gravity.CENTER);
+        btnViewMode.setBackground(rounded(logbookRuledViewMode ? 0x33FDE047 : 0x2206B6D4, dp(6)));
+        LinearLayout.LayoutParams vmlp = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
+        vmlp.rightMargin = dp(4);
+        btnViewMode.setLayoutParams(vmlp);
+        btnViewMode.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                hapticHeavyClick();
+                logbookRuledViewMode = !logbookRuledViewMode;
+                btnViewMode.setText(logbookRuledViewMode ? "📖 LEDGER" : "📜 FEED");
+                btnViewMode.setTextColor(logbookRuledViewMode ? 0xFFFDE047 : colCyan);
+                btnViewMode.setBackground(rounded(logbookRuledViewMode ? 0x33FDE047 : 0x2206B6D4, dp(6)));
+                if (refreshContent[0] != null) refreshContent[0].run();
+            }
+        });
+        row2.addView(btnViewMode);
+
+        final TextView btnExport = new TextView(this);
+        btnExport.setText("📄 EXPORT");
+        btnExport.setTextColor(0xFF38BDF8);
+        btnExport.setTextSize(9.5f);
+        btnExport.setTypeface(Typeface.create(Typeface.MONOSPACE, Typeface.BOLD));
+        btnExport.setPadding(dp(8), dp(4), dp(8), dp(4));
+        btnExport.setGravity(Gravity.CENTER);
+        btnExport.setBackground(rounded(0x2238BDF8, dp(6)));
+        LinearLayout.LayoutParams exlp = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
+        exlp.rightMargin = dp(4);
+        btnExport.setLayoutParams(exlp);
+        btnExport.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                hapticHeavyClick();
+                exportCurrentShiftStatement(logMgr);
+            }
+        });
+        row2.addView(btnExport);
+
+        final TextView btnSealShift = new TextView(this);
+        btnSealShift.setText("✍️ SEAL");
+        btnSealShift.setTextColor(colEmerald);
+        btnSealShift.setTextSize(9.5f);
+        btnSealShift.setTypeface(Typeface.create(Typeface.MONOSPACE, Typeface.BOLD));
+        btnSealShift.setPadding(dp(8), dp(4), dp(8), dp(4));
+        btnSealShift.setGravity(Gravity.CENTER);
+        btnSealShift.setBackground(rounded(0x2810B981, dp(6)));
+        LinearLayout.LayoutParams sslp = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
+        sslp.rightMargin = dp(4);
+        btnSealShift.setLayoutParams(sslp);
+        btnSealShift.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                hapticSealThud();
+                showShiftSealHandoverDialog(logMgr, refreshContent[0]);
+            }
+        });
+        row2.addView(btnSealShift);
+
+        TextView btnRefresh = new TextView(this);
+        btnRefresh.setText("↻ SYNC");
+        btnRefresh.setTextColor(colPale);
+        btnRefresh.setTextSize(9.5f);
+        btnRefresh.setTypeface(Typeface.create(Typeface.MONOSPACE, Typeface.BOLD));
+        btnRefresh.setPadding(dp(8), dp(4), dp(8), dp(4));
+        btnRefresh.setGravity(Gravity.CENTER);
+        btnRefresh.setBackground(rounded(0x1AFFFFFF, dp(6)));
+        LinearLayout.LayoutParams rflp = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
+        btnRefresh.setLayoutParams(rflp);
+        btnRefresh.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                hapticClick();
+                logMgr.syncFromCore(Core.entryCount());
+                if (refreshContent[0] != null) refreshContent[0].run();
+                Toast.makeText(MainActivity.this, "✓ Logbook ledger synced", Toast.LENGTH_SHORT).show();
+            }
+        });
+        row2.addView(btnRefresh);
+        container.addView(row2);
+
+        // =========================================================================
+        // 2. LIVE OFFICER SHIFT COMMAND CARD
+        // =========================================================================
+        LinearLayout shiftCard = new LinearLayout(this);
+        shiftCard.setOrientation(LinearLayout.VERTICAL);
+        shiftCard.setBackground(rounded(0xFF1E293B, dp(10)));
+        shiftCard.setPadding(dp(12), dp(8), dp(12), dp(8));
+        LinearLayout.LayoutParams sclp = new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+        sclp.bottomMargin = dp(6);
+        shiftCard.setLayoutParams(sclp);
+
+        LinearLayout scTop = new LinearLayout(this);
+        scTop.setOrientation(LinearLayout.HORIZONTAL);
+        scTop.setGravity(Gravity.CENTER_VERTICAL);
+
+        TextView tvOfficer = new TextView(this);
+        tvOfficer.setText("🛡️ L. DOHERTY #41207 ↗");
+        tvOfficer.setTextColor(colAccent);
+        tvOfficer.setTextSize(10.5f);
+        tvOfficer.setTypeface(Typeface.create(Typeface.MONOSPACE, Typeface.BOLD));
+        tvOfficer.setPadding(dp(6), dp(2), dp(6), dp(2));
+        tvOfficer.setBackground(rounded(0x22F59E0B, dp(6)));
+        tvOfficer.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                hapticClick();
+                showOfficerCredentialModal();
+            }
+        });
+        scTop.addView(tvOfficer);
+
+        View space = new View(this);
+        LinearLayout.LayoutParams splp = new LinearLayout.LayoutParams(0, dp(1), 1f);
+        space.setLayoutParams(splp);
+        scTop.addView(space);
+
+        TextView tvShiftTime = new TextView(this);
+        tvShiftTime.setText("🌙 18:00 → 06:00 · ACTIVE");
+        tvShiftTime.setTextColor(colCyan);
+        tvShiftTime.setTextSize(9.5f);
+        tvShiftTime.setTypeface(Typeface.create(Typeface.MONOSPACE, Typeface.BOLD));
+        scTop.addView(tvShiftTime);
+        shiftCard.addView(scTop);
+
+        // Live Shift Progression & Handover Countdown
+        java.util.Calendar cal = java.util.Calendar.getInstance();
+        int curHour = cal.get(java.util.Calendar.HOUR_OF_DAY);
+        int curMin = cal.get(java.util.Calendar.MINUTE);
+        int nowMins = curHour * 60 + curMin;
+        int shiftStartMins = 18 * 60; // 18:00
+        int elapsedMins = (nowMins >= shiftStartMins) ? (nowMins - shiftStartMins) : (nowMins + 24 * 60 - shiftStartMins);
+        int shiftEndMins = 6 * 60; // 06:00
+        int remainingMins = (nowMins <= shiftEndMins) ? (shiftEndMins - nowMins) : (24 * 60 - nowMins + shiftEndMins);
+        int elH = elapsedMins / 60;
+        int elM = elapsedMins % 60;
+        int remH = remainingMins / 60;
+        int remM = remainingMins % 60;
+
+        TextView tvProg = new TextView(this);
+        tvProg.setText(String.format(Locale.US, "⏱️ %02dh %02dm Elapsed  ·  ⏳ %02dh %02dm to Handover (06:00 AM)", elH, elM, remH, remM));
+        tvProg.setTextColor(colEmerald);
+        tvProg.setTextSize(9.5f);
+        tvProg.setTypeface(Typeface.create(Typeface.MONOSPACE, Typeface.BOLD));
+        tvProg.setPadding(0, dp(3), 0, dp(2));
+        shiftCard.addView(tvProg);
+
+        // Telemetry Row
+        int numPatrols = logMgr.filterEntries("ALL", "PATROL", "").size();
+        int numLots = logMgr.filterEntries("ALL", "LOT_LOCKUP", "").size();
+        int numPumps = logMgr.filterEntries("ALL", "FIRE_PUMP", "").size();
+        int numRegos = logMgr.filterEntries("ALL", "VEHICLE_REGO", "").size();
+        int numPhotos = logMgr.filterEntries("ALL", "PHOTO", "").size();
+
+        TextView tvTelemetry = new TextView(this);
+        tvTelemetry.setText("📊 METRICS: " + numPatrols + " Patrols · " + numLots + " Lots · " + numPumps + " Pumps · " + numRegos + " Regos · " + numPhotos + " Photos ↗");
+        tvTelemetry.setTextColor(0xFF94A3B8);
+        tvTelemetry.setTextSize(9f);
+        tvTelemetry.setTypeface(Typeface.create(Typeface.MONOSPACE, Typeface.NORMAL));
+        tvTelemetry.setPadding(dp(6), dp(3), dp(6), dp(3));
+        tvTelemetry.setBackground(rounded(0x18FFFFFF, dp(6)));
+        tvTelemetry.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                hapticClick();
+                showShiftMetricsModal(logMgr);
+            }
+        });
+        shiftCard.addView(tvTelemetry);
+        container.addView(shiftCard);
+
+        // =========================================================================
+        // 3. SEGMENTED SHIFT SELECTOR
+        // =========================================================================
+        final HorizontalScrollView shiftHsv = new HorizontalScrollView(this);
+        shiftHsv.setHorizontalScrollBarEnabled(false);
+        final LinearLayout shiftRow = new LinearLayout(this);
+        shiftRow.setOrientation(LinearLayout.HORIZONTAL);
+        shiftRow.setPadding(0, 0, 0, dp(6));
+
+        final List<LogbookManager.ShiftRecord> shifts = logMgr.getAllShifts();
+        final Runnable buildShiftSegment = new Runnable() {
+            @Override
+            public void run() {
+                shiftRow.removeAllViews();
+
+                // 1. Tonight Pill
+                final boolean isTonight = "CURRENT".equalsIgnoreCase(logbookSelectedShiftId) || (shifts.size() > 0 && shifts.get(0).shiftId.equals(logbookSelectedShiftId));
+                final int tonightCount = shifts.size() > 0 ? shifts.get(0).entries.size() : 0;
+                TextView chipTonight = new TextView(MainActivity.this);
+                chipTonight.setText("🌙 TONIGHT (" + tonightCount + ")");
+                chipTonight.setTextColor(isTonight ? 0xFF080D1A : colCyan);
+                chipTonight.setTextSize(10f);
+                chipTonight.setTypeface(Typeface.create(Typeface.MONOSPACE, Typeface.BOLD));
+                chipTonight.setPadding(dp(10), dp(5), dp(10), dp(5));
+                chipTonight.setBackground(rounded(isTonight ? colCyan : 0x2206B6D4, dp(6)));
+                chipTonight.setOnClickListener(new View.OnClickListener() {
+                    @Override
+                    public void onClick(View v) {
+                        hapticClick();
+                        logbookSelectedShiftId = shifts.size() > 0 ? shifts.get(0).shiftId : "CURRENT";
+                        if (tvSubHead != null) tvSubHead.setText(getLogbookSubtitle(logMgr));
+                        if (refreshContent[0] != null) refreshContent[0].run();
+                    }
+                });
+                LinearLayout.LayoutParams tlp = new LinearLayout.LayoutParams(
+                        LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+                tlp.rightMargin = dp(4);
+                chipTonight.setLayoutParams(tlp);
+                shiftRow.addView(chipTonight);
+
+                // 2. Past Shifts
+                for (int i = 1; i < shifts.size(); i++) {
+                    final LogbookManager.ShiftRecord s = shifts.get(i);
+                    final boolean isSelected = s.shiftId.equals(logbookSelectedShiftId);
+                    TextView chip = new TextView(MainActivity.this);
+                    chip.setText("📅 " + s.shortDateStr + " (" + s.entries.size() + ")");
+                    chip.setTextColor(isSelected ? 0xFF080D1A : colPale);
+                    chip.setTextSize(10f);
+                    chip.setTypeface(Typeface.create(Typeface.MONOSPACE, Typeface.BOLD));
+                    chip.setPadding(dp(10), dp(5), dp(10), dp(5));
+                    chip.setBackground(rounded(isSelected ? colEmerald : 0x1AFFFFFF, dp(6)));
+                    chip.setOnClickListener(new View.OnClickListener() {
+                        @Override
+                        public void onClick(View v) {
+                            hapticClick();
+                            logbookSelectedShiftId = s.shiftId;
+                            if (tvSubHead != null) tvSubHead.setText(getLogbookSubtitle(logMgr));
+                            if (refreshContent[0] != null) refreshContent[0].run();
+                        }
+                    });
+                    LinearLayout.LayoutParams clp = new LinearLayout.LayoutParams(
+                            LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+                    clp.rightMargin = dp(4);
+                    chip.setLayoutParams(clp);
+                    shiftRow.addView(chip);
+                }
+
+                // 3. All Archives Pill
+                final boolean allSelected = "ALL".equalsIgnoreCase(logbookSelectedShiftId);
+                TextView chipAll = new TextView(MainActivity.this);
+                chipAll.setText("📚 ALL ARCHIVES (" + logMgr.getAllEntriesChronological(false).size() + ")");
+                chipAll.setTextColor(allSelected ? colAccentInk : colMuted);
+                chipAll.setTextSize(10f);
+                chipAll.setTypeface(Typeface.create(Typeface.MONOSPACE, Typeface.BOLD));
+                chipAll.setPadding(dp(10), dp(5), dp(10), dp(5));
+                chipAll.setBackground(rounded(allSelected ? colAccent : 0x1AFFFFFF, dp(6)));
+                chipAll.setOnClickListener(new View.OnClickListener() {
+                    @Override
+                    public void onClick(View v) {
+                        hapticClick();
+                        logbookSelectedShiftId = "ALL";
+                        if (tvSubHead != null) tvSubHead.setText(getLogbookSubtitle(logMgr));
+                        if (refreshContent[0] != null) refreshContent[0].run();
+                    }
+                });
+                shiftRow.addView(chipAll);
+            }
+        };
+        buildShiftSegment.run();
+        shiftHsv.addView(shiftRow);
+        container.addView(shiftHsv);
+
+        // =========================================================================
+        // 4. ALWAYS-VISIBLE LIVE SEARCH & CATEGORY FILTER BAR
+        // =========================================================================
+        LinearLayout searchBox = new LinearLayout(this);
+        searchBox.setOrientation(LinearLayout.VERTICAL);
+        searchBox.setBackground(rounded(0xFF131C2E, dp(10)));
+        searchBox.setPadding(dp(8), dp(6), dp(8), dp(6));
+        LinearLayout.LayoutParams sblp = new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+        sblp.bottomMargin = dp(6);
+        searchBox.setLayoutParams(sblp);
+
+        LinearLayout searchRow = new LinearLayout(this);
+        searchRow.setOrientation(LinearLayout.HORIZONTAL);
+        searchRow.setGravity(Gravity.CENTER_VERTICAL);
+        searchRow.setBackground(rounded(0x18FFFFFF, dp(6)));
+        searchRow.setPadding(dp(8), dp(2), dp(8), dp(2));
+
+        final EditText searchField = new EditText(this);
+        searchField.setHint("🔍 Search occurrences, regos, lot checks, pumps...");
+        searchField.setHintTextColor(colMuted);
+        searchField.setTextColor(colPale);
+        searchField.setTextSize(11f);
+        searchField.setBackground(null);
+        searchField.setSingleLine(true);
+        if (!logbookSearchQuery.isEmpty()) searchField.setText(logbookSearchQuery);
+        LinearLayout.LayoutParams sflp = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
+        searchField.setLayoutParams(sflp);
+
+        final TextView btnClearSearch = new TextView(this);
+        btnClearSearch.setText("✕");
+        btnClearSearch.setTextColor(colMuted);
+        btnClearSearch.setTextSize(12f);
+        btnClearSearch.setPadding(dp(6), dp(4), dp(6), dp(4));
+        btnClearSearch.setVisibility(logbookSearchQuery.isEmpty() ? View.GONE : View.VISIBLE);
+        btnClearSearch.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                hapticClick();
+                searchField.setText("");
+            }
+        });
+
+        searchField.addTextChangedListener(new android.text.TextWatcher() {
+            @Override
+            public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
+            @Override
+            public void onTextChanged(CharSequence s, int start, int before, int count) {
+                logbookSearchQuery = s.toString();
+                btnClearSearch.setVisibility(s.length() > 0 ? View.VISIBLE : View.GONE);
+                if (refreshContent[0] != null) refreshContent[0].run();
+            }
+            @Override
+            public void afterTextChanged(android.text.Editable s) {}
+        });
+
+        searchRow.addView(searchField);
+        searchRow.addView(btnClearSearch);
+        searchBox.addView(searchRow);
+
+        // Category Pills inside search box
+        HorizontalScrollView catHsv = new HorizontalScrollView(this);
+        catHsv.setHorizontalScrollBarEnabled(false);
+        final LinearLayout catRow = new LinearLayout(this);
+        catRow.setOrientation(LinearLayout.HORIZONTAL);
+        catRow.setPadding(0, dp(6), 0, 0);
+
+        final String[][] categories = {
+                {"ALL", "All"},
+                {"PATROL", "🛡️ Patrols"},
+                {"LOT_LOCKUP", "🏢 Lots"},
+                {"FIRE_PUMP", "💧 Pumps"},
+                {"VEHICLE_REGO", "🚗 Rego"},
+                {"PHOTO", "📷 Photos"},
+                {"INCIDENT", "⚠️ Incidents"},
+                {"HANDOVER", "🤝 Handovers"}
+        };
+
+        for (final String[] cat : categories) {
+            final String catId = cat[0];
+            final String catLabel = cat[1];
+            final boolean isSelected = catId.equalsIgnoreCase(logbookSelectedCategory);
+            final int count = logMgr.filterEntries(logbookSelectedShiftId, catId, "").size();
+
+            TextView chip = new TextView(this);
+            chip.setText(catLabel + " (" + count + ")");
+            chip.setTextColor(isSelected ? colAccentInk : colPale);
+            chip.setTextSize(9.5f);
+            chip.setTypeface(Typeface.create(Typeface.MONOSPACE, Typeface.BOLD));
+            chip.setPadding(dp(8), dp(4), dp(8), dp(4));
+            chip.setBackground(rounded(isSelected ? colAccent : 0x22FFFFFF, dp(6)));
+            chip.setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View v) {
+                    hapticClick();
+                    if (isSelected && !catId.equalsIgnoreCase("ALL")) {
+                        logbookSelectedCategory = "ALL";
+                    } else {
+                        logbookSelectedCategory = catId;
+                    }
+                    if (refreshContent[0] != null) refreshContent[0].run();
+                }
+            });
+            LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+            lp.rightMargin = dp(4);
+            chip.setLayoutParams(lp);
+            catRow.addView(chip);
+        }
+        catHsv.addView(catRow);
+        searchBox.addView(catHsv);
+
+        // Time Bucket Presets inside search box
+        HorizontalScrollView timeHsv = new HorizontalScrollView(this);
+        timeHsv.setHorizontalScrollBarEnabled(false);
+        final LinearLayout timeRow = new LinearLayout(this);
+        timeRow.setOrientation(LinearLayout.HORIZONTAL);
+        timeRow.setPadding(0, dp(4), 0, 0);
+
+        final String[][] timeBuckets = {
+                {"ALL", "🌅 All Hours"},
+                {"EVENING", "🌆 Evening (18-22)"},
+                {"NIGHT", "🌌 Night (22-02)"},
+                {"DAWN", "🌄 Dawn (02-06)"}
+        };
+
+        for (final String[] tb : timeBuckets) {
+            final String tbId = tb[0];
+            final String tbLabel = tb[1];
+            final boolean isSelected = tbId.equalsIgnoreCase(logbookSelectedTimeBucket);
+            final int count = logMgr.filterEntries(logbookSelectedShiftId, logbookSelectedCategory, "", tbId).size();
+
+            TextView chip = new TextView(this);
+            chip.setText(tbLabel + " (" + count + ")");
+            chip.setTextColor(isSelected ? 0xFF0F172A : 0xFF94A3B8);
+            chip.setTextSize(9f);
+            chip.setTypeface(Typeface.create(Typeface.MONOSPACE, Typeface.BOLD));
+            chip.setPadding(dp(7), dp(3), dp(7), dp(3));
+            chip.setBackground(rounded(isSelected ? 0xFF38BDF8 : 0x18FFFFFF, dp(5)));
+            chip.setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View v) {
+                    hapticClick();
+                    if (isSelected && !tbId.equalsIgnoreCase("ALL")) {
+                        logbookSelectedTimeBucket = "ALL";
+                    } else {
+                        logbookSelectedTimeBucket = tbId;
+                    }
+                    if (refreshContent[0] != null) refreshContent[0].run();
+                }
+            });
+            LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+            lp.rightMargin = dp(4);
+            chip.setLayoutParams(lp);
+            timeRow.addView(chip);
+        }
+        timeHsv.addView(timeRow);
+        searchBox.addView(timeHsv);
+
+        boolean hasCat = !logbookSelectedCategory.equalsIgnoreCase("ALL");
+        boolean hasTime = !logbookSelectedTimeBucket.equalsIgnoreCase("ALL");
+        boolean hasQuery = !logbookSearchQuery.isEmpty();
+        if (hasCat || hasTime || hasQuery) {
+            LinearLayout activeFilterStrip = new LinearLayout(this);
+            activeFilterStrip.setOrientation(LinearLayout.HORIZONTAL);
+            activeFilterStrip.setGravity(Gravity.CENTER_VERTICAL);
+            activeFilterStrip.setBackground(rounded(0x22F59E0B, dp(6)));
+            activeFilterStrip.setPadding(dp(8), dp(4), dp(8), dp(4));
+            LinearLayout.LayoutParams aflp = new LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+            aflp.topMargin = dp(4);
+            activeFilterStrip.setLayoutParams(aflp);
+
+            TextView tvFilterSummary = new TextView(this);
+            tvFilterSummary.setTextColor(0xFFFDE047);
+            tvFilterSummary.setTextSize(9f);
+            tvFilterSummary.setTypeface(Typeface.create(Typeface.MONOSPACE, Typeface.BOLD));
+            LinearLayout.LayoutParams tslp = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
+            tvFilterSummary.setLayoutParams(tslp);
+            StringBuilder sb = new StringBuilder("⚡ FILTERED: ");
+            if (hasCat) sb.append("[").append(logbookSelectedCategory).append("] ");
+            if (hasTime) sb.append("[").append(logbookSelectedTimeBucket).append("] ");
+            if (hasQuery) sb.append("[\"").append(logbookSearchQuery).append("\"] ");
+            tvFilterSummary.setText(sb.toString().trim());
+            activeFilterStrip.addView(tvFilterSummary);
+
+            TextView btnResetAll = new TextView(this);
+            btnResetAll.setText("✕ RESET ALL");
+            btnResetAll.setTextColor(colPale);
+            btnResetAll.setTextSize(8.5f);
+            btnResetAll.setTypeface(Typeface.create(Typeface.MONOSPACE, Typeface.BOLD));
+            btnResetAll.setPadding(dp(6), dp(2), dp(6), dp(2));
+            btnResetAll.setBackground(rounded(0x44EF4444, dp(4)));
+            btnResetAll.setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View v) {
+                    hapticClick();
+                    logbookSelectedCategory = "ALL";
+                    logbookSelectedTimeBucket = "ALL";
+                    logbookSearchQuery = "";
+                    if (refreshContent[0] != null) refreshContent[0].run();
+                }
+            });
+            activeFilterStrip.addView(btnResetAll);
+            searchBox.addView(activeFilterStrip);
+        }
+        container.addView(searchBox);
+
         List<LogbookManager.LogEntry> entries = logMgr.filterEntries(
                 logbookSelectedShiftId, logbookSelectedCategory, logbookSearchQuery, logbookSelectedTimeBucket);
 
