@@ -3882,24 +3882,32 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
         return rippleCard;
     }
 
+    private int leaderboardActiveFilter = -1; // -1 = Overall, 0=Baduk, 1=Chess, 2=Ur, 3=Senet, 4=Hnefatafl, 5=Backgammon, 6=Morris, 7=Connect4
+
     private void showRecreationLeaderboardDialog() {
         hapticHeavyClick();
-        final LinearLayout box = dialogContainer("🏆 Recreation Leaderboard", "BLE MESH OSMOSIS SYNC · OFF-GRID", colAccent);
+        final LinearLayout box = dialogContainer("🏆 Recreation Leaderboard", "BLE MESH OSMOSIS SYNC · 100% OFF-GRID", colAccent);
         final RecreationLeaderboardManager mgr = RecreationLeaderboardManager.getInstance(this);
 
-        // 1. Mesh Daemon Status Card
+        // 1. Mesh Daemon Status & Hut Anchors Card
         LinearLayout statusCard = new LinearLayout(this);
         statusCard.setOrientation(LinearLayout.HORIZONTAL);
         statusCard.setGravity(Gravity.CENTER_VERTICAL);
-        statusCard.setBackground(rounded(colPanel2, dp(12)));
-        statusCard.setPadding(dp(12), dp(10), dp(12), dp(10));
+        android.graphics.drawable.GradientDrawable scBg = new android.graphics.drawable.GradientDrawable(
+            android.graphics.drawable.GradientDrawable.Orientation.TL_BR,
+            new int[]{0xFF13221C, 0xFF0D1612}
+        );
+        scBg.setCornerRadius(dp(12));
+        scBg.setStroke(dp(1), 0x3310B981);
+        statusCard.setBackground(scBg);
+        statusCard.setPadding(dp(12), dp(9), dp(12), dp(9));
         LinearLayout.LayoutParams scp = new LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
-        scp.bottomMargin = dp(10);
+        scp.bottomMargin = dp(8);
         statusCard.setLayoutParams(scp);
 
         TextView sTitle = new TextView(this);
-        sTitle.setText("🟢 BLE OSMOSIS: PASSIVE ACTIVE");
+        sTitle.setText("🟢 BLE MESH OSMOSIS: ACTIVE");
         sTitle.setTextColor(colEmerald);
         sTitle.setTextSize(11f);
         sTitle.setTypeface(Typeface.create(Typeface.MONOSPACE, Typeface.BOLD));
@@ -3910,16 +3918,47 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
         TextView pCount = new TextView(this);
         pCount.setText("4 HUT ANCHORS");
         pCount.setTextColor(colAccent);
-        pCount.setTextSize(9.5f);
+        pCount.setTextSize(9f);
         pCount.setTypeface(Typeface.MONOSPACE);
         pCount.setPadding(dp(8), dp(3), dp(8), dp(3));
-        pCount.setBackground(rounded(colPanel3, dp(6)));
+        pCount.setBackground(rounded(0x28F59E0B, dp(6)));
         statusCard.addView(pCount);
         box.addView(statusCard);
 
-        // 2. Leaderboard Roster Cards
-        java.util.List<RecreationLeaderboardManager.OfficerScoreRecord> list = mgr.getLeaderboard();
-        for (int i = 0; i < list.size(); i++) {
+        // 2. Tournament Podium (Top 3 Players)
+        final java.util.List<RecreationLeaderboardManager.OfficerScoreRecord> list =
+                (leaderboardActiveFilter == -1) ? mgr.getLeaderboard() : mgr.getLeaderboardForGame(leaderboardActiveFilter);
+
+        if (list.size() >= 3) {
+            RecreationLeaderboardManager.OfficerScoreRecord r1st = list.get(0);
+            RecreationLeaderboardManager.OfficerScoreRecord r2nd = list.get(1);
+            RecreationLeaderboardManager.OfficerScoreRecord r3rd = list.get(2);
+
+            LinearLayout podiumRow = new LinearLayout(this);
+            podiumRow.setOrientation(LinearLayout.HORIZONTAL);
+            podiumRow.setGravity(Gravity.BOTTOM);
+            podiumRow.setPadding(0, dp(4), 0, dp(10));
+
+            // Pillar 2 (Silver - Left)
+            podiumRow.addView(buildPodiumPillar("🥈", r2nd.officerName, r2nd.anchorHut,
+                    (leaderboardActiveFilter == -1 ? r2nd.totalWins + " WINS" : RecreationLeaderboardManager.getGameScore(r2nd, leaderboardActiveFilter) + " PTS"),
+                    0xFF94A3B8, 0xFFE2E8F0, 0xFF1E293B, 0xFF0F172A, dp(112)));
+
+            // Pillar 1 (Gold Crown - Center)
+            podiumRow.addView(buildPodiumPillar("👑", r1st.officerName, r1st.anchorHut,
+                    (leaderboardActiveFilter == -1 ? r1st.totalWins + " WINS" : RecreationLeaderboardManager.getGameScore(r1st, leaderboardActiveFilter) + " PTS"),
+                    0xFFF59E0B, 0xFFFFD166, 0xFF2D1F08, 0xFF140F04, dp(134)));
+
+            // Pillar 3 (Bronze - Right)
+            podiumRow.addView(buildPodiumPillar("🥉", r3rd.officerName, r3rd.anchorHut,
+                    (leaderboardActiveFilter == -1 ? r3rd.totalWins + " WINS" : RecreationLeaderboardManager.getGameScore(r3rd, leaderboardActiveFilter) + " PTS"),
+                    0xFFEA580C, 0xFFFDBA74, 0xFF24150E, 0xFF120A07, dp(102)));
+
+            box.addView(podiumRow);
+        }
+
+        // 3. Leaderboard Roster Cards (Rank 4+)
+        for (int i = 3; i < list.size(); i++) {
             RecreationLeaderboardManager.OfficerScoreRecord r = list.get(i);
             LinearLayout card = new LinearLayout(this);
             card.setOrientation(LinearLayout.VERTICAL);
@@ -3930,21 +3969,18 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
             clp.bottomMargin = dp(6);
             card.setLayoutParams(clp);
 
-            // Row 1: Rank Badge + Officer Name + Wins
-            LinearLayout r1 = new LinearLayout(this);
-            r1.setOrientation(LinearLayout.HORIZONTAL);
-            r1.setGravity(Gravity.CENTER_VERTICAL);
-
-            String rankIcon = (i == 0 ? "🥇" : (i == 1 ? "🥈" : (i == 2 ? "🥉" : "#" + (i + 1))));
-            int rankColor = (i == 0 ? 0xFFFFD166 : (i == 1 ? 0xFFE2E8F0 : (i == 2 ? 0xFFF59E0B : 0xFF94A3B8)));
+            // Row 1: Position Badge + Name + Score
+            LinearLayout row1 = new LinearLayout(this);
+            row1.setOrientation(LinearLayout.HORIZONTAL);
+            row1.setGravity(Gravity.CENTER_VERTICAL);
 
             TextView rankTv = new TextView(this);
-            rankTv.setText(rankIcon);
-            rankTv.setTextColor(rankColor);
-            rankTv.setTextSize(14f);
-            rankTv.setTypeface(Typeface.DEFAULT_BOLD);
-            rankTv.setPadding(0, 0, dp(8), 0);
-            r1.addView(rankTv);
+            rankTv.setText(String.format(java.util.Locale.US, "#%02d", i + 1));
+            rankTv.setTextColor(0xFF64748B);
+            rankTv.setTextSize(12f);
+            rankTv.setTypeface(Typeface.create(Typeface.MONOSPACE, Typeface.BOLD));
+            rankTv.setPadding(0, 0, dp(10), 0);
+            row1.addView(rankTv);
 
             TextView nameTv = new TextView(this);
             nameTv.setText(r.officerName);
@@ -3953,22 +3989,22 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
             nameTv.setTypeface(Typeface.DEFAULT_BOLD);
             LinearLayout.LayoutParams nlp = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
             nameTv.setLayoutParams(nlp);
-            r1.addView(nameTv);
+            row1.addView(nameTv);
 
             TextView winTv = new TextView(this);
-            winTv.setText(r.totalWins + " WINS");
+            winTv.setText((leaderboardActiveFilter == -1 ? r.totalWins + " WINS" : RecreationLeaderboardManager.getGameScore(r, leaderboardActiveFilter) + " PTS"));
             winTv.setTextColor(colAccent);
-            winTv.setTextSize(12f);
+            winTv.setTextSize(11.5f);
             winTv.setTypeface(Typeface.create(Typeface.MONOSPACE, Typeface.BOLD));
-            r1.addView(winTv);
+            row1.addView(winTv);
 
-            card.addView(r1);
+            card.addView(row1);
 
-            // Row 2: Ratings Breakdown & Anchor Hut Tag
-            LinearLayout r2 = new LinearLayout(this);
-            r2.setOrientation(LinearLayout.HORIZONTAL);
-            r2.setGravity(Gravity.CENTER_VERTICAL);
-            r2.setPadding(0, dp(4), 0, 0);
+            // Row 2: Stats Breakdown + Hut Tag
+            LinearLayout row2 = new LinearLayout(this);
+            row2.setOrientation(LinearLayout.HORIZONTAL);
+            row2.setGravity(Gravity.CENTER_VERTICAL);
+            row2.setPadding(0, dp(4), 0, 0);
 
             TextView statsTv = new TextView(this);
             statsTv.setText("Chess: " + r.chessElo + " ELO · Baduk: " + r.badukDanRank + "-Dan · Ur: " + r.urWins + " · Senet: " + r.senetWins);
@@ -3976,7 +4012,7 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
             statsTv.setTextSize(10f);
             LinearLayout.LayoutParams stlp = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
             statsTv.setLayoutParams(stlp);
-            r2.addView(statsTv);
+            row2.addView(statsTv);
 
             TextView hutTag = new TextView(this);
             hutTag.setText(r.anchorHut);
@@ -3985,18 +4021,44 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
             hutTag.setTypeface(Typeface.MONOSPACE);
             hutTag.setPadding(dp(6), dp(2), dp(6), dp(2));
             hutTag.setBackground(rounded(0x2200E5FF, dp(4)));
-            r2.addView(hutTag);
+            row2.addView(hutTag);
 
-            card.addView(r2);
+            card.addView(row2);
             box.addView(card);
         }
 
+        // 4. "Your Standing" Pinned Status Card
+        LinearLayout myStandCard = new LinearLayout(this);
+        myStandCard.setOrientation(LinearLayout.HORIZONTAL);
+        myStandCard.setGravity(Gravity.CENTER_VERTICAL);
+        android.graphics.drawable.GradientDrawable msBg = new android.graphics.drawable.GradientDrawable(
+            android.graphics.drawable.GradientDrawable.Orientation.TL_BR,
+            new int[]{0xFF241B08, 0xFF120E04}
+        );
+        msBg.setCornerRadius(dp(12));
+        msBg.setStroke(dp(1), 0x55F59E0B);
+        myStandCard.setBackground(msBg);
+        myStandCard.setPadding(dp(12), dp(10), dp(12), dp(10));
+        LinearLayout.LayoutParams mslp = new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+        mslp.topMargin = dp(4);
+        mslp.bottomMargin = dp(6);
+        myStandCard.setLayoutParams(mslp);
+
+        TextView msTv = new TextView(this);
+        msTv.setText("👑 YOUR STANDING: #1 OVERALL CHAMPION (+13 WINS LEAD)");
+        msTv.setTextColor(0xFFFFD166);
+        msTv.setTextSize(11f);
+        msTv.setTypeface(Typeface.DEFAULT_BOLD);
+        myStandCard.addView(msTv);
+        box.addView(myStandCard);
+
         final Dialog dlg = createDialogSheet(box);
 
-        // Action Buttons Row
+        // 5. Action Buttons Row
         LinearLayout btnRow = new LinearLayout(this);
         btnRow.setOrientation(LinearLayout.HORIZONTAL);
-        btnRow.setPadding(0, dp(8), 0, 0);
+        btnRow.setPadding(0, dp(6), 0, 0);
 
         final TextView btnPulse = actionButton("⚡ Pulse BLE Osmosis Sync", colAccent, colAccentInk);
         btnPulse.setOnClickListener(new View.OnClickListener() {
@@ -4030,6 +4092,67 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
 
         box.addView(btnRow);
         dlg.show();
+    }
+
+    private View buildPodiumPillar(String medalEmoji, String nameStr, String hutStr, String scoreStr, int borderCol, int glowCol, int gradTop, int gradBottom, int pillarHeight) {
+        LinearLayout pillar = new LinearLayout(this);
+        pillar.setOrientation(LinearLayout.VERTICAL);
+        pillar.setGravity(Gravity.CENTER_HORIZONTAL);
+        android.graphics.drawable.GradientDrawable bg = new android.graphics.drawable.GradientDrawable(
+            android.graphics.drawable.GradientDrawable.Orientation.TOP_BOTTOM,
+            new int[]{gradTop, gradBottom}
+        );
+        bg.setCornerRadius(dp(14));
+        bg.setStroke(dp(1), borderCol);
+        pillar.setBackground(bg);
+        pillar.setPadding(dp(6), dp(10), dp(6), dp(8));
+        pillar.setMinimumHeight(pillarHeight);
+
+        LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
+        lp.setMargins(dp(3), 0, dp(3), 0);
+        pillar.setLayoutParams(lp);
+
+        // Medal Glyph / Crown
+        TextView medTv = new TextView(this);
+        medTv.setText(medalEmoji);
+        medTv.setTextSize(22f);
+        medTv.setGravity(Gravity.CENTER);
+        pillar.addView(medTv);
+
+        // Name
+        TextView nameTv = new TextView(this);
+        nameTv.setText(nameStr);
+        nameTv.setTextColor(glowCol);
+        nameTv.setTextSize(11f);
+        nameTv.setTypeface(Typeface.DEFAULT_BOLD);
+        nameTv.setGravity(Gravity.CENTER);
+        nameTv.setSingleLine(true);
+        nameTv.setEllipsize(android.text.TextUtils.TruncateAt.END);
+        nameTv.setPadding(0, dp(4), 0, dp(2));
+        pillar.addView(nameTv);
+
+        // Score Pill
+        TextView scTv = new TextView(this);
+        scTv.setText(scoreStr);
+        scTv.setTextColor(0xFFFFFFFF);
+        scTv.setTextSize(10f);
+        scTv.setTypeface(Typeface.create(Typeface.MONOSPACE, Typeface.BOLD));
+        scTv.setGravity(Gravity.CENTER);
+        pillar.addView(scTv);
+
+        // Hut Station Badge
+        TextView hutTv = new TextView(this);
+        hutTv.setText(hutStr);
+        hutTv.setTextColor(0xFF94A3B8);
+        hutTv.setTextSize(8f);
+        hutTv.setTypeface(Typeface.MONOSPACE);
+        hutTv.setGravity(Gravity.CENTER);
+        hutTv.setSingleLine(true);
+        hutTv.setEllipsize(android.text.TextUtils.TruncateAt.END);
+        hutTv.setPadding(0, dp(4), 0, 0);
+        pillar.addView(hutTv);
+
+        return pillar;
     }
 
     private View buildGameCard(String iconGlyph, String titleStr, String badgeStr, int badgeCol, String descStr, String metaSpecs, final View.OnClickListener onClick) {
