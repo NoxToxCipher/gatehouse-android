@@ -4491,7 +4491,7 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
         ctrlRow.setOrientation(LinearLayout.HORIZONTAL);
         ctrlRow.setPadding(0, dp(8), 0, 0);
 
-        TextView btnCast = actionButton("🥢 Cast Sticks", 0xFFFDE047, colAccentInk);
+        TextView btnCast = actionButton("🥢 Cast", 0xFFFDE047, colAccentInk);
         btnCast.setOnClickListener(new View.OnClickListener() {
             public void onClick(View v) {
                 hapticClick();
@@ -4503,14 +4503,27 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
         btnCast.setLayoutParams(clp1);
         ctrlRow.addView(btnCast);
 
-        TextView btnReset = actionButton("↻ New Game", colLine, colPale);
+        TextView btnUndo = actionButton("↶ Undo", colLine, colPale);
+        btnUndo.setOnClickListener(new View.OnClickListener() {
+            public void onClick(View v) {
+                hapticClick();
+                senetView.undoMove();
+            }
+        });
+        LinearLayout.LayoutParams ulp = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
+        ulp.leftMargin = dp(2);
+        ulp.rightMargin = dp(2);
+        btnUndo.setLayoutParams(ulp);
+        ctrlRow.addView(btnUndo);
+
+        TextView btnReset = actionButton("↻ Reset", colLine, colPale);
         btnReset.setOnClickListener(new View.OnClickListener() {
             public void onClick(View v) {
                 hapticClick();
                 senetView.resetGame();
             }
         });
-        LinearLayout.LayoutParams clp2 = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 0.8f);
+        LinearLayout.LayoutParams clp2 = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
         clp2.leftMargin = dp(4);
         btnReset.setLayoutParams(clp2);
         ctrlRow.addView(btnReset);

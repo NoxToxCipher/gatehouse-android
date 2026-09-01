@@ -61,6 +61,31 @@ public class SenetGameView extends View {
         {2,0}, {2,1}, {2,2}, {2,3}, {2,4}, {2,5}, {2,6}, {2,7}, {2,8}, {2,9}
     };
 
+    private static class HistoryState {
+        final int[] whitePieces;
+        final int[] blackPieces;
+        final int whiteBorneOff;
+        final int blackBorneOff;
+        final int currentTurn;
+        final int currentRoll;
+        final boolean waitingForRoll;
+        final boolean[] lastSticksLight;
+
+        HistoryState(int[] wp, int[] bp, int wOff, int bOff, int turn, int roll, boolean wait, boolean[] sticks) {
+            this.whitePieces = wp.clone();
+            this.blackPieces = bp.clone();
+            this.whiteBorneOff = wOff;
+            this.blackBorneOff = bOff;
+            this.currentTurn = turn;
+            this.currentRoll = roll;
+            this.waitingForRoll = wait;
+            this.lastSticksLight = sticks.clone();
+        }
+    }
+
+    private final java.util.List<HistoryState> history = new java.util.ArrayList<>();
+    private final Paint moveGlowPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+
     private float dpf(float v) {
         return v * getResources().getDisplayMetrics().density;
     }
@@ -88,6 +113,10 @@ public class SenetGameView extends View {
         pieceShinePaint.setColor(0xAAFFFFFF);
         pieceShinePaint.setStyle(Paint.Style.FILL);
 
+        moveGlowPaint.setColor(0xFFFDE047);
+        moveGlowPaint.setStyle(Paint.Style.STROKE);
+        moveGlowPaint.setStrokeWidth(dpf(2.5f));
+
         textPaint.setColor(0xFFE2E8F0);
         textPaint.setTextAlign(Paint.Align.CENTER);
         textPaint.setTypeface(Typeface.create(Typeface.MONOSPACE, Typeface.BOLD));
@@ -113,7 +142,29 @@ public class SenetGameView extends View {
         updateStatus();
     }
 
+    private void saveHistory() {
+        history.add(new HistoryState(whitePieces, blackPieces, whiteBorneOff, blackBorneOff, currentTurn, currentRoll, waitingForRoll, lastSticksLight));
+        if (history.size() > 50) history.remove(0);
+    }
+
+    public void undoMove() {
+        if (history.isEmpty()) return;
+        HistoryState state = history.remove(history.size() - 1);
+        System.arraycopy(state.whitePieces, 0, whitePieces, 0, 5);
+        System.arraycopy(state.blackPieces, 0, blackPieces, 0, 5);
+        whiteBorneOff = state.whiteBorneOff;
+        blackBorneOff = state.blackBorneOff;
+        currentTurn = state.currentTurn;
+        currentRoll = state.currentRoll;
+        waitingForRoll = state.waitingForRoll;
+        System.arraycopy(state.lastSticksLight, 0, lastSticksLight, 0, 4);
+        try { performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP); } catch (Exception ignored) {}
+        updateStatus();
+        invalidate();
+    }
+
     public void resetGame() {
+        history.clear();
         currentTurn = 0;
         currentRoll = -1;
         waitingForRoll = true;
@@ -194,8 +245,31 @@ public class SenetGameView extends View {
         return false;
     }
 
+    private boolean isPieceMovable(int pieceIdx) {
+        if (waitingForRoll || currentRoll <= 0 || currentTurn != 0) return false;
+        int pos = whitePieces[pieceIdx];
+        if (pos == 30) return false;
+        int next = pos + currentRoll;
+        if (next > 30) return false;
+        if (next == 30) return true;
+
+        for (int j = 0; j < 5; j++) {
+            if (whitePieces[j] == next) return false;
+        }
+
+        for (int j = 0; j < 5; j++) {
+            if (blackPieces[j] == next) {
+                for (int k = 0; k < 5; k++) {
+                    if (blackPieces[k] == next - 1 || blackPieces[k] == next + 1) return false;
+                }
+            }
+        }
+        return true;
+    }
+
     private void makeMove(int pieceIdx) {
         if (waitingForRoll || currentRoll <= 0) return;
+        if (currentTurn == 0) saveHistory();
         int[] my = (currentTurn == 0) ? whitePieces : blackPieces;
         int[] opp = (currentTurn == 0) ? blackPieces : whitePieces;
 
@@ -364,7 +438,7 @@ public class SenetGameView extends View {
                     if (pos >= 0 && pos < 30) {
                         int pr = SENET_PATH[pos][0];
                         int pc = SENET_PATH[pos][1];
-                        if (pr == r && pc == c) {
+                        if (pr == r && pc == c && isPieceMovable(i)) {
                             makeMove(i);
                             return true;
                         }
@@ -435,6 +509,9 @@ public class SenetGameView extends View {
                 int c = SENET_PATH[wp][1];
                 float cx = pad + c * cellW + cellW / 2f;
                 float cy = dpf(6f) + r * cellH + cellH / 2f;
+                if (currentTurn == 0 && !waitingForRoll && currentRoll > 0 && isPieceMovable(i)) {
+                    canvas.drawCircle(cx, cy, pieceR + dpf(3.5f), moveGlowPaint);
+                }
                 drawEgyptianPiece(canvas, cx, cy, pieceR, true);
             }
 
@@ -485,8 +562,23 @@ public class SenetGameView extends View {
     }
 
     private void drawCastingStick(Canvas canvas, float cx, float cy, float len, float thickness, boolean isLight) {
+        // Drop Shadow under stick
+        rect.set(cx - len / 2f + dpf(1.2f), cy - thickness / 2f + dpf(1.8f), cx + len / 2f + dpf(1.2f), cy + thickness / 2f + dpf(1.8f));
+        canvas.drawRoundRect(rect, thickness / 2f, thickness / 2f, shadowPaint);
+
         rect.set(cx - len / 2f, cy - thickness / 2f, cx + len / 2f, cy + thickness / 2f);
         canvas.drawRoundRect(rect, thickness / 2f, thickness / 2f, isLight ? stickLightPaint : stickDarkPaint);
+
+        // Stick Relief Inlays / Notches
+        if (isLight) {
+            Paint notchPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+            notchPaint.setColor(0xFFCA8A04);
+            notchPaint.setStrokeWidth(dpf(1f));
+            for (float nx = -len * 0.3f; nx <= len * 0.3f; nx += len * 0.2f) {
+                canvas.drawLine(cx + nx, cy - thickness * 0.35f, cx + nx, cy + thickness * 0.35f, notchPaint);
+            }
+        }
+
         canvas.drawRoundRect(rect, thickness / 2f, thickness / 2f, goldBorderPaint);
     }
 }
