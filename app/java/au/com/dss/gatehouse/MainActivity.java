@@ -16406,6 +16406,52 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
             box.addView(attachBox);
         }
 
+        // Quick Action Toolbar
+        LinearLayout actionToolbar = new LinearLayout(this);
+        actionToolbar.setOrientation(LinearLayout.HORIZONTAL);
+        actionToolbar.setPadding(0, dp(4), 0, dp(8));
+
+        TextView btnShareDispatch = new TextView(this);
+        btnShareDispatch.setText("📡 Radio Dispatch");
+        btnShareDispatch.setTextColor(colCyan);
+        btnShareDispatch.setTextSize(9.5f);
+        btnShareDispatch.setTypeface(Typeface.create(Typeface.MONOSPACE, Typeface.BOLD));
+        btnShareDispatch.setPadding(dp(8), dp(4), dp(8), dp(4));
+        btnShareDispatch.setBackground(rounded(0x2200E5FF, dp(6)));
+        btnShareDispatch.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                hapticClick();
+                String dispatchMsg = "DSS DISPATCH: [" + entry.timeStr + "] " + entry.categoryLabel + " - " + entry.text;
+                shareStatement("Radio Dispatch Snippet", dispatchMsg);
+            }
+        });
+        LinearLayout.LayoutParams dlp = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
+        btnShareDispatch.setLayoutParams(dlp);
+        actionToolbar.addView(btnShareDispatch);
+
+        TextView btnFlagFollowUp = new TextView(this);
+        btnFlagFollowUp.setText("⚠️ Flag Handover");
+        btnFlagFollowUp.setTextColor(0xFFFDE047);
+        btnFlagFollowUp.setTextSize(9.5f);
+        btnFlagFollowUp.setTypeface(Typeface.create(Typeface.MONOSPACE, Typeface.BOLD));
+        btnFlagFollowUp.setPadding(dp(8), dp(4), dp(8), dp(4));
+        btnFlagFollowUp.setBackground(rounded(0x22FDE047, dp(6)));
+        btnFlagFollowUp.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                hapticHeavyClick();
+                note(Core.TOPIC_FOR_DAY_CREW, "[HANDOVER FLAG] Follow-up required from " + entry.timeStr + ": " + entry.text);
+                Toast.makeText(MainActivity.this, "⚠️ Flagged for Morning Handover", Toast.LENGTH_SHORT).show();
+            }
+        });
+        LinearLayout.LayoutParams flp = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
+        flp.leftMargin = dp(6);
+        btnFlagFollowUp.setLayoutParams(flp);
+        actionToolbar.addView(btnFlagFollowUp);
+
+        box.addView(actionToolbar);
+
         final Dialog dlg = createDialogSheet(box);
 
         // Action Buttons Row
