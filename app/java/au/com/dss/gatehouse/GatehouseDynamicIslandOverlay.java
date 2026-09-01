@@ -14,6 +14,7 @@ import android.os.Looper;
 import android.view.Gravity;
 import android.view.View;
 import android.view.ViewGroup;
+import android.view.animation.AccelerateDecelerateInterpolator;
 import android.view.animation.OvershootInterpolator;
 import android.widget.FrameLayout;
 import android.widget.LinearLayout;
@@ -23,8 +24,8 @@ import java.util.Locale;
 
 /**
  * GatehouseDynamicIslandOverlay — High-fidelity top cutout Dynamic Island & Live Capsule.
- * Morphs seamlessly around the camera punch-hole cutout with spring physics,
- * expanding on tap into an interactive cyber-glass telemetry HUD.
+ * Solid pure jet black (0xFF000000) backdrop to prevent status bar bleed-through,
+ * with fluid ValueAnimator dimension morphing and spring physics.
  */
 public class GatehouseDynamicIslandOverlay {
     private static final String TAG = "DynamicIslandOverlay";
@@ -49,9 +50,15 @@ public class GatehouseDynamicIslandOverlay {
     // Active Data
     private String currentEmoji = "⛽";
     private String currentTitle = "OOM 168.9¢";
-    private String currentSubtitle = "0.8km · Save 6.0¢";
+    private String currentSubtitle = "0.8km · Lowest";
     private int currentAccentColor = 0xFFF59E0B;
     private String currentNavAddress = "OOM Energy Kingston, 122 Kingston Rd, Kingston QLD";
+
+    // Standard Dimensions
+    private int compactWidth;
+    private int compactHeight;
+    private int expandedWidth;
+    private int expandedHeight;
 
     public static synchronized GatehouseDynamicIslandOverlay getInstance(Context ctx) {
         if (instance == null) {
@@ -62,6 +69,14 @@ public class GatehouseDynamicIslandOverlay {
 
     private GatehouseDynamicIslandOverlay(Context ctx) {
         this.context = ctx;
+        initDimensions();
+    }
+
+    private void initDimensions() {
+        compactWidth = dp(168);
+        compactHeight = dp(32);
+        expandedWidth = dp(320);
+        expandedHeight = dp(155);
     }
 
     public void attachToContainer(FrameLayout container) {
@@ -80,60 +95,48 @@ public class GatehouseDynamicIslandOverlay {
         }
 
         islandRoot = new FrameLayout(parentContainer.getContext());
-        FrameLayout.LayoutParams rlp = new FrameLayout.LayoutParams(
-                FrameLayout.LayoutParams.WRAP_CONTENT, FrameLayout.LayoutParams.WRAP_CONTENT);
+        FrameLayout.LayoutParams rlp = new FrameLayout.LayoutParams(compactWidth, compactHeight);
         rlp.gravity = Gravity.TOP | Gravity.CENTER_HORIZONTAL;
+        // Positioned safely centered between left clock & right status icons
         rlp.topMargin = dp(6);
         islandRoot.setLayoutParams(rlp);
         islandRoot.setVisibility(View.GONE);
-        islandRoot.setElevation(dp(16));
+        islandRoot.setElevation(dp(20));
 
-        // Background Glass Pill
+        // Solid Pure Jet Black (#000000) so zero system text bleeds through
         GradientDrawable pillBg = new GradientDrawable();
-        pillBg.setColor(0xF00A0E17);
-        pillBg.setCornerRadius(dp(22));
-        pillBg.setStroke(dp(1.5f), 0xFFF59E0B);
+        pillBg.setColor(0xFF000000);
+        pillBg.setCornerRadius(compactHeight / 2f);
+        pillBg.setStroke(dp(1.2f), 0xFFF59E0B);
         islandRoot.setBackground(pillBg);
-        islandRoot.setPadding(dp(12), dp(6), dp(12), dp(6));
+        islandRoot.setPadding(dp(8), dp(2), dp(8), dp(2));
 
         // 1. Compact Pill View
         compactView = new LinearLayout(parentContainer.getContext());
         compactView.setOrientation(LinearLayout.HORIZONTAL);
-        compactView.setGravity(Gravity.CENTER_VERTICAL);
+        compactView.setGravity(Gravity.CENTER);
         compactView.setLayoutParams(new FrameLayout.LayoutParams(
-                FrameLayout.LayoutParams.WRAP_CONTENT, FrameLayout.LayoutParams.WRAP_CONTENT));
+                FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT));
 
         TextView tvEmoji = new TextView(parentContainer.getContext());
-        tvEmoji.setId(View.generateViewId());
         tvEmoji.setText("⛽");
-        tvEmoji.setTextSize(14f);
-        tvEmoji.setPadding(0, 0, dp(6), 0);
+        tvEmoji.setTextSize(13f);
+        tvEmoji.setPadding(0, 0, dp(4), 0);
         compactView.addView(tvEmoji);
 
         TextView tvText = new TextView(parentContainer.getContext());
-        tvText.setId(View.generateViewId());
-        tvText.setText("OOM 168.9¢ · 0.8km");
+        tvText.setText("168.9¢ · 0.8km");
         tvText.setTextColor(0xFFFEF08A);
-        tvText.setTextSize(11.5f);
+        tvText.setTextSize(11f);
         tvText.setTypeface(Typeface.create(Typeface.MONOSPACE, Typeface.BOLD));
         compactView.addView(tvText);
 
-        TextView tvBadge = new TextView(parentContainer.getContext());
-        tvBadge.setId(View.generateViewId());
-        tvBadge.setText("★ BEST");
-        tvBadge.setTextColor(0xFF0F172A);
-        tvBadge.setTextSize(8.5f);
-        tvBadge.setTypeface(Typeface.DEFAULT_BOLD);
-        tvBadge.setPadding(dp(5), dp(2), dp(5), dp(2));
-        GradientDrawable bgBadge = new GradientDrawable();
-        bgBadge.setColor(0xFF10B981);
-        bgBadge.setCornerRadius(dp(4));
-        tvBadge.setBackground(bgBadge);
-        LinearLayout.LayoutParams blp = new LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT);
-        blp.leftMargin = dp(6);
-        tvBadge.setLayoutParams(blp);
-        compactView.addView(tvBadge);
+        TextView tvDot = new TextView(parentContainer.getContext());
+        tvDot.setText("●");
+        tvDot.setTextColor(0xFF10B981);
+        tvDot.setTextSize(8f);
+        tvDot.setPadding(dp(5), 0, 0, 0);
+        compactView.addView(tvDot);
 
         islandRoot.addView(compactView);
 
@@ -142,11 +145,11 @@ public class GatehouseDynamicIslandOverlay {
         expandedView.setOrientation(LinearLayout.VERTICAL);
         expandedView.setVisibility(View.GONE);
         expandedView.setLayoutParams(new FrameLayout.LayoutParams(
-                dp(300), FrameLayout.LayoutParams.WRAP_CONTENT));
+                FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT));
 
         islandRoot.addView(expandedView);
 
-        // Click to toggle expand / collapse
+        // Interactive Click to Morph
         islandRoot.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
@@ -182,23 +185,17 @@ public class GatehouseDynamicIslandOverlay {
     private void updateViewsData() {
         if (islandRoot == null) return;
 
-        GradientDrawable pillBg = new GradientDrawable();
-        pillBg.setColor(0xF40A0E17);
-        pillBg.setCornerRadius(dp(currentState == IslandState.EXPANDED_CARD ? 16 : 22));
-        pillBg.setStroke(dp(1.5f), currentAccentColor);
-        islandRoot.setBackground(pillBg);
-
         // Update Compact View
         if (compactView != null && compactView.getChildCount() >= 3) {
             ((TextView) compactView.getChildAt(0)).setText(currentEmoji);
-            ((TextView) compactView.getChildAt(1)).setText(currentTitle + " · 0.8km");
+            ((TextView) compactView.getChildAt(1)).setText(currentTitle.replace("OOM ", "") + " · 0.8km");
             ((TextView) compactView.getChildAt(1)).setTextColor(currentAccentColor);
         }
 
         // Build Expanded View
         if (expandedView != null) {
             expandedView.removeAllViews();
-            expandedView.setPadding(dp(6), dp(4), dp(6), dp(4));
+            expandedView.setPadding(dp(12), dp(10), dp(12), dp(10));
 
             // Header
             LinearLayout hRow = new LinearLayout(parentContainer.getContext());
@@ -217,8 +214,8 @@ public class GatehouseDynamicIslandOverlay {
             TextView btnClose = new TextView(parentContainer.getContext());
             btnClose.setText("✕");
             btnClose.setTextColor(0xFF94A3B8);
-            btnClose.setTextSize(13f);
-            btnClose.setPadding(dp(6), 0, dp(2), 0);
+            btnClose.setTextSize(14f);
+            btnClose.setPadding(dp(8), 0, dp(4), 0);
             btnClose.setOnClickListener(new View.OnClickListener() {
                 @Override
                 public void onClick(View v) {
@@ -232,7 +229,7 @@ public class GatehouseDynamicIslandOverlay {
             TextView tvLeader = new TextView(parentContainer.getContext());
             tvLeader.setText("🟢 OOM Kingston: " + currentTitle.replace("OOM ", "") + "/L (0.8km · Lowest)\n" +
                     "⚪ 7-Eleven: 174.9¢ · ⚪ Ampol: 176.9¢\n" +
-                    "💰 Save $3.60 on 60L fill vs 7-Eleven");
+                    "💰 Save $3.60 on a 60L fill vs 7-Eleven");
             tvLeader.setTextColor(0xFFE2E8F0);
             tvLeader.setTextSize(10.5f);
             tvLeader.setTypeface(Typeface.MONOSPACE);
@@ -249,13 +246,13 @@ public class GatehouseDynamicIslandOverlay {
             btnNav.setTextSize(10f);
             btnNav.setTypeface(Typeface.DEFAULT_BOLD);
             btnNav.setGravity(Gravity.CENTER);
-            btnNav.setPadding(dp(8), dp(5), dp(8), dp(5));
+            btnNav.setPadding(dp(8), dp(6), dp(8), dp(6));
             GradientDrawable navBg = new GradientDrawable();
             navBg.setColor(currentAccentColor);
             navBg.setCornerRadius(dp(6));
             btnNav.setBackground(navBg);
             LinearLayout.LayoutParams nlp = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
-            nlp.rightMargin = dp(4);
+            nlp.rightMargin = dp(6);
             btnNav.setLayoutParams(nlp);
             btnNav.setOnClickListener(new View.OnClickListener() {
                 @Override
@@ -279,7 +276,7 @@ public class GatehouseDynamicIslandOverlay {
             btnCollapse.setTextSize(10f);
             btnCollapse.setTypeface(Typeface.MONOSPACE);
             btnCollapse.setGravity(Gravity.CENTER);
-            btnCollapse.setPadding(dp(8), dp(5), dp(8), dp(5));
+            btnCollapse.setPadding(dp(8), dp(6), dp(8), dp(6));
             GradientDrawable colBg = new GradientDrawable();
             colBg.setColor(0xFF1E293B);
             colBg.setCornerRadius(dp(6));
@@ -299,20 +296,33 @@ public class GatehouseDynamicIslandOverlay {
     private void animateShowIsland() {
         if (islandRoot == null) return;
         currentState = IslandState.COMPACT_PILL;
+
+        FrameLayout.LayoutParams lp = (FrameLayout.LayoutParams) islandRoot.getLayoutParams();
+        lp.width = compactWidth;
+        lp.height = compactHeight;
+        islandRoot.setLayoutParams(lp);
+
+        GradientDrawable pillBg = new GradientDrawable();
+        pillBg.setColor(0xFF000000);
+        pillBg.setCornerRadius(compactHeight / 2f);
+        pillBg.setStroke(dp(1.2f), currentAccentColor);
+        islandRoot.setBackground(pillBg);
+
         compactView.setVisibility(View.VISIBLE);
+        compactView.setAlpha(1f);
         expandedView.setVisibility(View.GONE);
 
         islandRoot.setVisibility(View.VISIBLE);
-        islandRoot.setScaleX(0.2f);
-        islandRoot.setScaleY(0.2f);
+        islandRoot.setScaleX(0.1f);
+        islandRoot.setScaleY(0.1f);
         islandRoot.setAlpha(0f);
 
         islandRoot.animate()
                 .scaleX(1.0f)
                 .scaleY(1.0f)
                 .alpha(1.0f)
-                .setDuration(350)
-                .setInterpolator(new OvershootInterpolator(1.4f))
+                .setDuration(320)
+                .setInterpolator(new OvershootInterpolator(1.3f))
                 .start();
 
         scheduleAutoCollapse(8000);
@@ -324,20 +334,48 @@ public class GatehouseDynamicIslandOverlay {
         cancelAutoCollapse();
 
         updateViewsData();
-        compactView.setVisibility(View.GONE);
-        expandedView.setVisibility(View.VISIBLE);
 
-        islandRoot.animate()
-                .scaleX(1.03f)
-                .scaleY(1.03f)
-                .setDuration(120)
-                .withEndAction(new Runnable() {
-                    @Override
-                    public void run() {
-                        islandRoot.animate().scaleX(1.0f).scaleY(1.0f).setDuration(100).start();
-                    }
-                })
-                .start();
+        // Fluid morph from compactWidth/Height to expandedWidth/Height
+        final int startW = islandRoot.getWidth() > 0 ? islandRoot.getWidth() : compactWidth;
+        final int startH = islandRoot.getHeight() > 0 ? islandRoot.getHeight() : compactHeight;
+        final float startRadius = compactHeight / 2f;
+        final float endRadius = dp(16);
+
+        // Fade out compact contents quickly
+        compactView.animate().alpha(0f).setDuration(80).withEndAction(new Runnable() {
+            @Override
+            public void run() {
+                compactView.setVisibility(View.GONE);
+                expandedView.setAlpha(0f);
+                expandedView.setVisibility(View.VISIBLE);
+                expandedView.animate().alpha(1f).setDuration(160).start();
+            }
+        }).start();
+
+        ValueAnimator anim = ValueAnimator.ofFloat(0f, 1f);
+        anim.setDuration(280);
+        anim.setInterpolator(new OvershootInterpolator(1.1f));
+        anim.addUpdateListener(new ValueAnimator.AnimatorUpdateListener() {
+            @Override
+            public void onAnimationUpdate(ValueAnimator va) {
+                float f = va.getAnimatedFraction();
+                int curW = (int) (startW + (expandedWidth - startW) * f);
+                int curH = (int) (startH + (expandedHeight - startH) * f);
+                float curR = startRadius + (endRadius - startRadius) * f;
+
+                FrameLayout.LayoutParams lp = (FrameLayout.LayoutParams) islandRoot.getLayoutParams();
+                lp.width = curW;
+                lp.height = curH;
+                islandRoot.setLayoutParams(lp);
+
+                GradientDrawable bg = new GradientDrawable();
+                bg.setColor(0xFF000000);
+                bg.setCornerRadius(curR);
+                bg.setStroke(dp(1.2f), currentAccentColor);
+                islandRoot.setBackground(bg);
+            }
+        });
+        anim.start();
 
         scheduleAutoCollapse(12000);
     }
@@ -347,9 +385,46 @@ public class GatehouseDynamicIslandOverlay {
         currentState = IslandState.COMPACT_PILL;
         cancelAutoCollapse();
 
-        expandedView.setVisibility(View.GONE);
-        compactView.setVisibility(View.VISIBLE);
-        updateViewsData();
+        final int startW = islandRoot.getWidth();
+        final int startH = islandRoot.getHeight();
+        final float startRadius = dp(16);
+        final float endRadius = compactHeight / 2f;
+
+        // Fade out expanded contents quickly
+        expandedView.animate().alpha(0f).setDuration(80).withEndAction(new Runnable() {
+            @Override
+            public void run() {
+                expandedView.setVisibility(View.GONE);
+                compactView.setAlpha(0f);
+                compactView.setVisibility(View.VISIBLE);
+                compactView.animate().alpha(1f).setDuration(160).start();
+            }
+        }).start();
+
+        ValueAnimator anim = ValueAnimator.ofFloat(0f, 1f);
+        anim.setDuration(240);
+        anim.setInterpolator(new AccelerateDecelerateInterpolator());
+        anim.addUpdateListener(new ValueAnimator.AnimatorUpdateListener() {
+            @Override
+            public void onAnimationUpdate(ValueAnimator va) {
+                float f = va.getAnimatedFraction();
+                int curW = (int) (startW + (compactWidth - startW) * f);
+                int curH = (int) (startH + (compactHeight - startH) * f);
+                float curR = startRadius + (endRadius - startRadius) * f;
+
+                FrameLayout.LayoutParams lp = (FrameLayout.LayoutParams) islandRoot.getLayoutParams();
+                lp.width = curW;
+                lp.height = curH;
+                islandRoot.setLayoutParams(lp);
+
+                GradientDrawable bg = new GradientDrawable();
+                bg.setColor(0xFF000000);
+                bg.setCornerRadius(curR);
+                bg.setStroke(dp(1.2f), currentAccentColor);
+                islandRoot.setBackground(bg);
+            }
+        });
+        anim.start();
 
         scheduleAutoCollapse(6000);
     }
@@ -360,10 +435,10 @@ public class GatehouseDynamicIslandOverlay {
         cancelAutoCollapse();
 
         islandRoot.animate()
-                .scaleX(0.2f)
-                .scaleY(0.2f)
+                .scaleX(0.1f)
+                .scaleY(0.1f)
                 .alpha(0f)
-                .setDuration(250)
+                .setDuration(200)
                 .withEndAction(new Runnable() {
                     @Override
                     public void run() {
