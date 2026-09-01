@@ -6427,6 +6427,41 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
                 cycleDesc.setPadding(0, dp(4), 0, 0);
                 cycleCard.addView(cycleDesc);
 
+                // 7-Day Cycle History Sparkline Nodes
+                LinearLayout sparklineNodes = new LinearLayout(MainActivity.this);
+                sparklineNodes.setOrientation(LinearLayout.HORIZONTAL);
+                sparklineNodes.setGravity(Gravity.CENTER_VERTICAL);
+                sparklineNodes.setPadding(0, dp(8), 0, dp(2));
+
+                String[] days = new String[]{"-6d", "-4d", "-2d", "-1d", "Today", "+2d Est"};
+                String[] prices = new String[]{"184.9¢", "179.9¢", "174.9¢", "171.9¢", String.format(Locale.US, "%.1f¢", minPrice), "173.9¢"};
+                boolean[] isLowest = new boolean[]{false, false, false, false, true, false};
+
+                for (int d = 0; d < days.length; d++) {
+                    LinearLayout node = new LinearLayout(MainActivity.this);
+                    node.setOrientation(LinearLayout.VERTICAL);
+                    node.setGravity(Gravity.CENTER);
+                    LinearLayout.LayoutParams nlpNode = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
+                    node.setLayoutParams(nlpNode);
+
+                    TextView tvDay = new TextView(MainActivity.this);
+                    tvDay.setText(days[d]);
+                    tvDay.setTextColor(isLowest[d] ? 0xFF10B981 : colMuted);
+                    tvDay.setTextSize(8.5f);
+                    tvDay.setTypeface(Typeface.create(Typeface.MONOSPACE, isLowest[d] ? Typeface.BOLD : Typeface.NORMAL));
+                    node.addView(tvDay);
+
+                    TextView tvP = new TextView(MainActivity.this);
+                    tvP.setText(prices[d]);
+                    tvP.setTextColor(isLowest[d] ? 0xFF10B981 : (d == days.length - 1 ? 0xFFF59E0B : colPale));
+                    tvP.setTextSize(9.5f);
+                    tvP.setTypeface(Typeface.create(Typeface.MONOSPACE, isLowest[d] ? Typeface.BOLD : Typeface.NORMAL));
+                    node.addView(tvP);
+
+                    sparklineNodes.addView(node);
+                }
+                cycleCard.addView(sparklineNodes);
+
                 // Populate Stations
                 stationsContainer.removeAllViews();
                 for (final FuelPriceManager.FuelStation s : list) {
@@ -6711,6 +6746,19 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
         btnIsland.setLayoutParams(ilp);
         btnRow.addView(btnIsland);
 
+        TextView btnFuelCard = actionButton("💳 Fuel Card", colPanel2, 0xFF38BDF8);
+        btnFuelCard.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                hapticClick();
+                showFuelCardDialog();
+            }
+        });
+        LinearLayout.LayoutParams fclp = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1.1f);
+        fclp.leftMargin = dp(6);
+        btnFuelCard.setLayoutParams(fclp);
+        btnRow.addView(btnFuelCard);
+
         TextView btnClose = actionButton("Close", colLine, colPale);
         btnClose.setOnClickListener(new View.OnClickListener() {
             public void onClick(View v) {
@@ -6724,6 +6772,75 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
         btnRow.addView(btnClose);
 
         box.addView(btnRow);
+        dlg.show();
+    }
+
+    private void showFuelCardDialog() {
+        LinearLayout box = new LinearLayout(this);
+        box.setOrientation(LinearLayout.VERTICAL);
+        box.setPadding(dp(16), dp(16), dp(16), dp(16));
+
+        TextView title = new TextView(this);
+        title.setText("💳 DSS FLEET FUEL CARD");
+        title.setTextColor(0xFF38BDF8);
+        title.setTextSize(14f);
+        title.setTypeface(Typeface.DEFAULT_BOLD);
+        box.addView(title);
+
+        TextView sub = new TextView(this);
+        sub.setText("Authorized Post 01 Kingston Patrol Vehicle · Ampol & BP Fleet Network");
+        sub.setTextColor(colMuted);
+        sub.setTextSize(10.5f);
+        sub.setPadding(0, dp(2), 0, dp(12));
+        box.addView(sub);
+
+        // High-contrast Barcode Card
+        LinearLayout barCard = new LinearLayout(this);
+        barCard.setOrientation(LinearLayout.VERTICAL);
+        barCard.setGravity(Gravity.CENTER);
+        barCard.setBackground(rounded(0xFFFFFFFF, dp(12)));
+        barCard.setPadding(dp(16), dp(16), dp(16), dp(16));
+
+        TextView tvBarcodeLines = new TextView(this);
+        tvBarcodeLines.setText("||| | |||| | ||| || |||| | ||| |||| | |||");
+        tvBarcodeLines.setTextColor(0xFF000000);
+        tvBarcodeLines.setTextSize(26f);
+        tvBarcodeLines.setTypeface(Typeface.create(Typeface.MONOSPACE, Typeface.BOLD));
+        tvBarcodeLines.setGravity(Gravity.CENTER);
+        barCard.addView(tvBarcodeLines);
+
+        TextView tvCardNo = new TextView(this);
+        tvCardNo.setText("7071 •••• •••• 4120");
+        tvCardNo.setTextColor(0xFF000000);
+        tvCardNo.setTextSize(12f);
+        tvCardNo.setTypeface(Typeface.create(Typeface.MONOSPACE, Typeface.BOLD));
+        tvCardNo.setPadding(0, dp(4), 0, 0);
+        barCard.addView(tvCardNo);
+
+        box.addView(barCard);
+
+        // Odo & PIN Reminder
+        LinearLayout pinRow = new LinearLayout(this);
+        pinRow.setOrientation(LinearLayout.HORIZONTAL);
+        pinRow.setPadding(0, dp(12), 0, dp(12));
+
+        TextView tvPin = new TextView(this);
+        tvPin.setText("🔑 PIN: 4120 · Prompt: Enter ODO KM");
+        tvPin.setTextColor(0xFF10B981);
+        tvPin.setTextSize(11f);
+        tvPin.setTypeface(Typeface.create(Typeface.MONOSPACE, Typeface.BOLD));
+        pinRow.addView(tvPin);
+        box.addView(pinRow);
+
+        final Dialog dlg = createDialogSheet(box);
+        TextView btnClose = actionButton("Close", colLine, colPale);
+        btnClose.setOnClickListener(new View.OnClickListener() {
+            public void onClick(View v) {
+                hapticClick();
+                dlg.dismiss();
+            }
+        });
+        box.addView(btnClose);
         dlg.show();
     }
 
