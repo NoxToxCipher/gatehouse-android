@@ -1362,9 +1362,6 @@ public class BadukGameView extends View {
     public boolean onTouchEvent(MotionEvent event) {
         if (gameOver && !isScoringMode) return false;
         int action = event.getActionMasked();
-        if (action == MotionEvent.ACTION_DOWN || action == MotionEvent.ACTION_MOVE) {
-            if (getParent() != null) getParent().requestDisallowInterceptTouchEvent(true);
-        }
         if (action == MotionEvent.ACTION_DOWN) {
             float w = getWidth();
             float h = getHeight();
