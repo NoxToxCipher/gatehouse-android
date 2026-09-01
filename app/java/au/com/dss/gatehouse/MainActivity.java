@@ -17150,13 +17150,22 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
         clp.bottomMargin = dp(12);
         card.setLayoutParams(clp);
 
-        TextView tvWave = new TextView(this);
-        tvWave.setText(" ▂▃▅▆▇▆▅▃▂  ▂▃▅▆▇█▇▆▅▃▂ ");
-        tvWave.setTextColor(colEmerald);
-        tvWave.setTextSize(16f);
-        tvWave.setTypeface(Typeface.MONOSPACE);
-        tvWave.setGravity(Gravity.CENTER);
-        card.addView(tvWave);
+        LinearLayout waveBarRow = new LinearLayout(this);
+        waveBarRow.setOrientation(LinearLayout.HORIZONTAL);
+        waveBarRow.setGravity(Gravity.CENTER);
+        waveBarRow.setPadding(0, dp(6), 0, dp(8));
+
+        int[] heights = {6, 12, 18, 26, 32, 22, 14, 28, 36, 40, 28, 16, 22, 34, 38, 24, 18, 28, 32, 20, 14, 8};
+        for (int h : heights) {
+            View bar = new View(this);
+            bar.setBackground(rounded(colEmerald, dp(2)));
+            LinearLayout.LayoutParams blp = new LinearLayout.LayoutParams(dp(4), dp(h));
+            blp.leftMargin = dp(2);
+            blp.rightMargin = dp(2);
+            bar.setLayoutParams(blp);
+            waveBarRow.addView(bar);
+        }
+        card.addView(waveBarRow);
 
         TextView tvTime = new TextView(this);
         tvTime.setText("▶ 00:14 / 00:28 · 44.1 kHz Digital Master");
@@ -17164,7 +17173,7 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
         tvTime.setTextSize(11f);
         tvTime.setTypeface(Typeface.create(Typeface.MONOSPACE, Typeface.BOLD));
         tvTime.setGravity(Gravity.CENTER);
-        tvTime.setPadding(0, dp(8), 0, dp(4));
+        tvTime.setPadding(0, dp(4), 0, dp(4));
         card.addView(tvTime);
 
         TextView tvGuard = new TextView(this);
@@ -17410,6 +17419,51 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
         tvPageNum.setTypeface(Typeface.create(Typeface.MONOSPACE, Typeface.BOLD));
         notebookHeader.addView(tvPageNum);
         sheetCard.addView(notebookHeader);
+
+        // Category Jump Scroller in Ruled Ledger
+        HorizontalScrollView catScroller = new HorizontalScrollView(this);
+        catScroller.setHorizontalScrollBarEnabled(false);
+        LinearLayout catRow = new LinearLayout(this);
+        catRow.setOrientation(LinearLayout.HORIZONTAL);
+        catRow.setPadding(dp(2), 0, dp(2), dp(6));
+
+        final String[][] cats = {
+                {"ALL", "★ ALL"},
+                {"PATROL", "🛡️ PATROLS"},
+                {"GATE", "🚪 GATES"},
+                {"LOTS", "🏢 LOTS"},
+                {"PUMPS", "💧 PUMPS"},
+                {"INCIDENT", "⚠️ INCIDENTS"}
+        };
+
+        for (final String[] cat : cats) {
+            final String catKey = cat[0];
+            final String catLabel = cat[1];
+            final boolean isActive = logbookSelectedCategory.equalsIgnoreCase(catKey);
+
+            TextView chip = new TextView(this);
+            chip.setText(catLabel);
+            chip.setTextColor(isActive ? 0xFF0F172A : (carbonMode ? 0xFFFEF08A : colPale));
+            chip.setTextSize(9.5f);
+            chip.setTypeface(Typeface.create(Typeface.MONOSPACE, Typeface.BOLD));
+            chip.setPadding(dp(8), dp(3), dp(8), dp(3));
+            chip.setBackground(rounded(isActive ? (carbonMode ? 0xFFFDE047 : colCyan) : (carbonMode ? 0x22FDE047 : 0x22FFFFFF), dp(6)));
+            chip.setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View v) {
+                    hapticClick();
+                    logbookSelectedCategory = isActive ? "ALL" : catKey;
+                    showFullLogbookDialog();
+                }
+            });
+            LinearLayout.LayoutParams clp = new LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+            clp.rightMargin = dp(4);
+            chip.setLayoutParams(clp);
+            catRow.addView(chip);
+        }
+        catScroller.addView(catRow);
+        sheetCard.addView(catScroller);
 
         // Top Double Rule Line
         View topRule = new View(this);
