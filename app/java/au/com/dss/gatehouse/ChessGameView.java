@@ -59,6 +59,15 @@ public class ChessGameView extends View {
     private int puzzleIndex = 0;
     private boolean puzzleSolved = false;
 
+    // Smooth Piece Motion Animation
+    private boolean isAnimating = false;
+    private char animPiece = '.';
+    private float animFromCol = 0f, animFromRow = 0f;
+    private float animToCol = 0f, animToRow = 0f;
+    private long animStartTime = 0;
+    private static final long ANIM_DURATION_MS = 240;
+    private int animHideCol = -1, animHideRow = -1;
+
     private float dpf(float v) {
         return v * getResources().getDisplayMetrics().density;
     }
@@ -381,7 +390,18 @@ public class ChessGameView extends View {
         if (mode == 1) {
             ChessPuzzle p = CHESS_PUZZLES[puzzleIndex];
             if (fromX == p.fromX && fromY == p.fromY && toX == p.toX && toY == p.toY) {
-                board[toY][toX] = board[fromY][fromX];
+                char mover = board[fromY][fromX];
+                isAnimating = true;
+                animPiece = mover;
+                animFromCol = fromX;
+                animFromRow = fromY;
+                animToCol = toX;
+                animToRow = toY;
+                animHideCol = toX;
+                animHideRow = toY;
+                animStartTime = System.currentTimeMillis();
+
+                board[toY][toX] = mover;
                 board[fromY][fromX] = '.';
                 puzzleSolved = true;
                 try {
@@ -408,6 +428,17 @@ public class ChessGameView extends View {
         char mover = board[fromY][fromX];
         if (mover == 'P' && toY == 0) mover = 'Q';
         if (mover == 'p' && toY == 7) mover = 'q';
+
+        // Start smooth piece slide animation
+        isAnimating = true;
+        animPiece = mover;
+        animFromCol = fromX;
+        animFromRow = fromY;
+        animToCol = toX;
+        animToRow = toY;
+        animHideCol = toX;
+        animHideRow = toY;
+        animStartTime = System.currentTimeMillis();
 
         board[toY][toX] = mover;
         board[fromY][fromX] = '.';
@@ -680,7 +711,8 @@ public class ChessGameView extends View {
                 }
 
                 char p = board[r][c];
-                if (p != '.') {
+                // If this cell is currently the landing target of an active piece animation, skip drawing static piece
+                if (p != '.' && !(isAnimating && c == animHideCol && r == animHideRow)) {
                     String glyph = getPieceGlyph(p);
                     float cx = left + cellSize / 2f;
                     float cy = top + cellSize * 0.76f;
@@ -719,6 +751,58 @@ public class ChessGameView extends View {
                     }
                 }
             }
+        }
+
+        // Draw active animated gliding piece above the board
+        if (isAnimating && animPiece != '.') {
+            long now = System.currentTimeMillis();
+            float t = (float) (now - animStartTime) / (float) ANIM_DURATION_MS;
+            if (t >= 1f) {
+                t = 1f;
+                isAnimating = false;
+                animHideCol = -1;
+                animHideRow = -1;
+            } else {
+                postInvalidateOnAnimation();
+            }
+
+            // Smooth cubic ease-in-out translation
+            float easeT = (t < 0.5f) ? (2f * t * t) : (1f - (float) Math.pow(-2f * t + 2f, 2) / 2f);
+            float curCol = animFromCol + (animToCol - animFromCol) * easeT;
+            float curRow = animFromRow + (animToRow - animFromRow) * easeT;
+
+            float cx = startX + curCol * cellSize + cellSize / 2f;
+            float baseCy = startY + curRow * cellSize + cellSize * 0.76f;
+
+            // Parabolic lift height (lifts smoothly into 3D space and lands)
+            float lift = (float) Math.sin(t * Math.PI) * dpf(9f);
+            float drawCy = baseCy - lift;
+
+            String glyph = getPieceGlyph(animPiece);
+            boolean isWhite = isWhitePiece(animPiece);
+
+            float originalWhiteTextSize = whitePiecePaint.getTextSize();
+            float originalBlackTextSize = blackPiecePaint.getTextSize();
+            float movingSize = cellSize * 0.84f;
+
+            whitePiecePaint.setTextSize(movingSize);
+            blackPiecePaint.setTextSize(movingSize);
+            shadowPaint.setTextSize(movingSize);
+
+            // Dynamic airborne drop shadow (drops lower and widens as piece ascends)
+            float shadowOffset = dpf(2f) + lift * 0.75f;
+            canvas.drawText(glyph, cx + shadowOffset * 0.6f, baseCy + shadowOffset, shadowPaint);
+
+            if (isWhite) {
+                canvas.drawText(glyph, cx, drawCy, whitePiecePaint);
+            } else {
+                canvas.drawText(glyph, cx + dpf(0.6f), drawCy + dpf(0.6f), pieceRimPaint);
+                canvas.drawText(glyph, cx, drawCy, blackPiecePaint);
+            }
+
+            whitePiecePaint.setTextSize(originalWhiteTextSize);
+            blackPiecePaint.setTextSize(originalBlackTextSize);
+            shadowPaint.setTextSize(originalWhiteTextSize);
         }
 
         // Move targets
