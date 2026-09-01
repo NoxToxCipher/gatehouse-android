@@ -5213,6 +5213,26 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
         btnSgf.setLayoutParams(sgflp);
         bottomRow.addView(btnSgf);
 
+        final TextView btnClock = actionButton("⏱️ Clock", colPanel2, 0xFF38BDF8);
+        btnClock.setOnClickListener(new View.OnClickListener() {
+            public void onClick(View v) {
+                hapticClick();
+                badukView.toggleTimer();
+                if (badukView.isTimerEnabled()) {
+                    btnClock.setBackground(rounded(0xFF38BDF8, dp(8)));
+                    btnClock.setTextColor(0xFF0F172A);
+                } else {
+                    btnClock.setBackground(rounded(colPanel2, dp(8)));
+                    btnClock.setTextColor(0xFF38BDF8);
+                }
+            }
+        });
+        LinearLayout.LayoutParams ctlp = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 0.9f);
+        ctlp.leftMargin = dp(2);
+        ctlp.rightMargin = dp(2);
+        btnClock.setLayoutParams(ctlp);
+        bottomRow.addView(btnClock);
+
         TextView btnRules = actionButton("📖 Rules", colPanel2, colAccent);
         btnRules.setOnClickListener(new View.OnClickListener() {
             public void onClick(View v) {

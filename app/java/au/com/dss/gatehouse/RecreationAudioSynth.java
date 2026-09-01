@@ -91,6 +91,29 @@ public class RecreationAudioSynth {
         });
     }
 
+    public static void playClockTick(final boolean isWarning) {
+        Executors.newSingleThreadExecutor().execute(new Runnable() {
+            @Override
+            public void run() {
+                try {
+                    int durationMs = isWarning ? 70 : 45;
+                    int numSamples = (SAMPLE_RATE * durationMs) / 1000;
+                    short[] buffer = new short[numSamples];
+
+                    double freq = isWarning ? 1760.0 : 880.0;
+                    for (int i = 0; i < numSamples; i++) {
+                        double t = (double) i / SAMPLE_RATE;
+                        double decay = Math.exp(-t * (isWarning ? 75.0 : 110.0));
+                        double sample = Math.sin(2.0 * Math.PI * freq * t) * decay * (isWarning ? 0.8 : 0.4);
+                        buffer[i] = (short) (Math.max(-1.0, Math.min(1.0, sample)) * 28000.0);
+                    }
+
+                    playPcmBuffer(buffer);
+                } catch (Throwable ignored) {}
+            }
+        });
+    }
+
     public static void playExplosion() {
         Executors.newSingleThreadExecutor().execute(new Runnable() {
             @Override

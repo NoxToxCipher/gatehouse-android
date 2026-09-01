@@ -90,6 +90,89 @@ public class BadukGameView extends View {
     private final boolean[][] deadStones = new boolean[19][19];
     private final Paint deadStoneCrossPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
 
+    // Byo-Yomi Tournament Time Controls (10m Main Time + 3 x 30s Overtime)
+    private boolean isTimerEnabled = false;
+    private long blackTimeRemainingMs = 600000;
+    private long whiteTimeRemainingMs = 600000;
+    private int blackByoYomiPeriods = 3;
+    private int whiteByoYomiPeriods = 3;
+    private long lastTimerTickMs = 0;
+    private final Runnable timerRunnable = new Runnable() {
+        @Override
+        public void run() {
+            if (!isTimerEnabled || gameOver || reviewStepIndex != -1) return;
+            long now = System.currentTimeMillis();
+            if (lastTimerTickMs > 0) {
+                long delta = now - lastTimerTickMs;
+                if (currentTurn == 1) {
+                    blackTimeRemainingMs -= delta;
+                    if (blackTimeRemainingMs <= 0) {
+                        if (blackByoYomiPeriods > 1) {
+                            blackByoYomiPeriods--;
+                            blackTimeRemainingMs = 30000;
+                            try { RecreationAudioSynth.playClockTick(true); } catch (Exception ignored) {}
+                        } else {
+                            blackTimeRemainingMs = 0;
+                            gameOver = true;
+                            if (statusListener != null) {
+                                statusListener.onStatusChanged("⏱️ Black Time Forfeit! White Wins by Timeout.", 0xFFEF4444);
+                            }
+                            invalidate();
+                            return;
+                        }
+                    } else if (blackTimeRemainingMs < 10000 && (blackTimeRemainingMs / 1000) != ((blackTimeRemainingMs + delta) / 1000)) {
+                        try { RecreationAudioSynth.playClockTick(false); } catch (Exception ignored) {}
+                    }
+                } else if (currentTurn == 2) {
+                    whiteTimeRemainingMs -= delta;
+                    if (whiteTimeRemainingMs <= 0) {
+                        if (whiteByoYomiPeriods > 1) {
+                            whiteByoYomiPeriods--;
+                            whiteTimeRemainingMs = 30000;
+                            try { RecreationAudioSynth.playClockTick(true); } catch (Exception ignored) {}
+                        } else {
+                            whiteTimeRemainingMs = 0;
+                            gameOver = true;
+                            if (statusListener != null) {
+                                statusListener.onStatusChanged("⏱️ White Time Forfeit! Black Wins by Timeout.", 0xFF10B981);
+                            }
+                            invalidate();
+                            return;
+                        }
+                    }
+                }
+            }
+            lastTimerTickMs = now;
+            updateStatus();
+            postDelayed(this, 250);
+        }
+    };
+
+    public void toggleTimer() {
+        isTimerEnabled = !isTimerEnabled;
+        if (isTimerEnabled) {
+            blackTimeRemainingMs = 600000;
+            whiteTimeRemainingMs = 600000;
+            blackByoYomiPeriods = 3;
+            whiteByoYomiPeriods = 3;
+            lastTimerTickMs = System.currentTimeMillis();
+            removeCallbacks(timerRunnable);
+            post(timerRunnable);
+            try { performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK); } catch (Exception ignored) {}
+            if (statusListener != null) {
+                statusListener.onStatusChanged("⏱️ 10m + 3x30s Byo-Yomi Tournament Clock Active", 0xFF38BDF8);
+            }
+        } else {
+            removeCallbacks(timerRunnable);
+            updateStatus();
+        }
+        invalidate();
+    }
+
+    public boolean isTimerEnabled() {
+        return isTimerEnabled;
+    }
+
     // Interactive Move History Replayer / Timeline Stepper
     private int reviewStepIndex = -1;
     private final List<int[][]> fullReplayStates = new ArrayList<>();
@@ -641,8 +724,17 @@ public class BadukGameView extends View {
                     ? String.format(java.util.Locale.US, "● Black +%.1f", (blackTotal - whiteTotal))
                     : String.format(java.util.Locale.US, "○ White +%.1f", (whiteTotal - blackTotal));
 
+            String timerStr = "";
+            if (isTimerEnabled) {
+                long bSec = Math.max(0, blackTimeRemainingMs / 1000);
+                long wSec = Math.max(0, whiteTimeRemainingMs / 1000);
+                timerStr = String.format(java.util.Locale.US, " ⏱️ [B %02d:%02d (%d) | W %02d:%02d (%d)]",
+                        bSec / 60, bSec % 60, blackByoYomiPeriods,
+                        wSec / 60, wSec % 60, whiteByoYomiPeriods);
+            }
+
             String turn = (currentTurn == 1) ? "● Black's Turn" : "○ White's Turn (Bot)";
-            statusListener.onStatusChanged(turn + " · " + leadStr + " (●" + (int)blackTotal + " vs ○" + String.format(java.util.Locale.US, "%.1f", whiteTotal) + ")", (currentTurn == 1 ? 0xFFFFD166 : 0xFF38BDF8));
+            statusListener.onStatusChanged(turn + timerStr + " · " + leadStr + " (●" + (int)blackTotal + " vs ○" + String.format(java.util.Locale.US, "%.1f", whiteTotal) + ")", (currentTurn == 1 ? 0xFFFFD166 : 0xFF38BDF8));
         }
     }
 
