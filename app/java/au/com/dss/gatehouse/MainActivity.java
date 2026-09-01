@@ -15419,6 +15419,7 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
         container.setPadding(0, dp(4), 0, dp(6));
 
         final LogbookManager logMgr = LogbookManager.getInstance(this);
+        final List<LogbookManager.ShiftRecord> shifts = logMgr.getAllShifts();
 
         // =========================================================================
         // 1. IN-SCROLL ACTION BAR QUICK PILLS
@@ -15526,6 +15527,30 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
         sclp.bottomMargin = dp(6);
         shiftCard.setLayoutParams(sclp);
 
+        boolean isPastShift = false;
+        String pastShiftTitle = "";
+        for (int i = 1; i < shifts.size(); i++) {
+            if (shifts.get(i).shiftId.equals(logbookSelectedShiftId)) {
+                isPastShift = true;
+                pastShiftTitle = shifts.get(i).dateHeaderStr + " · " + shifts.get(i).entries.size() + " LOGS";
+                break;
+            }
+        }
+        if (isPastShift) {
+            TextView tvSealedRibbon = new TextView(this);
+            tvSealedRibbon.setText("🔒 HISTORICAL SHIFT · SEALED & LOCKED (" + pastShiftTitle + ")");
+            tvSealedRibbon.setTextColor(0xFFFEF08A);
+            tvSealedRibbon.setTextSize(9f);
+            tvSealedRibbon.setTypeface(Typeface.create(Typeface.MONOSPACE, Typeface.BOLD));
+            tvSealedRibbon.setPadding(dp(8), dp(3), dp(8), dp(3));
+            tvSealedRibbon.setBackground(rounded(0x33FDE047, dp(6)));
+            LinearLayout.LayoutParams rblp = new LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+            rblp.bottomMargin = dp(6);
+            tvSealedRibbon.setLayoutParams(rblp);
+            shiftCard.addView(tvSealedRibbon);
+        }
+
         LinearLayout scTop = new LinearLayout(this);
         scTop.setOrientation(LinearLayout.HORIZONTAL);
         scTop.setGravity(Gravity.CENTER_VERTICAL);
@@ -15614,7 +15639,6 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
         shiftRow.setOrientation(LinearLayout.HORIZONTAL);
         shiftRow.setPadding(0, 0, 0, dp(6));
 
-        final List<LogbookManager.ShiftRecord> shifts = logMgr.getAllShifts();
         final Runnable buildShiftSegment = new Runnable() {
             @Override
             public void run() {
@@ -15808,6 +15832,45 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
         }
         catHsv.addView(catRow);
         searchBox.addView(catHsv);
+
+        // Quick Auto-Suggest Search Filter Strip
+        HorizontalScrollView suggestHsv = new HorizontalScrollView(this);
+        suggestHsv.setHorizontalScrollBarEnabled(false);
+        LinearLayout suggestRow = new LinearLayout(this);
+        suggestRow.setOrientation(LinearLayout.HORIZONTAL);
+        suggestRow.setPadding(0, dp(4), 0, 0);
+
+        final String[] suggestions = {
+                "724-WJE", "620 kPa", "Lot 14", "Lot 15", "Lot 16", "Gate A", "Gate B", "Handover"
+        };
+        for (final String sug : suggestions) {
+            final boolean isActive = logbookSearchQuery.equalsIgnoreCase(sug);
+            TextView sugChip = new TextView(this);
+            sugChip.setText("🔍 " + sug);
+            sugChip.setTextColor(isActive ? 0xFF0F172A : colCyan);
+            sugChip.setTextSize(9f);
+            sugChip.setTypeface(Typeface.create(Typeface.MONOSPACE, Typeface.BOLD));
+            sugChip.setPadding(dp(7), dp(3), dp(7), dp(3));
+            sugChip.setBackground(rounded(isActive ? colCyan : 0x2200E5FF, dp(6)));
+            sugChip.setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View v) {
+                    hapticClick();
+                    if (isActive) {
+                        searchField.setText("");
+                    } else {
+                        searchField.setText(sug);
+                    }
+                }
+            });
+            LinearLayout.LayoutParams sugLp = new LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+            sugLp.rightMargin = dp(4);
+            sugChip.setLayoutParams(sugLp);
+            suggestRow.addView(sugChip);
+        }
+        suggestHsv.addView(suggestRow);
+        searchBox.addView(suggestHsv);
 
         // Time Bucket Presets inside search box
         HorizontalScrollView timeHsv = new HorizontalScrollView(this);
