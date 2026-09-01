@@ -19251,20 +19251,24 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
         div.setLayoutParams(dlp);
         body.addView(div);
 
-        // Formatted Document Text
-        final TextView tvContent = new TextView(this);
-        tvContent.setText(doc.contentMarkdown.replaceAll("^#+\\s*", ""));
-        tvContent.setTextColor(0xFFE2E8F0);
-        tvContent.setTextSize(docReaderTextSizeSp);
-        tvContent.setLineSpacing(dp(4), 1.2f);
-        body.addView(tvContent);
+        // Formatted Document Native Markdown View Container
+        final FrameLayout contentContainer = new FrameLayout(this);
+        final Runnable updateMarkdownView = new Runnable() {
+            public void run() {
+                contentContainer.removeAllViews();
+                View mdView = MarkdownDocumentRenderer.renderMarkdown(MainActivity.this, doc.contentMarkdown, docReaderTextSizeSp, activeTheme);
+                contentContainer.addView(mdView);
+            }
+        };
+        updateMarkdownView.run();
+        body.addView(contentContainer);
 
         btnFontMinus.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
                 hapticClick();
                 docReaderTextSizeSp = Math.max(11f, docReaderTextSizeSp - 1.5f);
-                tvContent.setTextSize(docReaderTextSizeSp);
+                updateMarkdownView.run();
             }
         });
 
@@ -19273,7 +19277,7 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
             public void onClick(View v) {
                 hapticClick();
                 docReaderTextSizeSp = Math.min(22f, docReaderTextSizeSp + 1.5f);
-                tvContent.setTextSize(docReaderTextSizeSp);
+                updateMarkdownView.run();
             }
         });
 
