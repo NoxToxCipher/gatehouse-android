@@ -5043,6 +5043,53 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
         nlp.leftMargin = dp(2); btnNextPuzzle.setLayoutParams(nlp); ctrlRow.addView(btnNextPuzzle);
         box.addView(ctrlRow);
 
+        // 4. Replay Timeline Step Row (|<<, < Step, Step >, >>|)
+        LinearLayout replayRow = new LinearLayout(this);
+        replayRow.setOrientation(LinearLayout.HORIZONTAL);
+        replayRow.setPadding(0, dp(5), 0, 0);
+
+        TextView btnRStart = actionButton("|◀", colLine, colPale);
+        btnRStart.setOnClickListener(new View.OnClickListener() {
+            public void onClick(View v) {
+                hapticClick();
+                badukView.stepToStart();
+            }
+        });
+        LinearLayout.LayoutParams rslp = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
+        rslp.rightMargin = dp(2); btnRStart.setLayoutParams(rslp); replayRow.addView(btnRStart);
+
+        TextView btnRBack = actionButton("◀ Step", colLine, colCyan);
+        btnRBack.setOnClickListener(new View.OnClickListener() {
+            public void onClick(View v) {
+                hapticClick();
+                badukView.stepBackward();
+            }
+        });
+        LinearLayout.LayoutParams rblp1 = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1.2f);
+        rblp1.leftMargin = dp(2); rblp1.rightMargin = dp(2); btnRBack.setLayoutParams(rblp1); replayRow.addView(btnRBack);
+
+        TextView btnRFwd = actionButton("Step ▶", colLine, colCyan);
+        btnRFwd.setOnClickListener(new View.OnClickListener() {
+            public void onClick(View v) {
+                hapticClick();
+                badukView.stepForward();
+            }
+        });
+        LinearLayout.LayoutParams rflp = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1.2f);
+        rflp.leftMargin = dp(2); rflp.rightMargin = dp(2); btnRFwd.setLayoutParams(rflp); replayRow.addView(btnRFwd);
+
+        TextView btnREnd = actionButton("▶| Live", colLine, 0xFFFFD166);
+        btnREnd.setOnClickListener(new View.OnClickListener() {
+            public void onClick(View v) {
+                hapticClick();
+                badukView.stepToEnd();
+            }
+        });
+        LinearLayout.LayoutParams relp = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1.2f);
+        relp.leftMargin = dp(2); btnREnd.setLayoutParams(relp); replayRow.addView(btnREnd);
+
+        box.addView(replayRow);
+
         final Dialog dlg = createDialogSheet(box);
 
         LinearLayout bottomRow = new LinearLayout(this);

@@ -90,6 +90,65 @@ public class BadukGameView extends View {
     private final boolean[][] deadStones = new boolean[19][19];
     private final Paint deadStoneCrossPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
 
+    // Interactive Move History Replayer / Timeline Stepper
+    private int reviewStepIndex = -1;
+    private final List<int[][]> fullReplayStates = new ArrayList<>();
+    private final List<Point> fullReplayMoves = new ArrayList<>();
+
+    public void stepToStart() {
+        if (fullReplayStates.isEmpty()) return;
+        reviewStepIndex = 0;
+        applyReplayState(reviewStepIndex);
+    }
+
+    public void stepBackward() {
+        if (fullReplayStates.isEmpty()) return;
+        if (reviewStepIndex == -1) reviewStepIndex = fullReplayStates.size() - 1;
+        reviewStepIndex = Math.max(0, reviewStepIndex - 1);
+        applyReplayState(reviewStepIndex);
+    }
+
+    public void stepForward() {
+        if (fullReplayStates.isEmpty() || reviewStepIndex == -1) return;
+        reviewStepIndex = Math.min(fullReplayStates.size() - 1, reviewStepIndex + 1);
+        applyReplayState(reviewStepIndex);
+        if (reviewStepIndex == fullReplayStates.size() - 1) {
+            reviewStepIndex = -1;
+        }
+    }
+
+    public void stepToEnd() {
+        if (fullReplayStates.isEmpty()) return;
+        reviewStepIndex = -1;
+        applyReplayState(fullReplayStates.size() - 1);
+    }
+
+    private void applyReplayState(int step) {
+        if (step < 0 || step >= fullReplayStates.size()) return;
+        int[][] state = fullReplayStates.get(step);
+        for (int r = 0; r < boardSize; r++) {
+            System.arraycopy(state[r], 0, board[r], 0, boardSize);
+        }
+        if (step > 0 && step <= fullReplayMoves.size()) {
+            Point p = fullReplayMoves.get(step - 1);
+            lastMoveX = p.x;
+            lastMoveY = p.y;
+        } else {
+            lastMoveX = -1;
+            lastMoveY = -1;
+        }
+        currentTurn = (step % 2 == 0) ? 1 : 2;
+        updateAtariMap();
+        try {
+            RecreationAudioSynth.playBadukStoneClack();
+            performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP);
+        } catch (Exception ignored) {}
+        if (statusListener != null) {
+            statusListener.onStatusChanged("⏪ Replay: Move " + step + " / " + (fullReplayStates.size() - 1) + (reviewStepIndex == -1 ? " (Live Game)" : ""), 0xFF38BDF8);
+        }
+        invalidate();
+    }
+
     public void toggleMoveNumbers() {
         showMoveNumbers = !showMoveNumbers;
         invalidate();
@@ -386,6 +445,13 @@ public class BadukGameView extends View {
         }
         history.clear();
         moveList.clear();
+        fullReplayStates.clear();
+        fullReplayMoves.clear();
+        reviewStepIndex = -1;
+
+        int[][] initialEmpty = new int[boardSize][boardSize];
+        fullReplayStates.add(initialEmpty);
+
         currentTurn = 1;
         blackCaptures = 0;
         whiteCaptures = 0;
@@ -430,6 +496,12 @@ public class BadukGameView extends View {
             System.arraycopy(board[r], 0, copy[r], 0, boardSize);
         }
         history.add(copy);
+
+        int[][] fCopy = new int[boardSize][boardSize];
+        for (int r = 0; r < boardSize; r++) {
+            System.arraycopy(board[r], 0, fCopy[r], 0, boardSize);
+        }
+        fullReplayStates.add(fCopy);
     }
 
     private void restoreState(int[][] saved) {
@@ -668,6 +740,7 @@ public class BadukGameView extends View {
         lastMoveX = x;
         lastMoveY = y;
         moveList.add(new Point(x, y));
+        fullReplayMoves.add(new Point(x, y));
         consecutivePasses = 0;
         currentTurn = opponent;
 
