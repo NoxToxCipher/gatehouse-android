@@ -36,6 +36,7 @@ public class BadukGameView extends View {
     private final Paint gobanPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final Paint woodGrainPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final Paint goldBorderPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+    private final Paint goldDetailPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final Paint gridLinePaint = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final Paint starPointPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final Paint stone3dPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
@@ -43,6 +44,7 @@ public class BadukGameView extends View {
     private final Paint stoneShinePaint = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final Paint shadowPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final Paint lastMovePaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+    private final Paint atariGlowPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final Paint coordTextPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final Paint territoryBlackPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final Paint territoryWhitePaint = new Paint(Paint.ANTI_ALIAS_FLAG);
@@ -78,15 +80,19 @@ public class BadukGameView extends View {
 
         goldBorderPaint.setColor(0xFFEAB308);
         goldBorderPaint.setStyle(Paint.Style.STROKE);
-        goldBorderPaint.setStrokeWidth(dpf(1.8f));
+        goldBorderPaint.setStrokeWidth(dpf(2f));
 
-        gridLinePaint.setColor(0xFF452B14);
+        goldDetailPaint.setColor(0xFFCA8A04);
+        goldDetailPaint.setStyle(Paint.Style.STROKE);
+        goldDetailPaint.setStrokeWidth(dpf(1f));
+
+        gridLinePaint.setColor(0xFF2C1808);
         gridLinePaint.setStrokeWidth(dpf(1.4f));
 
         woodGrainPaint.setColor(0x18000000);
         woodGrainPaint.setStrokeWidth(dpf(1f));
 
-        starPointPaint.setColor(0xFF3E2723);
+        starPointPaint.setColor(0xFF1E1005);
         starPointPaint.setStyle(Paint.Style.FILL);
 
         stoneRimPaint.setColor(0x88FFFFFF);
@@ -103,7 +109,11 @@ public class BadukGameView extends View {
         lastMovePaint.setStyle(Paint.Style.STROKE);
         lastMovePaint.setStrokeWidth(dpf(2.2f));
 
-        coordTextPaint.setColor(0xFF8C5C33);
+        atariGlowPaint.setColor(0xCCEF4444);
+        atariGlowPaint.setStyle(Paint.Style.STROKE);
+        atariGlowPaint.setStrokeWidth(dpf(2f));
+
+        coordTextPaint.setColor(0xFF5C3818);
         coordTextPaint.setTextAlign(Paint.Align.CENTER);
         coordTextPaint.setTypeface(Typeface.create(Typeface.MONOSPACE, Typeface.BOLD));
 
@@ -614,19 +624,23 @@ public class BadukGameView extends View {
         float h = getHeight();
         if (w <= 0 || h <= 0) return;
 
-        // Rich Japanese Hon-Kaya Wood Gradient
+        // Rich Japanese Hon-Kaya Wood Goban Gradient
         boardRect.set(0, 0, w, h);
-        gobanPaint.setShader(new LinearGradient(0, 0, w, h, 0xFF3D2411, 0xFF5C3A1E, Shader.TileMode.CLAMP));
+        gobanPaint.setShader(new LinearGradient(0, 0, w, h, 0xFFD49755, 0xFFB37332, Shader.TileMode.CLAMP));
         canvas.drawRoundRect(boardRect, dpf(16f), dpf(16f), gobanPaint);
 
         // Fine Wood Grain Texture Lines
-        for (int i = 1; i < 16; i++) {
-            float gy = h * (i / 16f);
-            canvas.drawLine(0, gy, w, gy + dpf(2f), woodGrainPaint);
+        for (int i = 1; i < 18; i++) {
+            float gy = h * (i / 18f);
+            canvas.drawLine(0, gy, w, gy + dpf(1.8f), woodGrainPaint);
         }
 
+        // Perimeter Inlaid Gold Borders
         RectF innerRect = new RectF(dpf(2.5f), dpf(2.5f), w - dpf(2.5f), h - dpf(2.5f));
         canvas.drawRoundRect(innerRect, dpf(14f), dpf(14f), goldBorderPaint);
+
+        RectF innerLine = new RectF(dpf(5f), dpf(5f), w - dpf(5f), h - dpf(5f));
+        canvas.drawRoundRect(innerLine, dpf(11f), dpf(11f), goldDetailPaint);
 
         float pad = dpf(22f);
         float size = Math.min(w, h) - pad * 2;
@@ -634,7 +648,7 @@ public class BadukGameView extends View {
         float startY = (h - size) / 2f;
         float cellSize = size / (boardSize - 1);
 
-        // Draw Grid Lines & Coordinates
+        // Draw Lacquered Grid Lines & Coordinates
         coordTextPaint.setTextSize(Math.max(dpf(7.5f), cellSize * 0.35f));
 
         for (int i = 0; i < boardSize; i++) {
@@ -673,8 +687,32 @@ public class BadukGameView extends View {
             }
         }
 
-        // Draw 3D Bi-convex Stones (Slate & Clamshell)
+        // Draw 3D Bi-convex Stones (Nachiguro Slate & Hyuga Clamshell)
         float stoneR = cellSize * 0.47f;
+
+        // Atari Alert Aura Detection
+        boolean[][] visited = new boolean[boardSize][boardSize];
+        for (int y = 0; y < boardSize; y++) {
+            for (int x = 0; x < boardSize; x++) {
+                int val = board[y][x];
+                if (val != 0 && !visited[y][x]) {
+                    boolean[][] groupVisited = new boolean[boardSize][boardSize];
+                    int libs = countGroupLiberties(x, y, val, groupVisited);
+                    if (libs == 1) {
+                        for (int gy = 0; gy < boardSize; gy++) {
+                            for (int gx = 0; gx < boardSize; gx++) {
+                                if (groupVisited[gy][gx]) {
+                                    visited[gy][gx] = true;
+                                    float acx = startX + gx * cellSize;
+                                    float acy = startY + gy * cellSize;
+                                    canvas.drawCircle(acx, acy, stoneR + dpf(2.2f), atariGlowPaint);
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
 
         for (int y = 0; y < boardSize; y++) {
             for (int x = 0; x < boardSize; x++) {
@@ -687,10 +725,10 @@ public class BadukGameView extends View {
                 // Contact Shadow
                 canvas.drawCircle(cx + dpf(1.5f), cy + dpf(2.5f), stoneR, shadowPaint);
 
-                if (val == 1) { // Matte Obsidian Slate
+                if (val == 1) { // Matte Nachiguro Slate
                     RadialGradient blackGrad = new RadialGradient(
                         cx - stoneR * 0.35f, cy - stoneR * 0.35f, stoneR * 1.3f,
-                        new int[]{0xFF475569, 0xFF0F172A, 0xFF020617},
+                        new int[]{0xFF4B5563, 0xFF1F2937, 0xFF0B0F17},
                         null, Shader.TileMode.CLAMP
                     );
                     stone3dPaint.setShader(blackGrad);
@@ -699,7 +737,7 @@ public class BadukGameView extends View {
                 } else if (val == 2) { // Hyuga Clamshell Pearl
                     RadialGradient whiteGrad = new RadialGradient(
                         cx - stoneR * 0.35f, cy - stoneR * 0.35f, stoneR * 1.3f,
-                        new int[]{0xFFFFFFFF, 0xFFF1F5F9, 0xFF94A3B8},
+                        new int[]{0xFFFFFFFF, 0xFFF8FAFC, 0xFFCBD5E1, 0xFF94A3B8},
                         null, Shader.TileMode.CLAMP
                     );
                     stone3dPaint.setShader(whiteGrad);
