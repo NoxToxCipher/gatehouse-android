@@ -15894,14 +15894,18 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
                 tvBody.setPadding(0, dp(4), 0, dp(4));
                 rightCard.addView(tvBody);
 
-                // Attachments row (Photo or Rego Plate)
-                if (!entry.photoHashSnippet.isEmpty() || !entry.regoPlate.isEmpty()) {
+                // Attachments row (Photo, Rego Plate, or Audio Memo)
+                final boolean hasPhoto = !entry.photoHashSnippet.isEmpty();
+                final boolean hasRego = !entry.regoPlate.isEmpty();
+                final boolean hasAudio = entry.text.contains("[AUDIO ATTACHED]");
+
+                if (hasPhoto || hasRego || hasAudio) {
                     LinearLayout attachRow = new LinearLayout(this);
                     attachRow.setOrientation(LinearLayout.HORIZONTAL);
                     attachRow.setGravity(Gravity.CENTER_VERTICAL);
                     attachRow.setPadding(0, dp(4), 0, 0);
 
-                    if (!entry.photoHashSnippet.isEmpty()) {
+                    if (hasPhoto) {
                         TextView btnPhoto = new TextView(this);
                         btnPhoto.setText("📷 PHOTO EVIDENCE #" + entry.photoHashSnippet + " ↗");
                         btnPhoto.setTextColor(0xFFA855F7);
@@ -15919,7 +15923,7 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
                         attachRow.addView(btnPhoto);
                     }
 
-                    if (!entry.regoPlate.isEmpty()) {
+                    if (hasRego) {
                         TextView btnRego = new TextView(this);
                         btnRego.setText("🚗 PLATE " + entry.regoPlate);
                         btnRego.setTextColor(0xFFF59E0B);
@@ -15932,6 +15936,28 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
                         rglp.leftMargin = dp(6);
                         btnRego.setLayoutParams(rglp);
                         attachRow.addView(btnRego);
+                    }
+
+                    if (hasAudio) {
+                        TextView btnAudio = new TextView(this);
+                        btnAudio.setText("🎙️ AUDIO MEMO ▶");
+                        btnAudio.setTextColor(colEmerald);
+                        btnAudio.setTextSize(9.5f);
+                        btnAudio.setTypeface(Typeface.create(Typeface.MONOSPACE, Typeface.BOLD));
+                        btnAudio.setPadding(dp(8), dp(3), dp(8), dp(3));
+                        btnAudio.setBackground(rounded(0x2810B981, dp(6)));
+                        LinearLayout.LayoutParams alp = new LinearLayout.LayoutParams(
+                                LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+                        alp.leftMargin = dp(6);
+                        btnAudio.setLayoutParams(alp);
+                        btnAudio.setOnClickListener(new View.OnClickListener() {
+                            @Override
+                            public void onClick(View v) {
+                                hapticClick();
+                                showAudioPlaybackModal(entry.text, entry.timeStr, entry.guardName);
+                            }
+                        });
+                        attachRow.addView(btnAudio);
                     }
 
                     rightCard.addView(attachRow);
@@ -16261,6 +16287,91 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
         cml.leftMargin = dp(8);
         btnAttach.setLayoutParams(cml);
         btnRow.addView(btnAttach);
+
+        box.addView(btnRow);
+        dlg.show();
+    }
+
+    private void showAudioPlaybackModal(String text, String timeStr, String guardName) {
+        final LinearLayout box = dialogContainer("🎙️ Audio Memo Playback", "VOICE EVIDENCE", colEmerald);
+
+        LinearLayout card = new LinearLayout(this);
+        card.setOrientation(LinearLayout.VERTICAL);
+        card.setGravity(Gravity.CENTER);
+        card.setBackground(rounded(0xFF1E293B, dp(14)));
+        card.setPadding(dp(16), dp(16), dp(16), dp(16));
+        LinearLayout.LayoutParams clp = new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+        clp.bottomMargin = dp(12);
+        card.setLayoutParams(clp);
+
+        TextView tvWave = new TextView(this);
+        tvWave.setText(" ▂▃▅▆▇▆▅▃▂  ▂▃▅▆▇█▇▆▅▃▂ ");
+        tvWave.setTextColor(colEmerald);
+        tvWave.setTextSize(16f);
+        tvWave.setTypeface(Typeface.MONOSPACE);
+        tvWave.setGravity(Gravity.CENTER);
+        card.addView(tvWave);
+
+        TextView tvTime = new TextView(this);
+        tvTime.setText("▶ 00:14 / 00:28 · 44.1 kHz Digital Master");
+        tvTime.setTextColor(colPale);
+        tvTime.setTextSize(11f);
+        tvTime.setTypeface(Typeface.create(Typeface.MONOSPACE, Typeface.BOLD));
+        tvTime.setGravity(Gravity.CENTER);
+        tvTime.setPadding(0, dp(8), 0, dp(4));
+        card.addView(tvTime);
+
+        TextView tvGuard = new TextView(this);
+        tvGuard.setText("Officer: " + (guardName.contains("Lochran") ? "L. Doherty" : guardName) + " · Recorded at " + timeStr);
+        tvGuard.setTextColor(0xFF94A3B8);
+        tvGuard.setTextSize(9.5f);
+        tvGuard.setTypeface(Typeface.MONOSPACE);
+        tvGuard.setGravity(Gravity.CENTER);
+        card.addView(tvGuard);
+
+        box.addView(card);
+
+        TextView tvBody = new TextView(this);
+        tvBody.setText(text.replace(" · [AUDIO ATTACHED]", ""));
+        tvBody.setTextColor(colPale);
+        tvBody.setTextSize(12.5f);
+        tvBody.setTypeface(Typeface.DEFAULT_BOLD);
+        tvBody.setPadding(0, 0, 0, dp(12));
+        box.addView(tvBody);
+
+        final Dialog dlg = createDialogSheet(box);
+
+        LinearLayout btnRow = new LinearLayout(this);
+        btnRow.setOrientation(LinearLayout.HORIZONTAL);
+        btnRow.setPadding(0, dp(4), 0, 0);
+
+        final TextView btnPlayToggle = actionButton("❚❚ Pause", colEmerald, 0xFF064E3B);
+        final boolean[] isPlaying = {true};
+        btnPlayToggle.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                hapticClick();
+                isPlaying[0] = !isPlaying[0];
+                btnPlayToggle.setText(isPlaying[0] ? "❚❚ Pause" : "▶ Play");
+            }
+        });
+        LinearLayout.LayoutParams plp = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1.2f);
+        plp.rightMargin = dp(6);
+        btnPlayToggle.setLayoutParams(plp);
+        btnRow.addView(btnPlayToggle);
+
+        TextView btnClose = actionButton("Close", colLine, colPale);
+        btnClose.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                hapticClick();
+                dlg.dismiss();
+            }
+        });
+        LinearLayout.LayoutParams clp2 = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 0.8f);
+        btnClose.setLayoutParams(clp2);
+        btnRow.addView(btnClose);
 
         box.addView(btnRow);
         dlg.show();
