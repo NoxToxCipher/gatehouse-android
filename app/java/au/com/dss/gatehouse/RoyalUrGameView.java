@@ -363,10 +363,19 @@ public class RoyalUrGameView extends View {
             else blackPiecesUnentered--;
         }
 
+        try {
+            RecreationAudioSynth.playBadukStoneClack();
+            performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP);
+        } catch (Exception ignored) {}
+
         myPieces[pieceIdx] = nextPos;
         if (nextPos == 14) {
             if (currentTurn == 0) whitePiecesOff++;
             else blackPiecesOff++;
+            try {
+                RecreationAudioSynth.playTetrisLineClear();
+                performHapticFeedback(HapticFeedbackConstants.CONFIRM);
+            } catch (Exception ignored) {}
         }
 
         if (whitePiecesOff == 7 || blackPiecesOff == 7) {
@@ -405,6 +414,7 @@ public class RoyalUrGameView extends View {
             }
 
             try {
+                RecreationAudioSynth.playTetrisRotate();
                 performHapticFeedback(HapticFeedbackConstants.CONFIRM);
             } catch (Exception ignored) {}
 

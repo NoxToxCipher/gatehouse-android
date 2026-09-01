@@ -4880,6 +4880,68 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
         slp3.leftMargin = dp(3); btn19x19.setLayoutParams(slp3); sizeRow.addView(btn19x19);
         box.addView(sizeRow);
 
+        // Handicap Quick-Buttons Row (Even, 2H, 3H, 4H, 9H)
+        LinearLayout hcapRow = new LinearLayout(this);
+        hcapRow.setOrientation(LinearLayout.HORIZONTAL);
+        hcapRow.setPadding(0, dp(5), 0, 0);
+
+        final TextView btnH0 = actionButton("Even", colAccent, colAccentInk);
+        final TextView btnH2 = actionButton("2H", colPanel2, colCyan);
+        final TextView btnH3 = actionButton("3H", colPanel2, colCyan);
+        final TextView btnH4 = actionButton("4H", colPanel2, colCyan);
+        final TextView btnH9 = actionButton("9H", colPanel2, 0xFFFFD166);
+
+        View.OnClickListener hcapClickListener = new View.OnClickListener() {
+            public void onClick(View v) {
+                hapticClick();
+                btnH0.setBackground(rounded(colPanel2, dp(8))); btnH0.setTextColor(colPale);
+                btnH2.setBackground(rounded(colPanel2, dp(8))); btnH2.setTextColor(colCyan);
+                btnH3.setBackground(rounded(colPanel2, dp(8))); btnH3.setTextColor(colCyan);
+                btnH4.setBackground(rounded(colPanel2, dp(8))); btnH4.setTextColor(colCyan);
+                btnH9.setBackground(rounded(colPanel2, dp(8))); btnH9.setTextColor(0xFFFFD166);
+
+                if (v == btnH0) {
+                    btnH0.setBackground(rounded(colAccent, dp(8))); btnH0.setTextColor(colAccentInk);
+                    badukView.resetGame();
+                } else if (v == btnH2) {
+                    btnH2.setBackground(rounded(colCyan, dp(8))); btnH2.setTextColor(0xFF0F172A);
+                    badukView.setHandicap(2);
+                } else if (v == btnH3) {
+                    btnH3.setBackground(rounded(colCyan, dp(8))); btnH3.setTextColor(0xFF0F172A);
+                    badukView.setHandicap(3);
+                } else if (v == btnH4) {
+                    btnH4.setBackground(rounded(colCyan, dp(8))); btnH4.setTextColor(0xFF0F172A);
+                    badukView.setHandicap(4);
+                } else if (v == btnH9) {
+                    btnH9.setBackground(rounded(0xFFFFD166, dp(8))); btnH9.setTextColor(0xFF0F172A);
+                    badukView.setHandicap(9);
+                }
+            }
+        };
+
+        btnH0.setOnClickListener(hcapClickListener);
+        btnH2.setOnClickListener(hcapClickListener);
+        btnH3.setOnClickListener(hcapClickListener);
+        btnH4.setOnClickListener(hcapClickListener);
+        btnH9.setOnClickListener(hcapClickListener);
+
+        LinearLayout.LayoutParams hlp0 = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1.2f);
+        hlp0.rightMargin = dp(2); btnH0.setLayoutParams(hlp0); hcapRow.addView(btnH0);
+
+        LinearLayout.LayoutParams hlp2 = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
+        hlp2.leftMargin = dp(2); hlp2.rightMargin = dp(2); btnH2.setLayoutParams(hlp2); hcapRow.addView(btnH2);
+
+        LinearLayout.LayoutParams hlp3 = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
+        hlp3.leftMargin = dp(2); hlp3.rightMargin = dp(2); btnH3.setLayoutParams(hlp3); hcapRow.addView(btnH3);
+
+        LinearLayout.LayoutParams hlp4 = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
+        hlp4.leftMargin = dp(2); hlp4.rightMargin = dp(2); btnH4.setLayoutParams(hlp4); hcapRow.addView(btnH4);
+
+        LinearLayout.LayoutParams hlp9 = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
+        hlp9.leftMargin = dp(2); btnH9.setLayoutParams(hlp9); hcapRow.addView(btnH9);
+
+        box.addView(hcapRow);
+
         // 2. Mode Selector Row
         LinearLayout modeRow = new LinearLayout(this);
         modeRow.setOrientation(LinearLayout.HORIZONTAL);
