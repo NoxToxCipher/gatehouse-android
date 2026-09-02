@@ -5623,15 +5623,27 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
         bottomRow.setOrientation(LinearLayout.HORIZONTAL);
         bottomRow.setPadding(0, dp(8), 0, 0);
 
-        TextView btnRules = actionButton("📖 Rules & How-To", colPanel2, 0xFFFDE047);
+        TextView btnGuide = actionButton("🗺️ Guide", colLine, 0xFFFDE047);
+        btnGuide.setOnClickListener(new View.OnClickListener() {
+            public void onClick(View v) {
+                hapticClick();
+                senetView.togglePathGuide();
+            }
+        });
+        LinearLayout.LayoutParams glp = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
+        glp.rightMargin = dp(3);
+        btnGuide.setLayoutParams(glp);
+        bottomRow.addView(btnGuide);
+
+        TextView btnRules = actionButton("📖 Rules", colPanel2, 0xFFFDE047);
         btnRules.setOnClickListener(new View.OnClickListener() {
             public void onClick(View v) {
                 hapticClick();
                 showSenetRulesDialog();
             }
         });
-        LinearLayout.LayoutParams rblp = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1.2f);
-        rblp.rightMargin = dp(4);
+        LinearLayout.LayoutParams rblp = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1.1f);
+        rblp.rightMargin = dp(3);
         btnRules.setLayoutParams(rblp);
         bottomRow.addView(btnRules);
 
@@ -5642,7 +5654,7 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
                 dlg.dismiss();
             }
         });
-        LinearLayout.LayoutParams cblp = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 0.8f);
+        LinearLayout.LayoutParams cblp = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 0.9f);
         cblp.leftMargin = dp(4);
         btnClose.setLayoutParams(cblp);
         bottomRow.addView(btnClose);
