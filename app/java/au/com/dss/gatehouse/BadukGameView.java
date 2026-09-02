@@ -1201,20 +1201,25 @@ public class BadukGameView extends View {
         float h = getHeight();
         if (w <= 0 || h <= 0) return;
 
-        // Dynamic Goban Wood Gradient Theme
-        int topCol = (gobanTheme == 0 ? 0xFFD49755 : (gobanTheme == 1 ? 0xFFB45309 : 0xFF1E293B));
-        int botCol = (gobanTheme == 0 ? 0xFFB37332 : (gobanTheme == 1 ? 0xFF78350F : 0xFF0F172A));
+        // Dynamic Luxury Goban Wood Surface Themes
+        int topCol = (gobanTheme == 0 ? 0xFFDCB378 : (gobanTheme == 1 ? 0xFF994418 : 0xFF141926));
+        int botCol = (gobanTheme == 0 ? 0xFFB27838 : (gobanTheme == 1 ? 0xFF5C2208 : 0xFF0A0D14));
         boardRect.set(0, 0, w, h);
         gobanPaint.setShader(new LinearGradient(0, 0, w, h, topCol, botCol, Shader.TileMode.CLAMP));
         canvas.drawRoundRect(boardRect, dpf(16f), dpf(16f), gobanPaint);
 
-        // Fine Wood Grain Texture Lines
-        for (int i = 1; i < 18; i++) {
-            float gy = h * (i / 18f);
-            canvas.drawLine(0, gy, w, gy + dpf(1.8f), woodGrainPaint);
+        // Organic Japanese Hon-Kaya / Katsura Wood Grain Rings
+        woodGrainPaint.setColor(gobanTheme == 2 ? 0x14FFFFFF : 0x1A421C04);
+        for (int i = 1; i < 22; i++) {
+            float gy = h * (i / 22f);
+            float curveOffset = (float) Math.sin(i * 0.75f) * dpf(3.5f);
+            Path grainPath = new Path();
+            grainPath.moveTo(0, gy);
+            grainPath.quadTo(w * 0.5f, gy + curveOffset, w, gy + dpf(1.5f));
+            canvas.drawPath(grainPath, woodGrainPaint);
         }
 
-        // Perimeter Inlaid Gold Borders
+        // Perimeter Inlaid Gold Borders & Chamfered Bevel
         RectF innerRect = new RectF(dpf(2.5f), dpf(2.5f), w - dpf(2.5f), h - dpf(2.5f));
         canvas.drawRoundRect(innerRect, dpf(14f), dpf(14f), goldBorderPaint);
 
@@ -1227,24 +1232,39 @@ public class BadukGameView extends View {
         float startY = (h - size) / 2f;
         float cellSize = size / (boardSize - 1);
 
-        // Draw Lacquered Grid Lines & Coordinates
-        coordTextPaint.setTextSize(Math.max(dpf(7.5f), cellSize * 0.35f));
-
+        // Draw Lacquered Urushi Grid Lines
+        gridLinePaint.setColor(gobanTheme == 2 ? 0x99F59E0B : 0xFF2A1506);
         for (int i = 0; i < boardSize; i++) {
             float py = startY + i * cellSize;
             canvas.drawLine(startX, py, startX + size, py, gridLinePaint);
             float px = startX + i * cellSize;
             canvas.drawLine(px, startY, px, startY + size, gridLinePaint);
+        }
 
+        // Draw Debossed Engraved Wood Coordinates
+        coordTextPaint.setTextSize(Math.max(dpf(7.5f), cellSize * 0.35f));
+        int coordColor = (gobanTheme == 2) ? 0xFF94A3B8 : 0xFF5C3314;
+        int coordHlColor = (gobanTheme == 2) ? 0x44FFFFFF : 0x44FFE0A3;
+
+        for (int i = 0; i < boardSize; i++) {
+            float px = startX + i * cellSize;
+            float py = startY + i * cellSize;
             String colName = String.valueOf((char) ('A' + (i >= 8 ? i + 1 : i)));
-            // Top and Bottom Column Labels
-            canvas.drawText(colName, px, startY - dpf(6f), coordTextPaint);
-            canvas.drawText(colName, px, startY + size + dpf(12f), coordTextPaint);
-
-            // Left and Right Row Numbers
             String rowName = String.valueOf(boardSize - i);
-            canvas.drawText(rowName, startX - dpf(9f), py + dpf(3.5f), coordTextPaint);
-            canvas.drawText(rowName, startX + size + dpf(9f), py + dpf(3.5f), coordTextPaint);
+
+            // Deboss Highlight Pass
+            coordTextPaint.setColor(coordHlColor);
+            canvas.drawText(colName, px, startY - dpf(5.5f), coordTextPaint);
+            canvas.drawText(colName, px, startY + size + dpf(12.5f), coordTextPaint);
+            canvas.drawText(rowName, startX - dpf(8.5f), py + dpf(4.0f), coordTextPaint);
+            canvas.drawText(rowName, startX + size + dpf(9.5f), py + dpf(4.0f), coordTextPaint);
+
+            // Primary Engraved Dark Ink Pass
+            coordTextPaint.setColor(coordColor);
+            canvas.drawText(colName, px, startY - dpf(6.0f), coordTextPaint);
+            canvas.drawText(colName, px, startY + size + dpf(12.0f), coordTextPaint);
+            canvas.drawText(rowName, startX - dpf(9.0f), py + dpf(3.5f), coordTextPaint);
+            canvas.drawText(rowName, startX + size + dpf(9.0f), py + dpf(3.5f), coordTextPaint);
         }
 
         // Draw Hoshi Star Points
@@ -1314,15 +1334,34 @@ public class BadukGameView extends View {
                         lastMovePaint.setAlpha(255);
                     }
                 } else {
-                    // Standard Static Stone
+                    // Standard Static Stone with Breathing Danger Halo
                     if (atariMap[y][x]) {
-                        canvas.drawCircle(cx, cy, stoneR + dpf(2.5f), atariGlowPaint);
+                        long now = System.currentTimeMillis();
+                        float pulse = 0.60f + 0.40f * (float) Math.sin(now / 150.0);
+                        atariGlowPaint.setColor(0xFFEF4444);
+                        atariGlowPaint.setAlpha((int) (230 * pulse));
+                        atariGlowPaint.setStrokeWidth(dpf(2.4f));
+                        canvas.drawCircle(cx, cy, stoneR + dpf(2.8f), atariGlowPaint);
+
+                        // Subtle outer amber aura
+                        Paint amberGlow = new Paint(Paint.ANTI_ALIAS_FLAG);
+                        amberGlow.setStyle(Paint.Style.STROKE);
+                        amberGlow.setColor(0xFFFFD166);
+                        amberGlow.setAlpha((int) (140 * pulse));
+                        amberGlow.setStrokeWidth(dpf(1.2f));
+                        canvas.drawCircle(cx, cy, stoneR + dpf(4.6f), amberGlow);
                     }
                     canvas.drawCircle(cx + dpf(1.5f), cy + dpf(2.5f), stoneR, shadowPaint);
                     drawSingleStone(canvas, cx, cy, stoneR, val, deadStones[y][x]);
 
                     if (x == lastMoveX && y == lastMoveY) {
-                        canvas.drawCircle(cx, cy, stoneR * 0.5f, lastMovePaint);
+                        lastMovePaint.setColor(0xFFFFD166);
+                        lastMovePaint.setStrokeWidth(dpf(2.2f));
+                        canvas.drawCircle(cx, cy, stoneR * 0.50f, lastMovePaint);
+                        Paint dotPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+                        dotPaint.setColor(0xFFFFD166);
+                        dotPaint.setStyle(Paint.Style.FILL);
+                        canvas.drawCircle(cx, cy, dpf(2.2f), dotPaint);
                     }
                 }
             }
@@ -1348,17 +1387,31 @@ public class BadukGameView extends View {
             }
         }
 
-        // Draw Wood Resonance Impact Clack Ripple
+        // Draw Concentric Wood Resonance Impact Waves
         if (animStoneX >= 0 && animStoneY >= 0 && elapsed < RIPPLE_ANIM_DURATION_MS) {
             float acx = startX + animStoneX * cellSize;
             float acy = startY + animStoneY * cellSize;
             float rp = (float) elapsed / RIPPLE_ANIM_DURATION_MS;
-            float rippleR = stoneR * (1.0f + 1.15f * rp);
+
+            // 1. Primary Gold Shockwave
+            float rippleR1 = stoneR * (1.0f + 1.25f * rp);
             placementRipplePaint.setColor(0xFFFFD166);
             placementRipplePaint.setStyle(Paint.Style.STROKE);
-            placementRipplePaint.setStrokeWidth(dpf(2.4f) * (1f - rp));
-            placementRipplePaint.setAlpha((int) (220 * (1f - rp)));
-            canvas.drawCircle(acx, acy, rippleR, placementRipplePaint);
+            placementRipplePaint.setStrokeWidth(dpf(2.6f) * (1f - rp));
+            placementRipplePaint.setAlpha((int) (240 * (1f - rp)));
+            canvas.drawCircle(acx, acy, rippleR1, placementRipplePaint);
+
+            // 2. Secondary Amber Echo Wave
+            if (rp > 0.15f) {
+                float rp2 = (rp - 0.15f) / 0.85f;
+                float rippleR2 = stoneR * (1.0f + 1.70f * rp2);
+                Paint echoPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+                echoPaint.setStyle(Paint.Style.STROKE);
+                echoPaint.setColor(0xFFF59E0B);
+                echoPaint.setStrokeWidth(dpf(1.6f) * (1f - rp2));
+                echoPaint.setAlpha((int) (160 * (1f - rp2)));
+                canvas.drawCircle(acx, acy, rippleR2, echoPaint);
+            }
         }
 
         if (isAnimating) {
@@ -1700,20 +1753,57 @@ public class BadukGameView extends View {
     }
 
     private void drawSingleStone(Canvas canvas, float cx, float cy, float r, int val, boolean isDead) {
-        if (val == 1) { // Matte Nachiguro Slate (Bi-convex 3D layered)
+        if (val == 1) { // Authentic Nachiguro Slate (Bi-convex 3D layered with Goban Bounce Reflection)
             if (isDead) blackStoneBasePaint.setAlpha(110);
+            // 1. Dark Velvet Obsidian Body
             canvas.drawCircle(cx, cy, r, blackStoneBasePaint);
-            canvas.drawCircle(cx - r * 0.30f, cy - r * 0.30f, r * 0.48f, blackStoneHlPaint);
+
+            // 2. Warm Goban Wood Reflection on Bottom-Right Rim (Bounce Light)
+            Paint bouncePaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+            bouncePaint.setStyle(Paint.Style.STROKE);
+            bouncePaint.setStrokeWidth(r * 0.16f);
+            bouncePaint.setColor(gobanTheme == 2 ? 0x2238BDF8 : 0x2ADCAE6C);
+            RectF bounceRect = new RectF(cx - r * 0.88f, cy - r * 0.88f, cx + r * 0.88f, cy + r * 0.88f);
+            canvas.drawArc(bounceRect, 25f, 95f, false, bouncePaint);
+
+            // 3. Graphite Subsurface Elevation
+            canvas.drawCircle(cx - r * 0.26f, cy - r * 0.26f, r * 0.52f, blackStoneHlPaint);
+
+            // 4. Soft Top-Left Velvet Sheen
             canvas.drawCircle(cx - r * 0.35f, cy - r * 0.35f, r * 0.22f, stoneShinePaint);
             blackStoneBasePaint.setAlpha(255);
-        } else if (val == 2) { // Hyuga Clamshell Pearl
+        } else if (val == 2) { // Authentic Hyuga Clamshell Pearl with Natural Grain Arcs
             if (isDead) whiteStoneBasePaint.setAlpha(110);
+            // 1. Pure Porcelain Base
             canvas.drawCircle(cx, cy, r, whiteStoneBasePaint);
+
+            // 2. Subtle Clamshell Growth Grain Arcs (Tsuki / Yuki Grade)
+            Paint grainPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+            grainPaint.setStyle(Paint.Style.STROKE);
+            grainPaint.setStrokeWidth(dpf(0.8f));
+            grainPaint.setColor(0x18000000);
+            for (int g = 1; g <= 3; g++) {
+                float gOffset = r * (0.22f * g);
+                RectF gRect = new RectF(cx - r + gOffset, cy - r, cx + r + gOffset, cy + r);
+                canvas.drawArc(gRect, 130f, 100f, false, grainPaint);
+            }
+
+            // 3. Clamshell Edge Rim Bevel
             canvas.drawCircle(cx, cy, r, stoneRimPaint);
-            canvas.drawCircle(cx - r * 0.28f, cy - r * 0.28f, r * 0.46f, whiteStoneHlPaint);
-            canvas.drawCircle(cx - r * 0.35f, cy - r * 0.35f, r * 0.24f, stoneShinePaint);
+
+            // 4. Radiant Top-Left Pearlescent Core
+            canvas.drawCircle(cx - r * 0.26f, cy - r * 0.26f, r * 0.48f, whiteStoneHlPaint);
+
+            // 5. Crisp Dual Specular Glint
+            canvas.drawCircle(cx - r * 0.34f, cy - r * 0.34f, r * 0.22f, stoneShinePaint);
+            Paint miniGlint = new Paint(Paint.ANTI_ALIAS_FLAG);
+            miniGlint.setColor(0x77FFFFFF);
+            miniGlint.setStyle(Paint.Style.FILL);
+            canvas.drawCircle(cx + r * 0.22f, cy + r * 0.22f, r * 0.10f, miniGlint);
+
             whiteStoneBasePaint.setAlpha(255);
         }
+
         if (isDead) {
             float crossR = r * 0.55f;
             deadStoneCrossPaint.setColor(0xFFEF4444);
