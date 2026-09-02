@@ -83,6 +83,16 @@ VAULT_SO="crates/gatehouse_vault/target/aarch64-linux-android/release/libgatehou
 cp "$VAULT_SO" "$OUT/lib/arm64-v8a/"
 ok
 
+say "rust space invaders"
+( cd crates/space_invaders && \
+  CARGO_TARGET_AARCH64_LINUX_ANDROID_LINKER="$NDK/toolchains/llvm/prebuilt/windows-x86_64/bin/aarch64-linux-android${API}-clang.cmd" \
+  cargo build --target aarch64-linux-android --release > "$OUT/space_invaders.log" 2>&1 ) \
+  || { echo "FAILED"; cat "$OUT/space_invaders.log"; exit 1; }
+INVADERS_SO="crates/space_invaders/target/aarch64-linux-android/release/libspace_invaders.so"
+[ -f "$INVADERS_SO" ] || { echo "FAILED: no $INVADERS_SO"; exit 1; }
+cp "$INVADERS_SO" "$OUT/lib/arm64-v8a/"
+ok
+
 say "zig systems core"
 ( cd native/gatehouse_zig && \
   "$ZIG" build-lib -dynamic src/main.zig -target aarch64-linux-android -O ReleaseSafe -femit-bin="libgatehouse_zig.so" > "$OUT/zig.log" 2>&1 ) \
@@ -112,6 +122,13 @@ for sym in Java_au_com_dss_gatehouse_GatehouseVault_nativeDeriveKey \
            Java_au_com_dss_gatehouse_GatehouseVault_nativeDecryptPayload \
            Java_au_com_dss_gatehouse_GatehouseVault_nativeSignAttestation; do
   "$NM" --dynamic "build/lib/arm64-v8a/libgatehouse_vault.so" \
+    | grep -q " $sym\$" || { echo "FAILED: $sym is missing"; exit 1; }
+done
+for sym in Java_au_com_dss_gatehouse_SpaceInvadersNative_nativeCreateEngine \
+           Java_au_com_dss_gatehouse_SpaceInvadersNative_nativeUpdate \
+           Java_au_com_dss_gatehouse_SpaceInvadersNative_nativeGetAlienRowMask \
+           Java_au_com_dss_gatehouse_SpaceInvadersNative_nativeSynthesizeAudio; do
+  "$NM" --dynamic "build/lib/arm64-v8a/libspace_invaders.so" \
     | grep -q " $sym\$" || { echo "FAILED: $sym is missing"; exit 1; }
 done
 for sym in Java_au_com_dss_gatehouse_GatehouseNativeZig_nativeExtractGreyscale \
@@ -169,6 +186,7 @@ python tools/addfiles.py "$OUT/unsigned.apk" \
   "$OUT/lib/arm64-v8a/libgatehouse_core.so=lib/arm64-v8a/libgatehouse_core.so" \
   "$OUT/lib/arm64-v8a/libgatehouse.so=lib/arm64-v8a/libgatehouse.so" \
   "$OUT/lib/arm64-v8a/libgatehouse_vault.so=lib/arm64-v8a/libgatehouse_vault.so" \
+  "$OUT/lib/arm64-v8a/libspace_invaders.so=lib/arm64-v8a/libspace_invaders.so" \
   "$OUT/lib/arm64-v8a/libgatehouse_zig.so=lib/arm64-v8a/libgatehouse_zig.so" \
   > "$OUT/zip.log" 2>&1 || { echo "FAILED"; cat "$OUT/zip.log"; exit 1; }
 ok

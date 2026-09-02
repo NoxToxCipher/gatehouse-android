@@ -1,0 +1,20 @@
+[package]
+name = "gatehouse_space_invaders"
+version = "1.0.0"
+edition = "2021"
+authors = ["DSS Security Systems"]
+description = "Museum-grade Space Invaders Engine in Rust (Native Android + WASM)"
+
+[lib]
+name = "space_invaders"
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+jni = { version = "0.21", default-features = false }
+
+[profile.release]
+opt-level = 3
+lto = true
+codegen-units = 1
+panic = "abort"
+strip = true
