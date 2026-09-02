@@ -5,12 +5,14 @@ pub mod patterns;
 pub mod ladder;
 pub mod benson;
 pub mod joseki;
+pub mod shader;
 pub mod mcts;
 pub mod jni;
 
 pub use board::{GoBoard, Point, BLACK, WHITE, EMPTY};
 pub use mcts::MctsBot;
 pub use joseki::JosekiBook;
+pub use shader::{render_stone_texture, render_woodgrain_texture};
 pub use benson::evaluate_territory;
 pub use ladder::is_ladder_capture;
 

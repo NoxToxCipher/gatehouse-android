@@ -164,3 +164,42 @@ pub unsafe extern "C" fn Java_au_com_dss_gatehouse_BadukNative_nativeIsLadderCap
         0
     }
 }
+
+#[no_mangle]
+pub unsafe extern "C" fn Java_au_com_dss_gatehouse_BadukNative_nativeRenderStoneTexture(
+    mut env: JNIEnv,
+    _class: JClass,
+    width: jint,
+    height: jint,
+    stone_type: jint,
+    theme: jint,
+    out_pixels: JIntArray,
+) {
+    let w = width as usize;
+    let h = height as usize;
+    let total = w * h;
+    if total == 0 { return; }
+
+    let mut buf = vec![0i32; total];
+    crate::shader::render_stone_texture(&mut buf, w, h, stone_type as u8, theme as u32);
+    let _ = env.set_int_array_region(&out_pixels, 0, &buf);
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn Java_au_com_dss_gatehouse_BadukNative_nativeRenderWoodgrainTexture(
+    mut env: JNIEnv,
+    _class: JClass,
+    width: jint,
+    height: jint,
+    theme: jint,
+    out_pixels: JIntArray,
+) {
+    let w = width as usize;
+    let h = height as usize;
+    let total = w * h;
+    if total == 0 { return; }
+
+    let mut buf = vec![0i32; total];
+    crate::shader::render_woodgrain_texture(&mut buf, w, h, theme as u32);
+    let _ = env.set_int_array_region(&out_pixels, 0, &buf);
+}

@@ -147,6 +147,30 @@ public final class BadukNative {
         return false;
     }
 
+    public static android.graphics.Bitmap renderStoneBitmap(int width, int height, int stoneType, int theme) {
+        if (!sLoaded || width <= 0 || height <= 0) return null;
+        try {
+            int[] pixels = new int[width * height];
+            nativeRenderStoneTexture(width, height, stoneType, theme, pixels);
+            return android.graphics.Bitmap.createBitmap(pixels, width, height, android.graphics.Bitmap.Config.ARGB_8888);
+        } catch (Throwable t) {
+            Log.w(TAG, "Native stone texture render failed", t);
+            return null;
+        }
+    }
+
+    public static android.graphics.Bitmap renderWoodgrainBitmap(int width, int height, int theme) {
+        if (!sLoaded || width <= 0 || height <= 0) return null;
+        try {
+            int[] pixels = new int[width * height];
+            nativeRenderWoodgrainTexture(width, height, theme, pixels);
+            return android.graphics.Bitmap.createBitmap(pixels, width, height, android.graphics.Bitmap.Config.ARGB_8888);
+        } catch (Throwable t) {
+            Log.w(TAG, "Native woodgrain texture render failed", t);
+            return null;
+        }
+    }
+
     // ---- Native Declarations ----
     private static native long nativeCreateEngine(int size);
     private static native void nativeDestroyEngine(long handle);
@@ -156,4 +180,6 @@ public final class BadukNative {
     private static native float nativeFindBestMove(long handle, int color, int difficultyTier, int[] outCoords, float[] outHeatmap);
     private static native void nativeEvaluateTerritory(long handle, float komi, int[] outScores, byte[] outTerritoryGrid);
     private static native boolean nativeIsLadderCapture(long handle, int x, int y);
+    private static native void nativeRenderStoneTexture(int width, int height, int stoneType, int theme, int[] outPixels);
+    private static native void nativeRenderWoodgrainTexture(int width, int height, int theme, int[] outPixels);
 }

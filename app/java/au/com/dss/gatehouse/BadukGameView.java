@@ -1,6 +1,7 @@
 package au.com.dss.gatehouse;
 
 import android.content.Context;
+import android.graphics.Bitmap;
 import android.graphics.Canvas;
 import android.graphics.LinearGradient;
 import android.graphics.Paint;
@@ -1752,13 +1753,38 @@ public class BadukGameView extends View {
         }
     }
 
+    private Bitmap cachedBlackStoneBmp = null;
+    private Bitmap cachedWhiteStoneBmp = null;
+    private int cachedStonePx = 0;
+    private int cachedTheme = -1;
+
+    private void ensureStoneBitmaps(int stonePx) {
+        if (stonePx <= 0) return;
+        if (cachedStonePx != stonePx || cachedTheme != gobanTheme || cachedBlackStoneBmp == null || cachedWhiteStoneBmp == null) {
+            cachedStonePx = stonePx;
+            cachedTheme = gobanTheme;
+            try {
+                cachedBlackStoneBmp = BadukNative.renderStoneBitmap(stonePx, stonePx, 1, gobanTheme);
+                cachedWhiteStoneBmp = BadukNative.renderStoneBitmap(stonePx, stonePx, 2, gobanTheme);
+            } catch (Throwable ignored) {}
+        }
+    }
+
     private void drawSingleStone(Canvas canvas, float cx, float cy, float r, int val, boolean isDead) {
-        if (val == 1) { // Authentic Nachiguro Slate (Bi-convex 3D layered with Goban Bounce Reflection)
+        int stonePx = Math.max(16, (int) (r * 2.0f));
+        ensureStoneBitmaps(stonePx);
+        Bitmap bmp = (val == 1) ? cachedBlackStoneBmp : cachedWhiteStoneBmp;
+
+        if (bmp != null) {
+            Paint p = isDead ? blackStoneBasePaint : null;
             if (isDead) blackStoneBasePaint.setAlpha(110);
-            // 1. Dark Velvet Obsidian Body
+            RectF dest = new RectF(cx - r, cy - r, cx + r, cy + r);
+            canvas.drawBitmap(bmp, null, dest, p);
+            if (isDead) blackStoneBasePaint.setAlpha(255);
+        } else if (val == 1) { // Authentic Nachiguro Slate Fallback
+            if (isDead) blackStoneBasePaint.setAlpha(110);
             canvas.drawCircle(cx, cy, r, blackStoneBasePaint);
 
-            // 2. Warm Goban Wood Reflection on Bottom-Right Rim (Bounce Light)
             Paint bouncePaint = new Paint(Paint.ANTI_ALIAS_FLAG);
             bouncePaint.setStyle(Paint.Style.STROKE);
             bouncePaint.setStrokeWidth(r * 0.16f);
@@ -1766,18 +1792,13 @@ public class BadukGameView extends View {
             RectF bounceRect = new RectF(cx - r * 0.88f, cy - r * 0.88f, cx + r * 0.88f, cy + r * 0.88f);
             canvas.drawArc(bounceRect, 25f, 95f, false, bouncePaint);
 
-            // 3. Graphite Subsurface Elevation
             canvas.drawCircle(cx - r * 0.26f, cy - r * 0.26f, r * 0.52f, blackStoneHlPaint);
-
-            // 4. Soft Top-Left Velvet Sheen
             canvas.drawCircle(cx - r * 0.35f, cy - r * 0.35f, r * 0.22f, stoneShinePaint);
             blackStoneBasePaint.setAlpha(255);
-        } else if (val == 2) { // Authentic Hyuga Clamshell Pearl with Natural Grain Arcs
+        } else if (val == 2) { // Authentic Hyuga Clamshell Fallback
             if (isDead) whiteStoneBasePaint.setAlpha(110);
-            // 1. Pure Porcelain Base
             canvas.drawCircle(cx, cy, r, whiteStoneBasePaint);
 
-            // 2. Subtle Clamshell Growth Grain Arcs (Tsuki / Yuki Grade)
             Paint grainPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
             grainPaint.setStyle(Paint.Style.STROKE);
             grainPaint.setStrokeWidth(dpf(0.8f));
@@ -1788,19 +1809,9 @@ public class BadukGameView extends View {
                 canvas.drawArc(gRect, 130f, 100f, false, grainPaint);
             }
 
-            // 3. Clamshell Edge Rim Bevel
             canvas.drawCircle(cx, cy, r, stoneRimPaint);
-
-            // 4. Radiant Top-Left Pearlescent Core
             canvas.drawCircle(cx - r * 0.26f, cy - r * 0.26f, r * 0.48f, whiteStoneHlPaint);
-
-            // 5. Crisp Dual Specular Glint
             canvas.drawCircle(cx - r * 0.34f, cy - r * 0.34f, r * 0.22f, stoneShinePaint);
-            Paint miniGlint = new Paint(Paint.ANTI_ALIAS_FLAG);
-            miniGlint.setColor(0x77FFFFFF);
-            miniGlint.setStyle(Paint.Style.FILL);
-            canvas.drawCircle(cx + r * 0.22f, cy + r * 0.22f, r * 0.10f, miniGlint);
-
             whiteStoneBasePaint.setAlpha(255);
         }
 
