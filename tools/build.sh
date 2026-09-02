@@ -22,6 +22,7 @@ NDK="$SDK/ndk/27.2.12479018"
 JDK="$SDK/jdk-17.0.20+8"
 ADB="$SDK/platform-tools/adb.exe"
 CORE="${GATEHOUSE_CORE:-/c/Users/lochr/shiftlog}"
+ZIG="${ZIG:-/c/Users/lochr/AppData/Local/Microsoft/WinGet/Packages/zig.zig_Microsoft.Winget.Source_8wekyb3d8bbwe/zig-x86_64-windows-0.16.0/zig.exe}"
 API=26
 
 CLANG="$NDK/toolchains/llvm/prebuilt/windows-x86_64/bin/aarch64-linux-android${API}-clang"
@@ -82,6 +83,15 @@ VAULT_SO="crates/gatehouse_vault/target/aarch64-linux-android/release/libgatehou
 cp "$VAULT_SO" "$OUT/lib/arm64-v8a/"
 ok
 
+say "zig systems core"
+( cd native/gatehouse_zig && \
+  "$ZIG" build-lib -dynamic src/main.zig -target aarch64-linux-android -O ReleaseSafe -femit-bin="libgatehouse_zig.so" > "$OUT/zig.log" 2>&1 ) \
+  || { echo "FAILED"; cat "$OUT/zig.log"; exit 1; }
+ZIG_SO="native/gatehouse_zig/libgatehouse_zig.so"
+[ -f "$ZIG_SO" ] || { echo "FAILED: no $ZIG_SO"; exit 1; }
+cp "$ZIG_SO" "$OUT/lib/arm64-v8a/"
+ok
+
 # What the app calls has to be in what the app ships. This is the check that
 # would have caught the scavenged build: it linked, it installed, and it was
 # missing nearly everything.
@@ -102,6 +112,13 @@ for sym in Java_au_com_dss_gatehouse_GatehouseVault_nativeDeriveKey \
            Java_au_com_dss_gatehouse_GatehouseVault_nativeDecryptPayload \
            Java_au_com_dss_gatehouse_GatehouseVault_nativeSignAttestation; do
   "$NM" --dynamic "build/lib/arm64-v8a/libgatehouse_vault.so" \
+    | grep -q " $sym\$" || { echo "FAILED: $sym is missing"; exit 1; }
+done
+for sym in Java_au_com_dss_gatehouse_GatehouseNativeZig_nativeExtractGreyscale \
+           Java_au_com_dss_gatehouse_GatehouseNativeZig_nativeBinarizeFrame \
+           Java_au_com_dss_gatehouse_GatehouseNativeZig_nativeSerializeMeshPacket \
+           Java_au_com_dss_gatehouse_GatehouseNativeZig_nativeSynthesizeTone; do
+  "$NM" --dynamic "build/lib/arm64-v8a/libgatehouse_zig.so" \
     | grep -q " $sym\$" || { echo "FAILED: $sym is missing"; exit 1; }
 done
 ok
@@ -152,6 +169,7 @@ python tools/addfiles.py "$OUT/unsigned.apk" \
   "$OUT/lib/arm64-v8a/libgatehouse_core.so=lib/arm64-v8a/libgatehouse_core.so" \
   "$OUT/lib/arm64-v8a/libgatehouse.so=lib/arm64-v8a/libgatehouse.so" \
   "$OUT/lib/arm64-v8a/libgatehouse_vault.so=lib/arm64-v8a/libgatehouse_vault.so" \
+  "$OUT/lib/arm64-v8a/libgatehouse_zig.so=lib/arm64-v8a/libgatehouse_zig.so" \
   > "$OUT/zip.log" 2>&1 || { echo "FAILED"; cat "$OUT/zip.log"; exit 1; }
 ok
 
