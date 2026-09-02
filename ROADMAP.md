@@ -12,7 +12,7 @@
 | **3** | **Emergency Services, Bushfire & BOM Radar** | QFES Live GeoJSON / Open-Meteo FWI / AFDRS | 10km perimeter radar sweep, ember vector math & shift weather alerts | ✅ **Complete & Live** |
 | **4** | **Security Licence Verification & Expiry Reminders** | QLD Fair Trading / SPARK Attestation | 3-month, 1-month, 1-fortnight & day-of renewal alerts on Officer Card | ✅ **Complete & Live** |
 | **5** | **⚡ Real-Time Lightning Strike Radar & Stand-Down Engine** | Open-Meteo Flash Density / Proximity Calibrator | Configurable distance (<3–10km) & cluster quantity thresholds, WHS stand-down notifications | ✅ **Complete & Live** |
-| **6** | **🚁 Low-Altitude Drone & POLAIR Airspace Radar** | ADS-B Transponder API / OpenSky Network | Dual-mode radar HUD, QPS POLAIR 1/2 tactical orbit detection, 1-tap drone sighting ledger | ✅ **Complete & Live** |
+| **6** | **🚁 Low-Altitude Drone & POLAIR Airspace Radar** | ADS-B Transponder API / OpenSky Network | Dual-mode radar HUD, QPS POLAIR 1/2 response orbit detection, 1-tap drone sighting ledger | ✅ **Complete & Live** |
 | **7** | **🧊 Severe Thunderstorm & Hail Warning Radar** | Open-Meteo MUCAPE / Convective Precip API | Atmospheric convective instability & hail size estimation (~15–55mm), vehicle cover alerts | ✅ **Complete & Live** |
 | **8** | **🌊 Next-Gen Peek & Flow Calendar & Deputy Deck** | Deputy API / Security Award MA000115 / Fluid Physics | 2-Guard overlap matrix, Award penalty calculations, fatigue pacers & 1-tap open shift claiming | ✅ **Complete & Live** |
 | **9** | **📚 Site Post Orders, Deputy Docs & Compliance Reader** | Deputy API (`/resource/NewsPost`) / Cryptographic Attestation | Category filter pills, full-text dark reader, font scaler (`A-`/`A+`), 1-tap shift ledger attestation | ✅ **Complete & Live** |
@@ -51,9 +51,9 @@
 | # | Feature / Idea | Implementation | Operational Value & Workflow |
 |---|---|---|---|
 | **20** | **⏳ Motion-Sensing Deadman's Welfare Switch** | Accelerometer / Gyro Step Detector | Auto-detects rover movement at night; plays gold chime after 30 mins of inactivity; dispatches distress alert if unacknowledged. |
-| **21** | **🚨 1-Tap Tactical Yard Strobe & Deterrence Siren** | Camera Flash Strobe (15Hz) + Audio Synth | High-frequency strobe + loud siren to disorient intruders and signal active security engagement. |
+| **21** | **🚨 1-Tap Perimeter Yard Strobe & Deterrence Siren** | Camera Flash Strobe (15Hz) + Audio Synth | High-frequency strobe + loud siren to disorient intruders and signal active security engagement. |
 | **22** | **🌡️ QLD Wet-Bulb Heat Stress & Hydration Adviser** | BOM Solar/Thermal Calc Engine | Computes occupational heat stress index during humid summer shifts, giving WHS-compliant hydration and rest prompts. |
-| **23** | **🌙 Circadian Fatigue Dip Curve & Alertness Tracker** | Shift Bio-Chronograph | Tracks 03:00–04:30 AM night fatigue dip, suggesting tactical lighting shifts and safe-driving advice for the morning drive home. |
+| **23** | **🌙 Circadian Fatigue Dip Curve & Alertness Tracker** | Shift Bio-Chronograph | Tracks 03:00–04:30 AM night fatigue dip, suggesting alertness lighting shifts and safe-driving advice for the morning drive home. |
 
 ---
 

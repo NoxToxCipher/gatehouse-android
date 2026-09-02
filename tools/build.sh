@@ -93,6 +93,16 @@ INVADERS_SO="crates/space_invaders/target/aarch64-linux-android/release/libspace
 cp "$INVADERS_SO" "$OUT/lib/arm64-v8a/"
 ok
 
+say "rust baduk engine"
+( cd crates/baduk_engine && \
+  CARGO_TARGET_AARCH64_LINUX_ANDROID_LINKER="$NDK/toolchains/llvm/prebuilt/windows-x86_64/bin/aarch64-linux-android${API}-clang.cmd" \
+  cargo build --target aarch64-linux-android --release > "$OUT/baduk.log" 2>&1 ) \
+  || { echo "FAILED"; cat "$OUT/baduk.log"; exit 1; }
+BADUK_SO="crates/baduk_engine/target/aarch64-linux-android/release/libgatehouse_baduk.so"
+[ -f "$BADUK_SO" ] || { echo "FAILED: no $BADUK_SO"; exit 1; }
+cp "$BADUK_SO" "$OUT/lib/arm64-v8a/"
+ok
+
 say "zig systems core"
 ( cd native/gatehouse_zig && \
   "$ZIG" build-lib -dynamic src/main.zig -target aarch64-linux-android -O ReleaseSafe -femit-bin="libgatehouse_zig.so" > "$OUT/zig.log" 2>&1 ) \
@@ -129,6 +139,13 @@ for sym in Java_au_com_dss_gatehouse_SpaceInvadersNative_nativeCreateEngine \
            Java_au_com_dss_gatehouse_SpaceInvadersNative_nativeGetAlienRowMask \
            Java_au_com_dss_gatehouse_SpaceInvadersNative_nativeSynthesizeAudio; do
   "$NM" --dynamic "build/lib/arm64-v8a/libspace_invaders.so" \
+    | grep -q " $sym\$" || { echo "FAILED: $sym is missing"; exit 1; }
+done
+for sym in Java_au_com_dss_gatehouse_BadukNative_nativeCreateEngine \
+           Java_au_com_dss_gatehouse_BadukNative_nativePlayMove \
+           Java_au_com_dss_gatehouse_BadukNative_nativeFindBestMove \
+           Java_au_com_dss_gatehouse_BadukNative_nativeEvaluateTerritory; do
+  "$NM" --dynamic "build/lib/arm64-v8a/libgatehouse_baduk.so" \
     | grep -q " $sym\$" || { echo "FAILED: $sym is missing"; exit 1; }
 done
 for sym in Java_au_com_dss_gatehouse_GatehouseNativeZig_nativeExtractGreyscale \
@@ -187,6 +204,7 @@ python tools/addfiles.py "$OUT/unsigned.apk" \
   "$OUT/lib/arm64-v8a/libgatehouse.so=lib/arm64-v8a/libgatehouse.so" \
   "$OUT/lib/arm64-v8a/libgatehouse_vault.so=lib/arm64-v8a/libgatehouse_vault.so" \
   "$OUT/lib/arm64-v8a/libspace_invaders.so=lib/arm64-v8a/libspace_invaders.so" \
+  "$OUT/lib/arm64-v8a/libgatehouse_baduk.so=lib/arm64-v8a/libgatehouse_baduk.so" \
   "$OUT/lib/arm64-v8a/libgatehouse_zig.so=lib/arm64-v8a/libgatehouse_zig.so" \
   > "$OUT/zip.log" 2>&1 || { echo "FAILED"; cat "$OUT/zip.log"; exit 1; }
 ok

@@ -86,6 +86,13 @@ public class BadukGameView extends View {
     private int hintY = -1;
     private final Paint hintPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
 
+    // Native Rust Baduk MCTS Core (libgatehouse_baduk.so)
+    private final BadukNative nativeBot = new BadukNative(9);
+    private final java.util.concurrent.ExecutorService aiExecutor = java.util.concurrent.Executors.newSingleThreadExecutor();
+    private volatile boolean isAiThinking = false;
+    private float currentWinrate = 0.5f;
+    private final float[] currentHeatmap = new float[19 * 19];
+
     public void cycleTheme() {
         gobanTheme = (gobanTheme + 1) % 3;
         try { performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK); } catch (Exception ignored) {}
@@ -547,6 +554,10 @@ public class BadukGameView extends View {
         fullReplayMoves.clear();
         reviewStepIndex = -1;
 
+        if (nativeBot != null) {
+            nativeBot.reset(boardSize);
+        }
+
         int[][] initialEmpty = new int[boardSize][boardSize];
         fullReplayStates.add(initialEmpty);
 
@@ -844,6 +855,10 @@ public class BadukGameView extends View {
             captureToastStartTime = System.currentTimeMillis();
         }
 
+        if (nativeBot != null) {
+            nativeBot.playMove(x, y, color);
+        }
+
         lastMoveX = x;
         lastMoveY = y;
         moveList.add(new Point(x, y));
@@ -1087,275 +1102,49 @@ public class BadukGameView extends View {
     }
 
     private void botPlayMove() {
-        if (currentTurn != 2 || gameOver) return;
-        Point best = findBestMove(2);
-        if (best != null && playMove(best.x, best.y)) return;
-        passTurn();
+        if (currentTurn != 2 || gameOver || isAiThinking) return;
+        isAiThinking = true;
+        if (statusListener != null) {
+            statusListener.onStatusChanged("🧠 AI Reading Variations (Native MCTS)...", 0xFF38BDF8);
+        }
+        invalidate();
+
+        aiExecutor.execute(new Runnable() {
+            @Override
+            public void run() {
+                final BadukNative.MoveResult moveRes = (nativeBot != null)
+                        ? nativeBot.findBestMove(2, difficultyTier)
+                        : null;
+
+                post(new Runnable() {
+                    @Override
+                    public void run() {
+                        isAiThinking = false;
+                        if (moveRes != null) {
+                            currentWinrate = moveRes.winrate;
+                            if (moveRes.heatmap != null) {
+                                System.arraycopy(moveRes.heatmap, 0, currentHeatmap, 0, Math.min(currentHeatmap.length, moveRes.heatmap.length));
+                            }
+                            if (moveRes.point != null && moveRes.point.x >= 0 && moveRes.point.y >= 0) {
+                                playMove(moveRes.point.x, moveRes.point.y);
+                                return;
+                            }
+                        }
+                        passTurn();
+                    }
+                });
+            }
+        });
     }
 
     public Point findBestMove(int color) {
-        int opponent = (color == 1) ? 2 : 1;
-
-        // 1. URGENT ATARI COMBAT: Immediate Defense & Capture
-        // 1A. Defend own groups in Atari (1 liberty)
-        int bestDefX = -1, bestDefY = -1;
-        int maxDefGain = 0;
-        for (int y = 0; y < boardSize; y++) {
-            for (int x = 0; x < boardSize; x++) {
-                if (board[y][x] == color) {
-                    boolean[][] v = new boolean[boardSize][boardSize];
-                    if (countGroupLiberties(x, y, color, v) == 1) {
-                        int[][] dirs = {{0,1}, {0,-1}, {1,0}, {-1,0}};
-                        for (int[] d : dirs) {
-                            int nx = x + d[0];
-                            int ny = y + d[1];
-                            if (nx >= 0 && nx < boardSize && ny >= 0 && ny < boardSize && board[ny][nx] == 0) {
-                                board[ny][nx] = color;
-                                boolean[][] v2 = new boolean[boardSize][boardSize];
-                                int libs = countGroupLiberties(nx, ny, color, v2);
-                                board[ny][nx] = 0;
-                                if (libs >= 2 && libs > maxDefGain) {
-                                    maxDefGain = libs;
-                                    bestDefX = nx;
-                                    bestDefY = ny;
-                                }
-                            }
-                        }
-                    }
-                }
+        if (nativeBot != null) {
+            BadukNative.MoveResult res = nativeBot.findBestMove(color, 2);
+            if (res != null && res.point != null && res.point.x >= 0 && res.point.y >= 0) {
+                return res.point;
             }
         }
-        if (bestDefX != -1 && bestDefY != -1) {
-            return new Point(bestDefX, bestDefY);
-        }
-
-        // 1B. Capture opponent groups in Atari (1 liberty)
-        int bestCapX = -1, bestCapY = -1;
-        int maxCapSize = 0;
-        for (int y = 0; y < boardSize; y++) {
-            for (int x = 0; x < boardSize; x++) {
-                if (board[y][x] == opponent) {
-                    boolean[][] v = new boolean[boardSize][boardSize];
-                    if (countGroupLiberties(x, y, opponent, v) == 1) {
-                        int[][] dirs = {{0,1}, {0,-1}, {1,0}, {-1,0}};
-                        for (int[] d : dirs) {
-                            int nx = x + d[0];
-                            int ny = y + d[1];
-                            if (nx >= 0 && nx < boardSize && ny >= 0 && ny < boardSize && board[ny][nx] == 0) {
-                                boolean[][] vSelf = new boolean[boardSize][boardSize];
-                                int groupSize = countGroupSize(x, y, opponent, vSelf);
-                                if (groupSize > maxCapSize) {
-                                    maxCapSize = groupSize;
-                                    bestCapX = nx;
-                                    bestCapY = ny;
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        }
-        if (bestCapX != -1 && bestCapY != -1) {
-            return new Point(bestCapX, bestCapY);
-        }
-
-        // 2. OPENING JOSEKI / CORNER & TENGEN (First 4 moves)
-        if (moveList.size() <= 4) {
-            int center = boardSize / 2;
-            int star = (boardSize >= 13) ? 3 : 2;
-            int starHigh = boardSize - 1 - star;
-            int[][] openingPoints = {
-                {center, center},
-                {star, star}, {starHigh, star}, {star, starHigh}, {starHigh, starHigh},
-                {center, star}, {star, center}, {center, starHigh}, {starHigh, center}
-            };
-            for (int[] pt : openingPoints) {
-                if (board[pt[1]][pt[0]] == 0) {
-                    return new Point(pt[0], pt[1]);
-                }
-            }
-        }
-
-        // 3. CANDIDATE MOVES WITH SHAPE HEURISTICS & MONTE CARLO ROLLOUTS
-        List<CandidateMove> candidates = new ArrayList<>();
-        for (int y = 0; y < boardSize; y++) {
-            for (int x = 0; x < boardSize; x++) {
-                if (board[y][x] != 0) continue;
-
-                // Test self-liberties
-                board[y][x] = color;
-                boolean[][] vTest = new boolean[boardSize][boardSize];
-                int testLibs = countGroupLiberties(x, y, color, vTest);
-                board[y][x] = 0;
-                if (testLibs <= 1) continue; // Avoid self-atari
-
-                float shapeScore = evaluateShapeScore(x, y);
-                candidates.add(new CandidateMove(x, y, shapeScore));
-            }
-        }
-
-        if (candidates.isEmpty()) return null;
-
-        java.util.Collections.sort(candidates, new java.util.Comparator<CandidateMove>() {
-            @Override
-            public int compare(CandidateMove a, CandidateMove b) {
-                return Float.compare(b.shapeScore, a.shapeScore);
-            }
-        });
-
-        int rollouts = (difficultyTier == 0) ? 6 : (difficultyTier == 1 ? 25 : 50);
-        int depth = (difficultyTier == 0) ? 6 : (difficultyTier == 1 ? 12 : 18);
-        int numTop = Math.min(candidates.size(), (difficultyTier == 0 ? 3 : (difficultyTier == 1 ? 6 : 10)));
-        CandidateMove bestMove = candidates.get(0);
-        float bestTotalScore = -999999f;
-
-        for (int i = 0; i < numTop; i++) {
-            CandidateMove c = candidates.get(i);
-            float winRate = runMonteCarloRollouts(c.x, c.y, rollouts, depth);
-            float totalScore = c.shapeScore * 0.45f + winRate * 55f;
-            if (totalScore > bestTotalScore) {
-                bestTotalScore = totalScore;
-                bestMove = c;
-            }
-        }
-
-        return (bestMove != null) ? new Point(bestMove.x, bestMove.y) : null;
-    }
-
-    private static class CandidateMove {
-        final int x, y;
-        final float shapeScore;
-        CandidateMove(int x, int y, float s) {
-            this.x = x; this.y = y; this.shapeScore = s;
-        }
-    }
-
-    private int countGroupSize(int startX, int startY, int color, boolean[][] visited) {
-        int count = 0;
-        Queue<Point> q = new LinkedList<>();
-        q.add(new Point(startX, startY));
-        visited[startY][startX] = true;
-        count++;
-
-        int[][] dirs = {{0,1}, {0,-1}, {1,0}, {-1,0}};
-        while (!q.isEmpty()) {
-            Point p = q.poll();
-            for (int[] d : dirs) {
-                int nx = p.x + d[0];
-                int ny = p.y + d[1];
-                if (nx >= 0 && nx < boardSize && ny >= 0 && ny < boardSize && board[ny][nx] == color && !visited[ny][nx]) {
-                    visited[ny][nx] = true;
-                    count++;
-                    q.add(new Point(nx, ny));
-                }
-            }
-        }
-        return count;
-    }
-
-    private float evaluateShapeScore(int x, int y) {
-        float score = 0f;
-        int distEdgeX = Math.min(x, boardSize - 1 - x);
-        int distEdgeY = Math.min(y, boardSize - 1 - y);
-
-        // 3rd / 4th line Golden Territory Lines (optimal Go balance)
-        if (distEdgeX == 2 && distEdgeY == 2) score += 60f;
-        else if (distEdgeX >= 2 && distEdgeY >= 2) score += 42f;
-        else if (distEdgeX == 1 || distEdgeY == 1) score += 15f;
-        else if (distEdgeX == 0 || distEdgeY == 0) score -= 35f; // First line penalty (death line)
-
-        // Contact & Tesuji Shape Patterns
-        int friendlyNeighbors = 0;
-        int enemyNeighbors = 0;
-        int friendlyDiagonals = 0;
-        int enemyDiagonals = 0;
-
-        int[][] dirs = {{0,1}, {0,-1}, {1,0}, {-1,0}};
-        for (int[] d : dirs) {
-            int nx = x + d[0];
-            int ny = y + d[1];
-            if (nx >= 0 && nx < boardSize && ny >= 0 && ny < boardSize) {
-                if (board[ny][nx] == 2) friendlyNeighbors++;
-                else if (board[ny][nx] == 1) enemyNeighbors++;
-            }
-        }
-
-        int[][] diagDirs = {{1,1}, {1,-1}, {-1,1}, {-1,-1}};
-        for (int[] d : diagDirs) {
-            int nx = x + d[0];
-            int ny = y + d[1];
-            if (nx >= 0 && nx < boardSize && ny >= 0 && ny < boardSize) {
-                if (board[ny][nx] == 2) friendlyDiagonals++;
-                else if (board[ny][nx] == 1) enemyDiagonals++;
-            }
-        }
-
-        // Hane & Head of 2 Stones (powerful wrapping shape)
-        if (enemyNeighbors >= 1 && friendlyNeighbors >= 1) score += 55f;
-
-        // Tiger's Mouth (3 surrounding friendly stones creating eye mouth)
-        if (friendlyNeighbors >= 2 && friendlyDiagonals >= 1) score += 65f;
-
-        // Kosumi (Diagonal connection with protection against cuts)
-        if (friendlyDiagonals >= 1 && enemyNeighbors == 0) score += 40f;
-
-        // Extension from friendly wall
-        score += friendlyNeighbors * 22f;
-
-        // Pressure opponent stone
-        if (enemyNeighbors == 1) score += 30f;
-
-        // Proximity to last move
-        if (lastMoveX >= 0) {
-            int dx = Math.abs(x - lastMoveX);
-            int dy = Math.abs(y - lastMoveY);
-            if (dx <= 2 && dy <= 2 && (dx + dy > 0)) score += 28f;
-        }
-
-        return score;
-    }
-
-    private float runMonteCarloRollouts(int startX, int startY, int numRollouts, int maxDepth) {
-        int wins = 0;
-        int[][] simBoard = new int[boardSize][boardSize];
-
-        for (int sim = 0; sim < numRollouts; sim++) {
-            // Copy state
-            for (int r = 0; r < boardSize; r++) {
-                System.arraycopy(board[r], 0, simBoard[r], 0, boardSize);
-            }
-            simBoard[startY][startX] = 2; // White candidate
-
-            // Fast Playouts
-            int turn = 1; // Black next
-            for (int ply = 0; ply < maxDepth; ply++) {
-                List<Point> legalMoves = new ArrayList<>();
-                for (int r = 0; r < boardSize; r++) {
-                    for (int c = 0; c < boardSize; c++) {
-                        if (simBoard[r][c] == 0) legalMoves.add(new Point(c, r));
-                    }
-                }
-                if (legalMoves.isEmpty()) break;
-
-                // Pick a pseudo-random move with preference for center
-                Point p = legalMoves.get(rng.nextInt(legalMoves.size()));
-                simBoard[p.y][p.x] = turn;
-                turn = (turn == 1) ? 2 : 1;
-            }
-
-            // Evaluate territory differential
-            int whiteScore = 0;
-            int blackScore = 0;
-            for (int r = 0; r < boardSize; r++) {
-                for (int c = 0; c < boardSize; c++) {
-                    if (simBoard[r][c] == 2) whiteScore += 2;
-                    else if (simBoard[r][c] == 1) blackScore += 2;
-                }
-            }
-            if (whiteScore + 6 >= blackScore) wins++; // 6.5 Komi advantage for White
-        }
-
-        return (float) wins / (float) numRollouts;
+        return null;
     }
 
     @Override
@@ -1824,26 +1613,36 @@ public class BadukGameView extends View {
         return validNeighbors >= 3 && count == validNeighbors;
     }
 
+    private static class HeatmapPoint {
+        int x, y;
+        float score;
+        HeatmapPoint(int x, int y, float score) {
+            this.x = x;
+            this.y = y;
+            this.score = score;
+        }
+    }
+
     private void drawKataGoCandidateBubbles(Canvas canvas, float startX, float startY, float cellSize) {
         if (!showHeatmap || gameOver || mode == 1) return;
-        List<CandidateMove> candidates = new ArrayList<>();
+        List<HeatmapPoint> candidates = new ArrayList<>();
         for (int y = 0; y < boardSize; y++) {
             for (int x = 0; x < boardSize; x++) {
-                if (board[y][x] != 0) continue;
-                board[y][x] = currentTurn;
-                boolean[][] vTest = new boolean[boardSize][boardSize];
-                int testLibs = countGroupLiberties(x, y, currentTurn, vTest);
-                board[y][x] = 0;
-                if (testLibs <= 1) continue;
-                float s = evaluateShapeScore(x, y);
-                candidates.add(new CandidateMove(x, y, s));
+                if (board[y][x] == 0) {
+                    float val = currentHeatmap[y * boardSize + x];
+                    if (val > 0.05f) {
+                        candidates.add(new HeatmapPoint(x, y, val));
+                    }
+                }
             }
         }
-        Collections.sort(candidates, new Comparator<CandidateMove>() {
-            public int compare(CandidateMove a, CandidateMove b) {
-                return Float.compare(b.shapeScore, a.shapeScore);
+
+        Collections.sort(candidates, new Comparator<HeatmapPoint>() {
+            public int compare(HeatmapPoint a, HeatmapPoint b) {
+                return Float.compare(b.score, a.score);
             }
         });
+
         int topN = Math.min(3, candidates.size());
         Paint bubblePaint = new Paint(Paint.ANTI_ALIAS_FLAG);
         Paint bubbleTextPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
@@ -1851,7 +1650,7 @@ public class BadukGameView extends View {
         bubbleTextPaint.setTextAlign(Paint.Align.CENTER);
 
         for (int i = 0; i < topN; i++) {
-            CandidateMove cm = candidates.get(i);
+            HeatmapPoint cm = candidates.get(i);
             float cx = startX + cm.x * cellSize;
             float cy = startY + cm.y * cellSize;
             float bubbleR = cellSize * 0.40f;

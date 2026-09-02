@@ -1,0 +1,20 @@
+[package]
+name = "gatehouse_baduk"
+version = "1.0.0"
+edition = "2021"
+authors = ["Deepmind Team <advanced-agentic-coding@google.com>"]
+description = "High-performance Baduk (Go) engine with Monte Carlo Tree Search, Zobrist superko, 3x3 pattern matching & Benson life-detection"
+
+[lib]
+name = "gatehouse_baduk"
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+jni = { version = "0.21", default-features = false }
+
+[profile.release]
+opt-level = 3
+lto = true
+codegen-units = 1
+panic = "abort"
+strip = true
