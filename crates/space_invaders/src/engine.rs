@@ -46,8 +46,8 @@ impl GameState {
         let row_spacing = 30.0;
 
         let bunker_w = col_spacing * 1.8;
-        let bunker_h = 24.0;
-        let bunker_y = screen_h - 130.0;
+        let bunker_h = 26.0;
+        let bunker_y = screen_h - 150.0;
         let bunker_spacing = (screen_w - (bunker_w * 3.0)) / 4.0;
 
         let bunkers = [
@@ -128,12 +128,12 @@ impl GameState {
         let cannon_half_w = 20.0;
         self.player_x = self.player_x.clamp(cannon_half_w + 10.0, self.screen_w - cannon_half_w - 10.0);
 
-        // 2. Player Laser Firing
+        // 2. Player Laser Firing (Spawns from cannon turret tip)
         self.player_fire_cooldown_ms -= dt_ms;
         if fire_trigger && self.player_fire_cooldown_ms <= 0.0 {
-            let player_y = self.screen_h - 75.0;
-            if self.projectiles.spawn(self.player_x, player_y, -650.0, true) {
-                self.player_fire_cooldown_ms = 200.0;
+            let cannon_tip_y = self.screen_h - 96.0;
+            if self.projectiles.spawn(self.player_x, cannon_tip_y, -680.0, true) {
+                self.player_fire_cooldown_ms = 180.0;
                 events |= EVENT_PLAYER_FIRED;
             }
         }
@@ -144,7 +144,7 @@ impl GameState {
             self.march_note_idx = (self.march_note_idx + 1) % 4;
 
             // Check if invaders reached bunker / player altitude
-            if self.fleet.lowest_invader_y(self.row_spacing) >= (self.screen_h - 100.0) {
+            if self.fleet.lowest_invader_y(self.row_spacing) >= (self.screen_h - 110.0) {
                 self.player_lives = 0;
                 self.game_over = true;
                 events |= EVENT_GAME_OVER;
@@ -185,7 +185,7 @@ impl GameState {
         self.projectiles.update(dt_sec, self.screen_h);
 
         // 7. Collision Detection
-        let player_y = self.screen_h - 75.0;
+        let player_y = self.screen_h - 85.0;
         let mut wave_cleared = false;
 
         for p in self.projectiles.pool.iter_mut() {
