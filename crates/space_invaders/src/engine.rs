@@ -62,7 +62,7 @@ impl GameState {
             projectiles: ProjectilePool::new(),
             player_x: screen_w / 2.0,
             player_target_x: screen_w / 2.0,
-            player_speed: 400.0,
+            player_speed: 850.0,
             player_lives: 3,
             score: 0,
             high_score: 1980,
@@ -71,7 +71,7 @@ impl GameState {
             game_won: false,
             ufo_x: -100.0,
             ufo_active: false,
-            ufo_speed: 120.0,
+            ufo_speed: 135.0,
             ufo_timer_ms: 8000.0,
             screen_w,
             screen_h,
@@ -132,8 +132,8 @@ impl GameState {
         self.player_fire_cooldown_ms -= dt_ms;
         if fire_trigger && self.player_fire_cooldown_ms <= 0.0 {
             let player_y = self.screen_h - 75.0;
-            if self.projectiles.spawn(self.player_x, player_y, -550.0, true) {
-                self.player_fire_cooldown_ms = 350.0;
+            if self.projectiles.spawn(self.player_x, player_y, -650.0, true) {
+                self.player_fire_cooldown_ms = 200.0;
                 events |= EVENT_PLAYER_FIRED;
             }
         }

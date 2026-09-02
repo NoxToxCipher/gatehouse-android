@@ -19,6 +19,8 @@ import java.util.Random;
  * 
  * Powered by native Rust (`libspace_invaders.so`) for 55-invader bitboard fleet stepping,
  * swept AABB projectile physics, destructible bunker shield bitmasks, and procedural 8-bit audio DSP.
+ * 
+ * Features Smart Dual-Thumb Touch Deck with multi-touch continuous gliding and auto-fire holding.
  */
 public class SpaceInvadersGameView extends View {
 
@@ -63,6 +65,16 @@ public class SpaceInvadersGameView extends View {
     private int animFrame = 0;
     private long lastFrameTime = 0;
     private boolean shootTrigger = false;
+
+    // Smart Multi-Touch Control State
+    private boolean isHoldingLeft = false;
+    private boolean isHoldingRight = false;
+    private boolean isHoldingFire = false;
+    private long lastAutoFireTime = 0;
+
+    private final RectF lBtnRect = new RectF();
+    private final RectF rBtnRect = new RectF();
+    private final RectF fBtnRect = new RectF();
 
     // Explosion Particles
     private static class Particle {
@@ -134,6 +146,16 @@ public class SpaceInvadersGameView extends View {
             playerX = w / 2f;
             playerTargetX = w / 2f;
             lastFrameTime = System.currentTimeMillis();
+
+            // Setup generous touch control zones
+            float btnH = dpf(52f);
+            float btnY1 = h - btnH - dpf(8f);
+            float btnY2 = h - dpf(8f);
+
+            lBtnRect.set(dpf(10f), btnY1, w * 0.28f, btnY2);
+            rBtnRect.set(w * 0.30f, btnY1, w * 0.48f, btnY2);
+            fBtnRect.set(w * 0.52f, btnY1, w - dpf(10f), btnY2);
+
             updateStatus();
         }
     }
@@ -172,6 +194,9 @@ public class SpaceInvadersGameView extends View {
         wave = 1;
         gameOver = false;
         gameWon = false;
+        isHoldingLeft = false;
+        isHoldingRight = false;
+        isHoldingFire = false;
         particles.clear();
         updateStatus();
         invalidate();
@@ -201,7 +226,7 @@ public class SpaceInvadersGameView extends View {
     @Override
     public boolean onTouchEvent(MotionEvent event) {
         int action = event.getActionMasked();
-        if (action == MotionEvent.ACTION_DOWN || action == MotionEvent.ACTION_MOVE) {
+        if (action == MotionEvent.ACTION_DOWN || action == MotionEvent.ACTION_POINTER_DOWN || action == MotionEvent.ACTION_MOVE) {
             if (getParent() != null) getParent().requestDisallowInterceptTouchEvent(true);
         }
 
@@ -212,36 +237,50 @@ public class SpaceInvadersGameView extends View {
             }
         }
 
-        float ex = event.getX();
-        float ey = event.getY();
-        int w = getWidth();
-        int h = getHeight();
-
-        if (action == MotionEvent.ACTION_DOWN || action == MotionEvent.ACTION_MOVE) {
-            // Check touch controls at bottom
-            if (ey > h - dpf(30f)) {
-                if (ex >= w - dpf(130f) && ex <= w - dpf(92f)) {
-                    playerTargetX = Math.max(dpf(24f), playerTargetX - dpf(22f));
-                    try { performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP); } catch (Exception ignored) {}
-                    return true;
-                } else if (ex >= w - dpf(88f) && ex <= w - dpf(46f)) {
-                    fireLaser();
-                    return true;
-                } else if (ex >= w - dpf(42f) && ex <= w - dpf(6f)) {
-                    playerTargetX = Math.min(w - dpf(24f), playerTargetX + dpf(22f));
-                    try { performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP); } catch (Exception ignored) {}
-                    return true;
-                }
-            }
-
-            // Touch / drag anywhere on upper screen to steer cannon
-            playerTargetX = Math.max(dpf(24f), Math.min(w - dpf(24f), ex));
-            if (action == MotionEvent.ACTION_DOWN && ey < h - dpf(45f)) {
-                fireLaser();
-            }
+        if (action == MotionEvent.ACTION_UP || action == MotionEvent.ACTION_CANCEL) {
+            isHoldingLeft = false;
+            isHoldingRight = false;
+            isHoldingFire = false;
             return true;
         }
-        return super.onTouchEvent(event);
+
+        // Multi-touch evaluation across all active pointers
+        boolean newHoldLeft = false;
+        boolean newHoldRight = false;
+        boolean newHoldFire = false;
+
+        int pointerCount = event.getPointerCount();
+        for (int p = 0; p < pointerCount; p++) {
+            float px = event.getX(p);
+            float py = event.getY(p);
+
+            if (lBtnRect.contains(px, py)) {
+                newHoldLeft = true;
+            } else if (rBtnRect.contains(px, py)) {
+                newHoldRight = true;
+            } else if (fBtnRect.contains(px, py)) {
+                newHoldFire = true;
+            } else if (py < lBtnRect.top - dpf(10f)) {
+                // Direct touch-to-aim glide anywhere on upper field
+                playerTargetX = Math.max(dpf(20f), Math.min(getWidth() - dpf(20f), px));
+            }
+        }
+
+        if (newHoldLeft && !isHoldingLeft) {
+            try { performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP); } catch (Exception ignored) {}
+        }
+        if (newHoldRight && !isHoldingRight) {
+            try { performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP); } catch (Exception ignored) {}
+        }
+        if (newHoldFire && !isHoldingFire) {
+            fireLaser();
+        }
+
+        isHoldingLeft = newHoldLeft;
+        isHoldingRight = newHoldRight;
+        isHoldingFire = newHoldFire;
+
+        return true;
     }
 
     @Override
@@ -255,6 +294,21 @@ public class SpaceInvadersGameView extends View {
         float dtMs = (lastFrameTime > 0) ? (now - lastFrameTime) : 16.6f;
         if (dtMs > 100f) dtMs = 16.6f; // Clamp pause jumps
         lastFrameTime = now;
+
+        // Apply continuous button gliding
+        float glideSpeed = dpf(8.5f) * (dtMs / 16.6f);
+        if (isHoldingLeft) {
+            playerTargetX = Math.max(dpf(20f), playerTargetX - glideSpeed);
+        }
+        if (isHoldingRight) {
+            playerTargetX = Math.min(w - dpf(20f), playerTargetX + glideSpeed);
+        }
+
+        // Apply continuous rapid auto-fire on hold (200ms cadence)
+        if (isHoldingFire && (now - lastAutoFireTime >= 200)) {
+            shootTrigger = true;
+            lastAutoFireTime = now;
+        }
 
         // 1. Step Native Rust Simulation
         if (nativeEngine != null && !gameOver) {
@@ -277,7 +331,7 @@ public class SpaceInvadersGameView extends View {
             }
             if ((events & SpaceInvadersNative.EVENT_PLAYER_HIT) != 0) {
                 SpaceInvadersNative.playProceduralSfx(3, 0);
-                triggerExplosion(playerX, h - dpf(38f), 0xFF34D399, 30);
+                triggerExplosion(playerX, h - dpf(85f), 0xFF34D399, 30);
                 try { performHapticFeedback(HapticFeedbackConstants.LONG_PRESS); } catch (Exception ignored) {}
             }
             if ((events & SpaceInvadersNative.EVENT_UFO_KILLED) != 0) {
@@ -369,8 +423,8 @@ public class SpaceInvadersGameView extends View {
             }
         }
 
-        // 9. Draw Player Cannon
-        drawPlayerCannon(canvas, playerX, h - dpf(38f));
+        // 9. Draw Player Cannon (positioned comfortably above the control deck)
+        drawPlayerCannon(canvas, playerX, h - dpf(78f));
 
         // 10. CRT Horizontal Scanlines
         for (int y = 0; y < h; y += (int) dpf(4f)) {
@@ -378,55 +432,58 @@ public class SpaceInvadersGameView extends View {
         }
 
         // 11. Retro Vector HUD Header & Score
-        hudPaint.setTextSize(dpf(10f));
+        hudPaint.setTextSize(dpf(10.5f));
         canvas.drawText("SCORE: " + score, dpf(14f), dpf(18f), hudPaint);
         hudPaint.setTextAlign(Paint.Align.RIGHT);
         canvas.drawText("HI: " + Math.max(score, highScore), w - dpf(14f), dpf(18f), hudPaint);
         hudPaint.setTextAlign(Paint.Align.LEFT);
 
-        // Bottom Lives Counter
+        // Bottom Lives Counter (Displayed above control deck)
         for (int i = 0; i < playerLives; i++) {
-            drawMiniCannon(canvas, dpf(14f) + i * dpf(18f), h - dpf(12f));
+            drawMiniCannon(canvas, dpf(14f) + i * dpf(18f), h - dpf(68f));
         }
 
-        // Retro Touch Control Badges
-        Paint ctrlBg = new Paint(Paint.ANTI_ALIAS_FLAG);
-        ctrlBg.setColor(0x2210B981);
-        Paint ctrlBorder = new Paint(Paint.ANTI_ALIAS_FLAG);
-        ctrlBorder.setColor(0x6610B981);
-        ctrlBorder.setStyle(Paint.Style.STROKE);
-        ctrlBorder.setStrokeWidth(dpf(1.2f));
-        Paint ctrlText = new Paint(Paint.ANTI_ALIAS_FLAG);
-        ctrlText.setColor(0xFF34D399);
-        ctrlText.setTextSize(dpf(9f));
-        ctrlText.setTypeface(Typeface.create(Typeface.MONOSPACE, Typeface.BOLD));
-        ctrlText.setTextAlign(Paint.Align.CENTER);
-
-        // Left button
-        RectF lRect = new RectF(w - dpf(130f), h - dpf(20f), w - dpf(92f), h - dpf(4f));
-        canvas.drawRoundRect(lRect, dpf(4f), dpf(4f), ctrlBg);
-        canvas.drawRoundRect(lRect, dpf(4f), dpf(4f), ctrlBorder);
-        canvas.drawText("◀", lRect.centerX(), lRect.centerY() + dpf(3f), ctrlText);
-
-        // Fire button
-        RectF fRect = new RectF(w - dpf(88f), h - dpf(20f), w - dpf(46f), h - dpf(4f));
-        ctrlBg.setColor(0x33EF4444);
-        ctrlBorder.setColor(0x88EF4444);
-        ctrlText.setColor(0xFFF43F5E);
-        canvas.drawRoundRect(fRect, dpf(4f), dpf(4f), ctrlBg);
-        canvas.drawRoundRect(fRect, dpf(4f), dpf(4f), ctrlBorder);
-        canvas.drawText("⚡ FIRE", fRect.centerX(), fRect.centerY() + dpf(3f), ctrlText);
-
-        // Right button
-        RectF rRect = new RectF(w - dpf(42f), h - dpf(20f), w - dpf(6f), h - dpf(4f));
-        ctrlBg.setColor(0x2210B981);
-        ctrlBorder.setColor(0x6610B981);
-        ctrlText.setColor(0xFF34D399);
-        canvas.drawRoundRect(rRect, dpf(4f), dpf(4f), ctrlBg);
-        canvas.drawRoundRect(rRect, dpf(4f), dpf(4f), ctrlBorder);
-        canvas.drawText("▶", rRect.centerX(), rRect.centerY() + dpf(3f), ctrlText);
+        // 12. Modern Ergonomic Dual-Thumb Control Deck (Large, high-comfort touch targets)
+        drawControlDeck(canvas);
 
         postInvalidateOnAnimation();
+    }
+
+    private void drawControlDeck(Canvas canvas) {
+        Paint btnBg = new Paint(Paint.ANTI_ALIAS_FLAG);
+        Paint btnBorder = new Paint(Paint.ANTI_ALIAS_FLAG);
+        btnBorder.setStyle(Paint.Style.STROKE);
+        btnBorder.setStrokeWidth(dpf(1.5f));
+
+        Paint btnText = new Paint(Paint.ANTI_ALIAS_FLAG);
+        btnText.setTypeface(Typeface.create(Typeface.MONOSPACE, Typeface.BOLD));
+        btnText.setTextAlign(Paint.Align.CENTER);
+
+        // Left Steer Button
+        btnBg.setColor(isHoldingLeft ? 0x5510B981 : 0x2210B981);
+        btnBorder.setColor(isHoldingLeft ? 0xFF10B981 : 0x6610B981);
+        btnText.setColor(isHoldingLeft ? 0xFFFFFFFF : 0xFF34D399);
+        btnText.setTextSize(dpf(12f));
+        canvas.drawRoundRect(lBtnRect, dpf(8f), dpf(8f), btnBg);
+        canvas.drawRoundRect(lBtnRect, dpf(8f), dpf(8f), btnBorder);
+        canvas.drawText("◀ LEFT", lBtnRect.centerX(), lBtnRect.centerY() + dpf(4f), btnText);
+
+        // Right Steer Button
+        btnBg.setColor(isHoldingRight ? 0x5510B981 : 0x2210B981);
+        btnBorder.setColor(isHoldingRight ? 0xFF10B981 : 0x6610B981);
+        btnText.setColor(isHoldingRight ? 0xFFFFFFFF : 0xFF34D399);
+        canvas.drawRoundRect(rBtnRect, dpf(8f), dpf(8f), btnBg);
+        canvas.drawRoundRect(rBtnRect, dpf(8f), dpf(8f), btnBorder);
+        canvas.drawText("RIGHT ▶", rBtnRect.centerX(), rBtnRect.centerY() + dpf(4f), btnText);
+
+        // Rapid Fire Button (Glowing Neon Coral)
+        btnBg.setColor(isHoldingFire ? 0x66EF4444 : 0x28EF4444);
+        btnBorder.setColor(isHoldingFire ? 0xFFF43F5E : 0x88EF4444);
+        btnText.setColor(isHoldingFire ? 0xFFFFFFFF : 0xFFF43F5E);
+        btnText.setTextSize(dpf(13f));
+        canvas.drawRoundRect(fBtnRect, dpf(8f), dpf(8f), btnBg);
+        canvas.drawRoundRect(fBtnRect, dpf(8f), dpf(8f), btnBorder);
+        canvas.drawText("⚡ RAPID FIRE", fBtnRect.centerX(), fBtnRect.centerY() + dpf(4.5f), btnText);
     }
 
     private void drawNativeAliens(Canvas canvas, int w, int h) {
@@ -494,8 +551,8 @@ public class SpaceInvadersGameView extends View {
 
     private void drawNativeBunkers(Canvas canvas, int w, int h) {
         if (nativeEngine == null) return;
-        float bunkerY = h - dpf(90f);
-        float bWidth = dpf(42f);
+        float bunkerY = h - dpf(125f);
+        float bWidth = dpf(44f);
         float bHeight = dpf(24f);
         float bGap = (w - bWidth * 3) / 4f;
         float pw = bWidth / 12f;
