@@ -1308,8 +1308,11 @@ public class BadukGameView extends View {
                 int val = board[y][x];
                 if (val == 0) continue;
 
-                float cx = startX + x * cellSize;
-                float cy = startY + y * cellSize;
+                // Deterministic organic human placement micro-jitter (+- 0.35dp)
+                float jx = (float) Math.sin((x * 7 + y * 13 + 3) * 0.73) * dpf(0.35f);
+                float jy = (float) Math.cos((x * 11 + y * 5 + 7) * 0.89) * dpf(0.35f);
+                float cx = startX + x * cellSize + jx;
+                float cy = startY + y * cellSize + jy;
 
                 if (x == animStoneX && y == animStoneY && elapsed < PLACEMENT_ANIM_DURATION_MS) {
                     // Elevated Descent Animation

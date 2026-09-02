@@ -19,22 +19,32 @@ public class RecreationAudioSynth {
             @Override
             public void run() {
                 try {
-                    int durationMs = 85;
+                    int durationMs = 110;
                     int numSamples = (SAMPLE_RATE * durationMs) / 1000;
                     short[] buffer = new short[numSamples];
 
-                    // Synthesize sharp crisp high-frequency transient (1950Hz) + fast decaying wood resonance (480Hz)
+                    // Procedural organic pitch variance (living wood acoustics)
+                    double pitchVar = 0.96 + Math.random() * 0.08;
+                    double freqSnap = 2450.0 * pitchVar;
+                    double freqWood = 820.0 * pitchVar;
+                    double freqHesoCavity = 310.0 * pitchVar;
+                    double freqWarmSub = 155.0 * pitchVar;
+
+                    // Synthesize sharp crisp stone contact snap + Kaya wood resonance + Heso acoustic chamber
                     for (int i = 0; i < numSamples; i++) {
                         double t = (double) i / SAMPLE_RATE;
-                        double decayFast = Math.exp(-t * 90.0);
-                        double decayBody = Math.exp(-t * 35.0);
+                        double decaySnap = Math.exp(-t * 140.0);
+                        double decayWood = Math.exp(-t * 45.0);
+                        double decayHeso = Math.exp(-t * 22.0);
 
-                        double click = Math.sin(2.0 * Math.PI * 1950.0 * t) * decayFast;
-                        double body = Math.sin(2.0 * Math.PI * 480.0 * t + 0.3) * decayBody;
-                        double snap = (Math.random() * 2.0 - 1.0) * Math.exp(-t * 220.0) * 0.4;
+                        double snapNoise = (Math.random() * 2.0 - 1.0) * Math.exp(-t * 300.0) * 0.35;
+                        double stoneSnap = Math.sin(2.0 * Math.PI * freqSnap * t) * decaySnap * 0.70;
+                        double woodBody = Math.sin(2.0 * Math.PI * freqWood * t + 0.4) * decayWood * 0.45;
+                        double hesoCavity = Math.sin(2.0 * Math.PI * freqHesoCavity * t + 0.8) * decayHeso * 0.30;
+                        double subResonance = Math.sin(2.0 * Math.PI * freqWarmSub * t + 1.2) * decayHeso * 0.18;
 
-                        double sample = (click * 0.65 + body * 0.45 + snap * 0.25);
-                        buffer[i] = (short) (Math.max(-1.0, Math.min(1.0, sample)) * 32000.0);
+                        double sample = (stoneSnap + snapNoise + woodBody + hesoCavity + subResonance);
+                        buffer[i] = (short) (Math.max(-1.0, Math.min(1.0, sample)) * 31500.0);
                     }
 
                     playPcmBuffer(buffer);
