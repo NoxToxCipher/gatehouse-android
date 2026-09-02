@@ -1,6 +1,4 @@
-//! 3x3 Pattern Database & Local Shape Heuristics for Baduk.
-
-use crate::board::{GoBoard, EMPTY, opponent};
+use crate::board::{GoBoard, opponent};
 
 /// Evaluate 3x3 shape score for a prospective move at (x, y).
 pub fn evaluate_shape_score(board: &GoBoard, x: usize, y: usize, color: u8) -> f32 {

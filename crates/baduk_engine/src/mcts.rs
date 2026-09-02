@@ -1,6 +1,4 @@
-//! Monte Carlo Tree Search (MCTS / UCT) Engine for Baduk.
-
-use crate::board::{GoBoard, Point, opponent, EMPTY, BLACK, WHITE, MAX_POINTS};
+use crate::board::{GoBoard, Point, opponent, EMPTY, BLACK, MAX_POINTS};
 use crate::patterns::evaluate_shape_score;
 use crate::benson::evaluate_territory;
 

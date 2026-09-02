@@ -104,10 +104,12 @@ cp "$BADUK_SO" "$OUT/lib/arm64-v8a/"
 ok
 
 say "zig systems core"
-( cd native/gatehouse_zig && \
-  "$ZIG" build-lib -dynamic src/main.zig -target aarch64-linux-android -O ReleaseSafe -femit-bin="libgatehouse_zig.so" > "$OUT/zig.log" 2>&1 ) \
-  || { echo "FAILED"; cat "$OUT/zig.log"; exit 1; }
 ZIG_SO="native/gatehouse_zig/libgatehouse_zig.so"
+if [ ! -f "$ZIG_SO" ]; then
+  ( cd native/gatehouse_zig && \
+    "$ZIG" build-lib -dynamic src/main.zig -target aarch64-linux-android -O ReleaseSafe -femit-bin="libgatehouse_zig.so" > "$OUT/zig.log" 2>&1 ) \
+    || { echo "FAILED"; cat "$OUT/zig.log"; exit 1; }
+fi
 [ -f "$ZIG_SO" ] || { echo "FAILED: no $ZIG_SO"; exit 1; }
 cp "$ZIG_SO" "$OUT/lib/arm64-v8a/"
 ok
