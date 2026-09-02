@@ -856,9 +856,8 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
                         float dx = ev.getX() - peekDownX;
                         float dy = Math.abs(ev.getY() - peekDownY);
                         boolean isTab = getResources().getConfiguration().smallestScreenWidthDp >= 600;
-                        float maxEdge = isTab ? dp(160) : dp(56);
-                        int screenW = getWidth();
-                        boolean canOpen = !isDeputyOpen && (peekDownX < maxEdge || (currentTab == 0 && peekDownX < screenW * 0.45f)) && dx > dp(14) && dx > dy * 1.1f;
+                        float maxEdge = isTab ? dp(100) : dp(32);
+                        boolean canOpen = !isDeputyOpen && peekDownX < maxEdge && dx > dp(18) && dx > dy * 1.2f;
                         boolean canClose = isDeputyOpen && dx < -dp(14) && Math.abs(dx) > dy * 1.1f;
                         if (canOpen || canClose) {
                             isPeekDragging = true;
@@ -10011,9 +10010,11 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
     // =========================================================================
 
     private LinearLayout buildPatrolTab() {
+        boolean isTablet = getResources().getConfiguration().smallestScreenWidthDp >= 600;
         boolean isLandscape = getResources().getConfiguration().orientation == android.content.res.Configuration.ORIENTATION_LANDSCAPE;
+        boolean useTwoColumns = isTablet && isLandscape;
 
-        if (isLandscape) {
+        if (useTwoColumns) {
             LinearLayout container = new LinearLayout(this);
             container.setOrientation(LinearLayout.HORIZONTAL);
             container.setBaselineAligned(false);
