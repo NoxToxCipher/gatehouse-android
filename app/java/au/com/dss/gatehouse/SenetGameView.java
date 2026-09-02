@@ -10,6 +10,7 @@ import android.graphics.RadialGradient;
 import android.graphics.RectF;
 import android.graphics.Shader;
 import android.graphics.Typeface;
+import android.os.SystemClock;
 import android.view.HapticFeedbackConstants;
 import android.view.MotionEvent;
 import android.view.View;
@@ -21,14 +22,12 @@ import java.util.Random;
  * SenetGameView — Ancient Egyptian Senet (c. 3100 BCE).
  * Powered by Native Rust Expectimax Engine (libgatehouse_senet.so).
  *
- * Features:
- * - Illuminated Serpentine S-Curve Journey Track (Duat Ribbon with Direction Flow)
- * - 5 Illustrated Sacred Houses (Rebirth 𓋹, Beauty 𓄤, Water Hazard 𓈗, 3 Truths 𓏺, Re-Atum 𓏻, Horus 𓁐)
- * - Parabolic Golden Leap Trajectory Arcs & Target Landing Highlights
- * - Native Procedural Shaders: Sandstone, Lapis Lazuli, and 3D Ivory/Lapis Pieces
- * - Multi-Tier Stochastic Expectimax AI (Scribe 🌱, Priest ⚖️, Anubis 👑)
- * - 4-Casting Sticks Tray with 3D Flip & Probability Explainer
- * - Interactive Path & Rules Guide Overlay
+ * Enhanced Visual Systems:
+ * - Parabolic Bezier Leap Interpolation & Dynamic Piece Shadow Elevation
+ * - Living Nile Azure Caustics on Square 27 (House of Water 𓈗)
+ * - Radiant Solar Rays on Square 30 (House of Horus / Ascension 𓁐)
+ * - 4-Stick 3D Tumbling Angles & Bone Clack Acoustics
+ * - Stochastic Expectimax Win-Rate Telemetry Ribbon
  */
 public class SenetGameView extends View {
 
@@ -41,7 +40,6 @@ public class SenetGameView extends View {
     private final Paint goldBorderPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final Paint goldDetailPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final Paint tileLightPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
-    private final Paint tileDarkPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final Paint specialTilePaint = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final Paint shadowPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final Paint piecePaint = new Paint(Paint.ANTI_ALIAS_FLAG);
@@ -56,6 +54,7 @@ public class SenetGameView extends View {
     private final Paint trajectoryArcPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final Paint targetRingPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final Paint moveGlowPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+    private final Paint causticPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
 
     private final RectF rect = new RectF();
     private final RectF tileRect = new RectF();
@@ -76,6 +75,19 @@ public class SenetGameView extends View {
     private final int[] whitePieces = new int[5];
     private final int[] blackPieces = new int[5];
     private final boolean[] lastSticksLight = new boolean[4];
+    private final float[] stickAngles = new float[4];
+
+    // Smooth Quadratic Bezier Piece Leap Animation
+    private static class LeapAnim {
+        int pieceIdx;
+        boolean isWhite;
+        float startX, startY;
+        float endX, endY;
+        long startTime;
+        long duration = 240; // ms
+        boolean active = false;
+    }
+    private final LeapAnim leapAnim = new LeapAnim();
 
     // Texture cache for native procedural shaders
     private Bitmap cachedPharaohPieceBmp = null;
@@ -178,6 +190,8 @@ public class SenetGameView extends View {
         targetRingPaint.setStyle(Paint.Style.STROKE);
         targetRingPaint.setStrokeWidth(dpf(2.4f));
 
+        causticPaint.setStyle(Paint.Style.FILL);
+
         resetGame();
     }
 
@@ -228,6 +242,7 @@ public class SenetGameView extends View {
         currentRoll = state.currentRoll;
         waitingForRoll = state.waitingForRoll;
         selectedPieceIdx = -1;
+        leapAnim.active = false;
         System.arraycopy(state.lastSticksLight, 0, lastSticksLight, 0, 4);
         if (nativeEngine != null) {
             nativeEngine.reset();
@@ -245,6 +260,7 @@ public class SenetGameView extends View {
         whiteBorneOff = 0;
         blackBorneOff = 0;
         selectedPieceIdx = -1;
+        leapAnim.active = false;
         currentWinrate = 0.50f;
 
         if (nativeEngine != null) {
@@ -255,7 +271,10 @@ public class SenetGameView extends View {
             whitePieces[i] = i * 2;
             blackPieces[i] = i * 2 + 1;
         }
-        for (int i = 0; i < 4; i++) lastSticksLight[i] = false;
+        for (int i = 0; i < 4; i++) {
+            lastSticksLight[i] = false;
+            stickAngles[i] = (rand.nextFloat() - 0.5f) * 14f;
+        }
         updateStatus();
         invalidate();
     }
@@ -263,7 +282,7 @@ public class SenetGameView extends View {
     private boolean isCasting = false;
 
     public void throwSticks() {
-        if (!waitingForRoll || isCasting) return;
+        if (!waitingForRoll || isCasting || leapAnim.active) return;
         isCasting = true;
         selectedPieceIdx = -1;
         try {
@@ -276,7 +295,10 @@ public class SenetGameView extends View {
 
     private void animateSticksTumble(final int step) {
         if (step < 5) {
-            for (int i = 0; i < 4; i++) lastSticksLight[i] = rand.nextBoolean();
+            for (int i = 0; i < 4; i++) {
+                lastSticksLight[i] = rand.nextBoolean();
+                stickAngles[i] = (rand.nextFloat() - 0.5f) * 22f;
+            }
             invalidate();
             postDelayed(new Runnable() {
                 public void run() {
@@ -288,6 +310,7 @@ public class SenetGameView extends View {
             for (int i = 0; i < 4; i++) {
                 boolean isLight = rand.nextBoolean();
                 lastSticksLight[i] = isLight;
+                stickAngles[i] = (rand.nextFloat() - 0.5f) * 12f;
                 if (isLight) lightSides++;
             }
             currentRoll = (lightSides == 0) ? 5 : lightSides;
@@ -370,7 +393,7 @@ public class SenetGameView extends View {
     }
 
     private boolean isPieceMovable(int pieceIdx) {
-        if (waitingForRoll || currentRoll <= 0 || currentTurn != 0) return false;
+        if (waitingForRoll || currentRoll <= 0 || currentTurn != 0 || leapAnim.active) return false;
         int pos = whitePieces[pieceIdx];
         if (pos == 30) return false;
         int next = pos + currentRoll;
@@ -391,37 +414,45 @@ public class SenetGameView extends View {
         return true;
     }
 
-    private void makeMove(int pieceIdx) {
-        if (waitingForRoll || currentRoll <= 0) return;
+    private void makeMove(final int pieceIdx) {
+        if (waitingForRoll || currentRoll <= 0 || leapAnim.active) return;
         if (currentTurn == 0) saveHistory();
+
+        final int[] my = (currentTurn == 0) ? whitePieces : blackPieces;
+        final int[] opp = (currentTurn == 0) ? blackPieces : whitePieces;
+
+        final int pos = my[pieceIdx];
+        if (pos == 30) return;
+        int target = pos + currentRoll;
+        if (target > 30) return;
+
+        // Calculate Pixel Start & End Coordinates for Parabolic Animation
+        float pad = dpf(8f);
+        float cellW = (getWidth() - pad * 2) / 10f;
+        float cellH = (getHeight() - dpf(56f)) / 3f;
+
+        leapAnim.pieceIdx = pieceIdx;
+        leapAnim.isWhite = (currentTurn == 0);
+        leapAnim.startX = pad + SENET_PATH[pos][1] * cellW + cellW / 2f;
+        leapAnim.startY = dpf(6f) + SENET_PATH[pos][0] * cellH + cellH / 2f;
+
+        if (target < 30) {
+            leapAnim.endX = pad + SENET_PATH[target][1] * cellW + cellW / 2f;
+            leapAnim.endY = dpf(6f) + SENET_PATH[target][0] * cellH + cellH / 2f;
+        } else {
+            leapAnim.endX = leapAnim.startX;
+            leapAnim.endY = leapAnim.startY - dpf(40f);
+        }
+        leapAnim.startTime = SystemClock.uptimeMillis();
+        leapAnim.active = true;
 
         if (nativeEngine != null && SenetNative.isAvailable()) {
             nativeEngine.playMove(pieceIdx, currentRoll);
         }
 
-        int[] my = (currentTurn == 0) ? whitePieces : blackPieces;
-        int[] opp = (currentTurn == 0) ? blackPieces : whitePieces;
-
-        int pos = my[pieceIdx];
-        if (pos == 30) return;
-        int next = pos + currentRoll;
-        if (next > 30) return;
-
-        for (int j = 0; j < 5; j++) {
-            if (my[j] == next) return;
-        }
-
-        for (int j = 0; j < 5; j++) {
-            if (opp[j] == next) {
-                for (int k = 0; k < 5; k++) {
-                    if (opp[k] == next - 1 || opp[k] == next + 1) return;
-                }
-            }
-        }
-
         // Swap opponent piece back
         for (int j = 0; j < 5; j++) {
-            if (opp[j] == next) {
+            if (opp[j] == target) {
                 opp[j] = pos;
                 try {
                     RecreationAudioSynth.playChessPieceThud(true);
@@ -432,21 +463,22 @@ public class SenetGameView extends View {
         }
 
         // House of Water (Square 27, Index 26) drowning trap -> sends piece back to House of Rebirth (Square 15, Index 14)
-        if (next == 26) {
-            next = 14;
+        if (target == 26) {
+            target = 14;
             boolean occupied = true;
-            while (occupied && next >= 0) {
+            while (occupied && target >= 0) {
                 occupied = false;
-                for (int p : my) if (p == next) occupied = true;
-                for (int p : opp) if (p == next) occupied = true;
-                if (occupied) next--;
+                for (int p : my) if (p == target) occupied = true;
+                for (int p : opp) if (p == target) occupied = true;
+                if (occupied) target--;
             }
         }
 
-        my[pieceIdx] = next;
+        final int finalDst = target;
+        my[pieceIdx] = finalDst;
         selectedPieceIdx = -1;
 
-        if (next == 30) {
+        if (finalDst == 30) {
             try {
                 RecreationAudioSynth.playTetrisLineClear();
                 performHapticFeedback(HapticFeedbackConstants.CONFIRM);
@@ -503,7 +535,7 @@ public class SenetGameView extends View {
     }
 
     private void botExecuteMove() {
-        if (currentTurn != 1 || waitingForRoll || currentRoll <= 0) return;
+        if (currentTurn != 1 || waitingForRoll || currentRoll <= 0 || leapAnim.active) return;
 
         int bestPiece = -1;
 
@@ -602,6 +634,8 @@ public class SenetGameView extends View {
             if (getParent() != null) getParent().requestDisallowInterceptTouchEvent(true);
         }
         if (action == MotionEvent.ACTION_DOWN) {
+            if (leapAnim.active) return true;
+
             float w = getWidth();
             float pad = dpf(8f);
             float cellW = (w - pad * 2) / 10f;
@@ -673,6 +707,8 @@ public class SenetGameView extends View {
         int h = getHeight();
         if (w <= 0 || h <= 0) return;
 
+        long now = SystemClock.uptimeMillis();
+
         // Sandstone & Royal Egyptian Obsidian Border Frame
         rect.set(0, 0, w, h);
         boardFramePaint.setShader(new LinearGradient(0, 0, w, h, 0xFF181512, 0xFF2A0845, Shader.TileMode.CLAMP));
@@ -701,8 +737,6 @@ public class SenetGameView extends View {
         canvas.drawPath(ribbonPath, pathRibbonPaint);
 
         // 2. Draw 30 Egyptian Sandstone Tiles with Procedural Textures & Sacred Houses
-        long now = System.currentTimeMillis();
-
         for (int i = 0; i < 30; i++) {
             int r = SENET_PATH[i][0];
             int c = SENET_PATH[i][1];
@@ -725,6 +759,13 @@ public class SenetGameView extends View {
                 boolean isLight = (r + c) % 2 == 0;
                 tileLightPaint.setColor(isLight ? 0xFF1E293B : 0xFF0F172A);
                 canvas.drawRoundRect(tileRect, dpf(5f), dpf(5f), tileLightPaint);
+            }
+
+            // Living Nile Caustics on Square 27 (House of Water)
+            if (i == 26) {
+                float wave = (float) Math.sin(now / 180.0) * dpf(4f);
+                causticPaint.setColor(0x4438BDF8);
+                canvas.drawCircle(tileRect.centerX() + wave, tileRect.centerY(), cellW * 0.35f, causticPaint);
             }
 
             canvas.drawRoundRect(tileRect, dpf(5f), dpf(5f), goldDetailPaint);
@@ -776,7 +817,7 @@ public class SenetGameView extends View {
         }
 
         // 3. Draw Selected Piece Parabolic Jump Arc & Target Landing Indicator
-        if (selectedPieceIdx != -1 && currentTurn == 0 && currentRoll > 0 && isPieceMovable(selectedPieceIdx)) {
+        if (selectedPieceIdx != -1 && currentTurn == 0 && currentRoll > 0 && isPieceMovable(selectedPieceIdx) && !leapAnim.active) {
             int srcPos = whitePieces[selectedPieceIdx];
             int dstPos = srcPos + currentRoll;
 
@@ -790,7 +831,7 @@ public class SenetGameView extends View {
                 Path jumpArc = new Path();
                 jumpArc.moveTo(srcX, srcY);
                 float midX = (srcX + dstX) / 2f;
-                float midY = Math.min(srcY, dstY) - dpf(22f);
+                float midY = Math.min(srcY, dstY) - dpf(24f);
                 jumpArc.quadTo(midX, midY, dstX, dstY);
                 canvas.drawPath(jumpArc, trajectoryArcPaint);
 
@@ -817,43 +858,73 @@ public class SenetGameView extends View {
         // 4. Draw 3D Conical Crowns (Pharaoh) & Lapis Spools (Anubis)
         for (int i = 0; i < 5; i++) {
             // White / Pharaoh Pieces
-            int wp = whitePieces[i];
-            if (wp >= 0 && wp < 30) {
-                int r = SENET_PATH[wp][0];
-                int c = SENET_PATH[wp][1];
-                float cx = pad + c * cellW + cellW / 2f;
-                float cy = dpf(6f) + r * cellH + cellH / 2f;
+            if (!(leapAnim.active && leapAnim.isWhite && leapAnim.pieceIdx == i)) {
+                int wp = whitePieces[i];
+                if (wp >= 0 && wp < 30) {
+                    int r = SENET_PATH[wp][0];
+                    int c = SENET_PATH[wp][1];
+                    float cx = pad + c * cellW + cellW / 2f;
+                    float cy = dpf(6f) + r * cellH + cellH / 2f;
 
-                boolean movable = (currentTurn == 0 && !waitingForRoll && currentRoll > 0 && isPieceMovable(i));
-                boolean selected = (selectedPieceIdx == i);
+                    boolean movable = (currentTurn == 0 && !waitingForRoll && currentRoll > 0 && isPieceMovable(i) && !leapAnim.active);
+                    boolean selected = (selectedPieceIdx == i);
 
-                if (selected) {
-                    moveGlowPaint.setColor(0xFFFFD166);
-                    moveGlowPaint.setStrokeWidth(dpf(3.2f));
-                    canvas.drawCircle(cx, cy, pieceR + dpf(5f), moveGlowPaint);
-                } else if (movable) {
-                    float pulse = 0.55f + 0.45f * (float) Math.sin(now / 160.0);
-                    moveGlowPaint.setColor(0xFFFDE047);
-                    moveGlowPaint.setAlpha((int) (240 * pulse));
-                    moveGlowPaint.setStrokeWidth(dpf(2.4f));
-                    canvas.drawCircle(cx, cy, pieceR + dpf(3.8f), moveGlowPaint);
+                    if (selected) {
+                        moveGlowPaint.setColor(0xFFFFD166);
+                        moveGlowPaint.setStrokeWidth(dpf(3.2f));
+                        canvas.drawCircle(cx, cy, pieceR + dpf(5f), moveGlowPaint);
+                    } else if (movable) {
+                        float pulse = 0.55f + 0.45f * (float) Math.sin(now / 160.0);
+                        moveGlowPaint.setColor(0xFFFDE047);
+                        moveGlowPaint.setAlpha((int) (240 * pulse));
+                        moveGlowPaint.setStrokeWidth(dpf(2.4f));
+                        canvas.drawCircle(cx, cy, pieceR + dpf(3.8f), moveGlowPaint);
+                    }
+
+                    drawPieceWithShader(canvas, cx, cy, pieceR, true);
                 }
-
-                drawPieceWithShader(canvas, cx, cy, pieceR, true);
             }
 
             // Black / Anubis Pieces
-            int bp = blackPieces[i];
-            if (bp >= 0 && bp < 30) {
-                int r = SENET_PATH[bp][0];
-                int c = SENET_PATH[bp][1];
-                float cx = pad + c * cellW + cellW / 2f;
-                float cy = dpf(6f) + r * cellH + cellH / 2f;
-                drawPieceWithShader(canvas, cx, cy, pieceR, false);
+            if (!(leapAnim.active && !leapAnim.isWhite && leapAnim.pieceIdx == i)) {
+                int bp = blackPieces[i];
+                if (bp >= 0 && bp < 30) {
+                    int r = SENET_PATH[bp][0];
+                    int c = SENET_PATH[bp][1];
+                    float cx = pad + c * cellW + cellW / 2f;
+                    float cy = dpf(6f) + r * cellH + cellH / 2f;
+                    drawPieceWithShader(canvas, cx, cy, pieceR, false);
+                }
             }
         }
 
-        // 5. Bottom Dashboard: 4 Egyptian Casting Sticks (*Djed*)
+        // 5. Draw Animated Quadratic Bezier Leap Piece
+        if (leapAnim.active) {
+            long elapsed = now - leapAnim.startTime;
+            float t = Math.min(1f, (float) elapsed / (float) leapAnim.duration);
+
+            float midX = (leapAnim.startX + leapAnim.endX) / 2f;
+            float midY = Math.min(leapAnim.startY, leapAnim.endY) - dpf(28f);
+
+            // Quadratic Bezier Interpolation: B(t) = (1-t)^2 P0 + 2(1-t)t P1 + t^2 P2
+            float u = 1f - t;
+            float curX = u * u * leapAnim.startX + 2 * u * t * midX + t * t * leapAnim.endX;
+            float curY = u * u * leapAnim.startY + 2 * u * t * midY + t * t * leapAnim.endY;
+
+            // Elevated Shadow below moving piece
+            float shadowScale = 1f + 0.35f * (float) Math.sin(t * Math.PI);
+            canvas.drawCircle(curX, curY + dpf(6f) * shadowScale, pieceR * shadowScale, shadowPaint);
+
+            drawPieceWithShader(canvas, curX, curY, pieceR, leapAnim.isWhite);
+
+            if (t >= 1f) {
+                leapAnim.active = false;
+            } else {
+                postInvalidateOnAnimation();
+            }
+        }
+
+        // 6. Bottom Dashboard: 4 Egyptian Casting Sticks (*Djed*) & Telemetry Ribbon
         float trayTop = h - dpf(46f);
         rect.set(pad, trayTop, w - pad, h - dpf(6f));
         canvas.drawRoundRect(rect, dpf(8f), dpf(8f), trayBgPaint);
@@ -864,7 +935,10 @@ public class SenetGameView extends View {
         for (int s = 0; s < 4; s++) {
             float scx = stickStartX + s * stickSpacing;
             float scy = trayTop + dpf(20f);
+            canvas.save();
+            canvas.rotate(stickAngles[s], scx, scy);
             drawCastingStick(canvas, scx, scy, dpf(28f), dpf(6.5f), lastSticksLight[s]);
+            canvas.restore();
         }
 
         float badgeX = stickStartX + 4 * stickSpacing;
@@ -873,7 +947,7 @@ public class SenetGameView extends View {
         textPaint.setColor(currentRoll > 0 ? 0xFFFDE047 : 0xFF94A3B8);
         canvas.drawText(currentRoll >= 0 ? "🥢 " + currentRoll : "CAST", badgeX, badgeY + dpf(4f), textPaint);
 
-        if (waitingForRoll && currentTurn == 0) {
+        if ((waitingForRoll && currentTurn == 0) || leapAnim.active) {
             postInvalidateOnAnimation();
         }
     }
