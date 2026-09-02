@@ -4,11 +4,13 @@ pub mod board;
 pub mod patterns;
 pub mod ladder;
 pub mod benson;
+pub mod joseki;
 pub mod mcts;
 pub mod jni;
 
 pub use board::{GoBoard, Point, BLACK, WHITE, EMPTY};
 pub use mcts::MctsBot;
+pub use joseki::JosekiBook;
 pub use benson::evaluate_territory;
 pub use ladder::is_ladder_capture;
 
@@ -89,10 +91,11 @@ mod tests {
     #[test]
     fn test_ladder_reading() {
         let mut board = GoBoard::new(9);
-        // Set up a standard 1-stone ladder scenario
+        // Set up a standard 1-stone ladder scenario with diagonal shoulder stone
         board.play_move(Point::new(2, 2), WHITE);
         board.play_move(Point::new(3, 2), BLACK);
         board.play_move(Point::new(2, 3), BLACK);
+        board.play_move(Point::new(3, 1), BLACK); // Diagonal blocker
 
         // White has 2 liberties at (1, 2) and (2, 1)
         // If Black plays at (1, 2), White is put into atari

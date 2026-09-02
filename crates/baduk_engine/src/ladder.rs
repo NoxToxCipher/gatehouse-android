@@ -39,7 +39,7 @@ fn read_ladder_recursive(
         return false; // Escaped with 3+ liberties
     }
 
-    if depth % 2 == 0 {
+    if depth % 2 == 1 {
         // Hunter's turn: try to keep prey in atari (1 liberty)
         let mut neighbors_buf = [0usize; 4];
         let mut best_captured = false;
