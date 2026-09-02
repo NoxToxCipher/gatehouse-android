@@ -1,3 +1,6 @@
 build/
 debug.keystore
 *.png
+target/
+crates/**/target/
+
