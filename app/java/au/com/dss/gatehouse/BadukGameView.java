@@ -661,6 +661,17 @@ public class BadukGameView extends View {
         invalidate();
     }
 
+    public int getPuzzleIndex() {
+        return puzzleIndex;
+    }
+
+    public void loadPuzzleIndex(int idx) {
+        if (idx >= 0 && idx < TSUMEGO_PUZZLES.length) {
+            this.puzzleIndex = idx;
+            loadPuzzle(idx);
+        }
+    }
+
     public void nextPuzzle() {
         puzzleIndex = (puzzleIndex + 1) % TSUMEGO_PUZZLES.length;
         loadPuzzle(puzzleIndex);

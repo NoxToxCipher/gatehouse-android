@@ -4842,14 +4842,57 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
             }
         });
 
-        // 1. Board Size Selector Row (9x9, 13x13, 19x19)
-        LinearLayout sizeRow = new LinearLayout(this);
-        sizeRow.setOrientation(LinearLayout.HORIZONTAL);
-        sizeRow.setPadding(0, dp(6), 0, 0);
+        // 1. Top Segmented Mode Navigation Tab Deck (vs AI, Tsumego, 2-Player, SGF Review)
+        LinearLayout modeTabDeck = new LinearLayout(this);
+        modeTabDeck.setOrientation(LinearLayout.HORIZONTAL);
+        modeTabDeck.setPadding(0, dp(6), 0, 0);
+
+        final TextView tabVsAi = actionButton("⚔️ vs AI", colAccent, colAccentInk);
+        final TextView tabTsumego = actionButton("🧩 Tsumego", colPanel2, colPale);
+        final TextView tab2Player = actionButton("👥 2-Player", colPanel2, colPale);
+        final TextView tabSgfReview = actionButton("📜 SGF", colPanel2, colPale);
+
+        LinearLayout.LayoutParams tlp1 = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
+        tlp1.rightMargin = dp(2); tabVsAi.setLayoutParams(tlp1); modeTabDeck.addView(tabVsAi);
+
+        LinearLayout.LayoutParams tlp2 = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
+        tlp2.leftMargin = dp(2); tlp2.rightMargin = dp(2); tabTsumego.setLayoutParams(tlp2); modeTabDeck.addView(tabTsumego);
+
+        LinearLayout.LayoutParams tlp3 = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
+        tlp3.leftMargin = dp(2); tlp3.rightMargin = dp(2); tab2Player.setLayoutParams(tlp3); modeTabDeck.addView(tab2Player);
+
+        LinearLayout.LayoutParams tlp4 = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
+        tlp4.leftMargin = dp(2); tabSgfReview.setLayoutParams(tlp4); modeTabDeck.addView(tabSgfReview);
+        box.addView(modeTabDeck);
+
+        // 2. Dynamic Context Containers for Mode-Specific Control Decks
+        final LinearLayout deckVsAi = new LinearLayout(this);
+        deckVsAi.setOrientation(LinearLayout.VERTICAL);
+        deckVsAi.setPadding(0, dp(6), 0, 0);
+
+        final LinearLayout deckTsumego = new LinearLayout(this);
+        deckTsumego.setOrientation(LinearLayout.VERTICAL);
+        deckTsumego.setPadding(0, dp(6), 0, 0);
+        deckTsumego.setVisibility(View.GONE);
+
+        final LinearLayout deck2Player = new LinearLayout(this);
+        deck2Player.setOrientation(LinearLayout.VERTICAL);
+        deck2Player.setPadding(0, dp(6), 0, 0);
+        deck2Player.setVisibility(View.GONE);
+
+        final LinearLayout deckSgf = new LinearLayout(this);
+        deckSgf.setOrientation(LinearLayout.VERTICAL);
+        deckSgf.setPadding(0, dp(6), 0, 0);
+        deckSgf.setVisibility(View.GONE);
+
+        // --- DECK A: VS AI (Board Size & Difficulty + Match Actions) ---
+        LinearLayout aiConfigRow = new LinearLayout(this);
+        aiConfigRow.setOrientation(LinearLayout.HORIZONTAL);
 
         final TextView btn9x9 = actionButton("9×9 Fast", colAccent, colAccentInk);
         final TextView btn13x13 = actionButton("13×13 Mid", colPanel2, colPale);
         final TextView btn19x19 = actionButton("19×19 Pro", colPanel2, colPale);
+        final TextView btnDiff = actionButton("🏆 3-Dan", colPanel2, 0xFFFFD166);
 
         View.OnClickListener sizeClickListener = new View.OnClickListener() {
             public void onClick(View v) {
@@ -4877,20 +4920,99 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
         btn13x13.setOnClickListener(sizeClickListener);
         btn19x19.setOnClickListener(sizeClickListener);
 
+        btnDiff.setOnClickListener(new View.OnClickListener() {
+            public void onClick(View v) {
+                hapticClick();
+                int cur = badukView.getDifficultyTier();
+                int next = (cur + 1) % 3;
+                badukView.setDifficultyTier(next);
+                if (next == 0) {
+                    btnDiff.setText("🌱 1-Kyu");
+                    btnDiff.setTextColor(0xFF10B981);
+                } else if (next == 1) {
+                    btnDiff.setText("🏆 3-Dan");
+                    btnDiff.setTextColor(0xFFFFD166);
+                } else {
+                    btnDiff.setText("👑 9-Dan");
+                    btnDiff.setTextColor(0xFFEF4444);
+                }
+            }
+        });
+
         LinearLayout.LayoutParams slp1 = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
-        slp1.rightMargin = dp(3); btn9x9.setLayoutParams(slp1); sizeRow.addView(btn9x9);
-
+        slp1.rightMargin = dp(2); btn9x9.setLayoutParams(slp1); aiConfigRow.addView(btn9x9);
         LinearLayout.LayoutParams slp2 = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
-        slp2.leftMargin = dp(3); slp2.rightMargin = dp(3); btn13x13.setLayoutParams(slp2); sizeRow.addView(btn13x13);
-
+        slp2.leftMargin = dp(2); slp2.rightMargin = dp(2); btn13x13.setLayoutParams(slp2); aiConfigRow.addView(btn13x13);
         LinearLayout.LayoutParams slp3 = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
-        slp3.leftMargin = dp(3); btn19x19.setLayoutParams(slp3); sizeRow.addView(btn19x19);
-        box.addView(sizeRow);
+        slp3.leftMargin = dp(2); slp3.rightMargin = dp(2); btn19x19.setLayoutParams(slp3); aiConfigRow.addView(btn19x19);
+        LinearLayout.LayoutParams slp4 = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1.1f);
+        slp4.leftMargin = dp(2); btnDiff.setLayoutParams(slp4); aiConfigRow.addView(btnDiff);
+        deckVsAi.addView(aiConfigRow);
 
-        // Handicap Quick-Buttons Row (Even, 2H, 3H, 4H, 9H)
-        LinearLayout hcapRow = new LinearLayout(this);
-        hcapRow.setOrientation(LinearLayout.HORIZONTAL);
-        hcapRow.setPadding(0, dp(5), 0, 0);
+        LinearLayout aiActionRow = new LinearLayout(this);
+        aiActionRow.setOrientation(LinearLayout.HORIZONTAL);
+        aiActionRow.setPadding(0, dp(5), 0, 0);
+
+        TextView btnAiPass = actionButton("Pass", colLine, colPale);
+        btnAiPass.setOnClickListener(new View.OnClickListener() { public void onClick(View v) { hapticClick(); badukView.passTurn(); } });
+        TextView btnAiUndo = actionButton("↶ Undo", colLine, colPale);
+        btnAiUndo.setOnClickListener(new View.OnClickListener() { public void onClick(View v) { hapticClick(); badukView.undoMove(); } });
+        TextView btnAiHint = actionButton("💡 Hint", colLine, 0xFFFFD166);
+        btnAiHint.setOnClickListener(new View.OnClickListener() { public void onClick(View v) { hapticClick(); badukView.showHint(); } });
+        TextView btnAiScore = actionButton("⚖️ Score", colLine, colCyan);
+        btnAiScore.setOnClickListener(new View.OnClickListener() { public void onClick(View v) { hapticClick(); badukView.toggleScoringMode(); } });
+
+        LinearLayout.LayoutParams aip1 = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
+        aip1.rightMargin = dp(2); btnAiPass.setLayoutParams(aip1); aiActionRow.addView(btnAiPass);
+        LinearLayout.LayoutParams aip2 = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
+        aip2.leftMargin = dp(2); aip2.rightMargin = dp(2); btnAiUndo.setLayoutParams(aip2); aiActionRow.addView(btnAiUndo);
+        LinearLayout.LayoutParams aip3 = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
+        aip3.leftMargin = dp(2); aip3.rightMargin = dp(2); btnAiHint.setLayoutParams(aip3); aiActionRow.addView(btnAiHint);
+        LinearLayout.LayoutParams aip4 = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1.1f);
+        aip4.leftMargin = dp(2); btnAiScore.setLayoutParams(aip4); aiActionRow.addView(btnAiScore);
+        deckVsAi.addView(aiActionRow);
+
+        box.addView(deckVsAi);
+
+        // --- DECK B: TSUMEGO PUZZLES (Navigation & Life/Death Hints) ---
+        LinearLayout tsumegoNavRow = new LinearLayout(this);
+        tsumegoNavRow.setOrientation(LinearLayout.HORIZONTAL);
+
+        TextView btnPrevPuz = actionButton("◀ Prev", colLine, colPale);
+        btnPrevPuz.setOnClickListener(new View.OnClickListener() {
+            public void onClick(View v) {
+                hapticClick();
+                int idx = badukView.getPuzzleIndex();
+                badukView.loadPuzzleIndex(Math.max(0, idx - 1));
+            }
+        });
+        TextView btnNextPuz = actionButton("Next Problem ▶", colAccent, colAccentInk);
+        btnNextPuz.setOnClickListener(new View.OnClickListener() {
+            public void onClick(View v) {
+                hapticClick();
+                badukView.nextPuzzle();
+            }
+        });
+        TextView btnRetryPuz = actionButton("🔄 Reset", colLine, 0xFFFFD166);
+        btnRetryPuz.setOnClickListener(new View.OnClickListener() {
+            public void onClick(View v) {
+                hapticClick();
+                badukView.loadPuzzleIndex(badukView.getPuzzleIndex());
+            }
+        });
+
+        LinearLayout.LayoutParams tp1 = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
+        tp1.rightMargin = dp(2); btnPrevPuz.setLayoutParams(tp1); tsumegoNavRow.addView(btnPrevPuz);
+        LinearLayout.LayoutParams tp2 = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1.6f);
+        tp2.leftMargin = dp(2); tp2.rightMargin = dp(2); btnNextPuz.setLayoutParams(tp2); tsumegoNavRow.addView(btnNextPuz);
+        LinearLayout.LayoutParams tp3 = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
+        tp3.leftMargin = dp(2); btnRetryPuz.setLayoutParams(tp3); tsumegoNavRow.addView(btnRetryPuz);
+        deckTsumego.addView(tsumegoNavRow);
+        box.addView(deckTsumego);
+
+        // --- DECK C: 2-PLAYER PASS & PLAY (Handicaps & Clocks) ---
+        LinearLayout twoPConfigRow = new LinearLayout(this);
+        twoPConfigRow.setOrientation(LinearLayout.HORIZONTAL);
 
         final TextView btnH0 = actionButton("Even", colAccent, colAccentInk);
         final TextView btnH2 = actionButton("2H", colPanel2, colCyan);
@@ -4933,191 +5055,63 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
         btnH9.setOnClickListener(hcapClickListener);
 
         LinearLayout.LayoutParams hlp0 = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1.2f);
-        hlp0.rightMargin = dp(2); btnH0.setLayoutParams(hlp0); hcapRow.addView(btnH0);
-
+        hlp0.rightMargin = dp(2); btnH0.setLayoutParams(hlp0); twoPConfigRow.addView(btnH0);
         LinearLayout.LayoutParams hlp2 = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
-        hlp2.leftMargin = dp(2); hlp2.rightMargin = dp(2); btnH2.setLayoutParams(hlp2); hcapRow.addView(btnH2);
-
+        hlp2.leftMargin = dp(2); hlp2.rightMargin = dp(2); btnH2.setLayoutParams(hlp2); twoPConfigRow.addView(btnH2);
         LinearLayout.LayoutParams hlp3 = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
-        hlp3.leftMargin = dp(2); hlp3.rightMargin = dp(2); btnH3.setLayoutParams(hlp3); hcapRow.addView(btnH3);
-
+        hlp3.leftMargin = dp(2); hlp3.rightMargin = dp(2); btnH3.setLayoutParams(hlp3); twoPConfigRow.addView(btnH3);
         LinearLayout.LayoutParams hlp4 = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
-        hlp4.leftMargin = dp(2); hlp4.rightMargin = dp(2); btnH4.setLayoutParams(hlp4); hcapRow.addView(btnH4);
-
+        hlp4.leftMargin = dp(2); hlp4.rightMargin = dp(2); btnH4.setLayoutParams(hlp4); twoPConfigRow.addView(btnH4);
         LinearLayout.LayoutParams hlp9 = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
-        hlp9.leftMargin = dp(2); btnH9.setLayoutParams(hlp9); hcapRow.addView(btnH9);
+        hlp9.leftMargin = dp(2); btnH9.setLayoutParams(hlp9); twoPConfigRow.addView(btnH9);
+        deck2Player.addView(twoPConfigRow);
 
-        box.addView(hcapRow);
+        LinearLayout twoPActionRow = new LinearLayout(this);
+        twoPActionRow.setOrientation(LinearLayout.HORIZONTAL);
+        twoPActionRow.setPadding(0, dp(5), 0, 0);
 
-        // 2. Mode Selector Row
-        LinearLayout modeRow = new LinearLayout(this);
-        modeRow.setOrientation(LinearLayout.HORIZONTAL);
-        modeRow.setPadding(0, dp(6), 0, 0);
+        TextView btn2Pass = actionButton("Pass", colLine, colPale);
+        btn2Pass.setOnClickListener(new View.OnClickListener() { public void onClick(View v) { hapticClick(); badukView.passTurn(); } });
+        TextView btn2Undo = actionButton("↶ Undo", colLine, colPale);
+        btn2Undo.setOnClickListener(new View.OnClickListener() { public void onClick(View v) { hapticClick(); badukView.undoMove(); } });
+        TextView btn2Score = actionButton("⚖️ Score", colLine, colCyan);
+        btn2Score.setOnClickListener(new View.OnClickListener() { public void onClick(View v) { hapticClick(); badukView.toggleScoringMode(); } });
 
-        final TextView btnBotMatch = actionButton("🤖 vs Bot", colAccent, colAccentInk);
-        final TextView btnTsumego = actionButton("🧩 Tsumego (8)", colPanel2, colPale);
-        final TextView btn2Player = actionButton("👥 2-Player", colPanel2, colPale);
+        LinearLayout.LayoutParams t2p1 = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
+        t2p1.rightMargin = dp(2); btn2Pass.setLayoutParams(t2p1); twoPActionRow.addView(btn2Pass);
+        LinearLayout.LayoutParams t2p2 = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
+        t2p2.leftMargin = dp(2); t2p2.rightMargin = dp(2); btn2Undo.setLayoutParams(t2p2); twoPActionRow.addView(btn2Undo);
+        LinearLayout.LayoutParams t2p3 = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1.2f);
+        t2p3.leftMargin = dp(2); btn2Score.setLayoutParams(t2p3); twoPActionRow.addView(btn2Score);
+        deck2Player.addView(twoPActionRow);
+        box.addView(deck2Player);
 
-        View.OnClickListener modeClickListener = new View.OnClickListener() {
-            public void onClick(View v) {
-                hapticClick();
-                if (v == btnBotMatch) {
-                    badukView.setMode(0);
-                    btnBotMatch.setBackground(rounded(colAccent, dp(8))); btnBotMatch.setTextColor(colAccentInk);
-                    btnTsumego.setBackground(rounded(colPanel2, dp(8))); btnTsumego.setTextColor(colPale);
-                    btn2Player.setBackground(rounded(colPanel2, dp(8))); btn2Player.setTextColor(colPale);
-                } else if (v == btnTsumego) {
-                    badukView.setMode(1);
-                    btnTsumego.setBackground(rounded(colAccent, dp(8))); btnTsumego.setTextColor(colAccentInk);
-                    btnBotMatch.setBackground(rounded(colPanel2, dp(8))); btnBotMatch.setTextColor(colPale);
-                    btn2Player.setBackground(rounded(colPanel2, dp(8))); btn2Player.setTextColor(colPale);
-                } else if (v == btn2Player) {
-                    badukView.setMode(2);
-                    btn2Player.setBackground(rounded(colAccent, dp(8))); btn2Player.setTextColor(colAccentInk);
-                    btnBotMatch.setBackground(rounded(colPanel2, dp(8))); btnBotMatch.setTextColor(colPale);
-                    btnTsumego.setBackground(rounded(colPanel2, dp(8))); btnTsumego.setTextColor(colPale);
-                }
-            }
-        };
-
-        btnBotMatch.setOnClickListener(modeClickListener);
-        btnTsumego.setOnClickListener(modeClickListener);
-        btn2Player.setOnClickListener(modeClickListener);
-
-        LinearLayout.LayoutParams mlp1 = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
-        mlp1.rightMargin = dp(3); btnBotMatch.setLayoutParams(mlp1); modeRow.addView(btnBotMatch);
-
-        LinearLayout.LayoutParams mlp2 = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
-        mlp2.leftMargin = dp(3); mlp2.rightMargin = dp(3); btnTsumego.setLayoutParams(mlp2); modeRow.addView(btnTsumego);
-
-        LinearLayout.LayoutParams mlp3 = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
-        mlp3.leftMargin = dp(3); btn2Player.setLayoutParams(mlp3); modeRow.addView(btn2Player);
-        box.addView(modeRow);
-
-        // 3. Actions Row: Undo, Pass, Territory, Reset, Next
-        LinearLayout ctrlRow = new LinearLayout(this);
-        ctrlRow.setOrientation(LinearLayout.HORIZONTAL);
-        ctrlRow.setPadding(0, dp(6), 0, 0);
-
-        TextView btnUndo = actionButton("↶ Undo", colLine, colPale);
-        btnUndo.setOnClickListener(new View.OnClickListener() {
-            public void onClick(View v) {
-                hapticClick();
-                badukView.undoMove();
-            }
-        });
-        LinearLayout.LayoutParams ulp = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
-        ulp.rightMargin = dp(2); btnUndo.setLayoutParams(ulp); ctrlRow.addView(btnUndo);
-
-        TextView btnPass = actionButton("Pass", colLine, colPale);
-        btnPass.setOnClickListener(new View.OnClickListener() {
-            public void onClick(View v) {
-                hapticClick();
-                badukView.passTurn();
-            }
-        });
-        LinearLayout.LayoutParams plp = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
-        plp.leftMargin = dp(2); plp.rightMargin = dp(2); btnPass.setLayoutParams(plp); ctrlRow.addView(btnPass);
-
-        TextView btnTerritory = actionButton("📊 Score", colLine, colCyan);
-        btnTerritory.setOnClickListener(new View.OnClickListener() {
-            public void onClick(View v) {
-                hapticClick();
-                badukView.toggleTerritoryView();
-            }
-        });
-        LinearLayout.LayoutParams tlp = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
-        tlp.leftMargin = dp(2); tlp.rightMargin = dp(2); btnTerritory.setLayoutParams(tlp); ctrlRow.addView(btnTerritory);
-
-        TextView btnHint = actionButton("💡 Hint", colLine, 0xFFFFD166);
-        btnHint.setOnClickListener(new View.OnClickListener() {
-            public void onClick(View v) {
-                hapticClick();
-                badukView.showHint();
-            }
-        });
-        LinearLayout.LayoutParams hlp = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
-        hlp.leftMargin = dp(2); hlp.rightMargin = dp(2); btnHint.setLayoutParams(hlp); ctrlRow.addView(btnHint);
-
-        TextView btnNextPuzzle = actionButton("Next ➔", colLine, 0xFF38BDF8);
-        btnNextPuzzle.setOnClickListener(new View.OnClickListener() {
-            public void onClick(View v) {
-                hapticClick();
-                badukView.nextPuzzle();
-            }
-        });
-        LinearLayout.LayoutParams nlp = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
-        nlp.leftMargin = dp(2); btnNextPuzzle.setLayoutParams(nlp); ctrlRow.addView(btnNextPuzzle);
-        box.addView(ctrlRow);
-
-        // 4. Replay Timeline Step Row (|<<, < Step, Step >, >>|)
-        LinearLayout replayRow = new LinearLayout(this);
-        replayRow.setOrientation(LinearLayout.HORIZONTAL);
-        replayRow.setPadding(0, dp(5), 0, 0);
+        // --- DECK D: SGF REVIEW & TIMELINE SCRUBBER ---
+        LinearLayout sgfScrubberRow = new LinearLayout(this);
+        sgfScrubberRow.setOrientation(LinearLayout.HORIZONTAL);
 
         TextView btnRStart = actionButton("|◀", colLine, colPale);
-        btnRStart.setOnClickListener(new View.OnClickListener() {
-            public void onClick(View v) {
-                hapticClick();
-                badukView.stepToStart();
-            }
-        });
-        LinearLayout.LayoutParams rslp = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
-        rslp.rightMargin = dp(2); btnRStart.setLayoutParams(rslp); replayRow.addView(btnRStart);
-
+        btnRStart.setOnClickListener(new View.OnClickListener() { public void onClick(View v) { hapticClick(); badukView.stepToStart(); } });
         TextView btnRBack = actionButton("◀ Step", colLine, colCyan);
-        btnRBack.setOnClickListener(new View.OnClickListener() {
-            public void onClick(View v) {
-                hapticClick();
-                badukView.stepBackward();
-            }
-        });
-        LinearLayout.LayoutParams rblp1 = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1.2f);
-        rblp1.leftMargin = dp(2); rblp1.rightMargin = dp(2); btnRBack.setLayoutParams(rblp1); replayRow.addView(btnRBack);
-
+        btnRBack.setOnClickListener(new View.OnClickListener() { public void onClick(View v) { hapticClick(); badukView.stepBackward(); } });
         TextView btnRFwd = actionButton("Step ▶", colLine, colCyan);
-        btnRFwd.setOnClickListener(new View.OnClickListener() {
-            public void onClick(View v) {
-                hapticClick();
-                badukView.stepForward();
-            }
-        });
-        LinearLayout.LayoutParams rflp = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1.2f);
-        rflp.leftMargin = dp(2); rflp.rightMargin = dp(2); btnRFwd.setLayoutParams(rflp); replayRow.addView(btnRFwd);
-
+        btnRFwd.setOnClickListener(new View.OnClickListener() { public void onClick(View v) { hapticClick(); badukView.stepForward(); } });
         TextView btnREnd = actionButton("▶| Live", colLine, 0xFFFFD166);
-        btnREnd.setOnClickListener(new View.OnClickListener() {
-            public void onClick(View v) {
-                hapticClick();
-                badukView.stepToEnd();
-            }
-        });
+        btnREnd.setOnClickListener(new View.OnClickListener() { public void onClick(View v) { hapticClick(); badukView.stepToEnd(); } });
+
+        LinearLayout.LayoutParams rslp = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
+        rslp.rightMargin = dp(2); btnRStart.setLayoutParams(rslp); sgfScrubberRow.addView(btnRStart);
+        LinearLayout.LayoutParams rblp1 = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1.2f);
+        rblp1.leftMargin = dp(2); rblp1.rightMargin = dp(2); btnRBack.setLayoutParams(rblp1); sgfScrubberRow.addView(btnRBack);
+        LinearLayout.LayoutParams rflp = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1.2f);
+        rflp.leftMargin = dp(2); rflp.rightMargin = dp(2); btnRFwd.setLayoutParams(rflp); sgfScrubberRow.addView(btnRFwd);
         LinearLayout.LayoutParams relp = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1.2f);
-        relp.leftMargin = dp(2); btnREnd.setLayoutParams(relp); replayRow.addView(btnREnd);
+        relp.leftMargin = dp(2); btnREnd.setLayoutParams(relp); sgfScrubberRow.addView(btnREnd);
+        deckSgf.addView(sgfScrubberRow);
 
-        box.addView(replayRow);
-
-        // 5. Analysis & Rules Tool Row (Heatmap, Move #, Rules/Komi, Clock)
-        LinearLayout analysisRow = new LinearLayout(this);
-        analysisRow.setOrientation(LinearLayout.HORIZONTAL);
-        analysisRow.setPadding(0, dp(5), 0, 0);
-
-        final TextView btnHeatmap = actionButton("🗺️ Heatmap", colPanel2, 0xFF10B981);
-        btnHeatmap.setOnClickListener(new View.OnClickListener() {
-            public void onClick(View v) {
-                hapticClick();
-                badukView.toggleHeatmap();
-                if (badukView.isHeatmapEnabled()) {
-                    btnHeatmap.setBackground(rounded(0xFF10B981, dp(8)));
-                    btnHeatmap.setTextColor(0xFF0F172A);
-                } else {
-                    btnHeatmap.setBackground(rounded(colPanel2, dp(8)));
-                    btnHeatmap.setTextColor(0xFF10B981);
-                }
-            }
-        });
-        LinearLayout.LayoutParams hmlp = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
-        hmlp.rightMargin = dp(2); btnHeatmap.setLayoutParams(hmlp); analysisRow.addView(btnHeatmap);
+        LinearLayout sgfToolRow = new LinearLayout(this);
+        sgfToolRow.setOrientation(LinearLayout.HORIZONTAL);
+        sgfToolRow.setPadding(0, dp(5), 0, 0);
 
         final TextView btnNumbers = actionButton("🔢 Move #", colPanel2, 0xFF38BDF8);
         btnNumbers.setOnClickListener(new View.OnClickListener() {
@@ -5133,27 +5127,117 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
                 }
             }
         });
-        LinearLayout.LayoutParams nblp = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
-        nblp.leftMargin = dp(2); nblp.rightMargin = dp(2); btnNumbers.setLayoutParams(nblp); analysisRow.addView(btnNumbers);
-
-        final TextView btnRulesKomi = actionButton("📜 JP 6.5", colPanel2, 0xFFFFD166);
-        btnRulesKomi.setOnClickListener(new View.OnClickListener() {
+        TextView btnSgfCopy = actionButton("📋 Copy SGF", colPanel2, colCyan);
+        btnSgfCopy.setOnClickListener(new View.OnClickListener() {
             public void onClick(View v) {
                 hapticClick();
-                badukView.toggleRules();
-                if (badukView.isChineseRules()) {
-                    btnRulesKomi.setText("📜 CN 7.5");
-                    btnRulesKomi.setBackground(rounded(0xFFFFD166, dp(8)));
-                    btnRulesKomi.setTextColor(0xFF0F172A);
-                } else {
-                    btnRulesKomi.setText("📜 JP 6.5");
-                    btnRulesKomi.setBackground(rounded(colPanel2, dp(8)));
-                    btnRulesKomi.setTextColor(0xFFFFD166);
+                String sgf = badukView.exportSGF();
+                android.content.ClipboardManager cm = (android.content.ClipboardManager) getSystemService(android.content.Context.CLIPBOARD_SERVICE);
+                if (cm != null) {
+                    cm.setPrimaryClip(android.content.ClipData.newPlainText("Baduk SGF", sgf));
+                    Toast.makeText(MainActivity.this, "📋 SGF Game Copied to Clipboard!", Toast.LENGTH_SHORT).show();
                 }
             }
         });
-        LinearLayout.LayoutParams rklp = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
-        rklp.leftMargin = dp(2); rklp.rightMargin = dp(2); btnRulesKomi.setLayoutParams(rklp); analysisRow.addView(btnRulesKomi);
+        TextView btnSgfPaste = actionButton("📂 Load SGF", colPanel2, 0xFFFFD166);
+        btnSgfPaste.setOnClickListener(new View.OnClickListener() {
+            public void onClick(View v) {
+                hapticHeavyClick();
+                android.content.ClipboardManager cm = (android.content.ClipboardManager) getSystemService(android.content.Context.CLIPBOARD_SERVICE);
+                if (cm != null && cm.hasPrimaryClip() && cm.getPrimaryClip().getItemCount() > 0) {
+                    CharSequence text = cm.getPrimaryClip().getItemAt(0).getText();
+                    if (text != null && text.toString().contains("(;")) {
+                        boolean ok = badukView.importSGF(text.toString());
+                        if (ok) {
+                            Toast.makeText(MainActivity.this, "📂 Loaded SGF Game Record!", Toast.LENGTH_SHORT).show();
+                            return;
+                        }
+                    }
+                }
+                Toast.makeText(MainActivity.this, "No valid SGF text found on clipboard to load", Toast.LENGTH_SHORT).show();
+            }
+        });
+
+        LinearLayout.LayoutParams stp1 = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
+        stp1.rightMargin = dp(2); btnNumbers.setLayoutParams(stp1); sgfToolRow.addView(btnNumbers);
+        LinearLayout.LayoutParams stp2 = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1.2f);
+        stp2.leftMargin = dp(2); stp2.rightMargin = dp(2); btnSgfCopy.setLayoutParams(stp2); sgfToolRow.addView(btnSgfCopy);
+        LinearLayout.LayoutParams stp3 = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1.2f);
+        stp3.leftMargin = dp(2); btnSgfPaste.setLayoutParams(stp3); sgfToolRow.addView(btnSgfPaste);
+        deckSgf.addView(sgfToolRow);
+        box.addView(deckSgf);
+
+        // Wire Segmented Navigation Tabs
+        View.OnClickListener modeTabListener = new View.OnClickListener() {
+            public void onClick(View v) {
+                hapticClick();
+                tabVsAi.setBackground(rounded(colPanel2, dp(8))); tabVsAi.setTextColor(colPale);
+                tabTsumego.setBackground(rounded(colPanel2, dp(8))); tabTsumego.setTextColor(colPale);
+                tab2Player.setBackground(rounded(colPanel2, dp(8))); tab2Player.setTextColor(colPale);
+                tabSgfReview.setBackground(rounded(colPanel2, dp(8))); tabSgfReview.setTextColor(colPale);
+
+                deckVsAi.setVisibility(View.GONE);
+                deckTsumego.setVisibility(View.GONE);
+                deck2Player.setVisibility(View.GONE);
+                deckSgf.setVisibility(View.GONE);
+
+                if (v == tabVsAi) {
+                    badukView.setMode(0);
+                    tabVsAi.setBackground(rounded(colAccent, dp(8))); tabVsAi.setTextColor(colAccentInk);
+                    deckVsAi.setVisibility(View.VISIBLE);
+                } else if (v == tabTsumego) {
+                    badukView.setMode(1);
+                    tabTsumego.setBackground(rounded(colAccent, dp(8))); tabTsumego.setTextColor(colAccentInk);
+                    deckTsumego.setVisibility(View.VISIBLE);
+                } else if (v == tab2Player) {
+                    badukView.setMode(2);
+                    tab2Player.setBackground(rounded(colAccent, dp(8))); tab2Player.setTextColor(colAccentInk);
+                    deck2Player.setVisibility(View.VISIBLE);
+                } else if (v == tabSgfReview) {
+                    tabSgfReview.setBackground(rounded(colAccent, dp(8))); tabSgfReview.setTextColor(colAccentInk);
+                    deckSgf.setVisibility(View.VISIBLE);
+                }
+            }
+        };
+
+        tabVsAi.setOnClickListener(modeTabListener);
+        tabTsumego.setOnClickListener(modeTabListener);
+        tab2Player.setOnClickListener(modeTabListener);
+        tabSgfReview.setOnClickListener(modeTabListener);
+
+        final Dialog dlg = createDialogSheet(box);
+
+        // 3. Persistent Luxury Global Quick-Pill Toolbar (Theme, Heatmap, Clock, Rules, Close)
+        LinearLayout bottomRow = new LinearLayout(this);
+        bottomRow.setOrientation(LinearLayout.HORIZONTAL);
+        bottomRow.setPadding(0, dp(6), 0, 0);
+
+        final TextView btnTheme = actionButton("🎨 Theme", colPanel2, 0xFFFFD166);
+        btnTheme.setOnClickListener(new View.OnClickListener() {
+            public void onClick(View v) {
+                hapticClick();
+                badukView.cycleTheme();
+            }
+        });
+        LinearLayout.LayoutParams thlp = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
+        thlp.rightMargin = dp(2); btnTheme.setLayoutParams(thlp); bottomRow.addView(btnTheme);
+
+        final TextView btnHeatmap = actionButton("🗺️ Heatmap", colPanel2, 0xFF10B981);
+        btnHeatmap.setOnClickListener(new View.OnClickListener() {
+            public void onClick(View v) {
+                hapticClick();
+                badukView.toggleHeatmap();
+                if (badukView.isHeatmapEnabled()) {
+                    btnHeatmap.setBackground(rounded(0xFF10B981, dp(8)));
+                    btnHeatmap.setTextColor(0xFF0F172A);
+                } else {
+                    btnHeatmap.setBackground(rounded(colPanel2, dp(8)));
+                    btnHeatmap.setTextColor(0xFF10B981);
+                }
+            }
+        });
+        LinearLayout.LayoutParams hmlp = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1.1f);
+        hmlp.leftMargin = dp(2); hmlp.rightMargin = dp(2); btnHeatmap.setLayoutParams(hmlp); bottomRow.addView(btnHeatmap);
 
         final TextView btnClock = actionButton("⏱️ Clock", colPanel2, 0xFF38BDF8);
         btnClock.setOnClickListener(new View.OnClickListener() {
@@ -5170,59 +5254,7 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
             }
         });
         LinearLayout.LayoutParams ctlp = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
-        ctlp.leftMargin = dp(2); btnClock.setLayoutParams(ctlp); analysisRow.addView(btnClock);
-
-        box.addView(analysisRow);
-
-        final Dialog dlg = createDialogSheet(box);
-
-        // 6. Utility & Close Action Row (Theme, SGF, Rules, Close)
-        LinearLayout bottomRow = new LinearLayout(this);
-        bottomRow.setOrientation(LinearLayout.HORIZONTAL);
-        bottomRow.setPadding(0, dp(6), 0, 0);
-
-        final TextView btnTheme = actionButton("🎨 Theme", colPanel2, 0xFFFFD166);
-        btnTheme.setOnClickListener(new View.OnClickListener() {
-            public void onClick(View v) {
-                hapticClick();
-                badukView.cycleTheme();
-            }
-        });
-        LinearLayout.LayoutParams thlp = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
-        thlp.rightMargin = dp(2); btnTheme.setLayoutParams(thlp); bottomRow.addView(btnTheme);
-
-        TextView btnSgf = actionButton("📋 SGF", colPanel2, colCyan);
-        btnSgf.setOnClickListener(new View.OnClickListener() {
-            public void onClick(View v) {
-                hapticClick();
-                String sgf = badukView.exportSGF();
-                android.content.ClipboardManager cm = (android.content.ClipboardManager) getSystemService(android.content.Context.CLIPBOARD_SERVICE);
-                if (cm != null) {
-                    cm.setPrimaryClip(android.content.ClipData.newPlainText("Baduk SGF", sgf));
-                    Toast.makeText(MainActivity.this, "📋 SGF Copied (Hold to Load SGF)", Toast.LENGTH_SHORT).show();
-                }
-            }
-        });
-        btnSgf.setOnLongClickListener(new View.OnLongClickListener() {
-            public boolean onLongClick(View v) {
-                hapticHeavyClick();
-                android.content.ClipboardManager cm = (android.content.ClipboardManager) getSystemService(android.content.Context.CLIPBOARD_SERVICE);
-                if (cm != null && cm.hasPrimaryClip() && cm.getPrimaryClip().getItemCount() > 0) {
-                    CharSequence text = cm.getPrimaryClip().getItemAt(0).getText();
-                    if (text != null && text.toString().contains("(;")) {
-                        boolean ok = badukView.importSGF(text.toString());
-                        if (ok) {
-                            Toast.makeText(MainActivity.this, "📂 Loaded SGF Game Record from Clipboard!", Toast.LENGTH_SHORT).show();
-                            return true;
-                        }
-                    }
-                }
-                Toast.makeText(MainActivity.this, "No valid SGF text found on clipboard to load", Toast.LENGTH_SHORT).show();
-                return true;
-            }
-        });
-        LinearLayout.LayoutParams sgflp = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
-        sgflp.leftMargin = dp(2); sgflp.rightMargin = dp(2); btnSgf.setLayoutParams(sgflp); bottomRow.addView(btnSgf);
+        ctlp.leftMargin = dp(2); ctlp.rightMargin = dp(2); btnClock.setLayoutParams(ctlp); bottomRow.addView(btnClock);
 
         TextView btnRules = actionButton("📖 Rules", colPanel2, colAccent);
         btnRules.setOnClickListener(new View.OnClickListener() {
