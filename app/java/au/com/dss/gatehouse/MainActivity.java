@@ -3763,93 +3763,21 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
             container.addView(r6);
         }
 
-        // 5. 🎮 RECREATION & BOARD GAMES ARCADE (8 GAMES - Placed at bottom)
+        // 5. 🎮 RECREATION & BOARD GAMES ARCADE (Consolidated Single Card)
         if (showAll || "GAMES".equalsIgnoreCase(toolsActiveFilter)) {
-            container.addView(sectionHeader("🎮 OFFICER RECREATION & ARCADE SUITE (10)", null));
-
-            // Hero Off-Grid BLE Mesh Osmosis Leaderboard
-            container.addView(buildRecreationLeaderboardCard());
-
-            LinearLayout rGames1 = new LinearLayout(this);
-            rGames1.setOrientation(LinearLayout.HORIZONTAL);
-            rGames1.addView(buildGameCard("⚪⚫", "Baduk (Go)", "MCTS · DAN", colAccent, "Tsumego puzzles, Dan AI & territory score engine", "⚡ MCTS ROLLOUT · 9×9 & 19×19", new View.OnClickListener() {
-                public void onClick(View v) {
-                    showBadukGameDialog();
-                }
-            }));
-            rGames1.addView(buildGameCard("♟️", "Grandmaster Chess", "ELO 2200", colCyan, "Captured graveyard, advantage bar & Stockfish AI", "♔ 8×8 TOURNAMENT · GRAVEYARD", new View.OnClickListener() {
-                public void onClick(View v) {
-                    showChessGameDialog();
-                }
-            }));
-            container.addView(rGames1);
-
-            LinearLayout rGames2 = new LinearLayout(this);
-            rGames2.setOrientation(LinearLayout.HORIZONTAL);
-            rGames2.addView(buildGameCard("🏺", "Royal Game of Ur", "2600 BCE", colAccent, "3D animated pyramid dice & Sumerian combat", "🎲 4 PYRAMID DICE · ROSETTE", new View.OnClickListener() {
-                public void onClick(View v) {
-                    showRoyalUrGameDialog();
-                }
-            }));
-            rGames2.addView(buildGameCard("🪲", "Egyptian Senet", "3100 BCE", 0xFFFDE047, "3D hieroglyphic stick casting & underworld race", "📜 4 CASTING STICKS · 30 TILES", new View.OnClickListener() {
-                public void onClick(View v) {
-                    showSenetGameDialog();
-                }
-            }));
-            container.addView(rGames2);
-
-            LinearLayout rGames3 = new LinearLayout(this);
-            rGames3.setOrientation(LinearLayout.HORIZONTAL);
-            rGames3.addView(buildGameCard("🐺", "Viking Hnefatafl", "11×11 TAFL", colCrimson, "King's escape route tracers & corner fort victory", "🛡️ 11×11 FETLAR · 37 WARRIORS", new View.OnClickListener() {
-                public void onClick(View v) {
-                    showHnefataflGameDialog();
-                }
-            }));
-            rGames3.addView(buildGameCard("🎲", "Backgammon", "24 POINTS", colEmerald, "Pip equity counter & 3D checker stacks", "🎲 24 POINTS · BEARING OFF", new View.OnClickListener() {
-                public void onClick(View v) {
-                    showBackgammonGameDialog();
-                }
-            }));
-            container.addView(rGames3);
-
-            LinearLayout rGames4 = new LinearLayout(this);
-            rGames4.setOrientation(LinearLayout.HORIZONTAL);
-            rGames4.addView(buildGameCard("🏛️", "Nine Men's Morris", "1400 BCE", colCyan, "Concentric intaglio mills & 3-piece flying phase", "🏛️ 3 CONCENTRIC SQUARES · MILLS", new View.OnClickListener() {
-                public void onClick(View v) {
-                    showNineMensMorrisGameDialog();
-                }
-            }));
-            rGames4.addView(buildGameCard("🔴🟡", "Connect 4", "7×6 ACRYLIC", 0xFFF59E0B, "Gravity drop physics & victory star sparklers", "⚡ 7×6 GRAVITY · SOLVER BOT", new View.OnClickListener() {
-                public void onClick(View v) {
-                    showConnectFourGameDialog();
-                }
-            }));
-            container.addView(rGames4);
-
-            LinearLayout rGames5 = new LinearLayout(this);
-            rGames5.setOrientation(LinearLayout.HORIZONTAL);
-            rGames5.addView(buildGameCard("👾", "Space Invaders", "1978 ARCADE", 0xFF10B981, "5 alien rows, bunkers, mystery UFO & CRT scanlines", "👾 VECTOR ARCADE · MOTHERSHIP", new View.OnClickListener() {
-                public void onClick(View v) {
-                    showSpaceInvadersGameDialog();
-                }
-            }));
-            rGames5.addView(buildGameCard("🧱", "Cyber Tetris", "10×20 MATRIX", 0xFF06B6D4, "SRS rotation, ghost projection, hold queue & particle clears", "🧱 7 TETROMINOES · LINE FLASH", new View.OnClickListener() {
-                public void onClick(View v) {
-                    showTetrisGameDialog();
-                }
-            }));
-            container.addView(rGames5);
+            container.addView(sectionHeader("🎮 OFFICER RECREATION & ARCADE", null));
+            container.addView(buildUnifiedRecreationCard());
         }
     }
 
-    private View buildRecreationLeaderboardCard() {
+    private View buildUnifiedRecreationCard() {
         final RippleCardFrameLayout rippleCard = new RippleCardFrameLayout(this, 18f, colAccent);
         android.graphics.drawable.GradientDrawable bg = new android.graphics.drawable.GradientDrawable(
-            android.graphics.drawable.GradientDrawable.Orientation.TL_BR,
-            new int[]{0xFF1C2234, 0xFF0F1424}
+                android.graphics.drawable.GradientDrawable.Orientation.TL_BR,
+                new int[]{0xFF1C2234, 0xFF0F1424}
         );
         bg.setCornerRadius(dp(18));
-        bg.setStroke(dp(1), 0x33F59E0B);
+        bg.setStroke(dp(1), 0x3338BDF8);
         rippleCard.setBackground(bg);
 
         LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(
@@ -3861,18 +3789,18 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
         box.setOrientation(LinearLayout.VERTICAL);
         box.setPadding(dp(14), dp(13), dp(14), dp(13));
 
-        // Top Row: Trophy Pod + Title + Osmosis Badge
+        // Top Row: Icon + Title + Leaderboard Action
         LinearLayout top = new LinearLayout(this);
         top.setOrientation(LinearLayout.HORIZONTAL);
         top.setGravity(Gravity.CENTER_VERTICAL);
 
         FrameLayout iconBox = new FrameLayout(this);
-        iconBox.setBackground(rounded(0x33F59E0B, dp(12)));
-        LinearLayout.LayoutParams iblp = new LinearLayout.LayoutParams(dp(44), dp(44));
+        iconBox.setBackground(rounded(0x3338BDF8, dp(12)));
+        LinearLayout.LayoutParams iblp = new LinearLayout.LayoutParams(dp(42), dp(42));
         iconBox.setLayoutParams(iblp);
 
         TextView tvIco = new TextView(this);
-        tvIco.setText("🏆");
+        tvIco.setText("🎮");
         tvIco.setTextSize(20);
         tvIco.setGravity(Gravity.CENTER);
         iconBox.addView(tvIco);
@@ -3885,7 +3813,7 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
         titleCol.setLayoutParams(tclp);
 
         TextView tTitle = new TextView(this);
-        tTitle.setText("Officer Recreation Leaderboard");
+        tTitle.setText("Officer Recreation Suite (10)");
         tTitle.setTextColor(0xFFFFFFFF);
         tTitle.setTextSize(14f);
         tTitle.setTypeface(Typeface.DEFAULT_BOLD);
@@ -3893,7 +3821,7 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
 
         RecreationLeaderboardManager lm = RecreationLeaderboardManager.getInstance(this);
         java.util.List<RecreationLeaderboardManager.OfficerScoreRecord> topList = lm.getLeaderboard();
-        String subText = "🥇 #1 Officer Lochran Doherty · 0 Wins (1200 ELO)";
+        String subText = "10 Ancient & Retro Games · Off-Grid AI";
         if (!topList.isEmpty()) {
             RecreationLeaderboardManager.OfficerScoreRecord topR = topList.get(0);
             subText = "🥇 #1 " + topR.officerName + " · " + topR.totalWins + " Wins (" + topR.chessElo + " ELO)";
@@ -3901,38 +3829,108 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
 
         TextView tSub = new TextView(this);
         tSub.setText(subText);
-        tSub.setTextColor(colAccent);
-        tSub.setTextSize(11f);
+        tSub.setTextColor(0xFF38BDF8);
+        tSub.setTextSize(10.5f);
         tSub.setTypeface(Typeface.create(Typeface.MONOSPACE, Typeface.BOLD));
         titleCol.addView(tSub);
         top.addView(titleCol);
 
-        TextView badge = new TextView(this);
-        badge.setText("● BLE OSMOSIS");
-        badge.setTextColor(colEmerald);
-        badge.setTextSize(8.5f);
-        badge.setTypeface(Typeface.MONOSPACE);
-        badge.setPadding(dp(8), dp(4), dp(8), dp(4));
-        badge.setBackground(rounded(0x2810B981, dp(7)));
-        top.addView(badge);
-
-        box.addView(top);
-
-        TextView desc = new TextView(this);
-        desc.setText("100% off-grid tournament scoring · Scores sync passively via BLE mesh as officers pass Kingston Gatehouse & Lot 16 Hut relay phones.");
-        desc.setTextColor(0xFF94A3B8);
-        desc.setTextSize(11f);
-        desc.setPadding(0, dp(8), 0, 0);
-        box.addView(desc);
-
-        rippleCard.setOnClickListener(new View.OnClickListener() {
+        TextView btnScores = new TextView(this);
+        btnScores.setText("🏆 Scores");
+        btnScores.setTextColor(0xFF38BDF8);
+        btnScores.setTextSize(10f);
+        btnScores.setTypeface(Typeface.create(Typeface.MONOSPACE, Typeface.BOLD));
+        btnScores.setPadding(dp(8), dp(4), dp(8), dp(4));
+        btnScores.setBackground(rounded(0x2838BDF8, dp(6)));
+        btnScores.setOnClickListener(new View.OnClickListener() {
+            @Override
             public void onClick(View v) {
-                hapticHeavyClick();
+                hapticClick();
                 showRecreationLeaderboardDialog();
             }
         });
+        top.addView(btnScores);
+        box.addView(top);
+
+        // Divider
+        View div = new View(this);
+        div.setBackgroundColor(0x1AFFFFFF);
+        LinearLayout.LayoutParams dlp = new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT, dp(1));
+        dlp.setMargins(0, dp(10), 0, dp(10));
+        div.setLayoutParams(dlp);
+        box.addView(div);
+
+        // Game Launch Chips (Row 1: 5 games)
+        String[][] gamesRow1 = {
+                {"♟️ Chess", "chess"},
+                {"⚪ Baduk", "baduk"},
+                {"🏺 Ur", "royal_ur"},
+                {"🪲 Senet", "senet"},
+                {"🐺 Tafl", "hnefatafl"}
+        };
+        // Game Launch Chips (Row 2: 5 games)
+        String[][] gamesRow2 = {
+                {"🎲 Gammon", "backgammon"},
+                {"🏛️ Morris", "morris"},
+                {"🔴 Connect4", "connect4"},
+                {"👾 Invaders", "invaders"},
+                {"🧱 Tetris", "tetris"}
+        };
+
+        box.addView(buildGameChipsRow(gamesRow1));
+        box.addView(buildGameChipsRow(gamesRow2));
+
         rippleCard.addView(box);
         return rippleCard;
+    }
+
+    private View buildGameChipsRow(final String[][] games) {
+        LinearLayout row = new LinearLayout(this);
+        row.setOrientation(LinearLayout.HORIZONTAL);
+        row.setPadding(0, 0, 0, dp(6));
+
+        for (int i = 0; i < games.length; i++) {
+            final String label = games[i][0];
+            final String key = games[i][1];
+
+            TextView chip = new TextView(this);
+            chip.setText(label);
+            chip.setTextColor(colPale);
+            chip.setTextSize(9.5f);
+            chip.setTypeface(Typeface.DEFAULT_BOLD);
+            chip.setGravity(Gravity.CENTER);
+            chip.setSingleLine(true);
+            chip.setEllipsize(android.text.TextUtils.TruncateAt.END);
+            chip.setPadding(dp(2), dp(8), dp(2), dp(8));
+            chip.setBackground(rounded(0x1FFFFFFF, dp(6)));
+            chip.setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View v) {
+                    hapticClick();
+                    launchGameByKey(key);
+                }
+            });
+
+            LinearLayout.LayoutParams clp = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
+            if (i > 0) clp.leftMargin = dp(4);
+            chip.setLayoutParams(clp);
+            row.addView(chip);
+        }
+        return row;
+    }
+
+    private void launchGameByKey(String key) {
+        if ("chess".equalsIgnoreCase(key)) showChessGameDialog();
+        else if ("baduk".equalsIgnoreCase(key)) showBadukGameDialog();
+        else if ("royal_ur".equalsIgnoreCase(key)) showRoyalUrGameDialog();
+        else if ("senet".equalsIgnoreCase(key)) showSenetGameDialog();
+        else if ("hnefatafl".equalsIgnoreCase(key)) showHnefataflGameDialog();
+        else if ("backgammon".equalsIgnoreCase(key)) showBackgammonGameDialog();
+        else if ("morris".equalsIgnoreCase(key)) showNineMensMorrisGameDialog();
+        else if ("connect4".equalsIgnoreCase(key)) showConnectFourGameDialog();
+        else if ("invaders".equalsIgnoreCase(key)) showSpaceInvadersGameDialog();
+        else if ("tetris".equalsIgnoreCase(key)) showTetrisGameDialog();
     }
 
     private int leaderboardActiveFilter = -1; // -1 = Overall, 0=Baduk, 1=Chess, 2=Ur, 3=Senet, 4=Hnefatafl, 5=Backgammon, 6=Morris, 7=Connect4
