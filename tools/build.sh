@@ -72,6 +72,16 @@ say "libgatehouse.so"
   -L "$OUT/lib/arm64-v8a" -lgatehouse_core
 ok
 
+say "rust crypto vault"
+( cd crates/gatehouse_vault && \
+  CARGO_TARGET_AARCH64_LINUX_ANDROID_LINKER="$NDK/toolchains/llvm/prebuilt/windows-x86_64/bin/aarch64-linux-android${API}-clang.cmd" \
+  cargo build --target aarch64-linux-android --release > "$OUT/vault.log" 2>&1 ) \
+  || { echo "FAILED"; cat "$OUT/vault.log"; exit 1; }
+VAULT_SO="crates/gatehouse_vault/target/aarch64-linux-android/release/libgatehouse_vault.so"
+[ -f "$VAULT_SO" ] || { echo "FAILED: no $VAULT_SO"; exit 1; }
+cp "$VAULT_SO" "$OUT/lib/arm64-v8a/"
+ok
+
 # What the app calls has to be in what the app ships. This is the check that
 # would have caught the scavenged build: it linked, it installed, and it was
 # missing nearly everything.
@@ -85,6 +95,13 @@ done
 for sym in Java_au_com_dss_gatehouse_Core_report \
            Java_au_com_dss_gatehouse_Core_addCheckpoint; do
   "$NM" --defined-only "build/lib/arm64-v8a/libgatehouse.so" \
+    | grep -q " $sym\$" || { echo "FAILED: $sym is missing"; exit 1; }
+done
+for sym in Java_au_com_dss_gatehouse_GatehouseVault_nativeDeriveKey \
+           Java_au_com_dss_gatehouse_GatehouseVault_nativeEncryptPayload \
+           Java_au_com_dss_gatehouse_GatehouseVault_nativeDecryptPayload \
+           Java_au_com_dss_gatehouse_GatehouseVault_nativeSignAttestation; do
+  "$NM" --dynamic "build/lib/arm64-v8a/libgatehouse_vault.so" \
     | grep -q " $sym\$" || { echo "FAILED: $sym is missing"; exit 1; }
 done
 ok
@@ -134,6 +151,7 @@ python tools/addfiles.py "$OUT/unsigned.apk" \
   "$OUT/classes.dex=classes.dex" \
   "$OUT/lib/arm64-v8a/libgatehouse_core.so=lib/arm64-v8a/libgatehouse_core.so" \
   "$OUT/lib/arm64-v8a/libgatehouse.so=lib/arm64-v8a/libgatehouse.so" \
+  "$OUT/lib/arm64-v8a/libgatehouse_vault.so=lib/arm64-v8a/libgatehouse_vault.so" \
   > "$OUT/zip.log" 2>&1 || { echo "FAILED"; cat "$OUT/zip.log"; exit 1; }
 ok
 

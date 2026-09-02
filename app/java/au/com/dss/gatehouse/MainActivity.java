@@ -3728,7 +3728,7 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
             container.addView(sectionHeader("🪪 OFFICER VAULT & COMPLIANCE", null));
             LinearLayout r5 = new LinearLayout(this);
             r5.setOrientation(LinearLayout.HORIZONTAL);
-            r5.addView(buildCompactToolTile("🪪", "Officer Vault", "LIC #41207", colPale, "Digital ID & credentials", new View.OnClickListener() {
+            r5.addView(buildCompactToolTile("🪪", "Officer Vault", GatehouseVault.isAvailable() ? "RUST AES-GCM" : "LIC #41207", 0xFF38BDF8, "Hardware-bound cryptographic vault & ID", new View.OnClickListener() {
                 public void onClick(View v) {
                     hapticClick();
                     showOfficerCredentialVaultDialog();
@@ -9819,6 +9819,48 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
         reminderInfo.setPadding(0, dp(2), 0, dp(4));
         schedCard.addView(reminderInfo);
         box.addView(schedCard);
+
+        // Native Rust Crypto Vault Card
+        LinearLayout vaultCard = new LinearLayout(this);
+        vaultCard.setOrientation(LinearLayout.VERTICAL);
+        vaultCard.setBackground(rounded(0xFF0F172A, dp(12)));
+        vaultCard.setPadding(dp(12), dp(10), dp(12), dp(10));
+        LinearLayout.LayoutParams vcp = new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+        vcp.bottomMargin = dp(10);
+        vaultCard.setLayoutParams(vcp);
+
+        LinearLayout vHead = new LinearLayout(this);
+        vHead.setOrientation(LinearLayout.HORIZONTAL);
+        vHead.setGravity(Gravity.CENTER_VERTICAL);
+
+        TextView vTitle = new TextView(this);
+        vTitle.setText("🛡️ NATIVE RUST CRYPTO VAULT");
+        vTitle.setTextColor(0xFF38BDF8);
+        vTitle.setTextSize(11f);
+        vTitle.setTypeface(Typeface.create(Typeface.MONOSPACE, Typeface.BOLD));
+        LinearLayout.LayoutParams vtp = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
+        vTitle.setLayoutParams(vtp);
+        vHead.addView(vTitle);
+
+        TextView vBadge = new TextView(this);
+        boolean isVaultActive = GatehouseVault.isAvailable();
+        vBadge.setText(isVaultActive ? "● AES-256-GCM" : "● FALLBACK");
+        vBadge.setTextColor(isVaultActive ? 0xFF10B981 : 0xFFF59E0B);
+        vBadge.setTextSize(9f);
+        vBadge.setTypeface(Typeface.MONOSPACE);
+        vBadge.setPadding(dp(6), dp(2), dp(6), dp(2));
+        vBadge.setBackground(rounded(isVaultActive ? 0x2810B981 : 0x28F59E0B, dp(4)));
+        vHead.addView(vBadge);
+        vaultCard.addView(vHead);
+
+        TextView vDesc = new TextView(this);
+        vDesc.setText("Hardware-bound PBKDF2 key derivation (10,000 iterations) · Tamper-evident digital shift seals & zero-leak memory scrubbing.");
+        vDesc.setTextColor(colMuted);
+        vDesc.setTextSize(10.5f);
+        vDesc.setPadding(0, dp(4), 0, 0);
+        vaultCard.addView(vDesc);
+        box.addView(vaultCard);
 
         final Dialog dlg = createDialogSheet(box);
 
