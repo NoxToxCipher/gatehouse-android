@@ -3,4 +3,6 @@ debug.keystore
 *.png
 target/
 crates/**/target/
+.zig-cache/
+native/**/.zig-cache/
 
