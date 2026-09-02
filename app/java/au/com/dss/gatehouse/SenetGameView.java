@@ -1,6 +1,7 @@
 package au.com.dss.gatehouse;
 
 import android.content.Context;
+import android.graphics.Bitmap;
 import android.graphics.Canvas;
 import android.graphics.LinearGradient;
 import android.graphics.Paint;
@@ -18,12 +19,14 @@ import java.util.Random;
 
 /**
  * SenetGameView — Ancient Egyptian Senet (c. 3100 BCE).
- * Museum-grade Egyptian Sandstone, Lapis Lazuli & Gold Hieroglyphic Board.
+ * Powered by Native Rust Expectimax Engine (libgatehouse_senet.so).
+ *
  * Features:
  * - Illuminated Serpentine S-Curve Journey Track (Duat Ribbon with Direction Flow)
  * - 5 Illustrated Sacred Houses (Rebirth 𓋹, Beauty 𓄤, Water Hazard 𓈗, 3 Truths 𓏺, Re-Atum 𓏻, Horus 𓁐)
  * - Parabolic Golden Leap Trajectory Arcs & Target Landing Highlights
- * - Authentic 3D Conical Crowns (Pharaoh) & Lapis Spools (Anubis)
+ * - Native Procedural Shaders: Sandstone, Lapis Lazuli, and 3D Ivory/Lapis Pieces
+ * - Multi-Tier Stochastic Expectimax AI (Scribe 🌱, Priest ⚖️, Anubis 👑)
  * - 4-Casting Sticks Tray with 3D Flip & Probability Explainer
  * - Interactive Path & Rules Guide Overlay
  */
@@ -58,6 +61,10 @@ public class SenetGameView extends View {
     private final RectF tileRect = new RectF();
     private final Random rand = new Random();
 
+    private SenetNative nativeEngine;
+    private int difficultyTier = 1; // 0 = Scribe, 1 = Priest, 2 = Anubis
+    private float currentWinrate = 0.50f;
+
     private int currentTurn = 0; // 0 = Pharaoh (You), 1 = Anubis Bot
     private int currentRoll = -1;
     private boolean waitingForRoll = true;
@@ -70,10 +77,16 @@ public class SenetGameView extends View {
     private final int[] blackPieces = new int[5];
     private final boolean[] lastSticksLight = new boolean[4];
 
+    // Texture cache for native procedural shaders
+    private Bitmap cachedPharaohPieceBmp = null;
+    private Bitmap cachedAnubisPieceBmp = null;
+    private Bitmap cachedDarkTileBmp = null;
+    private Bitmap cachedLightTileBmp = null;
+    private Bitmap cachedSacredTileBmp = null;
+    private int cachedTileW = 0, cachedTileH = 0;
+    private int cachedPiecePx = 0;
+
     // 30-Square Serpentine Path (Boustrophedon S-Track)
-    // Row 0: 0 -> 9 (Squares 1-10, Left to Right)
-    // Row 1: 19 <- 10 (Squares 11-20, Right to Left)
-    // Row 2: 20 -> 29 (Squares 21-30, Left to Right)
     private static final int[][] SENET_PATH = {
         {0,0}, {0,1}, {0,2}, {0,3}, {0,4}, {0,5}, {0,6}, {0,7}, {0,8}, {0,9},
         {1,9}, {1,8}, {1,7}, {1,6}, {1,5}, {1,4}, {1,3}, {1,2}, {1,1}, {1,0},
@@ -112,6 +125,8 @@ public class SenetGameView extends View {
         super(context);
         setClickable(true);
         setFocusable(true);
+
+        nativeEngine = new SenetNative(difficultyTier);
 
         goldBorderPaint.setColor(0xFFEAB308);
         goldBorderPaint.setStyle(Paint.Style.STROKE);
@@ -166,6 +181,19 @@ public class SenetGameView extends View {
         resetGame();
     }
 
+    public void setDifficultyTier(int tier) {
+        this.difficultyTier = Math.max(0, Math.min(2, tier));
+        if (nativeEngine != null) {
+            nativeEngine.release();
+        }
+        nativeEngine = new SenetNative(this.difficultyTier);
+        updateStatus();
+    }
+
+    public int getDifficultyTier() {
+        return difficultyTier;
+    }
+
     public void setStatusListener(StatusListener l) {
         this.statusListener = l;
         updateStatus();
@@ -201,6 +229,9 @@ public class SenetGameView extends View {
         waitingForRoll = state.waitingForRoll;
         selectedPieceIdx = -1;
         System.arraycopy(state.lastSticksLight, 0, lastSticksLight, 0, 4);
+        if (nativeEngine != null) {
+            nativeEngine.reset();
+        }
         try { performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP); } catch (Exception ignored) {}
         updateStatus();
         invalidate();
@@ -214,8 +245,12 @@ public class SenetGameView extends View {
         whiteBorneOff = 0;
         blackBorneOff = 0;
         selectedPieceIdx = -1;
+        currentWinrate = 0.50f;
 
-        // Standard historical starting setup: alternating pieces on first 10 squares
+        if (nativeEngine != null) {
+            nativeEngine.reset();
+        }
+
         for (int i = 0; i < 5; i++) {
             whitePieces[i] = i * 2;
             blackPieces[i] = i * 2 + 1;
@@ -255,12 +290,6 @@ public class SenetGameView extends View {
                 lastSticksLight[i] = isLight;
                 if (isLight) lightSides++;
             }
-            // Senet casting stick scoring:
-            // 1 Light = 1 step (+ extra turn)
-            // 2 Light = 2 steps
-            // 3 Light = 3 steps
-            // 4 Light = 4 steps (+ extra turn)
-            // 0 Light (All Dark) = 5 steps (+ extra turn)
             currentRoll = (lightSides == 0) ? 5 : lightSides;
             waitingForRoll = false;
             isCasting = false;
@@ -301,6 +330,11 @@ public class SenetGameView extends View {
     }
 
     private boolean hasLegalMoves(int turn, int roll) {
+        if (nativeEngine != null && SenetNative.isAvailable()) {
+            int mask = nativeEngine.getLegalMovesMask(roll);
+            return mask != 0;
+        }
+
         int[] my = (turn == 0) ? whitePieces : blackPieces;
         int[] opp = (turn == 0) ? blackPieces : whitePieces;
 
@@ -360,6 +394,11 @@ public class SenetGameView extends View {
     private void makeMove(int pieceIdx) {
         if (waitingForRoll || currentRoll <= 0) return;
         if (currentTurn == 0) saveHistory();
+
+        if (nativeEngine != null && SenetNative.isAvailable()) {
+            nativeEngine.playMove(pieceIdx, currentRoll);
+        }
+
         int[] my = (currentTurn == 0) ? whitePieces : blackPieces;
         int[] opp = (currentTurn == 0) ? blackPieces : whitePieces;
 
@@ -467,44 +506,51 @@ public class SenetGameView extends View {
         if (currentTurn != 1 || waitingForRoll || currentRoll <= 0) return;
 
         int bestPiece = -1;
-        int bestScore = -9999;
 
-        for (int i = 0; i < 5; i++) {
-            int pos = blackPieces[i];
-            if (pos == 30) continue;
-            int next = pos + currentRoll;
-            if (next > 30) continue;
+        if (nativeEngine != null && SenetNative.isAvailable()) {
+            SenetNative.MoveResult mr = nativeEngine.findBestMove(currentRoll, difficultyTier);
+            bestPiece = mr.bestPieceIdx;
+            currentWinrate = mr.winrate;
+        } else {
+            // Fallback heuristic
+            int bestScore = -9999;
+            for (int i = 0; i < 5; i++) {
+                int pos = blackPieces[i];
+                if (pos == 30) continue;
+                int next = pos + currentRoll;
+                if (next > 30) continue;
 
-            boolean ownBlock = false;
-            for (int j = 0; j < 5; j++) {
-                if (blackPieces[j] == next) { ownBlock = true; break; }
-            }
-            if (ownBlock) continue;
+                boolean ownBlock = false;
+                for (int j = 0; j < 5; j++) {
+                    if (blackPieces[j] == next) { ownBlock = true; break; }
+                }
+                if (ownBlock) continue;
 
-            boolean oppProtected = false;
-            boolean isAttack = false;
-            for (int j = 0; j < 5; j++) {
-                if (whitePieces[j] == next) {
-                    isAttack = true;
-                    for (int k = 0; k < 5; k++) {
-                        if (whitePieces[k] == next - 1 || whitePieces[k] == next + 1) {
-                            oppProtected = true;
-                            break;
+                boolean oppProtected = false;
+                boolean isAttack = false;
+                for (int j = 0; j < 5; j++) {
+                    if (whitePieces[j] == next) {
+                        isAttack = true;
+                        for (int k = 0; k < 5; k++) {
+                            if (whitePieces[k] == next - 1 || whitePieces[k] == next + 1) {
+                                oppProtected = true;
+                                break;
+                            }
                         }
                     }
                 }
-            }
-            if (oppProtected) continue;
+                if (oppProtected) continue;
 
-            int score = next * 2;
-            if (next == 30) score += 60; // Bearing off
-            if (isAttack) score += 35; // Capture/swap
-            if (next == 25) score += 20; // Safe House of Beauty
-            if (next == 26) score -= 45; // Avoid Water Trap
+                int score = next * 2;
+                if (next == 30) score += 60;
+                if (isAttack) score += 35;
+                if (next == 25) score += 20;
+                if (next == 26) score -= 45;
 
-            if (score > bestScore) {
-                bestScore = score;
-                bestPiece = i;
+                if (score > bestScore) {
+                    bestScore = score;
+                    bestPiece = i;
+                }
             }
         }
 
@@ -519,10 +565,34 @@ public class SenetGameView extends View {
         if (statusListener == null) return;
         if (whiteBorneOff == 5 || blackBorneOff == 5) return;
 
-        String turnStr = (currentTurn == 0) ? "🟡 Pharaoh (You)" : "🔵 Anubis Bot";
-        String rollStr = waitingForRoll ? "· Tap to Cast 4 Sticks" : ("· Cast: " + currentRoll + (currentRoll == 1 || currentRoll >= 4 ? " (Bonus Roll ⚡)" : ""));
+        String tierName = (difficultyTier == 0 ? "🌱 Scribe" : (difficultyTier == 1 ? "⚖️ Priest" : "👑 Anubis"));
+        String turnStr = (currentTurn == 0) ? "🟡 Pharaoh (You)" : ("🔵 " + tierName);
+        String rollStr = waitingForRoll ? "· Tap to Cast" : ("· Cast: " + currentRoll + (currentRoll == 1 || currentRoll >= 4 ? " (Bonus ⚡)" : ""));
         String scoreStr = " [𓁐 " + whiteBorneOff + "/5 vs " + blackBorneOff + "/5]";
         statusListener.onStatusChanged(turnStr + " " + rollStr + scoreStr, 0xFFFFD166);
+    }
+
+    private void ensureNativeBitmaps(int tileW, int tileH, int pieceR) {
+        if (tileW <= 0 || tileH <= 0 || pieceR <= 0) return;
+        int piecePx = pieceR * 2;
+
+        if (cachedTileW != tileW || cachedTileH != tileH || cachedDarkTileBmp == null) {
+            cachedTileW = tileW;
+            cachedTileH = tileH;
+            try {
+                cachedDarkTileBmp = SenetNative.renderTileBitmap(tileW, tileH, 0);
+                cachedLightTileBmp = SenetNative.renderTileBitmap(tileW, tileH, 1);
+                cachedSacredTileBmp = SenetNative.renderTileBitmap(tileW, tileH, 2);
+            } catch (Throwable ignored) {}
+        }
+
+        if (cachedPiecePx != piecePx || cachedPharaohPieceBmp == null) {
+            cachedPiecePx = piecePx;
+            try {
+                cachedPharaohPieceBmp = SenetNative.renderPieceBitmap(piecePx, piecePx, true);
+                cachedAnubisPieceBmp = SenetNative.renderPieceBitmap(piecePx, piecePx, false);
+            } catch (Throwable ignored) {}
+        }
     }
 
     @Override
@@ -558,7 +628,6 @@ public class SenetGameView extends View {
                 int r = (int) (ey / cellH);
 
                 if (c >= 0 && c < 10 && r >= 0 && r < 3) {
-                    // Check if tapping a player piece
                     for (int i = 0; i < 5; i++) {
                         int pos = whitePieces[i];
                         if (pos >= 0 && pos < 30) {
@@ -566,10 +635,8 @@ public class SenetGameView extends View {
                             int pc = SENET_PATH[pos][1];
                             if (pr == r && pc == c && isPieceMovable(i)) {
                                 if (selectedPieceIdx == i) {
-                                    // Second tap on already selected piece -> Execute move!
                                     makeMove(i);
                                 } else {
-                                    // First tap -> Select piece and show jump trajectory
                                     selectedPieceIdx = i;
                                     try { performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP); } catch (Exception ignored) {}
                                     invalidate();
@@ -579,7 +646,6 @@ public class SenetGameView extends View {
                         }
                     }
 
-                    // Check if tapping destination target square for selected piece
                     if (selectedPieceIdx != -1 && isPieceMovable(selectedPieceIdx)) {
                         int targetPos = whitePieces[selectedPieceIdx] + currentRoll;
                         if (targetPos < 30) {
@@ -590,7 +656,6 @@ public class SenetGameView extends View {
                                 return true;
                             }
                         } else if (targetPos == 30) {
-                            // Bearing off
                             makeMove(selectedPieceIdx);
                             return true;
                         }
@@ -619,6 +684,9 @@ public class SenetGameView extends View {
         float pad = dpf(8f);
         float cellW = (w - pad * 2) / 10f;
         float cellH = (h - dpf(56f)) / 3f;
+        int pieceR = (int) (Math.min(cellW, cellH) * 0.38f);
+
+        ensureNativeBitmaps((int) cellW, (int) cellH, pieceR);
 
         // 1. Draw Continuous Serpentine S-Curve Path Ribbon Underneath Tiles
         Path ribbonPath = new Path();
@@ -632,9 +700,8 @@ public class SenetGameView extends View {
         }
         canvas.drawPath(ribbonPath, pathRibbonPaint);
 
-        // 2. Draw 30 Egyptian Tiles with Sacred Houses and Directional Guidance
+        // 2. Draw 30 Egyptian Sandstone Tiles with Procedural Textures & Sacred Houses
         long now = System.currentTimeMillis();
-        float flowPulse = 0.5f + 0.5f * (float) Math.sin(now / 200.0);
 
         for (int i = 0; i < 30; i++) {
             int r = SENET_PATH[i][0];
@@ -645,7 +712,11 @@ public class SenetGameView extends View {
             tileRect.set(left + dpf(1.5f), top + dpf(1.5f), left + cellW - dpf(1.5f), top + cellH - dpf(1.5f));
 
             boolean isSpecial = (i == 14 || i >= 25);
-            if (isSpecial) {
+            Bitmap tileBmp = isSpecial ? cachedSacredTileBmp : (((r + c) % 2 == 0) ? cachedLightTileBmp : cachedDarkTileBmp);
+
+            if (tileBmp != null) {
+                canvas.drawBitmap(tileBmp, null, tileRect, null);
+            } else if (isSpecial) {
                 int col1 = (i == 26) ? 0xFF0284C7 : (i == 14 ? 0xFF059669 : 0xFF6B21A8);
                 int col2 = (i == 26) ? 0xFF082F49 : (i == 14 ? 0xFF064E3B : 0xFF3B0764);
                 specialTilePaint.setShader(new RadialGradient(tileRect.centerX(), tileRect.centerY(), cellW * 0.85f, col1, col2, Shader.TileMode.CLAMP));
@@ -660,16 +731,8 @@ public class SenetGameView extends View {
 
             // Subtle square numbering (1..30) in top-left
             textPaint.setTextSize(dpf(7f));
-            textPaint.setColor(0x77FDE047);
+            textPaint.setColor(0x88FDE047);
             canvas.drawText(String.valueOf(i + 1), left + dpf(7f), top + dpf(9f), textPaint);
-
-            // Flow Direction Chevrons (→ / ← / →)
-            if (showGuide && !isSpecial) {
-                String dirArrow = (r == 1) ? "◀" : "▶";
-                textPaint.setTextSize(dpf(8f));
-                textPaint.setColor(0x44FDE047);
-                canvas.drawText(dirArrow, tileRect.centerX(), tileRect.bottom - dpf(3f), textPaint);
-            }
 
             // Sacred House Hieroglyphic Badges
             hieroglyphPaint.setTextSize(dpf(8.5f));
@@ -724,7 +787,6 @@ public class SenetGameView extends View {
                 float dstX = pad + SENET_PATH[dstPos][1] * cellW + cellW / 2f;
                 float dstY = dpf(6f) + SENET_PATH[dstPos][0] * cellH + cellH / 2f;
 
-                // Parabolic Leap Arc
                 Path jumpArc = new Path();
                 jumpArc.moveTo(srcX, srcY);
                 float midX = (srcX + dstX) / 2f;
@@ -732,7 +794,6 @@ public class SenetGameView extends View {
                 jumpArc.quadTo(midX, midY, dstX, dstY);
                 canvas.drawPath(jumpArc, trajectoryArcPaint);
 
-                // Landing Target Highlight Ring
                 boolean isEnemySwap = false;
                 for (int bp : blackPieces) {
                     if (bp == dstPos) { isEnemySwap = true; break; }
@@ -745,7 +806,6 @@ public class SenetGameView extends View {
                 textPaint.setColor(isEnemySwap ? 0xFFEF4444 : 0xFF10B981);
                 canvas.drawText(isEnemySwap ? "⚔️ SWAP" : "✓ LAND", dstX, dstY - dpf(12f), textPaint);
             } else if (dstPos == 30) {
-                // Bearing Off Ascension Beam
                 targetRingPaint.setColor(0xFFFFD166);
                 canvas.drawCircle(srcX, srcY, cellW * 0.48f, targetRingPaint);
                 textPaint.setTextSize(dpf(8.5f));
@@ -755,7 +815,6 @@ public class SenetGameView extends View {
         }
 
         // 4. Draw 3D Conical Crowns (Pharaoh) & Lapis Spools (Anubis)
-        float pieceR = Math.min(cellW, cellH) * 0.38f;
         for (int i = 0; i < 5; i++) {
             // White / Pharaoh Pieces
             int wp = whitePieces[i];
@@ -780,7 +839,7 @@ public class SenetGameView extends View {
                     canvas.drawCircle(cx, cy, pieceR + dpf(3.8f), moveGlowPaint);
                 }
 
-                drawEgyptianCrown(canvas, cx, cy, pieceR, true);
+                drawPieceWithShader(canvas, cx, cy, pieceR, true);
             }
 
             // Black / Anubis Pieces
@@ -790,7 +849,7 @@ public class SenetGameView extends View {
                 int c = SENET_PATH[bp][1];
                 float cx = pad + c * cellW + cellW / 2f;
                 float cy = dpf(6f) + r * cellH + cellH / 2f;
-                drawEgyptianCrown(canvas, cx, cy, pieceR, false);
+                drawPieceWithShader(canvas, cx, cy, pieceR, false);
             }
         }
 
@@ -819,26 +878,18 @@ public class SenetGameView extends View {
         }
     }
 
-    private void drawEgyptianCrown(Canvas canvas, float cx, float cy, float r, boolean isPharaoh) {
-        canvas.drawCircle(cx + dpf(1.5f), cy + dpf(2f), r, shadowPaint);
-
-        if (isPharaoh) {
-            // Pharaoh Golden White Crown (Hedjet) with Gold Core
-            RadialGradient grad = new RadialGradient(
-                cx - r * 0.3f, cy - r * 0.3f, r * 1.3f,
-                new int[]{0xFFFFFBEB, 0xFFFDE047, 0xFFB45309},
-                null, Shader.TileMode.CLAMP
-            );
-            piecePaint.setShader(grad);
-            canvas.drawCircle(cx, cy, r, piecePaint);
-            canvas.drawCircle(cx, cy, r, pieceRimPaint);
-            canvas.drawCircle(cx - r * 0.35f, cy - r * 0.35f, r * 0.28f, pieceShinePaint);
-            canvas.drawCircle(cx, cy, r * 0.24f, goldBorderPaint);
+    private void drawPieceWithShader(Canvas canvas, float cx, float cy, float r, boolean isPharaoh) {
+        Bitmap bmp = isPharaoh ? cachedPharaohPieceBmp : cachedAnubisPieceBmp;
+        if (bmp != null) {
+            canvas.drawCircle(cx + dpf(1.5f), cy + dpf(2f), r, shadowPaint);
+            RectF dest = new RectF(cx - r, cy - r, cx + r, cy + r);
+            canvas.drawBitmap(bmp, null, dest, null);
         } else {
-            // Anubis Lapis Lazuli Spool with Turquoise Shimmer
+            // High-precision vector fallback
+            canvas.drawCircle(cx + dpf(1.5f), cy + dpf(2f), r, shadowPaint);
             RadialGradient grad = new RadialGradient(
                 cx - r * 0.3f, cy - r * 0.3f, r * 1.3f,
-                new int[]{0xFF7DD3FC, 0xFF0284C7, 0xFF082F49},
+                isPharaoh ? new int[]{0xFFFFFBEB, 0xFFFDE047, 0xFFB45309} : new int[]{0xFF7DD3FC, 0xFF0284C7, 0xFF082F49},
                 null, Shader.TileMode.CLAMP
             );
             piecePaint.setShader(grad);

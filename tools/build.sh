@@ -103,6 +103,16 @@ BADUK_SO="crates/baduk_engine/target/aarch64-linux-android/release/libgatehouse_
 cp "$BADUK_SO" "$OUT/lib/arm64-v8a/"
 ok
 
+say "rust senet engine"
+( cd crates/senet_engine && \
+  CARGO_TARGET_AARCH64_LINUX_ANDROID_LINKER="$NDK/toolchains/llvm/prebuilt/windows-x86_64/bin/aarch64-linux-android${API}-clang.cmd" \
+  cargo build --target aarch64-linux-android --release > "$OUT/senet.log" 2>&1 ) \
+  || { echo "FAILED"; cat "$OUT/senet.log"; exit 1; }
+SENET_SO="crates/senet_engine/target/aarch64-linux-android/release/libgatehouse_senet.so"
+[ -f "$SENET_SO" ] || { echo "FAILED: no $SENET_SO"; exit 1; }
+cp "$SENET_SO" "$OUT/lib/arm64-v8a/"
+ok
+
 say "zig systems core"
 ZIG_SO="native/gatehouse_zig/libgatehouse_zig.so"
 if [ ! -f "$ZIG_SO" ]; then

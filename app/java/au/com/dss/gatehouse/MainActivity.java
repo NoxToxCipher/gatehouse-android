@@ -5575,18 +5575,46 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
             }
         });
 
+        LinearLayout diffRow = new LinearLayout(this);
+        diffRow.setOrientation(LinearLayout.HORIZONTAL);
+        diffRow.setPadding(0, dp(6), 0, 0);
+
+        final TextView btnScribe = actionButton("🌱 Scribe", colLine, colPale);
+        final TextView btnPriest = actionButton("⚖️ Priest", 0xFFFDE047, colAccentInk);
+        final TextView btnAnubis = actionButton("👑 Anubis", colLine, colPale);
+
+        final TextView[] diffBtns = {btnScribe, btnPriest, btnAnubis};
+        for (int i = 0; i < 3; i++) {
+            final int t = i;
+            diffBtns[i].setOnClickListener(new View.OnClickListener() {
+                public void onClick(View v) {
+                    hapticClick();
+                    senetView.setDifficultyTier(t);
+                    for (int j = 0; j < 3; j++) {
+                        diffBtns[j].setBackground(rounded(j == t ? 0xFFFDE047 : colLine, dp(8)));
+                        diffBtns[j].setTextColor(j == t ? colAccentInk : colPale);
+                    }
+                }
+            });
+            LinearLayout.LayoutParams dlp = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
+            if (i > 0) dlp.leftMargin = dp(3);
+            diffBtns[i].setLayoutParams(dlp);
+            diffRow.addView(diffBtns[i]);
+        }
+        box.addView(diffRow);
+
         LinearLayout ctrlRow = new LinearLayout(this);
         ctrlRow.setOrientation(LinearLayout.HORIZONTAL);
-        ctrlRow.setPadding(0, dp(8), 0, 0);
+        ctrlRow.setPadding(0, dp(6), 0, 0);
 
-        TextView btnCast = actionButton("🥢 Cast", 0xFFFDE047, colAccentInk);
+        TextView btnCast = actionButton("🥢 Cast Sticks", 0xFFFDE047, colAccentInk);
         btnCast.setOnClickListener(new View.OnClickListener() {
             public void onClick(View v) {
                 hapticClick();
                 senetView.throwSticks();
             }
         });
-        LinearLayout.LayoutParams clp1 = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1.2f);
+        LinearLayout.LayoutParams clp1 = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1.4f);
         clp1.rightMargin = dp(4);
         btnCast.setLayoutParams(clp1);
         ctrlRow.addView(btnCast);
