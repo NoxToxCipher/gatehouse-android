@@ -71,8 +71,15 @@ pub fn evaluate_territory(board: &GoBoard, komi: f32) -> (TerritoryResult, [u8; 
         }
     }
 
-    let b_score = (board.captures_black as usize + black_territory) as i32;
-    let w_score = ((board.captures_white as usize + white_territory) as f32 + komi) as i32;
+    let mut black_stones = 0;
+    let mut white_stones = 0;
+    for idx in 0..size * size {
+        if board.grid[idx] == BLACK { black_stones += 1; }
+        else if board.grid[idx] == WHITE { white_stones += 1; }
+    }
+
+    let b_score = (black_stones + black_territory + board.captures_black as usize) as i32;
+    let w_score = ((white_stones + white_territory + board.captures_white as usize) as f32 + komi) as i32;
 
     (
         TerritoryResult {

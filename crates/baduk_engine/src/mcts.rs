@@ -79,7 +79,8 @@ impl MctsBot {
         }
 
         // 2. OPENING JOSEKI BOOK QUERY (Instant Grandmaster opening)
-        if board.move_count <= 8 {
+        let total_stones = board.grid.iter().filter(|&&s| s != EMPTY).count();
+        if board.move_count <= 6 && total_stones <= 4 {
             if let Some(joseki_pt) = JosekiBook::get_opening_move(board, color) {
                 if board.is_legal(joseki_pt.x as usize, joseki_pt.y as usize, color) {
                     let mut hm = [0.0; MAX_POINTS];

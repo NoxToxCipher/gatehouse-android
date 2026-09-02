@@ -150,4 +150,77 @@ mod tests {
         // Bot must defend by playing at (0, 1)
         assert_eq!(best_move, Point::new(0, 1));
     }
+
+    #[test]
+    fn test_tournament_puct_bot_dominance() {
+        let mut board = GoBoard::new(9);
+        let mut smart_bot = MctsBot::new(1); // 3-Dan PUCT MctsBot
+
+        // Run a 30-move mini tournament where Black is the smart PUCT bot and White plays pseudo-random legal moves
+        let mut rng = 0x12345678u64;
+        let mut passes = 0;
+
+        for _ in 0..30 {
+            if passes >= 2 { break; }
+
+            // Black's turn: Smart PUCT Bot
+            let (b_move, _, _) = smart_bot.search(&board, BLACK);
+            if b_move.is_pass() {
+                passes += 1;
+            } else {
+                passes = 0;
+                board.play_move(b_move, BLACK);
+            }
+
+            // White's turn: Random legal move
+            let mut w_moves = Vec::new();
+            for y in 0..9 {
+                for x in 0..9 {
+                    if board.is_legal(x, y, WHITE) {
+                        w_moves.push(Point::new(x, y));
+                    }
+                }
+            }
+
+            if w_moves.is_empty() {
+                passes += 1;
+            } else {
+                rng = rng.wrapping_mul(6364136223846793005).wrapping_add(1442695040888963407);
+                let pick = (rng >> 32) as usize % w_moves.len();
+                board.play_move(w_moves[pick], WHITE);
+                passes = 0;
+            }
+        }
+
+        // Evaluate territory — Smart bot must hold commanding lead
+        let (score, _) = evaluate_territory(&board, 6.5);
+        assert!(score.black_score > score.white_score, "Smart PUCT Bot must defeat random playout bot (Score: B {} vs W {})", score.black_score, score.white_score);
+    }
+
+    #[test]
+    fn test_nakade_vital_point_killing() {
+        let mut board = GoBoard::new(9);
+        // Set up Black enclosing the top-left area
+        board.play_move(Point::new(0, 1), BLACK);
+        board.play_move(Point::new(0, 2), BLACK);
+        board.play_move(Point::new(0, 3), BLACK);
+        board.play_move(Point::new(2, 1), BLACK);
+        board.play_move(Point::new(2, 2), BLACK);
+        board.play_move(Point::new(2, 3), BLACK);
+        board.play_move(Point::new(1, 0), BLACK);
+        board.play_move(Point::new(1, 4), BLACK);
+
+        // White tries to make two eyes by playing at (1, 1) and (1, 3)
+        board.play_move(Point::new(1, 1), WHITE);
+        board.play_move(Point::new(1, 3), WHITE);
+
+        // Advance move count
+        board.move_count = 12;
+
+        let mut bot = MctsBot::new(2); // 9-Dan Grandmaster
+        let (best_move, _, _) = bot.search(&board, BLACK);
+
+        // Black must strike the vital splitting/Nakade point at (1, 2)
+        assert_eq!(best_move, Point::new(1, 2), "Bot should strike the vital Nakade point at (1, 2)");
+    }
 }
