@@ -21,11 +21,11 @@ import java.util.Random;
  * Powered by native Rust (`libspace_invaders.so`) for 55-invader bitboard fleet stepping,
  * swept AABB projectile physics, destructible bunker shield bitmasks, and procedural 8-bit audio DSP.
  * 
- * Features:
- * - Pixel-accurate laser emergence from cannon turret tip
- * - Perfectly symmetrical equal-width ergonomic control deck with multi-touch continuous gliding
- * - Continuous rapid auto-fire holding
- * - Procedural CRT scanlines & particle physics
+ * Performance & Polish:
+ * - 0ms Latency Pre-cached Static AudioTracks (silky 60/120 FPS rendering)
+ * - Density-scaled coordinate parity between native Rust physics and Java canvas
+ * - Lasers emerge directly from the gold muzzle tip of the cannon turret
+ * - Symmetrical ergonomic dual-thumb control deck with multi-touch glide
  */
 public class SpaceInvadersGameView extends View {
 
@@ -125,11 +125,11 @@ public class SpaceInvadersGameView extends View {
         playerTurretPaint.setStyle(Paint.Style.FILL);
 
         laserGlowPaint.setColor(0x8838BDF8); // Neon Cyan Laser Glow
-        laserGlowPaint.setStrokeWidth(dpf(4.0f));
+        laserGlowPaint.setStrokeWidth(dpf(3.8f));
         laserGlowPaint.setStrokeCap(Paint.Cap.ROUND);
 
         laserCorePaint.setColor(0xFFFFFFFF); // Pure White Hot Beam Core
-        laserCorePaint.setStrokeWidth(dpf(2.0f));
+        laserCorePaint.setStrokeWidth(dpf(1.8f));
         laserCorePaint.setStrokeCap(Paint.Cap.ROUND);
 
         alienLaserPaint.setColor(0xFFF43F5E); // Crimson Alien Lightning
@@ -167,26 +167,25 @@ public class SpaceInvadersGameView extends View {
             if (nativeEngine != null) {
                 nativeEngine.release();
             }
-            nativeEngine = new SpaceInvadersNative(w, h);
+            float density = getResources().getDisplayMetrics().density;
+            nativeEngine = new SpaceInvadersNative(w, h, density);
             playerX = w / 2f;
             playerTargetX = w / 2f;
             lastFrameTime = System.currentTimeMillis();
 
-            // Setup perfectly symmetrical, equal-width touch control zones
+            // Symmetrical touch control deck layout
             float pad = dpf(10f);
             float gap = dpf(8f);
             float btnH = dpf(52f);
             float btnY1 = h - btnH - dpf(8f);
             float btnY2 = h - dpf(8f);
 
-            // Left steering section: 46% of available width, split equally into 2 symmetrical buttons
             float leftSectionW = (w - pad * 2f - gap) * 0.46f;
             float steerBtnW = (leftSectionW - gap) / 2f;
 
             lBtnRect.set(pad, btnY1, pad + steerBtnW, btnY2);
             rBtnRect.set(pad + steerBtnW + gap, btnY1, pad + steerBtnW * 2f + gap, btnY2);
 
-            // Right action section: Rapid Fire takes remaining width
             float fireX1 = pad + steerBtnW * 2f + gap * 2f;
             fBtnRect.set(fireX1, btnY1, w - pad, btnY2);
 
@@ -289,7 +288,6 @@ public class SpaceInvadersGameView extends View {
             return true;
         }
 
-        // Multi-touch evaluation across all active pointers
         boolean newHoldLeft = false;
         boolean newHoldRight = false;
         boolean newHoldFire = false;
@@ -306,7 +304,6 @@ public class SpaceInvadersGameView extends View {
             } else if (fBtnRect.contains(px, py)) {
                 newHoldFire = true;
             } else if (py < lBtnRect.top - dpf(10f)) {
-                // Direct touch-to-aim glide anywhere on upper field
                 playerTargetX = Math.max(dpf(20f), Math.min(getWidth() - dpf(20f), px));
             }
         }
@@ -340,7 +337,7 @@ public class SpaceInvadersGameView extends View {
         if (dtMs > 100f) dtMs = 16.6f; // Clamp pause jumps
         lastFrameTime = now;
 
-        // Apply continuous button gliding (responsive, buttery speed)
+        // Apply continuous button gliding (silky smooth)
         float glideSpeed = dpf(9.5f) * (dtMs / 16.6f);
         if (isHoldingLeft) {
             playerTargetX = Math.max(dpf(20f), playerTargetX - glideSpeed);
@@ -360,7 +357,7 @@ public class SpaceInvadersGameView extends View {
             int events = nativeEngine.update(dtMs, playerTargetX, shootTrigger);
             shootTrigger = false;
 
-            // Handle Native Events & Procedural Audio DSP
+            // Handle Native Events & Zero-Lag Pre-Cached Audio
             if ((events & SpaceInvadersNative.EVENT_MARCH_STEP) != 0) {
                 nativeEngine.getState(stateInts, stateFloats);
                 int marchNote = stateInts[9];
@@ -434,7 +431,7 @@ public class SpaceInvadersGameView extends View {
             drawUfo(canvas, ufoX, dpf(26f));
         }
 
-        // 7. Draw Native Projectiles (Lasers emerge cleanly upward from turret tip)
+        // 7. Draw Native Projectiles (Emerge directly from the gold muzzle tip)
         if (nativeEngine != null) {
             int projCount = nativeEngine.getProjectiles(projFloats);
             for (int i = 0; i < projCount; i++) {
@@ -499,7 +496,7 @@ public class SpaceInvadersGameView extends View {
             }
         }
 
-        // 10. Draw Player Cannon (Turret Tip sits precisely at laser spawn altitude)
+        // 10. Draw Player Cannon (Cannon base at h - dpf(85f), Turret Tip at h - dpf(96f))
         drawPlayerCannon(canvas, playerX, h - dpf(85f));
 
         // 11. CRT Horizontal Scanlines
@@ -519,7 +516,7 @@ public class SpaceInvadersGameView extends View {
             drawMiniCannon(canvas, dpf(14f) + i * dpf(18f), h - dpf(72f));
         }
 
-        // 13. Symmetrical Ergonomic Dual-Thumb Control Deck (Equal width steer buttons)
+        // 13. Symmetrical Ergonomic Dual-Thumb Control Deck
         drawControlDeck(canvas);
 
         postInvalidateOnAnimation();
@@ -565,7 +562,7 @@ public class SpaceInvadersGameView extends View {
     private void drawNativeAliens(Canvas canvas, int w, int h) {
         if (nativeEngine == null) return;
         float alienColW = (w - dpf(40f)) / 11f;
-        float alienRowH = dpf(18f);
+        float alienRowH = dpf(26f);
 
         for (int r = 0; r < 5; r++) {
             int mask = nativeEngine.getAlienRowMask(r);
@@ -653,10 +650,10 @@ public class SpaceInvadersGameView extends View {
         // Base Chassis
         rect.set(cx - w / 2f, cy, cx + w / 2f, cy + h);
         canvas.drawRoundRect(rect, dpf(3f), dpf(3f), playerPaint);
-        // Gun Turret Barrel
+        // Gun Turret Barrel (extends up 10dp)
         rect.set(cx - dpf(3f), cy - dpf(10f), cx + dpf(3f), cy);
         canvas.drawRect(rect, playerPaint);
-        // Muzzle Tip (Gold)
+        // Muzzle Tip (Gold highlight at the exact spawn point)
         rect.set(cx - dpf(2f), cy - dpf(11f), cx + dpf(2f), cy - dpf(9f));
         canvas.drawRect(rect, playerTurretPaint);
     }

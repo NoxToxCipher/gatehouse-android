@@ -33,6 +33,7 @@ pub struct GameState {
     pub ufo_timer_ms: f32,
     pub screen_w: f32,
     pub screen_h: f32,
+    pub density: f32,
     pub col_spacing: f32,
     pub row_spacing: f32,
     pub player_fire_cooldown_ms: f32,
@@ -41,13 +42,14 @@ pub struct GameState {
 }
 
 impl GameState {
-    pub fn new(screen_w: f32, screen_h: f32) -> Self {
-        let col_spacing = (screen_w - 40.0) / (COLS as f32);
-        let row_spacing = 30.0;
+    pub fn new(screen_w: f32, screen_h: f32, density: f32) -> Self {
+        let d = if density <= 0.1 { 1.0 } else { density };
+        let col_spacing = (screen_w - 40.0 * d) / (COLS as f32);
+        let row_spacing = 26.0 * d;
 
-        let bunker_w = col_spacing * 1.8;
-        let bunker_h = 26.0;
-        let bunker_y = screen_h - 150.0;
+        let bunker_w = 44.0 * d;
+        let bunker_h = 24.0 * d;
+        let bunker_y = screen_h - 145.0 * d;
         let bunker_spacing = (screen_w - (bunker_w * 3.0)) / 4.0;
 
         let bunkers = [
@@ -62,7 +64,7 @@ impl GameState {
             projectiles: ProjectilePool::new(),
             player_x: screen_w / 2.0,
             player_target_x: screen_w / 2.0,
-            player_speed: 850.0,
+            player_speed: 600.0 * d,
             player_lives: 3,
             score: 0,
             high_score: 1980,
@@ -71,10 +73,11 @@ impl GameState {
             game_won: false,
             ufo_x: -100.0,
             ufo_active: false,
-            ufo_speed: 135.0,
+            ufo_speed: 120.0 * d,
             ufo_timer_ms: 8000.0,
             screen_w,
             screen_h,
+            density: d,
             col_spacing,
             row_spacing,
             player_fire_cooldown_ms: 0.0,
@@ -116,6 +119,7 @@ impl GameState {
 
         let dt_sec = dt_ms / 1000.0;
         let mut events: u32 = 0;
+        let d = self.density;
 
         // 1. Smooth Player Movement towards Target X
         let dx = target_x - self.player_x;
@@ -125,14 +129,15 @@ impl GameState {
         } else {
             self.player_x += dx.signum() * max_move;
         }
-        let cannon_half_w = 20.0;
-        self.player_x = self.player_x.clamp(cannon_half_w + 10.0, self.screen_w - cannon_half_w - 10.0);
+        let cannon_half_w = 16.0 * d;
+        self.player_x = self.player_x.clamp(cannon_half_w + 10.0 * d, self.screen_w - cannon_half_w - 10.0 * d);
 
-        // 2. Player Laser Firing (Spawns from cannon turret tip)
+        // 2. Player Laser Firing (Spawns precisely from the top tip of the cannon turret)
         self.player_fire_cooldown_ms -= dt_ms;
         if fire_trigger && self.player_fire_cooldown_ms <= 0.0 {
-            let cannon_tip_y = self.screen_h - 96.0;
-            if self.projectiles.spawn(self.player_x, cannon_tip_y, -680.0, true) {
+            let cannon_tip_y = self.screen_h - 96.0 * d;
+            let laser_speed = -650.0 * d;
+            if self.projectiles.spawn(self.player_x, cannon_tip_y, laser_speed, true) {
                 self.player_fire_cooldown_ms = 180.0;
                 events |= EVENT_PLAYER_FIRED;
             }
@@ -144,7 +149,7 @@ impl GameState {
             self.march_note_idx = (self.march_note_idx + 1) % 4;
 
             // Check if invaders reached bunker / player altitude
-            if self.fleet.lowest_invader_y(self.row_spacing) >= (self.screen_h - 110.0) {
+            if self.fleet.lowest_invader_y(self.row_spacing) >= (self.screen_h - 110.0 * d) {
                 self.player_lives = 0;
                 self.game_over = true;
                 events |= EVENT_GAME_OVER;
@@ -159,8 +164,9 @@ impl GameState {
             for r in (0..ROWS).rev() {
                 if self.fleet.is_alive(r, col) {
                     let ax = self.fleet.base_x + (col as f32 * self.col_spacing) + (self.col_spacing * 0.4);
-                    let ay = self.fleet.base_y + (r as f32 * self.row_spacing) + 20.0;
-                    self.projectiles.spawn(ax, ay, 240.0 + (self.wave as f32 * 20.0), false);
+                    let ay = self.fleet.base_y + (r as f32 * self.row_spacing) + 20.0 * d;
+                    let bomb_speed = (220.0 + (self.wave as f32 * 20.0)) * d;
+                    self.projectiles.spawn(ax, ay, bomb_speed, false);
                     break;
                 }
             }
@@ -169,14 +175,14 @@ impl GameState {
         // 5. Mystery UFO Mothership
         if self.ufo_active {
             self.ufo_x += self.ufo_speed * dt_sec;
-            if self.ufo_x > self.screen_w + 60.0 {
+            if self.ufo_x > self.screen_w + 60.0 * d {
                 self.ufo_active = false;
             }
         } else {
             self.ufo_timer_ms -= dt_ms;
             if self.ufo_timer_ms <= 0.0 {
                 self.ufo_active = true;
-                self.ufo_x = -50.0;
+                self.ufo_x = -50.0 * d;
                 self.ufo_timer_ms = 12000.0 + self.next_rand() * 15000.0;
             }
         }
@@ -185,7 +191,7 @@ impl GameState {
         self.projectiles.update(dt_sec, self.screen_h);
 
         // 7. Collision Detection
-        let player_y = self.screen_h - 85.0;
+        let player_y = self.screen_h - 85.0 * d;
         let mut wave_cleared = false;
 
         for p in self.projectiles.pool.iter_mut() {
@@ -193,7 +199,7 @@ impl GameState {
 
             if p.is_player {
                 // A. Check collision with Mystery UFO
-                if self.ufo_active && p.y <= 40.0 && (p.x - self.ufo_x).abs() < 30.0 {
+                if self.ufo_active && p.y <= 45.0 * d && (p.x - self.ufo_x).abs() < 30.0 * d {
                     p.active = false;
                     self.ufo_active = false;
                     let ufo_pts = [50, 100, 150, 300][(p.x as usize) % 4];
@@ -238,8 +244,8 @@ impl GameState {
                     }
                 }
             } else {
-                // Alien Bomb vs Player
-                if (p.y - player_y).abs() < 14.0 && (p.x - self.player_x).abs() < cannon_half_w {
+                // Alien Bomb vs Player Cannon
+                if (p.y - player_y).abs() < 16.0 * d && (p.x - self.player_x).abs() < cannon_half_w {
                     p.active = false;
                     self.player_lives = self.player_lives.saturating_sub(1);
                     events |= EVENT_PLAYER_HIT;
@@ -277,7 +283,7 @@ mod tests {
 
     #[test]
     fn test_game_loop_1000_frames() {
-        let mut state = GameState::new(800.0, 600.0);
+        let mut state = GameState::new(800.0, 600.0, 1.0);
         assert_eq!(state.fleet.alive_count, 55);
 
         for _ in 0..1000 {

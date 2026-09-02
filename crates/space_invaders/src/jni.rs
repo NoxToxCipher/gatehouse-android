@@ -14,8 +14,9 @@ pub unsafe extern "C" fn Java_au_com_dss_gatehouse_SpaceInvadersNative_nativeCre
     _class: JClass,
     screen_w: jfloat,
     screen_h: jfloat,
+    density: jfloat,
 ) -> jlong {
-    let state = Box::new(GameState::new(screen_w, screen_h));
+    let state = Box::new(GameState::new(screen_w, screen_h, density));
     Box::into_raw(state) as jlong
 }
 
