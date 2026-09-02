@@ -139,8 +139,12 @@ public class RosterWidgetProvider extends AppWidgetProvider {
             textPaint.setTextAlign(Paint.Align.CENTER);
             canvas.drawText(todayPillText, datePill.centerX(), datePill.centerY() + 5.5f, textPaint);
 
-            // 2. Identify Today's Shift & Upcoming Shifts
-            DeputyApi.DeputyShift todayShift = null;
+            // 2. Identify Today's Shifts for User vs Site
+            String currentUserName = (roster != null && roster.userName != null) ? roster.userName.trim() : "Lochran Doherty";
+            
+            DeputyApi.DeputyShift myTodayShift = null;
+            DeputyApi.DeputyShift myNextShift = null;
+            List<DeputyApi.DeputyShift> todaySiteShifts = new ArrayList<>();
             List<DeputyApi.DeputyShift> upcomingShifts = new ArrayList<>();
 
             if (roster != null && roster.weekShifts != null) {
@@ -150,39 +154,23 @@ public class RosterWidgetProvider extends AppWidgetProvider {
                     boolean isSameDay = (cal.get(Calendar.YEAR) == cShift.get(Calendar.YEAR) &&
                                          cal.get(Calendar.DAY_OF_YEAR) == cShift.get(Calendar.DAY_OF_YEAR));
 
-                    if (isSameDay && todayShift == null) {
-                        todayShift = s;
+                    boolean isMe = s.isCurrentGuard || (s.guardName != null && s.guardName.toLowerCase().contains("lochran"));
+
+                    if (isSameDay) {
+                        todaySiteShifts.add(s);
+                        if (isMe && myTodayShift == null) {
+                            myTodayShift = s;
+                        }
                     } else if (s.startTs > nowSec) {
                         upcomingShifts.add(s);
+                        if (isMe && myNextShift == null) {
+                            myNextShift = s;
+                        }
                     }
                 }
             }
 
-            // Fallback shift details if none scheduled
-            String todayTimeRange = "16:00 – 00:00 (8.0h)";
-            String todaySite = "Hume Doors & Timber (Kingston)";
-            String todayStatus = "● TODAY'S SHIFT";
-            int todayStatusColor = COL_ACCENT;
-
-            if (todayShift != null) {
-                todayTimeRange = todayShift.getFormattedHoursRange();
-                if (todayShift.operationalUnit != null && !todayShift.operationalUnit.isEmpty()) {
-                    todaySite = todayShift.operationalUnit;
-                }
-                if (nowSec >= todayShift.startTs && nowSec <= todayShift.endTs) {
-                    todayStatus = "● ON SHIFT NOW";
-                    todayStatusColor = COL_EMERALD;
-                } else if (todayShift.startTs > nowSec) {
-                    long diffHours = (todayShift.startTs - nowSec) / 3600;
-                    todayStatus = diffHours > 0 ? ("● IN " + diffHours + " HOURS") : "● IMMINENT";
-                    todayStatusColor = COL_ACCENT;
-                } else {
-                    todayStatus = "✓ COMPLETED";
-                    todayStatusColor = COL_MUTED;
-                }
-            }
-
-            // 3. Hero Card (Today's Highlighted Shift)
+            // 3. Hero Card (Personalized for Officer)
             float heroY1 = 80f;
             float heroY2 = 225f;
             RectF heroCard = new RectF(padX, heroY1, w - padX, heroY2);
@@ -191,42 +179,114 @@ public class RosterWidgetProvider extends AppWidgetProvider {
             bgPaint.setColor(COL_HERO_BG);
             canvas.drawRoundRect(heroCard, 14f, 14f, bgPaint);
 
-            borderPaint.setColor(todayStatusColor == COL_EMERALD ? 0x6610B981 : 0x44FFD166);
-            borderPaint.setStrokeWidth(1.8f);
-            canvas.drawRoundRect(heroCard, 14f, 14f, borderPaint);
+            if (myTodayShift != null) {
+                // Officer has a shift today!
+                String todayTimeRange = myTodayShift.getFormattedHoursRange();
+                String todaySite = (myTodayShift.operationalUnit != null && !myTodayShift.operationalUnit.isEmpty())
+                        ? myTodayShift.operationalUnit : "Hume Doors & Timber (Kingston)";
+                
+                String todayStatus = "● YOUR SHIFT TODAY";
+                int todayStatusColor = COL_ACCENT;
+                if (nowSec >= myTodayShift.startTs && nowSec <= myTodayShift.endTs) {
+                    todayStatus = "● ON SHIFT NOW";
+                    todayStatusColor = COL_EMERALD;
+                } else if (myTodayShift.startTs > nowSec) {
+                    long diffHours = (myTodayShift.startTs - nowSec) / 3600;
+                    todayStatus = diffHours > 0 ? ("● IN " + diffHours + " HOURS") : "● IMMINENT";
+                    todayStatusColor = COL_ACCENT;
+                }
 
-            // Status Badge inside Hero Card
-            float badgeY = heroY1 + 16f;
-            textPaint.setTextAlign(Paint.Align.LEFT);
-            textPaint.setTypeface(Typeface.create(Typeface.MONOSPACE, Typeface.BOLD));
-            textPaint.setColor(todayStatusColor);
-            textPaint.setTextSize(14.5f);
-            canvas.drawText(todayStatus, padX + 18f, badgeY + 12f, textPaint);
+                borderPaint.setColor(todayStatusColor == COL_EMERALD ? 0x6610B981 : 0x44FFD166);
+                borderPaint.setStrokeWidth(1.8f);
+                canvas.drawRoundRect(heroCard, 14f, 14f, borderPaint);
 
-            // Big Bold Time Display
-            textPaint.setColor(COL_PALE);
-            textPaint.setTextSize(33f);
-            textPaint.setTypeface(Typeface.create(Typeface.MONOSPACE, Typeface.BOLD));
-            canvas.drawText(todayTimeRange, padX + 18f, heroY1 + 68f, textPaint);
+                // Status Badge
+                textPaint.setTextAlign(Paint.Align.LEFT);
+                textPaint.setTypeface(Typeface.create(Typeface.MONOSPACE, Typeface.BOLD));
+                textPaint.setColor(todayStatusColor);
+                textPaint.setTextSize(14.5f);
+                canvas.drawText(todayStatus, padX + 18f, heroY1 + 28f, textPaint);
 
-            // Site & Duty Role Line
-            textPaint.setColor(COL_MUTED);
-            textPaint.setTextSize(16.5f);
-            textPaint.setTypeface(Typeface.DEFAULT);
-            canvas.drawText(todaySite + " · Static Plant Security", padX + 18f, heroY1 + 104f, textPaint);
+                // Time Display
+                textPaint.setColor(COL_PALE);
+                textPaint.setTextSize(33f);
+                textPaint.setTypeface(Typeface.create(Typeface.MONOSPACE, Typeface.BOLD));
+                canvas.drawText(todayTimeRange, padX + 18f, heroY1 + 68f, textPaint);
 
-            // Live Pulse Pill on Right of Hero Card
-            float heroPillW = 140f;
-            float heroPillH = 32f;
-            RectF heroPill = new RectF(w - padX - heroPillW - 16f, heroY1 + 16f, w - padX - 16f, heroY1 + 16f + heroPillH);
-            bgPaint.setColor(todayStatusColor == COL_EMERALD ? 0x2210B981 : 0x22FFD166);
-            canvas.drawRoundRect(heroPill, 6f, 6f, bgPaint);
+                // Site & Duty Line
+                textPaint.setColor(COL_MUTED);
+                textPaint.setTextSize(16.5f);
+                textPaint.setTypeface(Typeface.DEFAULT);
+                canvas.drawText(todaySite + " · Static Plant Security", padX + 18f, heroY1 + 104f, textPaint);
 
-            textPaint.setTextAlign(Paint.Align.CENTER);
-            textPaint.setTypeface(Typeface.create(Typeface.MONOSPACE, Typeface.BOLD));
-            textPaint.setColor(todayStatusColor);
-            textPaint.setTextSize(13f);
-            canvas.drawText("PRIMARY DUTY", heroPill.centerX(), heroPill.centerY() + 4.5f, textPaint);
+                // Right Pill
+                float heroPillW = 140f;
+                float heroPillH = 32f;
+                RectF heroPill = new RectF(w - padX - heroPillW - 16f, heroY1 + 16f, w - padX - 16f, heroY1 + 16f + heroPillH);
+                bgPaint.setColor(todayStatusColor == COL_EMERALD ? 0x2210B981 : 0x22FFD166);
+                canvas.drawRoundRect(heroPill, 6f, 6f, bgPaint);
+                textPaint.setTextAlign(Paint.Align.CENTER);
+                textPaint.setTypeface(Typeface.create(Typeface.MONOSPACE, Typeface.BOLD));
+                textPaint.setColor(todayStatusColor);
+                textPaint.setTextSize(13f);
+                canvas.drawText("PRIMARY DUTY", heroPill.centerX(), heroPill.centerY() + 4.5f, textPaint);
+
+            } else {
+                // Officer is OFF-DUTY / RDO today!
+                borderPaint.setColor(0x3338BDF8);
+                borderPaint.setStrokeWidth(1.5f);
+                canvas.drawRoundRect(heroCard, 14f, 14f, borderPaint);
+
+                // Status Badge (RDO)
+                textPaint.setTextAlign(Paint.Align.LEFT);
+                textPaint.setTypeface(Typeface.create(Typeface.MONOSPACE, Typeface.BOLD));
+                textPaint.setColor(COL_CYAN);
+                textPaint.setTextSize(14.5f);
+                canvas.drawText("● ROSTERED DAY OFF (RDO)", padX + 18f, heroY1 + 28f, textPaint);
+
+                // Who is working today
+                String onDutyStr = "On-Duty Guards: ";
+                if (!todaySiteShifts.isEmpty()) {
+                    DeputyApi.DeputyShift s1 = todaySiteShifts.get(0);
+                    onDutyStr = s1.guardName + " (" + s1.getFormattedHoursRange() + ")";
+                    if (todaySiteShifts.size() > 1) {
+                        DeputyApi.DeputyShift s2 = todaySiteShifts.get(1);
+                        onDutyStr += " · " + s2.guardName;
+                    }
+                } else {
+                    onDutyStr = "No site coverage required today";
+                }
+
+                textPaint.setColor(COL_PALE);
+                textPaint.setTextSize(22f);
+                textPaint.setTypeface(Typeface.create(Typeface.MONOSPACE, Typeface.BOLD));
+                canvas.drawText(onDutyStr, padX + 18f, heroY1 + 68f, textPaint);
+
+                // Your next shift reminder
+                String nextShiftStr = "Your Next Shift: ";
+                if (myNextShift != null) {
+                    nextShiftStr += myNextShift.getDayDisplayLabel() + " · " + myNextShift.getFormattedHoursRange();
+                } else {
+                    nextShiftStr += "Sunday 06 Sep · 06:00 – 18:00 (12.0h)";
+                }
+
+                textPaint.setColor(COL_MUTED);
+                textPaint.setTextSize(16.5f);
+                textPaint.setTypeface(Typeface.DEFAULT);
+                canvas.drawText(nextShiftStr, padX + 18f, heroY1 + 104f, textPaint);
+
+                // Right Pill (OFF DUTY)
+                float heroPillW = 120f;
+                float heroPillH = 32f;
+                RectF heroPill = new RectF(w - padX - heroPillW - 16f, heroY1 + 16f, w - padX - 16f, heroY1 + 16f + heroPillH);
+                bgPaint.setColor(0x2238BDF8);
+                canvas.drawRoundRect(heroPill, 6f, 6f, bgPaint);
+                textPaint.setTextAlign(Paint.Align.CENTER);
+                textPaint.setTypeface(Typeface.create(Typeface.MONOSPACE, Typeface.BOLD));
+                textPaint.setColor(COL_CYAN);
+                textPaint.setTextSize(13f);
+                canvas.drawText("OFF DUTY", heroPill.centerX(), heroPill.centerY() + 4.5f, textPaint);
+            }
 
             // 4. Upcoming Shifts Section (Clean, tranquil 2-row table)
             float upY1 = 240f;
