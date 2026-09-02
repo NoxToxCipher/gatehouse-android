@@ -1429,42 +1429,57 @@ public class BadukGameView extends View {
 
     private void drawKataGoEvaluationBanner(Canvas canvas, float w, float h) {
         if (mode == 1) return; // Not in Tsumego
-        float barH = dpf(5.5f);
-        float barY = dpf(3.5f);
+        float barH = dpf(6.5f);
+        float barY = dpf(4.0f);
         float barW = w - dpf(18f);
         float barX = dpf(9f);
 
-        float bScore = isChineseRules ? (countTerritory(1) + countStones(1)) : (countTerritory(1) + blackCaptures);
-        float wScore = (isChineseRules ? (countTerritory(2) + countStones(2)) : (countTerritory(2) + whiteCaptures)) + customKomi;
-        float diff = bScore - wScore;
-        float bRate = (float) (1.0 / (1.0 + Math.exp(-diff / 7.5)));
-        bRate = Math.max(0.04f, Math.min(0.96f, bRate));
+        float bRate = (mode == 0) ? (1.0f - currentWinrate) : 0.5f;
+        if (bRate < 0.05f) bRate = 0.05f;
+        if (bRate > 0.95f) bRate = 0.95f;
 
-        // Background / White side
+        // Background / White side (Azure)
         Paint wBarPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
         wBarPaint.setColor(0xFF38BDF8);
         wBarPaint.setStyle(Paint.Style.FILL);
         RectF totalRect = new RectF(barX, barY, barX + barW, barY + barH);
-        canvas.drawRoundRect(totalRect, dpf(2.5f), dpf(2.5f), wBarPaint);
+        canvas.drawRoundRect(totalRect, dpf(3f), dpf(3f), wBarPaint);
 
-        // Black side
+        // Black side (Obsidian Slate)
         Paint bBarPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
         bBarPaint.setColor(0xFF0F172A);
         bBarPaint.setStyle(Paint.Style.FILL);
         RectF bRect = new RectF(barX, barY, barX + barW * bRate, barY + barH);
-        canvas.drawRoundRect(bRect, dpf(2.5f), dpf(2.5f), bBarPaint);
+        canvas.drawRoundRect(bRect, dpf(3f), dpf(3f), bBarPaint);
 
         // Gold Trim
         Paint trimPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
         trimPaint.setColor(0xFFEAB308);
         trimPaint.setStyle(Paint.Style.STROKE);
         trimPaint.setStrokeWidth(dpf(1f));
-        canvas.drawRoundRect(totalRect, dpf(2.5f), dpf(2.5f), trimPaint);
+        canvas.drawRoundRect(totalRect, dpf(3f), dpf(3f), trimPaint);
 
         // Center 50% Marker Needle
         float midX = barX + barW * 0.5f;
-        trimPaint.setStrokeWidth(dpf(1.4f));
-        canvas.drawLine(midX, barY - dpf(1f), midX, barY + barH + dpf(1f), trimPaint);
+        trimPaint.setStrokeWidth(dpf(1.5f));
+        canvas.drawLine(midX, barY - dpf(1.5f), midX, barY + barH + dpf(1.5f), trimPaint);
+
+        // Percentage Text Badges
+        Paint numPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+        numPaint.setTypeface(Typeface.create(Typeface.MONOSPACE, Typeface.BOLD));
+        numPaint.setTextSize(dpf(7.5f));
+
+        // Black winrate on left
+        numPaint.setColor(0xFFFFFFFF);
+        numPaint.setTextAlign(Paint.Align.LEFT);
+        String bPct = String.format(java.util.Locale.US, "● %.1f%%", bRate * 100f);
+        canvas.drawText(bPct, barX + dpf(4f), barY + dpf(5.5f), numPaint);
+
+        // White winrate on right
+        numPaint.setColor(0xFF0F172A);
+        numPaint.setTextAlign(Paint.Align.RIGHT);
+        String wPct = String.format(java.util.Locale.US, "○ %.1f%%", (1f - bRate) * 100f);
+        canvas.drawText(wPct, barX + barW - dpf(4f), barY + dpf(5.5f), numPaint);
     }
 
     public void showHint() {
