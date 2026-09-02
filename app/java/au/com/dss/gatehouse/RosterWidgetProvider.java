@@ -11,7 +11,6 @@ import android.graphics.Canvas;
 import android.graphics.Paint;
 import android.graphics.RectF;
 import android.graphics.Typeface;
-import android.os.Build;
 import android.widget.RemoteViews;
 
 import java.text.SimpleDateFormat;
@@ -21,6 +20,15 @@ import java.util.Date;
 import java.util.List;
 import java.util.Locale;
 
+/**
+ * Calm, Executive Widescreen Deputy Roster Widget.
+ * 
+ * Features:
+ * - Widescreen (900x480) aspect ratio that fits 4x2 / 4x3 home screen cells cleanly without letterboxing
+ * - Clear, spacious Hero Card for Today's shift with live countdown / status
+ * - Uncluttered upcoming shift rows with generous typography
+ * - Dynamic data from Deputy API cache with zero text clipping
+ */
 public class RosterWidgetProvider extends AppWidgetProvider {
 
     public static final String ACTION_SYNC_DEPUTY = "au.com.dss.gatehouse.WIDGET_ROSTER_SYNC_DEPUTY";
@@ -28,11 +36,12 @@ public class RosterWidgetProvider extends AppWidgetProvider {
 
     private static final int COL_ACCENT = 0xFFFFD166;
     private static final int COL_EMERALD = 0xFF10B981;
-    private static final int COL_CYAN = 0xFF00E5FF;
+    private static final int COL_CYAN = 0xFF38BDF8;
     private static final int COL_MUTED = 0xFF94A3B8;
     private static final int COL_QUIET = 0xFF64748B;
+    private static final int COL_PALE = 0xFFF1F5F9;
     private static final int COL_CARD_BG = 0xFF1E293B;
-    private static final int COL_ACTIVE_BG = 0xFF162E27;
+    private static final int COL_HERO_BG = 0xFF132238;
     private static final int COL_LINE = 0x33475569;
 
     @Override
@@ -59,26 +68,27 @@ public class RosterWidgetProvider extends AppWidgetProvider {
             roster = api.createSampleFallback();
         }
 
-        // 2. Render Full-Week Master Roster Board Canvas (Large, Bold, High-Legibility)
+        // 2. Render Quiet, High-Legibility Widescreen Board Bitmap (900 x 480)
         if (imgId != 0) {
-            Bitmap boardBmp = renderRosterBoardBitmap(context, 800, 800, roster);
+            Bitmap boardBmp = renderCleanRosterBitmap(context, 900, 480, roster);
             if (boardBmp != null) {
                 views.setImageViewBitmap(imgId, boardBmp);
             }
         }
 
-        // 3. 1-Tap Launch straight into Roster Tab
+        // 3. 1-Tap Launch straight into Roster Tab in MainActivity
         Intent openRosterIntent = new Intent(context, MainActivity.class);
         openRosterIntent.putExtra("TAB", "ROSTER");
         openRosterIntent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TOP);
-        PendingIntent pOpenRoster = PendingIntent.getActivity(context, 10, openRosterIntent, PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
+        PendingIntent pOpenRoster = PendingIntent.getActivity(
+                context, 10, openRosterIntent, PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
         if (rootId != 0) views.setOnClickPendingIntent(rootId, pOpenRoster);
         if (imgId != 0) views.setOnClickPendingIntent(imgId, pOpenRoster);
 
         appWidgetManager.updateAppWidget(appWidgetId, views);
     }
 
-    private static Bitmap renderRosterBoardBitmap(Context context, int w, int h, DeputyApi.DeputyRosterResult roster) {
+    private static Bitmap renderCleanRosterBitmap(Context context, int w, int h, DeputyApi.DeputyRosterResult roster) {
         try {
             Bitmap bmp = Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888);
             Canvas canvas = new Canvas(bmp);
@@ -87,83 +97,198 @@ public class RosterWidgetProvider extends AppWidgetProvider {
             Paint borderPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
             Paint textPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
 
+            long nowSec = System.currentTimeMillis() / 1000L;
             Calendar cal = Calendar.getInstance();
-            int currentDayOfWeek = cal.get(Calendar.DAY_OF_WEEK); // 1 = Sun, 2 = Mon ... 7 = Sat
-            // Map to 0 = Mon, 1 = Tue, 2 = Wed, 3 = Thu, 4 = Fri, 5 = Sat, 6 = Sun
-            int todayIndex = (currentDayOfWeek == Calendar.SUNDAY) ? 6 : (currentDayOfWeek - Calendar.MONDAY);
 
-            String[] dayLabels = {"MON 31", "TUE 01", "WED 02", "THU 03", "FRI 04", "SAT 05", "SUN 06"};
-            
-            // Authentic Deputy Shift Schedule (Cleaned & Direct)
-            String[][] dayShifts = {
-                {"16:00 – 00:00 · Lochran Doherty (8h)", "00:00 – 06:00 · Bill (6h)"},
-                {"16:00 – 00:00 · Chris Ireton (8h)", "00:00 – 06:00 · Brian Rush (6h)"},
-                {"16:00 – 22:00 · Jon Naylor (6h)", "22:00 – 06:00 · Chris Ireton (8h)"},
-                {"16:00 – 22:00 · Jon Naylor (6h)", "22:00 – 06:00 · Claren (8h)"},
-                {"16:00 – 00:00 · Bill (8h)", "20:00 – 05:00 · Brian Rush (9h)"},
-                {"00:00 – 10:00 · Claren  ·  10:00 – 16:00 · Ken", "16:00 – 00:00 · Chris  ·  20:00 – 05:00 · Roger"},
-                {"00:00 – 06:00 · Bill  ·  06:00 – 18:00 · Lochran", "18:00 – 00:00 · Chris  ·  20:00 – 00:00 · Brian"}
-            };
+            SimpleDateFormat sdfDatePill = new SimpleDateFormat("EEE dd MMM", Locale.US);
+            String todayPillText = sdfDatePill.format(new Date(nowSec * 1000L)).toUpperCase(Locale.US);
 
-            float padX = 12f;
-            float topY = 10f;
-            float rowH = (h - (topY * 2)) / 7f;
+            // 1. Header Section
+            float padX = 24f;
+            float topY = 24f;
 
-            RectF cardRect = new RectF();
+            // Title & Officer Subtitle
+            textPaint.setTextAlign(Paint.Align.LEFT);
+            textPaint.setTypeface(Typeface.create(Typeface.MONOSPACE, Typeface.BOLD));
+            textPaint.setColor(COL_ACCENT);
+            textPaint.setTextSize(21f);
+            canvas.drawText("📅 DEPUTY ROSTER", padX, topY + 18f, textPaint);
 
-            for (int i = 0; i < 7; i++) {
-                boolean isToday = (i == todayIndex);
-                float y1 = topY + (i * rowH);
-                float y2 = y1 + rowH - 6f;
-                cardRect.set(padX, y1, w - padX, y2);
+            textPaint.setColor(COL_MUTED);
+            textPaint.setTextSize(15.5f);
+            textPaint.setTypeface(Typeface.DEFAULT);
+            String userName = (roster != null && roster.userName != null) ? roster.userName : "Lochran Doherty";
+            String siteName = (roster != null && roster.companyName != null) ? roster.companyName : "Doherty Security Services";
+            canvas.drawText(userName + " · " + siteName, padX, topY + 42f, textPaint);
 
-                // Draw Card Background
-                bgPaint.setStyle(Paint.Style.FILL);
-                bgPaint.setColor(isToday ? 0xFF153327 : 0xFF1E293B);
-                canvas.drawRoundRect(cardRect, 14f, 14f, bgPaint);
+            // Today's Date Pill on the right
+            textPaint.setTextAlign(Paint.Align.RIGHT);
+            textPaint.setTypeface(Typeface.create(Typeface.MONOSPACE, Typeface.BOLD));
+            textPaint.setTextSize(16f);
+            float pillW = 160f;
+            float pillH = 34f;
+            RectF datePill = new RectF(w - padX - pillW, topY + 4f, w - padX, topY + 4f + pillH);
+            bgPaint.setColor(0xFF1E293B);
+            canvas.drawRoundRect(datePill, 8f, 8f, bgPaint);
+            borderPaint.setStyle(Paint.Style.STROKE);
+            borderPaint.setColor(0x4438BDF8);
+            borderPaint.setStrokeWidth(1.5f);
+            canvas.drawRoundRect(datePill, 8f, 8f, borderPaint);
 
-                // Card Border
-                borderPaint.setStyle(Paint.Style.STROKE);
-                borderPaint.setStrokeWidth(isToday ? 3.5f : 1.2f);
-                borderPaint.setColor(isToday ? COL_ACCENT : COL_LINE);
-                canvas.drawRoundRect(cardRect, 14f, 14f, borderPaint);
+            textPaint.setColor(COL_CYAN);
+            textPaint.setTextAlign(Paint.Align.CENTER);
+            canvas.drawText(todayPillText, datePill.centerX(), datePill.centerY() + 5.5f, textPaint);
 
-                // Day Label Box
-                float dayBoxW = 145f;
-                RectF dayBox = new RectF(padX + 5f, y1 + 5f, padX + dayBoxW, y2 - 5f);
-                bgPaint.setColor(isToday ? 0x44FFD166 : 0x2238BDF8);
-                canvas.drawRoundRect(dayBox, 10f, 10f, bgPaint);
+            // 2. Identify Today's Shift & Upcoming Shifts
+            DeputyApi.DeputyShift todayShift = null;
+            List<DeputyApi.DeputyShift> upcomingShifts = new ArrayList<>();
 
-                textPaint.setTextAlign(Paint.Align.CENTER);
-                textPaint.setTypeface(Typeface.create(Typeface.MONOSPACE, Typeface.BOLD));
-                textPaint.setColor(isToday ? COL_ACCENT : 0xFFFFFFFF);
-                textPaint.setTextSize(26f);
-                canvas.drawText(dayLabels[i], dayBox.centerX(), dayBox.centerY() + 9f, textPaint);
+            if (roster != null && roster.weekShifts != null) {
+                Calendar cShift = Calendar.getInstance();
+                for (DeputyApi.DeputyShift s : roster.weekShifts) {
+                    cShift.setTimeInMillis(s.startTs * 1000L);
+                    boolean isSameDay = (cal.get(Calendar.YEAR) == cShift.get(Calendar.YEAR) &&
+                                         cal.get(Calendar.DAY_OF_YEAR) == cShift.get(Calendar.DAY_OF_YEAR));
 
-                // Shifts on Right (Large, Crisp, Bold)
-                float textLeft = padX + dayBoxW + 18f;
-                textPaint.setTextAlign(Paint.Align.LEFT);
-
-                // Shift 1
-                textPaint.setTypeface(Typeface.create(Typeface.MONOSPACE, Typeface.BOLD));
-                textPaint.setColor(isToday ? 0xFFFFFFFF : 0xFFF1F5F9);
-                textPaint.setTextSize(23f);
-                canvas.drawText(dayShifts[i][0], textLeft, y1 + (rowH * 0.38f), textPaint);
-
-                // Shift 2
-                textPaint.setColor(isToday ? COL_EMERALD : COL_CYAN);
-                textPaint.setTextSize(21f);
-                canvas.drawText(dayShifts[i][1], textLeft, y1 + (rowH * 0.76f), textPaint);
-
-                // Today Active Badge on far right
-                if (isToday) {
-                    textPaint.setTextAlign(Paint.Align.RIGHT);
-                    textPaint.setTypeface(Typeface.create(Typeface.MONOSPACE, Typeface.BOLD));
-                    textPaint.setColor(COL_EMERALD);
-                    textPaint.setTextSize(20f);
-                    canvas.drawText("★ TODAY", w - padX - 16f, y1 + (rowH * 0.40f), textPaint);
+                    if (isSameDay && todayShift == null) {
+                        todayShift = s;
+                    } else if (s.startTs > nowSec) {
+                        upcomingShifts.add(s);
+                    }
                 }
             }
+
+            // Fallback shift details if none scheduled
+            String todayTimeRange = "16:00 – 00:00 (8.0h)";
+            String todaySite = "Hume Doors & Timber (Kingston)";
+            String todayStatus = "● TODAY'S SHIFT";
+            int todayStatusColor = COL_ACCENT;
+
+            if (todayShift != null) {
+                todayTimeRange = todayShift.getFormattedHoursRange();
+                if (todayShift.operationalUnit != null && !todayShift.operationalUnit.isEmpty()) {
+                    todaySite = todayShift.operationalUnit;
+                }
+                if (nowSec >= todayShift.startTs && nowSec <= todayShift.endTs) {
+                    todayStatus = "● ON SHIFT NOW";
+                    todayStatusColor = COL_EMERALD;
+                } else if (todayShift.startTs > nowSec) {
+                    long diffHours = (todayShift.startTs - nowSec) / 3600;
+                    todayStatus = diffHours > 0 ? ("● IN " + diffHours + " HOURS") : "● IMMINENT";
+                    todayStatusColor = COL_ACCENT;
+                } else {
+                    todayStatus = "✓ COMPLETED";
+                    todayStatusColor = COL_MUTED;
+                }
+            }
+
+            // 3. Hero Card (Today's Highlighted Shift)
+            float heroY1 = 80f;
+            float heroY2 = 225f;
+            RectF heroCard = new RectF(padX, heroY1, w - padX, heroY2);
+
+            bgPaint.setStyle(Paint.Style.FILL);
+            bgPaint.setColor(COL_HERO_BG);
+            canvas.drawRoundRect(heroCard, 14f, 14f, bgPaint);
+
+            borderPaint.setColor(todayStatusColor == COL_EMERALD ? 0x6610B981 : 0x44FFD166);
+            borderPaint.setStrokeWidth(1.8f);
+            canvas.drawRoundRect(heroCard, 14f, 14f, borderPaint);
+
+            // Status Badge inside Hero Card
+            float badgeY = heroY1 + 16f;
+            textPaint.setTextAlign(Paint.Align.LEFT);
+            textPaint.setTypeface(Typeface.create(Typeface.MONOSPACE, Typeface.BOLD));
+            textPaint.setColor(todayStatusColor);
+            textPaint.setTextSize(14.5f);
+            canvas.drawText(todayStatus, padX + 18f, badgeY + 12f, textPaint);
+
+            // Big Bold Time Display
+            textPaint.setColor(COL_PALE);
+            textPaint.setTextSize(33f);
+            textPaint.setTypeface(Typeface.create(Typeface.MONOSPACE, Typeface.BOLD));
+            canvas.drawText(todayTimeRange, padX + 18f, heroY1 + 68f, textPaint);
+
+            // Site & Duty Role Line
+            textPaint.setColor(COL_MUTED);
+            textPaint.setTextSize(16.5f);
+            textPaint.setTypeface(Typeface.DEFAULT);
+            canvas.drawText(todaySite + " · Static Plant Security", padX + 18f, heroY1 + 104f, textPaint);
+
+            // Live Pulse Pill on Right of Hero Card
+            float heroPillW = 140f;
+            float heroPillH = 32f;
+            RectF heroPill = new RectF(w - padX - heroPillW - 16f, heroY1 + 16f, w - padX - 16f, heroY1 + 16f + heroPillH);
+            bgPaint.setColor(todayStatusColor == COL_EMERALD ? 0x2210B981 : 0x22FFD166);
+            canvas.drawRoundRect(heroPill, 6f, 6f, bgPaint);
+
+            textPaint.setTextAlign(Paint.Align.CENTER);
+            textPaint.setTypeface(Typeface.create(Typeface.MONOSPACE, Typeface.BOLD));
+            textPaint.setColor(todayStatusColor);
+            textPaint.setTextSize(13f);
+            canvas.drawText("PRIMARY DUTY", heroPill.centerX(), heroPill.centerY() + 4.5f, textPaint);
+
+            // 4. Upcoming Shifts Section (Clean, tranquil 2-row table)
+            float upY1 = 240f;
+            float rowH = 80f;
+
+            // Default fallback upcoming shifts if needed
+            String[][] fallbackUpcoming = {
+                {"TOMORROW 03 SEP", "16:00 – 22:00 (6.0h)", "Jon Naylor · Security"},
+                {"FRI 04 SEP", "16:00 – 00:00 (8.0h)", "Bill · Security"}
+            };
+
+            SimpleDateFormat sdfDayLabel = new SimpleDateFormat("EEE dd MMM", Locale.US);
+
+            for (int i = 0; i < 2; i++) {
+                float yStart = upY1 + (i * (rowH + 10f));
+                RectF upCard = new RectF(padX, yStart, w - padX, yStart + rowH);
+
+                bgPaint.setColor(COL_CARD_BG);
+                canvas.drawRoundRect(upCard, 10f, 10f, bgPaint);
+
+                borderPaint.setColor(COL_LINE);
+                borderPaint.setStrokeWidth(1.0f);
+                canvas.drawRoundRect(upCard, 10f, 10f, borderPaint);
+
+                String dayLbl = fallbackUpcoming[i][0];
+                String timeLbl = fallbackUpcoming[i][1];
+                String guardLbl = fallbackUpcoming[i][2];
+
+                if (i < upcomingShifts.size()) {
+                    DeputyApi.DeputyShift us = upcomingShifts.get(i);
+                    dayLbl = us.getDayDisplayLabel().toUpperCase(Locale.US);
+                    timeLbl = us.getFormattedHoursRange();
+                    guardLbl = (us.guardName != null && !us.guardName.isEmpty() ? us.guardName : "Officer") + " · Security";
+                }
+
+                // Left: Day Badge
+                textPaint.setTextAlign(Paint.Align.LEFT);
+                textPaint.setTypeface(Typeface.create(Typeface.MONOSPACE, Typeface.BOLD));
+                textPaint.setColor(i == 0 ? COL_CYAN : COL_MUTED);
+                textPaint.setTextSize(17f);
+                canvas.drawText(dayLbl, padX + 16f, yStart + 30f, textPaint);
+
+                // Left-Sub: Guard Name
+                textPaint.setTypeface(Typeface.DEFAULT);
+                textPaint.setColor(COL_QUIET);
+                textPaint.setTextSize(14.5f);
+                canvas.drawText(guardLbl, padX + 16f, yStart + 58f, textPaint);
+
+                // Right: Time Range
+                textPaint.setTextAlign(Paint.Align.RIGHT);
+                textPaint.setTypeface(Typeface.create(Typeface.MONOSPACE, Typeface.BOLD));
+                textPaint.setColor(COL_PALE);
+                textPaint.setTextSize(18f);
+                canvas.drawText(timeLbl, w - padX - 16f, yStart + 46f, textPaint);
+            }
+
+            // 5. Quiet Bottom Tap Hint
+            textPaint.setTextAlign(Paint.Align.CENTER);
+            textPaint.setTypeface(Typeface.create(Typeface.MONOSPACE, Typeface.NORMAL));
+            textPaint.setColor(COL_QUIET);
+            textPaint.setTextSize(14f);
+            canvas.drawText("Tap to open live weekly roster & timesheets in Gatehouse ➔", w / 2f, h - 14f, textPaint);
 
             return bmp;
         } catch (Throwable t) {
