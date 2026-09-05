@@ -62,8 +62,8 @@ public class RosterWidgetProvider extends AppWidgetProvider {
         int imgId = context.getResources().getIdentifier("widget_roster_board_img", "id", pkg);
 
         // 1. Fetch Deputy Roster
-        DeputyApi api = new DeputyApi(context);
-        DeputyApi.DeputyRosterResult roster = api.loadCachedResult();
+        RosterProvider api = Rostering.create(context);
+        RosterProvider.Result roster = api.loadCachedResult();
         if (roster == null) {
             roster = api.createSampleFallback();
         }
@@ -88,7 +88,7 @@ public class RosterWidgetProvider extends AppWidgetProvider {
         appWidgetManager.updateAppWidget(appWidgetId, views);
     }
 
-    private static Bitmap renderCleanRosterBitmap(Context context, int w, int h, DeputyApi.DeputyRosterResult roster) {
+    private static Bitmap renderCleanRosterBitmap(Context context, int w, int h, RosterProvider.Result roster) {
         try {
             Bitmap bmp = Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888);
             Canvas canvas = new Canvas(bmp);
@@ -142,14 +142,14 @@ public class RosterWidgetProvider extends AppWidgetProvider {
             // 2. Identify Today's Shifts for User vs Site
             String currentUserName = (roster != null && roster.userName != null) ? roster.userName.trim() : "Lochran Doherty";
             
-            DeputyApi.DeputyShift myTodayShift = null;
-            DeputyApi.DeputyShift myNextShift = null;
-            List<DeputyApi.DeputyShift> todaySiteShifts = new ArrayList<>();
-            List<DeputyApi.DeputyShift> upcomingShifts = new ArrayList<>();
+            RosterProvider.Shift myTodayShift = null;
+            RosterProvider.Shift myNextShift = null;
+            List<RosterProvider.Shift> todaySiteShifts = new ArrayList<>();
+            List<RosterProvider.Shift> upcomingShifts = new ArrayList<>();
 
             if (roster != null && roster.weekShifts != null) {
                 Calendar cShift = Calendar.getInstance();
-                for (DeputyApi.DeputyShift s : roster.weekShifts) {
+                for (RosterProvider.Shift s : roster.weekShifts) {
                     cShift.setTimeInMillis(s.startTs * 1000L);
                     boolean isSameDay = (cal.get(Calendar.YEAR) == cShift.get(Calendar.YEAR) &&
                                          cal.get(Calendar.DAY_OF_YEAR) == cShift.get(Calendar.DAY_OF_YEAR));
@@ -247,10 +247,10 @@ public class RosterWidgetProvider extends AppWidgetProvider {
                 // Who is working today
                 String onDutyStr = "On-Duty Guards: ";
                 if (!todaySiteShifts.isEmpty()) {
-                    DeputyApi.DeputyShift s1 = todaySiteShifts.get(0);
+                    RosterProvider.Shift s1 = todaySiteShifts.get(0);
                     onDutyStr = s1.guardName + " (" + s1.getFormattedHoursRange() + ")";
                     if (todaySiteShifts.size() > 1) {
-                        DeputyApi.DeputyShift s2 = todaySiteShifts.get(1);
+                        RosterProvider.Shift s2 = todaySiteShifts.get(1);
                         onDutyStr += " · " + s2.guardName;
                     }
                 } else {
@@ -316,7 +316,7 @@ public class RosterWidgetProvider extends AppWidgetProvider {
                 String guardLbl = fallbackUpcoming[i][2];
 
                 if (i < upcomingShifts.size()) {
-                    DeputyApi.DeputyShift us = upcomingShifts.get(i);
+                    RosterProvider.Shift us = upcomingShifts.get(i);
                     dayLbl = us.getDayDisplayLabel().toUpperCase(Locale.US);
                     timeLbl = us.getFormattedHoursRange();
                     guardLbl = (us.guardName != null && !us.guardName.isEmpty() ? us.guardName : "Officer") + " · Security";
@@ -364,10 +364,10 @@ public class RosterWidgetProvider extends AppWidgetProvider {
             Intent i = new Intent("au.com.dss.gatehouse.ACTION_TOGGLE_TORCH");
             context.sendBroadcast(i);
         } else if (ACTION_SYNC_DEPUTY.equals(action)) {
-            DeputyApi api = new DeputyApi(context);
-            api.syncRoster(new DeputyApi.ApiCallback<DeputyApi.DeputyRosterResult>() {
+            RosterProvider api = Rostering.create(context);
+            api.syncRoster(new RosterProvider.Callback<RosterProvider.Result>() {
                 @Override
-                public void onSuccess(DeputyApi.DeputyRosterResult result) {
+                public void onSuccess(RosterProvider.Result result) {
                     AppWidgetManager mgr = AppWidgetManager.getInstance(context);
                     ComponentName cn = new ComponentName(context, RosterWidgetProvider.class);
                     int[] ids = mgr.getAppWidgetIds(cn);

@@ -1,0 +1,8 @@
+Gatehouse type roles (loaded by Fonts.java, each with a system fallback):
+  Sora[wght].ttf              display: the time and the site name
+  IBMPlexSans-Regular.ttf     text: everything you read
+  IBMPlexSans-Medium.ttf
+  IBMPlexSans-SemiBold.ttf
+  IBMPlexMono-Regular.ttf     mono: everything you measure
+  IBMPlexMono-Medium.ttf
+Both families are SIL Open Font License 1.1; ship OFL.txt alongside.

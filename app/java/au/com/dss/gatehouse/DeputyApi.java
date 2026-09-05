@@ -36,7 +36,7 @@ import java.util.concurrent.Executors;
  * Supports token auth, live roster/timesheet fetching, SharedPreferences persistence,
  * and robust offline caching for reliable offline gatehouse operation.
  */
-public class DeputyApi {
+public class DeputyApi implements RosterProvider {
     private static final String TAG = "DeputyApi";
     public static final String DEFAULT_BASE_URL = "https://1293b203030511.au.deputy.com/api/v1";
     public static final String DEFAULT_TOKEN = "f98c9fec2247dccb074ee42f10346e0e";
@@ -51,125 +51,6 @@ public class DeputyApi {
     private final ExecutorService executor;
     private final Handler mainHandler;
 
-    public interface ApiCallback<T> {
-        void onSuccess(T result);
-        void onError(String errorMessage);
-    }
-
-    public static class DeputyShift {
-        public int id;
-        public int employeeId;
-        public String guardName = "";
-        public long startTs; // Unix epoch in seconds
-        public long endTs;   // Unix epoch in seconds
-        public double totalHours;
-        public String operationalUnit = "Guard Hut";
-        public String status = "CONFIRMED"; // ACTIVE, CONFIRMED, DONE, SCHEDULED, REST, OPEN
-        public boolean isCurrentGuard = false;
-        public boolean isLiveNow = false;
-        public String notes = "";
-        public String dateString = ""; // YYYY-MM-DD
-
-        // Coworker & Joint Overlap Telemetry
-        public boolean hasCoworkerOverlap = false;
-        public String coworkerName = "";
-        public String coworkerOperationalUnit = "";
-        public long coworkerStartTs = 0L;
-        public long coworkerEndTs = 0L;
-        public double overlapHours = 0.0;
-
-        // Security Award MA000115 & Rates
-        public double baseHourlyRate = 31.85; // Level 3 Security Officer
-        public double effectiveHourlyRate = 36.63; // 15% Night Loading
-        public String awardRateTag = "+15% Night Loading (MA000115)";
-        public double estimatedGrossPay = 439.56; // 12h @ $36.63
-
-        // Fatigue & Health Pacer
-        public double restHoursPrior = 14.5;
-        public boolean isFatigueCompliant = true; // >= 10h break rule
-
-        // WHS Shift Weather Outlook
-        public String shiftWeatherSummary = "21.4°C · SSE 14km/h · ⚡ Clear · 🧊 No Hail";
-
-        // Open Shift Claiming
-        public boolean isOpenShift = false;
-
-        public String getFormattedHoursRange() {
-            if (startTs <= 0 || endTs <= 0) return "18:00 – 06:00 (12.0h)";
-            SimpleDateFormat sdf = new SimpleDateFormat("HH:mm", Locale.US);
-            String sStr = sdf.format(new Date(startTs * 1000L));
-            String eStr = sdf.format(new Date(endTs * 1000L));
-            double h = totalHours > 0 ? totalHours : ((endTs - startTs) / 3600.0);
-            return String.format(Locale.US, "%s – %s (%.1fh)", sStr, eStr, h);
-        }
-
-        public String getDayDisplayLabel() {
-            if (startTs <= 0) return dateString;
-            long nowSec = System.currentTimeMillis() / 1000L;
-            
-            SimpleDateFormat df = new SimpleDateFormat("EEE dd MMM", Locale.US);
-            String base = df.format(new Date(startTs * 1000L));
-
-            Calendar cNow = Calendar.getInstance();
-            Calendar cShift = Calendar.getInstance();
-            cShift.setTimeInMillis(startTs * 1000L);
-
-            if (cNow.get(Calendar.YEAR) == cShift.get(Calendar.YEAR) &&
-                cNow.get(Calendar.DAY_OF_YEAR) == cShift.get(Calendar.DAY_OF_YEAR)) {
-                return "Tonight (" + base + ")";
-            }
-            cNow.add(Calendar.DAY_OF_YEAR, 1);
-            if (cNow.get(Calendar.YEAR) == cShift.get(Calendar.YEAR) &&
-                cNow.get(Calendar.DAY_OF_YEAR) == cShift.get(Calendar.DAY_OF_YEAR)) {
-                return "Tomorrow (" + base + ")";
-            }
-            return base;
-        }
-    }
-
-    public static class DeputyDocument {
-        public String id;
-        public String title;
-        public String category; // "SOP", "EMERGENCY", "WHS", "LICENCE", "SITE_MAP"
-        public String categoryLabel;
-        public String icon;
-        public String updatedDate;
-        public String author;
-        public String summary;
-        public String contentMarkdown;
-        public boolean isMandatory;
-        public boolean isAttested;
-        public long attestedTs;
-
-        public DeputyDocument(String id, String title, String category, String categoryLabel, String icon,
-                              String updatedDate, String author, String summary, String contentMarkdown, boolean isMandatory) {
-            this.id = id;
-            this.title = title;
-            this.category = category;
-            this.categoryLabel = categoryLabel;
-            this.icon = icon;
-            this.updatedDate = updatedDate;
-            this.author = author;
-            this.summary = summary;
-            this.contentMarkdown = contentMarkdown;
-            this.isMandatory = isMandatory;
-            this.isAttested = false;
-            this.attestedTs = 0L;
-        }
-    }
-
-    public static class DeputyRosterResult {
-        public boolean isLive = false;
-        public long syncTimestamp = 0L;
-        public String statusMessage = "";
-        public String userName = "Lochran Doherty";
-        public String companyName = "Hume Doors & Timber (Kingston)";
-        public List<DeputyShift> weekShifts = new ArrayList<>();
-        public DeputyShift activeShift = null;
-        public List<DeputyShift> onDutyGuards = new ArrayList<>();
-        public DeputyShift nextRelief = null;
-        public List<DeputyDocument> documents = new ArrayList<>();
-    }
 
     public DeputyApi(Context context) {
         this.context = context.getApplicationContext();
@@ -207,10 +88,20 @@ public class DeputyApi {
         return t != null && !t.isEmpty();
     }
 
+    @Override
+    public String providerName() {
+        return "Deputy";
+    }
+
+    @Override
+    public boolean isConfigured() {
+        return hasToken();
+    }
+
     /**
      * Test connection to Deputy API with the specified or stored token.
      */
-    public void testConnection(final String testToken, final ApiCallback<String> callback) {
+    public void testConnection(final String testToken, final RosterProvider.Callback<String> callback) {
         executor.execute(new Runnable() {
             @Override
             public void run() {
@@ -238,14 +129,14 @@ public class DeputyApi {
      * Synchronize Roster and Timesheet data from Deputy API.
      * If network fails or token is missing, falls back seamlessly to cached/fallback data.
      */
-    public void syncRoster(final ApiCallback<DeputyRosterResult> callback) {
+    public void syncRoster(final RosterProvider.Callback<RosterProvider.Result> callback) {
         executor.execute(new Runnable() {
             @Override
             public void run() {
                 final String token = getToken();
                 if (token.isEmpty()) {
                     // Return cached or sample data with token-needed note
-                    DeputyRosterResult cached = loadCachedResult();
+                    RosterProvider.Result cached = loadCachedResult();
                     if (cached == null) cached = createSampleFallback();
                     cached.isLive = false;
                     cached.statusMessage = "API Token not configured. Using cached roster.";
@@ -308,8 +199,8 @@ public class DeputyApi {
 
                     JSONArray timesheetArray = requestArray("POST", "/resource/Timesheet/QUERY", tsQuery, token);
 
-                    // 3. Parse into DeputyRosterResult
-                    DeputyRosterResult result = parseRosterAndTimesheets(rosterArray, timesheetArray);
+                    // 3. Parse into RosterProvider.Result
+                    RosterProvider.Result result = parseRosterAndTimesheets(rosterArray, timesheetArray);
                     result.isLive = true;
                     result.syncTimestamp = System.currentTimeMillis();
                     result.statusMessage = "Live Deputy Roster Synced";
@@ -320,7 +211,7 @@ public class DeputyApi {
                     postSuccess(callback, result);
                 } catch (Exception e) {
                     Log.w(TAG, "Live sync failed, loading cached data: " + e.getMessage());
-                    DeputyRosterResult cached = loadCachedResult();
+                    RosterProvider.Result cached = loadCachedResult();
                     if (cached == null) cached = createSampleFallback();
                     cached.isLive = false;
                     cached.statusMessage = "Offline (Sync error: " + e.getMessage() + ")";
@@ -330,8 +221,8 @@ public class DeputyApi {
         });
     }
 
-    private DeputyRosterResult parseRosterAndTimesheets(JSONArray rosterArray, JSONArray timesheetArray) {
-        DeputyRosterResult res = new DeputyRosterResult();
+    private RosterProvider.Result parseRosterAndTimesheets(JSONArray rosterArray, JSONArray timesheetArray) {
+        RosterProvider.Result res = new RosterProvider.Result();
         long nowSec = System.currentTimeMillis() / 1000L;
 
         // Parse roster shifts
@@ -340,7 +231,7 @@ public class DeputyApi {
                 JSONObject r = rosterArray.optJSONObject(i);
                 if (r == null) continue;
 
-                DeputyShift shift = new DeputyShift();
+                RosterProvider.Shift shift = new RosterProvider.Shift();
                 shift.id = r.optInt("Id");
                 shift.employeeId = r.optInt("Employee");
                 shift.startTs = r.optLong("StartTime");
@@ -384,15 +275,15 @@ public class DeputyApi {
         }
 
         // Sort shifts by start timestamp
-        Collections.sort(res.weekShifts, new Comparator<DeputyShift>() {
+        Collections.sort(res.weekShifts, new Comparator<RosterProvider.Shift>() {
             @Override
-            public int compare(DeputyShift a, DeputyShift b) {
+            public int compare(RosterProvider.Shift a, RosterProvider.Shift b) {
                 return Long.compare(a.startTs, b.startTs);
             }
         });
 
         // Find current/active shift and next relief
-        for (DeputyShift s : res.weekShifts) {
+        for (RosterProvider.Shift s : res.weekShifts) {
             if (s.isCurrentGuard) {
                 if (s.isLiveNow || (res.activeShift == null && s.startTs >= nowSec - 7200)) {
                     res.activeShift = s;
@@ -417,14 +308,14 @@ public class DeputyApi {
                     JSONObject emp = ts.optJSONObject("EmployeeObject");
                     String guard = (emp != null) ? (emp.optString("FirstName", "") + " " + emp.optString("LastName", "")).trim() : "Officer";
                     boolean alreadyPresent = false;
-                    for (DeputyShift ods : res.onDutyGuards) {
+                    for (RosterProvider.Shift ods : res.onDutyGuards) {
                         if (ods.guardName.equalsIgnoreCase(guard)) {
                             alreadyPresent = true;
                             break;
                         }
                     }
                     if (!alreadyPresent) {
-                        DeputyShift liveTs = new DeputyShift();
+                        RosterProvider.Shift liveTs = new RosterProvider.Shift();
                         liveTs.guardName = guard;
                         liveTs.startTs = startTs;
                         liveTs.endTs = endTs > 0 ? endTs : (startTs + 43200L);
@@ -455,7 +346,7 @@ public class DeputyApi {
         }
     }
 
-    public DeputyRosterResult loadCachedResult() {
+    public RosterProvider.Result loadCachedResult() {
         String jsonStr = prefs.getString(KEY_CACHE_DATA, "");
         if (jsonStr == null || jsonStr.isEmpty()) return null;
         try {
@@ -464,7 +355,7 @@ public class DeputyApi {
             JSONArray timesheets = cache.optJSONArray("timesheets");
             long ts = cache.optLong("syncTimestamp", 0L);
 
-            DeputyRosterResult res = parseRosterAndTimesheets(roster, timesheets);
+            RosterProvider.Result res = parseRosterAndTimesheets(roster, timesheets);
             res.syncTimestamp = ts;
             res.isLive = false;
             return res;
@@ -474,8 +365,8 @@ public class DeputyApi {
         }
     }
 
-    public DeputyRosterResult createSampleFallback() {
-        DeputyRosterResult res = new DeputyRosterResult();
+    public RosterProvider.Result createSampleFallback() {
+        RosterProvider.Result res = new RosterProvider.Result();
         res.isLive = false;
         res.syncTimestamp = System.currentTimeMillis();
         res.userName = "Lochran Doherty";
@@ -532,7 +423,7 @@ public class DeputyApi {
             long sTs = sCal.getTimeInMillis() / 1000L;
             long eTs = sTs + (long)(hours * 3600L);
 
-            DeputyShift s = new DeputyShift();
+            RosterProvider.Shift s = new RosterProvider.Shift();
             s.id = 1400 + i;
             s.guardName = guard;
             s.startTs = sTs;
@@ -606,7 +497,7 @@ public class DeputyApi {
         return sb.toString();
     }
 
-    public void claimOpenShift(final int shiftId, final ApiCallback<String> callback) {
+    public void claimOpenShift(final int shiftId, final RosterProvider.Callback<String> callback) {
         executor.execute(new Runnable() {
             @Override
             public void run() {
@@ -631,13 +522,13 @@ public class DeputyApi {
     /**
      * Fetch document library from Deputy API NewsPosts/Resources or return offline preloaded suite.
      */
-    public void fetchDocuments(final ApiCallback<List<DeputyDocument>> callback) {
+    public void fetchDocuments(final RosterProvider.Callback<List<RosterProvider.Document>> callback) {
         executor.execute(new Runnable() {
             @Override
             public void run() {
                 try {
                     String token = getToken();
-                    List<DeputyDocument> docs = new ArrayList<>(getPreloadedDocuments());
+                    List<RosterProvider.Document> docs = new ArrayList<>(getPreloadedDocuments());
                     if (!token.isEmpty()) {
                         try {
                             JSONArray newsArr = requestArray("GET", "/resource/NewsPost", null, token);
@@ -650,7 +541,7 @@ public class DeputyApi {
                                     if (title.length() > 50) title = title.substring(0, 47) + "...";
                                     String content = np.optString("Content", "No content provided.");
                                     String date = np.optString("Date", "Recent");
-                                    docs.add(0, new DeputyDocument(
+                                    docs.add(0, new RosterProvider.Document(
                                             id, title, "SOP", "DEPUTY NOTICE", "📢",
                                             date, "Deputy Workplace", "Live Policy & News from Deputy",
                                             "# " + title + "\n\n" + content, false
@@ -670,11 +561,11 @@ public class DeputyApi {
         });
     }
 
-    public static List<DeputyDocument> getPreloadedDocuments() {
-        List<DeputyDocument> list = new ArrayList<>();
+    public static List<RosterProvider.Document> getPreloadedDocuments() {
+        List<RosterProvider.Document> list = new ArrayList<>();
 
         // 1. DOC-01: Security Services Industry Award 2020 - Reference
-        list.add(new DeputyDocument(
+        list.add(new RosterProvider.Document(
                 "DSS-REF-001",
                 "Security Services Industry Award 2020 — Full Text Reference",
                 "AWARD",
@@ -700,7 +591,7 @@ public class DeputyApi {
         ));
 
         // 2. DOC-02: Security Services Industry Award Pay Guide [MA000016]
-        list.add(new DeputyDocument(
+        list.add(new RosterProvider.Document(
                 "FWO-PAY-016",
                 "Security Services Industry Award Pay Guide [MA000016]",
                 "AWARD",
@@ -749,7 +640,7 @@ public class DeputyApi {
         ));
 
         // 3. DOC-03: Right to Disconnect - Reference
-        list.add(new DeputyDocument(
+        list.add(new RosterProvider.Document(
                 "DSS-REF-002",
                 "Right to Disconnect — Fair Work Ombudsman Reference",
                 "RIGHTS",
@@ -780,7 +671,7 @@ public class DeputyApi {
         ));
 
         // 4. DOC-04: National Employment Standards - Summary Reference
-        list.add(new DeputyDocument(
+        list.add(new RosterProvider.Document(
                 "DSS-REF-003",
                 "National Employment Standards (NES) — Summary Reference",
                 "FAIR_WORK",
@@ -815,7 +706,7 @@ public class DeputyApi {
         ));
 
         // 5. DOC-05: Fair Work Information Statement (FWIS)
-        list.add(new DeputyDocument(
+        list.add(new RosterProvider.Document(
                 "FWO-FWIS-2025",
                 "Fair Work Information Statement (FWIS)",
                 "FAIR_WORK",
@@ -848,7 +739,7 @@ public class DeputyApi {
         ));
 
         // 6. DOC-06: Casual Employment Information Statement (CEIS)
-        list.add(new DeputyDocument(
+        list.add(new RosterProvider.Document(
                 "FWO-CEIS-2025",
                 "Casual Employment Information Statement (CEIS)",
                 "FAIR_WORK",
@@ -875,7 +766,7 @@ public class DeputyApi {
         ));
 
         // 7. DOC-07: Worker Duties Under WHS Laws
-        list.add(new DeputyDocument(
+        list.add(new RosterProvider.Document(
                 "DSS-REF-004",
                 "Worker Duties Under WHS Laws — Safe Work Australia Reference",
                 "WHS",
@@ -901,7 +792,7 @@ public class DeputyApi {
         ));
 
         // 8. DOC-08: Bullying in the Workplace - Reference
-        list.add(new DeputyDocument(
+        list.add(new RosterProvider.Document(
                 "DSS-REF-005",
                 "Bullying in the Workplace — Fair Work Ombudsman Reference",
                 "RIGHTS",
@@ -931,7 +822,7 @@ public class DeputyApi {
         return list;
     }
 
-    private <T> void postSuccess(final ApiCallback<T> callback, final T result) {
+    private <T> void postSuccess(final RosterProvider.Callback<T> callback, final T result) {
         if (callback == null) return;
         mainHandler.post(new Runnable() {
             @Override
@@ -941,7 +832,7 @@ public class DeputyApi {
         });
     }
 
-    private <T> void postError(final ApiCallback<T> callback, final String message) {
+    private <T> void postError(final RosterProvider.Callback<T> callback, final String message) {
         if (callback == null) return;
         mainHandler.post(new Runnable() {
             @Override

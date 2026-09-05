@@ -182,6 +182,7 @@ MSYS_NO_PATHCONV=1 "$BT/aapt2.exe" link \
   -o "${W}${BS}build${BS}base.apk" \
   -I "$JARW" \
   --manifest "${W}${BS}app${BS}AndroidManifest.xml" \
+  -A "${W}${BS}app${BS}assets" \
   --version-code 126 --version-name "1.0.26" \
   --min-sdk-version 26 --target-sdk-version 35 \
   $(for fl in "$OUT"/res/*.flat; do printf "%s " "${W}${BS}build${BS}res${BS}$(basename "$fl")"; done) > build/aapt2.log 2>&1 \

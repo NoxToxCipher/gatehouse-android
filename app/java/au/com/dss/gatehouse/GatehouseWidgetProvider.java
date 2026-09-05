@@ -51,17 +51,17 @@ public class GatehouseWidgetProvider extends AppWidgetProvider {
         int imgId = context.getResources().getIdentifier("widget_chronograph_img", "id", pkg);
 
         // 1. Fetch live or cached Deputy roster
-        DeputyApi api = new DeputyApi(context);
-        DeputyApi.DeputyRosterResult roster = api.loadCachedResult();
+        RosterProvider api = Rostering.create(context);
+        RosterProvider.Result roster = api.loadCachedResult();
         if (roster == null) {
             roster = api.createSampleFallback();
         }
 
         long nowSec = System.currentTimeMillis() / 1000L;
-        DeputyApi.DeputyShift activeShift = null;
-        DeputyApi.DeputyShift nextShift = null;
+        RosterProvider.Shift activeShift = null;
+        RosterProvider.Shift nextShift = null;
         if (roster != null && roster.weekShifts != null) {
-            for (DeputyApi.DeputyShift s : roster.weekShifts) {
+            for (RosterProvider.Shift s : roster.weekShifts) {
                 if (nowSec >= s.startTs && nowSec <= s.endTs) {
                     activeShift = s;
                     break;
@@ -257,10 +257,10 @@ public class GatehouseWidgetProvider extends AppWidgetProvider {
             Intent i = new Intent("au.com.dss.gatehouse.ACTION_TOGGLE_TORCH");
             context.sendBroadcast(i);
         } else if (ACTION_SYNC_DEPUTY.equals(action)) {
-            DeputyApi api = new DeputyApi(context);
-            api.syncRoster(new DeputyApi.ApiCallback<DeputyApi.DeputyRosterResult>() {
+            RosterProvider api = Rostering.create(context);
+            api.syncRoster(new RosterProvider.Callback<RosterProvider.Result>() {
                 @Override
-                public void onSuccess(DeputyApi.DeputyRosterResult result) {
+                public void onSuccess(RosterProvider.Result result) {
                     AppWidgetManager mgr = AppWidgetManager.getInstance(context);
                     ComponentName cn = new ComponentName(context, GatehouseWidgetProvider.class);
                     int[] ids = mgr.getAppWidgetIds(cn);

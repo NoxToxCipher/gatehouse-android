@@ -23,10 +23,10 @@ public class DeputyAlarmReceiver extends BroadcastReceiver {
             return;
         }
 
-        DeputyApi api = new DeputyApi(context);
-        api.syncRoster(new DeputyApi.ApiCallback<DeputyApi.DeputyRosterResult>() {
+        RosterProvider api = Rostering.create(context);
+        api.syncRoster(new RosterProvider.Callback<RosterProvider.Result>() {
             @Override
-            public void onSuccess(DeputyApi.DeputyRosterResult result) {
+            public void onSuccess(RosterProvider.Result result) {
                 DeputyNotifier.processSyncResult(context, result);
             }
 

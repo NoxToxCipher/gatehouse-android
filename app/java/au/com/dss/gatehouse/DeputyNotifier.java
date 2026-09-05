@@ -121,7 +121,7 @@ public class DeputyNotifier {
      * Compare newly fetched shifts with previous snapshot, notify on changes,
      * and check for any shifts starting in ~12 hours to deliver weather briefings.
      */
-    public static void processSyncResult(final Context context, final DeputyApi.DeputyRosterResult result) {
+    public static void processSyncResult(final Context context, final RosterProvider.Result result) {
         if (context == null || result == null || result.weekShifts == null) return;
         // Do not spam shift notifications for offline fallback or mock cached schedules
         if (!result.isLive) return;
@@ -141,10 +141,10 @@ public class DeputyNotifier {
         });
     }
 
-    private static void checkShiftEndFuelReminders(Context context, List<DeputyApi.DeputyShift> shifts) {
+    private static void checkShiftEndFuelReminders(Context context, List<RosterProvider.Shift> shifts) {
         if (shifts == null) return;
         FuelPriceManager fpm = FuelPriceManager.getInstance(context);
-        for (DeputyApi.DeputyShift s : shifts) {
+        for (RosterProvider.Shift s : shifts) {
             if (s.endTs > 0) {
                 fpm.evaluateShiftEndFuelAlert(s.endTs, String.valueOf(s.id));
             }
@@ -155,14 +155,14 @@ public class DeputyNotifier {
     // 1. ROSTER CHANGE DETECTION & LUXURY NOTIFICATIONS
     // =========================================================================
 
-    private static void checkAndNotifyRosterChanges(Context context, List<DeputyApi.DeputyShift> newShifts) {
+    private static void checkAndNotifyRosterChanges(Context context, List<RosterProvider.Shift> newShifts) {
         SharedPreferences prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE);
         String lastDigest = prefs.getString(KEY_LAST_KNOWN_SHIFTS, null);
 
         Map<Integer, String> currentMap = new HashMap<>();
         StringBuilder currentDigestBuilder = new StringBuilder();
 
-        for (DeputyApi.DeputyShift s : newShifts) {
+        for (RosterProvider.Shift s : newShifts) {
             String sig = s.id + ":" + s.guardName + ":" + s.startTs + ":" + s.endTs + ":" + s.operationalUnit;
             currentMap.put(s.id, sig);
             currentDigestBuilder.append(sig).append(";");
@@ -198,7 +198,7 @@ public class DeputyNotifier {
         List<String> modified = new ArrayList<>();
         List<String> removed = new ArrayList<>();
 
-        for (DeputyApi.DeputyShift s : newShifts) {
+        for (RosterProvider.Shift s : newShifts) {
             if (!oldMap.containsKey(s.id)) {
                 added.add("• NEW: " + s.guardName + " · " + s.getDayDisplayLabel() + " (" + s.getFormattedHoursRange() + ")");
             } else {
@@ -303,11 +303,11 @@ public class DeputyNotifier {
     // 2. 12-HOUR PRE-SHIFT WEATHER & READINESS REMINDERS
     // =========================================================================
 
-    private static void check12HourShiftReminders(Context context, List<DeputyApi.DeputyShift> shifts) {
+    private static void check12HourShiftReminders(Context context, List<RosterProvider.Shift> shifts) {
         long nowSec = System.currentTimeMillis() / 1000L;
         SharedPreferences prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE);
 
-        for (DeputyApi.DeputyShift s : shifts) {
+        for (RosterProvider.Shift s : shifts) {
             if (s.startTs <= 0) continue;
 
             long secUntilStart = s.startTs - nowSec;
@@ -437,7 +437,7 @@ public class DeputyNotifier {
         return sb.toString().trim();
     }
 
-    private static void postLuxury12HourNotification(Context context, DeputyApi.DeputyShift shift, double hoursAway, WeatherForecast wf) {
+    private static void postLuxury12HourNotification(Context context, RosterProvider.Shift shift, double hoursAway, WeatherForecast wf) {
         try {
             NotificationManager nm = (NotificationManager) context.getSystemService(Context.NOTIFICATION_SERVICE);
             if (nm == null) return;

@@ -112,8 +112,11 @@ import java.util.regex.Matcher;
  */
 public class MainActivity extends Activity implements SensorEventListener, LocationListener {
     // 📱 DEPUTY WORKPLACE ADD-IN & PEEK & FLOW NAVIGATION
-    private DeputyApi deputyApi;
-    private DeputyApi.DeputyRosterResult latestDeputyResult;
+    private RosterProvider deputyApi;
+    // The record line (instrument): updated in place by refresh(), never rebuilt.
+    private TextView recordState, recordVerified;
+    private View recordDot;
+    private RosterProvider.Result latestDeputyResult;
     private TextView deputyStatusBadge;
     private LinearLayout deputyScheduleContainer;
     private TextView deputyClockStatus;
@@ -435,7 +438,13 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
             requestPermissions(new String[]{Manifest.permission.POST_NOTIFICATIONS}, 101);
         }
 
-        deputyApi = new DeputyApi(this);
+        // Safety-alert SMS (lightning stand-down + lone-worker welfare escalation).
+        AlertDispatcher.init(this);
+        if (checkSelfPermission(Manifest.permission.SEND_SMS) != PackageManager.PERMISSION_GRANTED) {
+            requestPermissions(new String[]{Manifest.permission.SEND_SMS}, 108);
+        }
+
+        deputyApi = Rostering.create(this);
         latestDeputyResult = deputyApi.loadCachedResult();
         if (latestDeputyResult == null) {
             latestDeputyResult = deputyApi.createSampleFallback();
@@ -2022,14 +2031,16 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
     // =========================================================================
 
     private LinearLayout buildDiagnosticsStrip() {
+        // One line, not three boxes. The green dot is the only status colour up
+        // here and it means exactly one thing: safe. The three TextViews keep
+        // their names so updateDiagnostics() carries on updating them in place.
         diagStrip = new LinearLayout(this);
         diagStrip.setOrientation(LinearLayout.HORIZONTAL);
         diagStrip.setGravity(Gravity.CENTER_VERTICAL);
-        diagStrip.setBackground(rounded(colPanel, dp(12)));
-        diagStrip.setPadding(dp(4), dp(4), dp(4), dp(4));
+        diagStrip.setPadding(dp(6), dp(8), dp(6), dp(6));
         LinearLayout.LayoutParams dsl = new LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
-        dsl.bottomMargin = dp(4);
+        dsl.bottomMargin = dp(2);
         diagStrip.setLayoutParams(dsl);
         diagStrip.setOnClickListener(new View.OnClickListener() {
             public void onClick(View v) {
@@ -2038,84 +2049,60 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
             }
         });
 
-        // 1. OLED Power Capsule
-        LinearLayout oledCap = new LinearLayout(this);
-        oledCap.setOrientation(LinearLayout.HORIZONTAL);
-        oledCap.setGravity(Gravity.CENTER);
-        oledCap.setBackground(rounded(colPanel2, dp(8)));
-        oledCap.setPadding(dp(6), dp(5), dp(6), dp(5));
-        LinearLayout.LayoutParams olp = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
-        olp.setMargins(dp(2), 0, dp(2), 0);
-        oledCap.setLayoutParams(olp);
+        View dot = new View(this);
+        LinearLayout.LayoutParams dlp = new LinearLayout.LayoutParams(dp(7), dp(7));
+        dlp.rightMargin = dp(9);
+        dot.setLayoutParams(dlp);
+        dot.setBackground(rounded(colEmerald, dp(4)));
+        diagStrip.addView(dot);
 
-        diagOledPower = new TextView(this);
-        diagOledPower.setText("⚡ 0.14W");
-        diagOledPower.setTextColor(colEmerald);
-        diagOledPower.setTextSize(10.5f);
-        diagOledPower.setTypeface(Typeface.create(Typeface.MONOSPACE, Typeface.BOLD));
-        oledCap.addView(diagOledPower);
-        diagStrip.addView(oledCap);
-
-        // 2. Kingston Weather Capsule
-        LinearLayout weatherCap = new LinearLayout(this);
-        weatherCap.setOrientation(LinearLayout.HORIZONTAL);
-        weatherCap.setGravity(Gravity.CENTER);
-        weatherCap.setBackground(rounded(colPanel2, dp(8)));
-        weatherCap.setPadding(dp(6), dp(5), dp(6), dp(5));
-        LinearLayout.LayoutParams wlp = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1.15f);
-        wlp.setMargins(dp(2), 0, dp(2), 0);
-        weatherCap.setLayoutParams(wlp);
+        TextView allClear = new TextView(this);
+        allClear.setText("All clear");
+        allClear.setTextColor(colPale);
+        allClear.setTextSize(12.5f);
+        allClear.setTypeface(Fonts.text(this, 500));
+        allClear.setPadding(0, 0, dp(8), 0);
+        diagStrip.addView(allClear);
 
         diagAmbientWeather = new TextView(this);
-        diagAmbientWeather.setText(String.format(Locale.US, "🌤️ %.1f°C", curTempC));
-        diagAmbientWeather.setTextColor(colCyan);
-        diagAmbientWeather.setTextSize(10.5f);
-        diagAmbientWeather.setTypeface(Typeface.create(Typeface.MONOSPACE, Typeface.BOLD));
-        weatherCap.addView(diagAmbientWeather);
-        diagStrip.addView(weatherCap);
+        diagAmbientWeather.setText(String.format(Locale.US, "%.1f°C", curTempC));
+        diagAmbientWeather.setTextColor(colMuted);
+        diagAmbientWeather.setTextSize(12f);
+        diagAmbientWeather.setTypeface(Fonts.text(this, 400));
+        LinearLayout.LayoutParams wlp = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
+        diagAmbientWeather.setLayoutParams(wlp);
+        diagStrip.addView(diagAmbientWeather);
 
-        // 3. Battery & Runtime Capsule
-        LinearLayout battCap = new LinearLayout(this);
-        battCap.setOrientation(LinearLayout.HORIZONTAL);
-        battCap.setGravity(Gravity.CENTER);
-        battCap.setBackground(rounded(colPanel2, dp(8)));
-        battCap.setPadding(dp(6), dp(5), dp(6), dp(5));
-        LinearLayout.LayoutParams blp = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1.15f);
-        blp.setMargins(dp(2), 0, dp(2), 0);
-        battCap.setLayoutParams(blp);
+        diagOledPower = new TextView(this);
+        diagOledPower.setText("0.14W");
+        diagOledPower.setTextColor(colQuiet);
+        diagOledPower.setTextSize(11f);
+        diagOledPower.setTypeface(Fonts.mono(this, false));
+        diagOledPower.setPadding(0, 0, dp(10), 0);
+        diagStrip.addView(diagOledPower);
 
         diagBatteryRuntime = new TextView(this);
-        diagBatteryRuntime.setText("🔋 85% · 19.1h");
-        diagBatteryRuntime.setTextColor(colAccent);
-        diagBatteryRuntime.setTextSize(10.5f);
-        diagBatteryRuntime.setTypeface(Typeface.create(Typeface.MONOSPACE, Typeface.BOLD));
-        battCap.addView(diagBatteryRuntime);
-        diagStrip.addView(battCap);
+        diagBatteryRuntime.setText("84% · 18.9h");
+        diagBatteryRuntime.setTextColor(colQuiet);
+        diagBatteryRuntime.setTextSize(11f);
+        diagBatteryRuntime.setTypeface(Fonts.mono(this, false));
+        diagStrip.addView(diagBatteryRuntime);
 
         boolean isTablet = getResources().getConfiguration().smallestScreenWidthDp >= 600;
         if (isTablet) {
-            LinearLayout depCap = new LinearLayout(this);
-            depCap.setOrientation(LinearLayout.HORIZONTAL);
-            depCap.setGravity(Gravity.CENTER);
-            depCap.setBackground(rounded(0x3313C5BE, dp(8)));
-            depCap.setPadding(dp(8), dp(5), dp(8), dp(5));
-            LinearLayout.LayoutParams dlp = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1.25f);
-            dlp.setMargins(dp(2), 0, dp(2), 0);
-            depCap.setLayoutParams(dlp);
-
             TextView depTv = new TextView(this);
-            depTv.setText("📖 DEPUTY ROSTER");
-            depTv.setTextColor(0xFF13C5BE);
-            depTv.setTextSize(10.5f);
-            depTv.setTypeface(Typeface.create(Typeface.MONOSPACE, Typeface.BOLD));
-            depCap.addView(depTv);
-            depCap.setOnClickListener(new View.OnClickListener() {
+            depTv.setText("Roster");
+            depTv.setTextColor(colAccent);
+            depTv.setTextSize(11f);
+            depTv.setTypeface(Fonts.mono(this, true));
+            depTv.setPadding(dp(12), 0, 0, 0);
+            depTv.setOnClickListener(new View.OnClickListener() {
                 public void onClick(View v) {
                     hapticHeavyClick();
                     openDeputy(true);
                 }
             });
-            diagStrip.addView(depCap);
+            diagStrip.addView(depTv);
         }
 
         return diagStrip;
@@ -2132,11 +2119,11 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
                 float estHours = (batteryPct / 100f) * 22.5f;
 
                 if (diagBatteryRuntime != null) {
-                    diagBatteryRuntime.setText(String.format(Locale.US, "🔋 %d%% · %.1fh", (int) batteryPct, estHours));
+                    diagBatteryRuntime.setText(String.format(Locale.US, "%d%% · %.1fh", (int) batteryPct, estHours));
                 }
             }
             if (diagAmbientWeather != null) {
-                diagAmbientWeather.setText(String.format(Locale.US, "🌤️ %.1f°C", curTempC));
+                diagAmbientWeather.setText(String.format(Locale.US, "%.1f°C", curTempC));
             }
         } catch (Exception e) {}
     }
@@ -2962,50 +2949,18 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
     private LinearLayout buildChronographSection() {
         LinearLayout container = new LinearLayout(this);
         container.setOrientation(LinearLayout.VERTICAL);
-        container.setBackground(rounded(colPanel, dp(18)));
-        container.setPadding(dp(16), dp(16), dp(16), dp(16));
+        // The hero. No card, no title bar, no chip: the ring sits alone on the
+        // ground, and it is the only brass on the screen apart from the nav.
+        container.setPadding(dp(8), dp(2), dp(8), dp(2));
         LinearLayout.LayoutParams clp = new LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
-        clp.topMargin = dp(10);
-        clp.bottomMargin = dp(8);
+        clp.topMargin = dp(4);
+        clp.bottomMargin = dp(2);
         container.setLayoutParams(clp);
 
-        // 1. Header Bar
-        LinearLayout top = new LinearLayout(this);
-        top.setOrientation(LinearLayout.HORIZONTAL);
-        top.setGravity(Gravity.CENTER_VERTICAL);
-        top.setPadding(0, 0, 0, dp(8));
-
-        TextView title = new TextView(this);
-        title.setText("⏱️ SHIFT CHRONOGRAPH");
-        title.setTextColor(colQuiet);
-        title.setTextSize(10.5f);
-        title.setTypeface(Typeface.DEFAULT_BOLD);
-        title.setLetterSpacing(0.12f);
-        LinearLayout.LayoutParams tl = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
-        title.setLayoutParams(tl);
-        top.addView(title);
-
-        TextView tag = new TextView(this);
-        tag.setText("SOLAR NIGHT SWEEP 🛰️");
-        tag.setTextColor(colAccent);
-        tag.setTextSize(9);
-        tag.setTypeface(Typeface.MONOSPACE);
-        tag.setPadding(dp(7), dp(3), dp(7), dp(3));
-        tag.setBackground(rounded(colPanel2, dp(6)));
-        tag.setOnClickListener(new View.OnClickListener() {
-            public void onClick(View v) {
-                hapticHeavyClick();
-                showSatelliteRadarDialog();
-            }
-        });
-        top.addView(tag);
-        container.addView(top);
-
-        // 2. High-Precision Dual-Arc Dial View
         chronographView = new ChronographView(this);
         LinearLayout.LayoutParams cvl = new LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT, dp(200));
+                LinearLayout.LayoutParams.MATCH_PARENT, dp(244));
         chronographView.setLayoutParams(cvl);
         chronographView.setOnClickListener(new View.OnClickListener() {
             public void onClick(View v) {
@@ -3015,11 +2970,7 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
         });
         container.addView(chronographView);
 
-        // 3. 3-Pill Telemetry Deck (Cleanly Separated Below the Dial)
-        LinearLayout deck = new LinearLayout(this);
-        deck.setOrientation(LinearLayout.HORIZONTAL);
-        deck.setPadding(0, dp(10), 0, 0);
-
+        // The same three figures as one line under the ring, no tiles.
         int nowMin = nowMinutes();
         int currentMinWrapped = nowMin % 1440;
         if (currentMinWrapped < 12 * 60) currentMinWrapped += 1440;
@@ -3028,14 +2979,227 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
 
         long elapsedWelfareMs = SystemClock.elapsedRealtime() - lastActivityTimeMs;
         long remainMins = Math.max(0, (WELFARE_INTERVAL_MS - elapsedWelfareMs) / 60000L);
+        int welfareDot = remainMins < 20 ? colCrimson : (remainMins < 40 ? 0xFFFFB020 : colEmerald);
 
-        deck.addView(chronoTelemetryCard("🌅 FIRST LIGHT", "05:41 AM", "Kingston Twilight", colCyan));
-        deck.addView(chronoTelemetryCard("🦺 WELFARE TIMER", remainMins + "m SAFE", "Tap to Reset", remainMins < 20 ? colCrimson : colEmerald));
-        deck.addView(chronoTelemetryCard("🔒 SHIFT PROGRESS", pct + "% DONE", "18:00 → 06:00", colAccent));
-
-        container.addView(deck);
+        LinearLayout line = new LinearLayout(this);
+        line.setOrientation(LinearLayout.HORIZONTAL);
+        line.setPadding(0, dp(6), 0, dp(10));
+        line.addView(instrumentStat("First light", "05:41", 0, false));
+        line.addView(instrumentStat("Welfare", remainMins + "m", welfareDot, true));
+        line.addView(instrumentStat("Progress", pct + "%", 0, true));
+        container.addView(line);
 
         return container;
+    }
+
+    /** One quiet figure for the stat line: tiny mono label over a mono value. */
+    private View instrumentStat(String label, String value, int dotColor, boolean leftRule) {
+        LinearLayout col = new LinearLayout(this);
+        col.setOrientation(LinearLayout.VERTICAL);
+        col.setGravity(Gravity.CENTER);
+        LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
+        col.setLayoutParams(lp);
+        TextView k = new TextView(this);
+        k.setText(label.toUpperCase(Locale.US));
+        k.setTextColor(colQuiet);
+        k.setTextSize(8.5f);
+        k.setLetterSpacing(0.14f);
+        k.setTypeface(Fonts.mono(this, false));
+        col.addView(k);
+
+        LinearLayout vrow = new LinearLayout(this);
+        vrow.setOrientation(LinearLayout.HORIZONTAL);
+        vrow.setGravity(Gravity.CENTER_VERTICAL);
+        vrow.setPadding(0, dp(4), 0, 0);
+        if (dotColor != 0) {
+            View dot = new View(this);
+            LinearLayout.LayoutParams dlp = new LinearLayout.LayoutParams(dp(6), dp(6));
+            dlp.rightMargin = dp(6);
+            dot.setLayoutParams(dlp);
+            dot.setBackground(rounded(dotColor, dp(3)));
+            vrow.addView(dot);
+        }
+        TextView v = new TextView(this);
+        v.setText(value);
+        v.setTextColor(colPale);
+        v.setTextSize(15f);
+        v.setTypeface(Fonts.mono(this, true));
+        vrow.addView(v);
+        col.addView(vrow);
+
+        col.setOnClickListener(new View.OnClickListener() {
+            public void onClick(View x) {
+                hapticClick();
+                showChronographBreakdownDialog();
+            }
+        });
+
+        if (!leftRule) return col;
+        // Wrap with a 1dp hairline on the left so the three figures read as one row.
+        LinearLayout wrap = new LinearLayout(this);
+        wrap.setOrientation(LinearLayout.HORIZONTAL);
+        wrap.setLayoutParams(new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f));
+        View hair = new View(this);
+        LinearLayout.LayoutParams hlp = new LinearLayout.LayoutParams(dp(1), dp(28));
+        hlp.gravity = Gravity.CENTER_VERTICAL;
+        hair.setLayoutParams(hlp);
+        hair.setBackgroundColor(colLineSubtle);
+        wrap.addView(hair);
+        col.setLayoutParams(new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f));
+        wrap.addView(col);
+        return wrap;
+    }
+
+    /** A hairline-outlined, transparent, rippling surface for buttons and tiles. */
+    private android.graphics.drawable.Drawable hairlinePressable(int radius) {
+        GradientDrawable g = new GradientDrawable();
+        g.setColor(Color.TRANSPARENT);
+        g.setStroke(dp(1), colLineSubtle);
+        g.setCornerRadius(radius);
+        GradientDrawable mask = new GradientDrawable();
+        mask.setColor(Color.WHITE);
+        mask.setCornerRadius(radius);
+        return new android.graphics.drawable.RippleDrawable(
+                android.content.res.ColorStateList.valueOf(colAccentSoft), g, mask);
+    }
+
+    /** A 1dp divider for lists that sit on the ground instead of in a card. */
+    private GradientDrawable hairlineDivider() {
+        GradientDrawable d = new GradientDrawable();
+        d.setColor(colLineSubtle);
+        d.setSize(0, dp(1));
+        return d;
+    }
+
+    /** The record as one sentence. The hash lives behind the tap. */
+    private LinearLayout recordRow() {
+        LinearLayout row = new LinearLayout(this);
+        row.setOrientation(LinearLayout.HORIZONTAL);
+        row.setGravity(Gravity.CENTER_VERTICAL);
+        row.setPadding(dp(16), dp(11), dp(12), dp(11));
+        row.setBackground(pressable(Color.TRANSPARENT, dp(8)));
+
+        recordDot = new View(this);
+        LinearLayout.LayoutParams dlp = new LinearLayout.LayoutParams(dp(7), dp(7));
+        dlp.rightMargin = dp(9);
+        recordDot.setLayoutParams(dlp);
+        recordDot.setBackground(rounded(colEmerald, dp(4)));
+        row.addView(recordDot);
+
+        TextView t = new TextView(this);
+        t.setText("Record sealed chain");
+        t.setTextColor(colPale);
+        t.setTextSize(12.5f);
+        t.setTypeface(Fonts.text(this, 500));
+        t.setPadding(0, 0, dp(8), 0);
+        row.addView(t);
+
+        recordState = new TextView(this);
+        recordState.setText("0 entries · open");
+        recordState.setTextColor(colMuted);
+        recordState.setTextSize(11.5f);
+        recordState.setTypeface(Fonts.mono(this, false));
+        recordState.setLayoutParams(new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f));
+        row.addView(recordState);
+
+        recordVerified = new TextView(this);
+        recordVerified.setText("verified");
+        recordVerified.setTextColor(colEmerald);
+        recordVerified.setTextSize(11f);
+        recordVerified.setTypeface(Fonts.mono(this, false));
+        row.addView(recordVerified);
+
+        TextView chev = new TextView(this);
+        chev.setText("›");
+        chev.setTextColor(colQuiet);
+        chev.setTextSize(20f);
+        chev.setPadding(dp(10), 0, 0, dp(2));
+        row.addView(chev);
+
+        row.setOnClickListener(new View.OnClickListener() {
+            public void onClick(View v) {
+                hapticClick();
+                showRecordHashSheet();
+            }
+        });
+        return row;
+    }
+
+    private void showRecordHashSheet() {
+        boolean ok = Core.verified() == 1;
+        LinearLayout box = dialogContainer("Record chain", ok ? "VERIFIED" : "BROKEN", ok ? colEmerald : colCrimson);
+        TextView head = new TextView(this);
+        head.setText("HEAD\n" + Core.head()
+                + "\n\nEntries " + Core.entryCount() + " · " + (Core.isSealed() == 1 ? "sealed" : "open")
+                + "\nEncoding v" + Core.encodingVersion() + " · archive v" + Core.archiveVersion());
+        head.setTextColor(colPale);
+        head.setTextSize(12f);
+        head.setTypeface(Fonts.mono(this, false));
+        head.setLineSpacing(0, 1.25f);
+        box.addView(head);
+        createDialogSheet(box).show();
+    }
+
+    /** The brass plate: a hairline that fades in from either edge. */
+    private View brassHairline() {
+        View v = new View(this);
+        LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT, dp(1));
+        lp.setMargins(dp(26), dp(2), dp(26), dp(2));
+        v.setLayoutParams(lp);
+        GradientDrawable g = new GradientDrawable(GradientDrawable.Orientation.LEFT_RIGHT,
+                new int[]{0x00000000, colAccent, 0x00000000});
+        v.setBackground(g);
+        return v;
+    }
+
+    /** The site as a row of text, not a card. Tap opens the full header sheet. */
+    private LinearLayout siteRow() {
+        LinearLayout row = new LinearLayout(this);
+        row.setOrientation(LinearLayout.HORIZONTAL);
+        row.setGravity(Gravity.CENTER_VERTICAL);
+        row.setPadding(dp(16), dp(12), dp(12), dp(12));
+
+        LinearLayout col = new LinearLayout(this);
+        col.setOrientation(LinearLayout.VERTICAL);
+        col.setLayoutParams(new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f));
+
+        TextView site = new TextView(this);
+        site.setText("Hume Doors & Timber, Kingston");
+        site.setTextColor(colPale);
+        site.setTextSize(15f);
+        site.setTypeface(Fonts.display(this, false));
+        col.addView(site);
+
+        LicenceVerificationManager.LicenceStatus lic = LicenceVerificationManager.getLicenceStatus(this);
+        TextView meta = new TextView(this);
+        meta.setText("Officer " + getActiveGuardOnShiftName()
+                + " · Lic " + lic.licenceNumber + (lic.daysRemaining > 0 ? " current" : " expired")
+                + " · " + getHutPhoneHardwareTag());
+        meta.setTextColor(colMuted);
+        meta.setTextSize(11f);
+        meta.setTypeface(Fonts.mono(this, false));
+        meta.setMaxLines(2);
+        meta.setEllipsize(android.text.TextUtils.TruncateAt.END);
+        meta.setLineSpacing(0, 1.2f);
+        meta.setPadding(0, dp(3), 0, 0);
+        col.addView(meta);
+        row.addView(col);
+
+        TextView chev = new TextView(this);
+        chev.setText("›");
+        chev.setTextColor(colQuiet);
+        chev.setTextSize(20f);
+        chev.setPadding(dp(10), 0, 0, dp(2));
+        row.addView(chev);
+
+        row.setOnClickListener(new View.OnClickListener() {
+            public void onClick(View v) {
+                hapticClick();
+                createDialogSheet(headerCard()).show();
+            }
+        });
+        return row;
     }
 
     private View chronoTelemetryCard(String title, String val, String sub, int accentColor) {
@@ -3114,13 +3278,18 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
             capPaint.setStyle(Paint.Style.FILL);
 
             timeTextPaint.setTextAlign(Paint.Align.CENTER);
-            timeTextPaint.setTypeface(Typeface.create(Typeface.MONOSPACE, Typeface.BOLD));
+            timeTextPaint.setTypeface(Fonts.display(context, true));
             labelPaint.setTextAlign(Paint.Align.CENTER);
-            labelPaint.setTypeface(Typeface.create(Typeface.MONOSPACE, Typeface.BOLD));
+            labelPaint.setTypeface(Fonts.mono(context, true));
+            density = getResources().getDisplayMetrics().density;
         }
 
+        // Read once. Re-reading display metrics every frame is the pattern that
+        // is free on an emulator and a stutter on a real phone.
+        private final float density;
+
         private float dpf(float v) {
-            return v * getResources().getDisplayMetrics().density;
+            return v * density;
         }
 
         @Override
@@ -3229,18 +3398,18 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
             labelPaint.setColor(arcColor);
             labelPaint.setTextSize(dpf(9.5f));
             labelPaint.setLetterSpacing(0.08f);
-            canvas.drawText("SHIFT " + pct + "%", cx, cy - dpf(18f), labelPaint);
+            canvas.drawText("SHIFT " + pct + "%", cx, cy - dpf(27f), labelPaint);
 
-            // Center Hero Time
-            timeTextPaint.setColor(0xFFFFFFFF);
-            timeTextPaint.setTextSize(dpf(21f));
-            canvas.drawText(timeStr, cx, cy + dpf(4f), timeTextPaint);
+            // Center Hero Time, in the display face
+            timeTextPaint.setColor(colPale);
+            timeTextPaint.setTextSize(dpf(30f));
+            canvas.drawText(timeStr, cx, cy + dpf(8f), timeTextPaint);
 
             // Bottom Sub Label: Location / Timezone
             labelPaint.setColor(colQuiet);
             labelPaint.setTextSize(dpf(8.5f));
             labelPaint.setLetterSpacing(0.12f);
-            canvas.drawText("AEST · BRISBANE", cx, cy + dpf(20f), labelPaint);
+            canvas.drawText("AEST · BRISBANE", cx, cy + dpf(25f), labelPaint);
 
             // 5. Endpoint Hour Markers at Dial Baseline
             labelPaint.setTextSize(dpf(8.5f));
@@ -3736,7 +3905,7 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
             r5.addView(buildCompactToolTile("⚖️", "Security Award", "MA000016", colAccent, "Pay rates & allowances reader", new View.OnClickListener() {
                 public void onClick(View v) {
                     hapticHeavyClick();
-                    List<DeputyApi.DeputyDocument> docs = DeputyApi.getPreloadedDocuments();
+                    List<RosterProvider.Document> docs = DeputyApi.getPreloadedDocuments();
                     if (!docs.isEmpty()) {
                         showDocumentReader(docs.get(0));
                     } else {
@@ -9230,7 +9399,10 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
                 testSnap.isLightningStandDownActive = true;
                 testSnap.lightningStandDownReason = "🚨 RED STAND-DOWN: Strike 2.4 km SW (Immediate Guard Hut Shelter Required)";
                 FireRadarManager.dispatchLightningNotification(MainActivity.this, testSnap);
-                banner.setText("⚡ Test Lightning Stand-Down Alert dispatched to notification shade");
+                // Also exercise the real control-pair SMS path so delivery can be verified.
+                String smsStatus = AlertDispatcher.sendStandDown(MainActivity.this,
+                        testSnap.lightningStandDownReason, "TEST alert (manual trigger)");
+                banner.setText("⚡ Test Lightning Stand-Down dispatched · " + smsStatus);
                 banner.setVisibility(View.VISIBLE);
             }
         });
@@ -10031,21 +10203,13 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
             rclp.leftMargin = dp(10);
             rightCol.setLayoutParams(rclp);
 
-            leftCol.addView(headerCard());
             leftCol.addView(buildChronographSection());
+            leftCol.addView(brassHairline());
+            leftCol.addView(siteRow());
 
             chainBannerView = new AnimatedChainBannerView(this);
-            LinearLayout.LayoutParams cbl = new LinearLayout.LayoutParams(
-                    LinearLayout.LayoutParams.MATCH_PARENT, dp(44));
-            cbl.topMargin = dp(4);
-            cbl.bottomMargin = dp(4);
-            chainBannerView.setLayoutParams(cbl);
-            leftCol.addView(chainBannerView);
-
             pills = new LinearLayout(this);
-            pills.setOrientation(LinearLayout.HORIZONTAL);
-            pills.setPadding(0, dp(4), 0, dp(6));
-            leftCol.addView(pills);
+            leftCol.addView(recordRow());
 
             banner = new TextView(this);
             banner.setTextSize(13);
@@ -10062,7 +10226,7 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
 
             primary = new TextView(this);
             primary.setTextSize(15);
-            primary.setTypeface(Typeface.DEFAULT_BOLD);
+            primary.setTypeface(Fonts.text(this, 600));
             primary.setGravity(Gravity.CENTER);
             primary.setPadding(dp(16), dp(18), dp(16), dp(18));
             leftCol.addView(primary);
@@ -10131,9 +10295,9 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
             TextView fTitle = new TextView(this);
             fTitle.setText("FIRE & PUMP SYSTEMS · 1,200 PSI");
             fTitle.setTextColor(colQuiet);
-            fTitle.setTextSize(10);
-            fTitle.setTypeface(Typeface.DEFAULT_BOLD);
-            fTitle.setLetterSpacing(0.12f);
+            fTitle.setTextSize(9.5f);
+            fTitle.setTypeface(Fonts.mono(this, false));
+            fTitle.setLetterSpacing(0.14f);
             LinearLayout.LayoutParams ftl = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
             fTitle.setLayoutParams(ftl);
             fireHeader.addView(fTitle);
@@ -10144,17 +10308,18 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
             fireStatusChip.setTextSize(10);
             fireStatusChip.setTypeface(Typeface.MONOSPACE);
             fireStatusChip.setPadding(dp(6), dp(2), dp(6), dp(2));
-            fireStatusChip.setBackground(rounded(colPanel2, dp(6)));
+            fireStatusChip.setBackground(null);
             fireHeader.addView(fireStatusChip);
             rightCol.addView(fireHeader);
 
             fireCard = new LinearLayout(this);
             fireCard.setOrientation(LinearLayout.VERTICAL);
-            fireCard.setBackground(rounded(colPanel, dp(14)));
-            fireCard.setPadding(dp(12), dp(8), dp(12), dp(8));
+            fireCard.setPadding(dp(4), 0, dp(4), dp(4));
 
             fireList = new LinearLayout(this);
             fireList.setOrientation(LinearLayout.VERTICAL);
+            fireList.setShowDividers(LinearLayout.SHOW_DIVIDER_MIDDLE);
+            fireList.setDividerDrawable(hairlineDivider());
             for (int i = 0; i < FIRE_POINTS.length; i += 2) {
                 fireList.addView(fireCompactRow(FIRE_POINTS[i], FIRE_POINTS[i + 1], i == FIRE_POINTS.length - 2));
             }
@@ -10171,7 +10336,7 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
 
             primary = new TextView(this);
             primary.setTextSize(15);
-            primary.setTypeface(Typeface.DEFAULT_BOLD);
+            primary.setTypeface(Fonts.text(this, 600));
             primary.setGravity(Gravity.CENTER);
             primary.setPadding(dp(16), dp(18), dp(16), dp(18));
             rightCol.addView(primary);
@@ -10183,25 +10348,17 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
             LinearLayout container = new LinearLayout(this);
             container.setOrientation(LinearLayout.VERTICAL);
 
-            // Header Card (Triple tap for Sun Conure!)
-            container.addView(headerCard());
-
-            // Shift Chronograph (Solar Dual-Arc)
+            // The instrument: hero ring, brass plate, then the site as a row.
+            // The full header card (and its triple-tap) lives behind the row.
             container.addView(buildChronographSection());
+            container.addView(brassHairline());
+            container.addView(siteRow());
 
-            // Chain Banner & Hash
+            // The record as one line. The banner and chips are kept as objects
+            // (ripple calls and refresh() still touch them) but no longer shown.
             chainBannerView = new AnimatedChainBannerView(this);
-            LinearLayout.LayoutParams cbl = new LinearLayout.LayoutParams(
-                    LinearLayout.LayoutParams.MATCH_PARENT, dp(44));
-            cbl.topMargin = dp(4);
-            cbl.bottomMargin = dp(4);
-            chainBannerView.setLayoutParams(cbl);
-            container.addView(chainBannerView);
-
             pills = new LinearLayout(this);
-            pills.setOrientation(LinearLayout.HORIZONTAL);
-            pills.setPadding(0, dp(4), 0, dp(6));
-            container.addView(pills);
+            container.addView(recordRow());
 
             banner = new TextView(this);
             banner.setTextSize(13);
@@ -10245,9 +10402,9 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
             TextView fTitle = new TextView(this);
             fTitle.setText("FIRE & PUMP SYSTEMS · 1,200 PSI");
             fTitle.setTextColor(colQuiet);
-            fTitle.setTextSize(10);
-            fTitle.setTypeface(Typeface.DEFAULT_BOLD);
-            fTitle.setLetterSpacing(0.12f);
+            fTitle.setTextSize(9.5f);
+            fTitle.setTypeface(Fonts.mono(this, false));
+            fTitle.setLetterSpacing(0.14f);
             LinearLayout.LayoutParams ftl = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
             fTitle.setLayoutParams(ftl);
             fireHeader.addView(fTitle);
@@ -10258,17 +10415,18 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
             fireStatusChip.setTextSize(10);
             fireStatusChip.setTypeface(Typeface.MONOSPACE);
             fireStatusChip.setPadding(dp(6), dp(2), dp(6), dp(2));
-            fireStatusChip.setBackground(rounded(colPanel2, dp(6)));
+            fireStatusChip.setBackground(null);
             fireHeader.addView(fireStatusChip);
             container.addView(fireHeader);
 
             fireCard = new LinearLayout(this);
             fireCard.setOrientation(LinearLayout.VERTICAL);
-            fireCard.setBackground(rounded(colPanel, dp(14)));
-            fireCard.setPadding(dp(12), dp(8), dp(12), dp(8));
+            fireCard.setPadding(dp(4), 0, dp(4), dp(4));
 
             fireList = new LinearLayout(this);
             fireList.setOrientation(LinearLayout.VERTICAL);
+            fireList.setShowDividers(LinearLayout.SHOW_DIVIDER_MIDDLE);
+            fireList.setDividerDrawable(hairlineDivider());
             for (int i = 0; i < FIRE_POINTS.length; i += 2) {
                 fireList.addView(fireCompactRow(FIRE_POINTS[i], FIRE_POINTS[i + 1], i == FIRE_POINTS.length - 2));
             }
@@ -10285,7 +10443,7 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
 
             primary = new TextView(this);
             primary.setTextSize(15);
-            primary.setTypeface(Typeface.DEFAULT_BOLD);
+            primary.setTypeface(Fonts.text(this, 600));
             primary.setGravity(Gravity.CENTER);
             primary.setPadding(dp(16), dp(18), dp(16), dp(18));
             container.addView(primary);
@@ -10509,10 +10667,10 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
             container.addView(contactCard("Gatehouse Site Cell Phone", "Hume Kingston After Hours Duty Mobile", "0478352551", "DUTY PHONE", colEmerald, "📱"));
 
             // 5. Additional Deputy Rostered Guards
-            DeputyApi.DeputyRosterResult roster = new DeputyApi(this).loadCachedResult();
-            if (roster == null) roster = new DeputyApi(this).createSampleFallback();
+            RosterProvider.Result roster = Rostering.create(this).loadCachedResult();
+            if (roster == null) roster = Rostering.create(this).createSampleFallback();
             if (roster != null && roster.weekShifts != null) {
-                for (DeputyApi.DeputyShift s : roster.weekShifts) {
+                for (RosterProvider.Shift s : roster.weekShifts) {
                     if (s.guardName != null && !s.guardName.isEmpty()) {
                         String lower = s.guardName.toLowerCase(Locale.US).trim();
                         if (lower.contains("petrea") || lower.contains("lochran") || lower.contains("claren")) {
@@ -11469,9 +11627,9 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
         btnSyncDeputy.setOnClickListener(new View.OnClickListener() {
             public void onClick(View v) {
                 hapticHeavyClick();
-                new DeputyApi(MainActivity.this).syncRoster(new DeputyApi.ApiCallback<DeputyApi.DeputyRosterResult>() {
+                Rostering.create(MainActivity.this).syncRoster(new RosterProvider.Callback<RosterProvider.Result>() {
                     @Override
-                    public void onSuccess(DeputyApi.DeputyRosterResult result) {
+                    public void onSuccess(RosterProvider.Result result) {
                         runOnUiThread(new Runnable() {
                             public void run() {
                                 Toast.makeText(MainActivity.this, "✓ Deputy roster sync completed", Toast.LENGTH_SHORT).show();
@@ -11794,9 +11952,9 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
         TextView t = new TextView(this);
         t.setText(title.toUpperCase());
         t.setTextColor(colQuiet);
-        t.setTextSize(11);
-        t.setTypeface(Typeface.DEFAULT_BOLD);
-        t.setLetterSpacing(0.12f);
+        t.setTextSize(9.5f);
+        t.setTypeface(Fonts.mono(this, false));
+        t.setLetterSpacing(0.14f);
         LinearLayout.LayoutParams tl = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
         t.setLayoutParams(tl);
         row.addView(t);
@@ -11842,11 +12000,11 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
         t.setTag(name);
         t.setText(name);
         t.setTextSize(12.5f);
-        t.setTypeface(Typeface.DEFAULT_BOLD);
+        t.setTypeface(Fonts.text(this, 500));
         t.setGravity(Gravity.CENTER);
         t.setTextColor(colPale);
-        t.setPadding(dp(12), dp(14), dp(12), dp(14));
-        t.setBackground(pressable(colPanel, dp(14)));
+        t.setPadding(dp(12), dp(13), dp(12), dp(13));
+        t.setBackground(hairlinePressable(dp(12)));
         t.setOnClickListener(new View.OnClickListener() {
             public void onClick(View v) {
                 hapticClick();
@@ -11870,7 +12028,8 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
         b.setGravity(Gravity.CENTER);
         b.setTextColor(colPale);
         b.setPadding(dp(6), dp(10), dp(6), dp(10));
-        b.setBackground(pressable(colPanel, dp(12)));
+        b.setTypeface(Fonts.text(this, 500));
+        b.setBackground(hairlinePressable(dp(10)));
         b.setOnClickListener(new View.OnClickListener() {
             public void onClick(View v) {
                 hapticClick();
@@ -11921,28 +12080,28 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
         dock.setOrientation(LinearLayout.HORIZONTAL);
         dock.setPadding(0, dp(4), 0, dp(12));
 
-        dock.addView(dockButton("INCIDENT", ModernDockIconView.TYPE_INCIDENT, 0xFFEF4444, 0xFFFF6B6B, new View.OnClickListener() {
+        dock.addView(dockButton("Incident", ModernDockIconView.TYPE_INCIDENT, colCrimson, 0xFFFF8A8A, new View.OnClickListener() {
             public void onClick(View v) {
                 hapticHeavyClick();
                 showModernIncidentSheet();
             }
         }, 0));
 
-        dock.addView(dockButton("NOTES", ModernDockIconView.TYPE_NOTES, 0xFFF59E0B, 0xFFFDE047, new View.OnClickListener() {
+        dock.addView(dockButton("Note", ModernDockIconView.TYPE_NOTES, colPale, colMuted, new View.OnClickListener() {
             public void onClick(View v) {
                 hapticClick();
                 showModernNotesSheet();
             }
         }, 1));
 
-        dock.addView(dockButton("PHOTO", ModernDockIconView.TYPE_PHOTO, 0xFF06B6D4, 0xFF38BDF8, new View.OnClickListener() {
+        dock.addView(dockButton("Photo", ModernDockIconView.TYPE_PHOTO, colPale, colMuted, new View.OnClickListener() {
             public void onClick(View v) {
                 hapticDoublePulse();
                 checkAndLaunchFastCamera(null);
             }
         }, 2));
 
-        dock.addView(dockButton("VOICE", ModernDockIconView.TYPE_VOICE, 0xFF10B981, 0xFF34D399, new View.OnClickListener() {
+        dock.addView(dockButton("Voice", ModernDockIconView.TYPE_VOICE, colPale, colMuted, new View.OnClickListener() {
             public void onClick(View v) {
                 hapticDoublePulse();
                 checkAndLaunchVoice();
@@ -11956,9 +12115,8 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
         final LinearLayout btn = new LinearLayout(this);
         btn.setOrientation(LinearLayout.VERTICAL);
         btn.setGravity(Gravity.CENTER);
-        btn.setBackground(pressable(colPanel, dp(16)));
-        btn.setPadding(dp(4), dp(10), dp(4), dp(10));
-        btn.setElevation(dp(4));
+        btn.setBackground(hairlinePressable(dp(12)));
+        btn.setPadding(dp(4), dp(10), dp(4), dp(9));
 
         btn.setOnTouchListener(new View.OnTouchListener() {
             public boolean onTouch(View v, MotionEvent e) {
@@ -11984,9 +12142,9 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
 
         TextView lbl = new TextView(this);
         lbl.setText(title);
-        lbl.setTextColor(colPale);
+        lbl.setTextColor(colMuted);
         lbl.setTextSize(10f);
-        lbl.setTypeface(Typeface.create(Typeface.DEFAULT, Typeface.BOLD));
+        lbl.setTypeface(Fonts.text(this, 500));
         lbl.setLetterSpacing(0.06f);
         lbl.setPadding(0, dp(6), 0, 0);
         lbl.setGravity(Gravity.CENTER);
@@ -15243,8 +15401,8 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
     private LinearLayout buildLogbookEntranceCard() {
         LinearLayout card = new LinearLayout(this);
         card.setOrientation(LinearLayout.VERTICAL);
-        card.setBackground(rounded(colPanel, dp(16)));
-        card.setPadding(dp(16), dp(16), dp(16), dp(16));
+        card.setBackground(outlined(colLineSubtle, dp(14)));
+        card.setPadding(dp(16), dp(14), dp(16), dp(14));
         LinearLayout.LayoutParams clp = new LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
         clp.topMargin = dp(14);
@@ -15256,11 +15414,7 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
         top.setOrientation(LinearLayout.HORIZONTAL);
         top.setGravity(Gravity.CENTER_VERTICAL);
 
-        TextView icon = new TextView(this);
-        icon.setText("📖");
-        icon.setTextSize(20);
-        icon.setPadding(0, 0, dp(10), 0);
-        top.addView(icon);
+        // No emoji glyph; the title carries the row.
 
         LinearLayout textCol = new LinearLayout(this);
         textCol.setOrientation(LinearLayout.VERTICAL);
@@ -15268,26 +15422,26 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
         textCol.setLayoutParams(tclp);
 
         TextView title = new TextView(this);
-        title.setText("SITE SECURITY OCCURRENCE LOGBOOK");
+        title.setText("Occurrence logbook");
         title.setTextColor(colPale);
-        title.setTextSize(13.5f);
-        title.setTypeface(Typeface.DEFAULT_BOLD);
+        title.setTextSize(15f);
+        title.setTypeface(Fonts.display(this, false));
         textCol.addView(title);
 
         TextView sub = new TextView(this);
-        sub.setText("Multi-Shift Occurrence Ledger · Real-Time Incident Tracking");
+        sub.setText("Multi-shift ledger · live incident tracking");
         sub.setTextColor(colMuted);
-        sub.setTextSize(10.5f);
+        sub.setTextSize(11f);
+        sub.setTypeface(Fonts.text(this, 400));
         textCol.addView(sub);
         top.addView(textCol);
 
         TextView badge = new TextView(this);
-        badge.setText("4 SHIFTS ◹");
-        badge.setTextColor(colAccent);
-        badge.setTextSize(10f);
-        badge.setTypeface(Typeface.create(Typeface.MONOSPACE, Typeface.BOLD));
-        badge.setPadding(dp(8), dp(4), dp(8), dp(4));
-        badge.setBackground(rounded(colPanel2, dp(6)));
+        badge.setText(LogbookManager.getInstance(this).getAllShifts().size() + " shifts");
+        badge.setTextColor(colMuted);
+        badge.setTextSize(11f);
+        badge.setTypeface(Fonts.mono(this, false));
+        badge.setPadding(dp(8), dp(4), 0, dp(4));
         top.addView(badge);
         card.addView(top);
 
@@ -15301,9 +15455,9 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
         int totalShifts = logMgr.getAllShifts().size();
         int tonightCount = Core.entryCount();
 
-        statRow.addView(buildMiniBadge("🌙 TONIGHT", tonightCount + " LOGS", colCyan));
-        statRow.addView(buildMiniBadge("📚 ARCHIVES", (totalShifts - 1) + " PAST SHIFTS", colEmerald));
-        statRow.addView(buildMiniBadge("🕒 ACTIVE SHIFT", "18:00 → 06:00", colAccent));
+        statRow.addView(buildMiniBadge("TONIGHT", tonightCount + (tonightCount == 1 ? " log" : " logs"), colPale));
+        statRow.addView(buildMiniBadge("ARCHIVES", (totalShifts - 1) + " past shifts", colPale));
+        statRow.addView(buildMiniBadge("ACTIVE SHIFT", "18:00 – 06:00", colPale));
         card.addView(statRow);
 
         // Main Action Buttons
@@ -15311,13 +15465,13 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
         btnRow.setOrientation(LinearLayout.HORIZONTAL);
 
         TextView btnOpen = new TextView(this);
-        btnOpen.setText("📖 OPEN FULL LOGBOOK & ARCHIVES");
-        btnOpen.setTextColor(colAccentInk);
-        btnOpen.setTextSize(11.5f);
-        btnOpen.setTypeface(Typeface.create(Typeface.MONOSPACE, Typeface.BOLD));
+        btnOpen.setText("Open logbook & archives");
+        btnOpen.setTextColor(colAccent);
+        btnOpen.setTextSize(12.5f);
+        btnOpen.setTypeface(Fonts.text(this, 600));
         btnOpen.setGravity(Gravity.CENTER);
-        btnOpen.setPadding(dp(14), dp(11), dp(14), dp(11));
-        btnOpen.setBackground(pressable(colAccent, dp(10)));
+        btnOpen.setPadding(dp(14), dp(12), dp(14), dp(12));
+        btnOpen.setBackground(hairlinePressable(dp(10)));
         LinearLayout.LayoutParams blp = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1.4f);
         btnOpen.setLayoutParams(blp);
         btnOpen.setOnClickListener(new View.OnClickListener() {
@@ -15329,13 +15483,13 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
         btnRow.addView(btnOpen);
 
         TextView btnQuickNote = new TextView(this);
-        btnQuickNote.setText("📝 + NOTE");
+        btnQuickNote.setText("+ Note");
         btnQuickNote.setTextColor(colPale);
-        btnQuickNote.setTextSize(11f);
-        btnQuickNote.setTypeface(Typeface.DEFAULT_BOLD);
+        btnQuickNote.setTextSize(12.5f);
+        btnQuickNote.setTypeface(Fonts.text(this, 500));
         btnQuickNote.setGravity(Gravity.CENTER);
-        btnQuickNote.setPadding(dp(12), dp(11), dp(12), dp(11));
-        btnQuickNote.setBackground(pressable(colPanel2, dp(10)));
+        btnQuickNote.setPadding(dp(12), dp(12), dp(12), dp(12));
+        btnQuickNote.setBackground(hairlinePressable(dp(10)));
         LinearLayout.LayoutParams qlp = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 0.7f);
         qlp.leftMargin = dp(8);
         btnQuickNote.setLayoutParams(qlp);
@@ -15363,24 +15517,24 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
         LinearLayout box = new LinearLayout(this);
         box.setOrientation(LinearLayout.VERTICAL);
         box.setGravity(Gravity.CENTER);
-        box.setPadding(dp(6), dp(4), dp(6), dp(4));
-        box.setBackground(rounded(0x18FFFFFF, dp(6)));
+        box.setPadding(dp(4), dp(2), dp(4), dp(2));
         LinearLayout.LayoutParams blp = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
-        blp.rightMargin = dp(4);
         box.setLayoutParams(blp);
 
         TextView tvLbl = new TextView(this);
         tvLbl.setText(label);
-        tvLbl.setTextColor(colMuted);
-        tvLbl.setTextSize(8f);
-        tvLbl.setTypeface(Typeface.create(Typeface.MONOSPACE, Typeface.BOLD));
+        tvLbl.setTextColor(colQuiet);
+        tvLbl.setTextSize(8.5f);
+        tvLbl.setLetterSpacing(0.14f);
+        tvLbl.setTypeface(Fonts.mono(this, false));
         box.addView(tvLbl);
 
         TextView tvVal = new TextView(this);
         tvVal.setText(value);
         tvVal.setTextColor(accentCol);
-        tvVal.setTextSize(10f);
-        tvVal.setTypeface(Typeface.create(Typeface.MONOSPACE, Typeface.BOLD));
+        tvVal.setTextSize(12f);
+        tvVal.setPadding(0, dp(3), 0, 0);
+        tvVal.setTypeface(Fonts.mono(this, true));
         box.addView(tvVal);
 
         return box;
@@ -18865,6 +19019,14 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
         pills.addView(pill(isSealed ? "SEALED" : "OPEN", isSealed));
         pills.addView(pill(Core.verified() == 1 ? "✓ VERIFIED" : "BROKEN", false));
 
+        boolean chainOk = Core.verified() == 1;
+        if (recordState != null) recordState.setText(n + (n == 1 ? " entry" : " entries") + " · " + (isSealed ? "sealed" : "open"));
+        if (recordVerified != null) {
+            recordVerified.setText(chainOk ? "verified" : "broken");
+            recordVerified.setTextColor(chainOk ? colEmerald : colCrimson);
+        }
+        if (recordDot != null) recordDot.setBackground(rounded(chainOk ? colEmerald : colCrimson, dp(4)));
+
         markExternalCard(tileExternalFull, EXTERNAL_CHOICES[0]);
         markExternalCard(tileExternalHalf, EXTERNAL_CHOICES[2]);
 
@@ -18884,7 +19046,7 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
         boolean fireComplete = fireDone >= fireTotal;
         fireStatusChip.setText(fireDone + "/" + fireTotal + (fireComplete ? " COMPLETE" : " CHECKED"));
         fireStatusChip.setTextColor(fireComplete ? colEmerald : colMuted);
-        fireStatusChip.setBackground(rounded(fireComplete ? colEmeraldSoft : colPanel2, dp(6)));
+        fireStatusChip.setBackground(fireComplete ? rounded(colEmeraldSoft, dp(6)) : null);
 
         if (tonight != null) fillTonight();
 
@@ -18904,7 +19066,7 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
                 }
             });
         } else {
-            primary.setText("🔒 SEAL SHIFT & HANDOVER (06:05 AM)");
+            primary.setText("Seal shift & handover · 06:05");
             primary.setTextColor(colAccentInk);
             primary.setBackground(pressable(colAccent, dp(16)));
             primary.setOnClickListener(new View.OnClickListener() {
@@ -18989,16 +19151,17 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
         if (visits <= 0) {
             t.setText(name + "\nTap to log");
             t.setTextColor(colPale);
-            t.setBackground(pressable(colPanel, dp(16)));
+            t.setBackground(hairlinePressable(dp(12)));
             return;
         }
         int at = Core.pointLast(name);
         String elapsedStr = formatTimeSinceVisited(at);
         int col = getElapsedBadgeColor(at);
 
+        // Visited: the status colour lives in the text, the surface stays a hairline.
         t.setText(name + "  (x" + visits + ")\n" + clock(at) + " · " + elapsedStr);
         t.setTextColor(col);
-        t.setBackground(pressable(colPanel, dp(16)));
+        t.setBackground(hairlinePressable(dp(12)));
     }
 
     private void markLotBadge(TextView b, String fullName) {
@@ -19007,7 +19170,7 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
         if (visits <= 0) {
             b.setText(shortName);
             b.setTextColor(colPale);
-            b.setBackground(pressable(colPanel, dp(12)));
+            b.setBackground(hairlinePressable(dp(10)));
         } else {
             int at = Core.pointLast(fullName);
             String elapsedStr = formatTimeSinceVisited(at);
@@ -19015,7 +19178,7 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
 
             b.setText(shortName + " ✓\n" + elapsedStr);
             b.setTextColor(col);
-            b.setBackground(rounded(colPanel2, dp(12)));
+            b.setBackground(hairlinePressable(dp(10)));
         }
     }
 
@@ -19078,6 +19241,7 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
         hapticHeavyClick();
         final long promptTime = SystemClock.elapsedRealtime();
         final long autoEscalateMs = 5 * 60 * 1000L;
+        final boolean[] welfareEscalated = {false};
 
         final LinearLayout box = dialogContainer("🦺 Lone Worker Welfare Check", "WHS COMPLIANCE", colEmerald);
 
@@ -19124,6 +19288,17 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
                     if (remain <= 0) {
                         timerView.setText("⚠️ UNCONFIRMED · ESCALATING TO CONTROL ROOM");
                         timerView.setTextColor(colCrimson);
+                        if (!welfareEscalated[0]) {
+                            welfareEscalated[0] = true;
+                            String locLink = (lastKnownLocation != null)
+                                    ? String.format(Locale.US, "https://maps.google.com/?q=%.5f,%.5f",
+                                        lastKnownLocation.getLatitude(), lastKnownLocation.getLongitude())
+                                    : "";
+                            String smsStatus = AlertDispatcher.sendWelfareBreach(
+                                    MainActivity.this, "Lochran Doherty", locLink);
+                            note(Core.TOPIC_INCIDENT,
+                                    "[WELFARE ESCALATION] No response in 5 min; control alerted (" + smsStatus + ")");
+                        }
                     } else {
                         int secs = (int) (remain / 1000);
                         timerView.setText(String.format(Locale.US, "Auto-Escalating to DSS Control in %02d:%02d", secs / 60, secs % 60));
@@ -19741,9 +19916,9 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
             deputyStatusBadge.setTextColor(0xFF38BDF8);
             deputyStatusBadge.setBackground(rounded(0x2238BDF8, dp(4)));
         }
-        deputyApi.syncRoster(new DeputyApi.ApiCallback<DeputyApi.DeputyRosterResult>() {
+        deputyApi.syncRoster(new RosterProvider.Callback<RosterProvider.Result>() {
             @Override
-            public void onSuccess(DeputyApi.DeputyRosterResult result) {
+            public void onSuccess(RosterProvider.Result result) {
                 latestDeputyResult = result;
                 updateDeputyUi(result);
                 DeputyNotifier.processSyncResult(MainActivity.this, result);
@@ -19769,7 +19944,7 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
         });
     }
 
-    private void updateDeputyUi(DeputyApi.DeputyRosterResult result) {
+    private void updateDeputyUi(RosterProvider.Result result) {
         if (result == null) return;
 
         // 1. Status Badge
@@ -19830,7 +20005,7 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
         if (deputyScheduleContainer != null) {
             deputyScheduleContainer.removeAllViews();
             if (result.weekShifts != null && !result.weekShifts.isEmpty()) {
-                for (DeputyApi.DeputyShift shift : result.weekShifts) {
+                for (RosterProvider.Shift shift : result.weekShifts) {
                     deputyScheduleContainer.addView(buildDeputyShiftCard(
                             shift.getDayDisplayLabel(),
                             shift.getFormattedHoursRange(),
@@ -19922,7 +20097,7 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
                 tvFeedback.setVisibility(View.VISIBLE);
                 tvFeedback.setTextColor(0xFF38BDF8);
                 tvFeedback.setText("Testing Deputy API connection...");
-                deputyApi.testConnection(t, new DeputyApi.ApiCallback<String>() {
+                deputyApi.testConnection(t, new RosterProvider.Callback<String>() {
                     @Override
                     public void onSuccess(String msg) {
                         tvFeedback.setTextColor(0xFF10B981);
@@ -20718,7 +20893,7 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
 
         if (latestDeputyResult != null && latestDeputyResult.onDutyGuards != null && !latestDeputyResult.onDutyGuards.isEmpty()) {
             int count = 0;
-            for (DeputyApi.DeputyShift s : latestDeputyResult.onDutyGuards) {
+            for (RosterProvider.Shift s : latestDeputyResult.onDutyGuards) {
                 if (count >= 2) break;
                 String gName = s.guardName + (s.isCurrentGuard ? " (You)" : "");
                 String sub = s.operationalUnit;
@@ -21352,7 +21527,7 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
                     @Override
                     public void onClick(View v) {
                         hapticHeavyClick();
-                        deputyApi.claimOpenShift(1000 + dayIndex, new DeputyApi.ApiCallback<String>() {
+                        deputyApi.claimOpenShift(1000 + dayIndex, new RosterProvider.Callback<String>() {
                             @Override
                             public void onSuccess(String result) {
                                 banner.setText("✓ " + result);
@@ -21775,7 +21950,7 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
     // 📚 READABLE SITE POST ORDERS & DEPUTY DOCUMENT LIBRARY READER
     // =========================================================================
 
-    private List<DeputyApi.DeputyDocument> cachedDocuments = null;
+    private List<RosterProvider.Document> cachedDocuments = null;
     private String selectedDocCategory = "ALL";
     private float docReaderTextSizeSp = 14f;
 
@@ -21821,9 +21996,9 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
             @Override
             public void onClick(View v) {
                 hapticHeavyClick();
-                deputyApi.fetchDocuments(new DeputyApi.ApiCallback<List<DeputyApi.DeputyDocument>>() {
+                deputyApi.fetchDocuments(new RosterProvider.Callback<List<RosterProvider.Document>>() {
                     @Override
-                    public void onSuccess(List<DeputyApi.DeputyDocument> result) {
+                    public void onSuccess(List<RosterProvider.Document> result) {
                         cachedDocuments = result;
                         dlg.dismiss();
                         showDocumentLibraryDialog();
@@ -21904,7 +22079,7 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
                 String query = etSearch.getText().toString().trim().toLowerCase(Locale.US);
 
                 int count = 0;
-                for (final DeputyApi.DeputyDocument doc : cachedDocuments) {
+                for (final RosterProvider.Document doc : cachedDocuments) {
                     if (!"ALL".equals(selectedDocCategory) && !doc.category.equalsIgnoreCase(selectedDocCategory)) {
                         continue;
                     }
@@ -22070,7 +22245,7 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
         dlg.show();
     }
 
-    private void showDocumentReader(final DeputyApi.DeputyDocument doc) {
+    private void showDocumentReader(final RosterProvider.Document doc) {
         final Dialog dlg = new Dialog(this, android.R.style.Theme_Translucent_NoTitleBar);
         final FrameLayout root = new FrameLayout(this);
         root.setBackgroundColor(0xF0080D1A);
@@ -22725,7 +22900,9 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
 
             indRect.set(indX, indPad, indX + indW, h - indPad);
 
-            indicatorPaint.setColor(colAccent);
+            // A soft brass tint, not a solid pill: the active tab is named by
+            // its brass icon and label, so the indicator only needs to whisper.
+            indicatorPaint.setColor(colAccentSoft);
             canvas.drawRoundRect(indRect, dpf(18f), dpf(18f), indicatorPaint);
 
             if (isTabScrubbing) {
@@ -22748,7 +22925,7 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
 
                 int itemColor;
                 if (i < 3 && dist < 0.5f) {
-                    itemColor = colAccentInk;
+                    itemColor = colAccent;
                 } else {
                     itemColor = colMuted;
                 }

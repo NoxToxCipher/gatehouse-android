@@ -44,6 +44,7 @@ public class FireRadarManager {
     private static final String KEY_LAST_DANGER_RATING = "last_known_danger_rating";
     private static final String KEY_LAST_NOTIFIED_INCIDENT = "last_notified_fire_id_";
     private static final String KEY_LAST_LIGHTNING_NOTIFIED_TS = "last_lightning_alert_ts";
+    private static final String KEY_STANDDOWN_SMS_ACTIVE = "standdown_sms_active";
     private static final String KEY_LAST_HAIL_NOTIFIED_TS = "last_hail_alert_ts";
 
     public static final String KEY_LIGHTNING_PROXIMITY_KM = "lightning_thresh_proximity_km";
@@ -158,6 +159,9 @@ public class FireRadarManager {
         public String closestLightningDir = "SW";
         public boolean isLightningStandDownActive = false;
         public String lightningStandDownReason = "";
+        // True only when the strikes came from a real lightning feed. Gates the
+        // automatic stand-down SMS so placeholder strikes never text control.
+        public boolean lightningStrikesAreReal = false;
         public double proximityThresholdKm = 5.0;
         public int quantityThreshold = 2;
 
@@ -329,6 +333,11 @@ public class FireRadarManager {
                             snapshot.lightningWithin10Km.add(s);
                         }
                     }
+                    // These strikes are placeholder positions derived from a
+                    // forecast index, not a real strike feed. Leave this false
+                    // until fetchRealTimeLightningStrikes returns live geolocated
+                    // strikes; setting it true is what arms the auto stand-down SMS.
+                    snapshot.lightningStrikesAreReal = false;
 
                     // Sort lightning by closest distance
                     Collections.sort(snapshot.lightningWithin10Km, new Comparator<LightningStrike>() {
@@ -456,9 +465,25 @@ public class FireRadarManager {
                 prefs.edit().putLong(KEY_LAST_LIGHTNING_NOTIFIED_TS, now).apply();
                 dispatchLightningNotification(context, snapshot);
             }
+
+            // SMS the control pair once per stand-down episode (rising edge),
+            // and only on real strike data so placeholder strikes never text out.
+            boolean smsAlreadyActive = prefs.getBoolean(KEY_STANDDOWN_SMS_ACTIVE, false);
+            if (snapshot.lightningStrikesAreReal && !smsAlreadyActive) {
+                prefs.edit().putBoolean(KEY_STANDDOWN_SMS_ACTIVE, true).apply();
+                AlertDispatcher.sendStandDown(context, snapshot.lightningStandDownReason,
+                        String.format(Locale.US, "Closest %.1f km %s, %d strikes in 10km",
+                                snapshot.closestLightningKm, snapshot.closestLightningDir,
+                                snapshot.totalLightningStrikes));
+            }
         } else {
             snapshot.isLightningStandDownActive = false;
             snapshot.lightningStandDownReason = "All lightning activity outside active safety threshold (" + String.format(Locale.US, "%.0f km", proxThresh) + ")";
+            // Reset the edge so the next genuine episode alerts again.
+            SharedPreferences prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE);
+            if (prefs.getBoolean(KEY_STANDDOWN_SMS_ACTIVE, false)) {
+                prefs.edit().putBoolean(KEY_STANDDOWN_SMS_ACTIVE, false).apply();
+            }
         }
     }
 
