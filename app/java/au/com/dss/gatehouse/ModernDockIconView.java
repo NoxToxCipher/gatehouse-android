@@ -13,6 +13,30 @@ public class ModernDockIconView extends View {
     public static final int TYPE_NOTES = 1;
     public static final int TYPE_PHOTO = 2;
     public static final int TYPE_VOICE = 3;
+    // Tools tile icons: the instrument set, drawn in the same line weight.
+    public static final int TYPE_GEAR = 4;
+    public static final int TYPE_BOLT = 5;
+    public static final int TYPE_TORCH = 6;
+    public static final int TYPE_RADIO = 7;
+    public static final int TYPE_SIREN = 8;
+    public static final int TYPE_GAUGE = 9;
+    public static final int TYPE_COMPASS = 10;
+    public static final int TYPE_WEATHER = 11;
+    public static final int TYPE_TELESCOPE = 12;
+    public static final int TYPE_DISH = 13;
+    public static final int TYPE_SPARK = 14;
+    public static final int TYPE_FUEL = 15;
+    public static final int TYPE_IDCARD = 16;
+    public static final int TYPE_SCALES = 17;
+    public static final int TYPE_BOOKS = 18;
+
+    /** When false the icon draws with no pod of its own (for use inside a tile's box). */
+    private boolean drawPod = true;
+
+    public void setDrawPod(boolean draw) {
+        this.drawPod = draw;
+        invalidate();
+    }
 
     private int iconType = TYPE_INCIDENT;
     private int primaryColor = 0xFFEF4444;
@@ -93,12 +117,14 @@ public class ModernDockIconView extends View {
         podRect.set(podLeft, podTop, podLeft + podSize, podTop + podSize);
         float podRadius = dpf(12);
 
-        // 1. Frosted Pod Background & Subtle Border
-        podBgPaint.setColor(podBgColor);
-        canvas.drawRoundRect(podRect, podRadius, podRadius, podBgPaint);
+        // 1. Frosted Pod Background & Subtle Border (skipped inside a tile box)
+        if (drawPod) {
+            podBgPaint.setColor(podBgColor);
+            canvas.drawRoundRect(podRect, podRadius, podRadius, podBgPaint);
 
-        podBorderPaint.setColor(podBorderColor);
-        canvas.drawRoundRect(podRect, podRadius, podRadius, podBorderPaint);
+            podBorderPaint.setColor(podBorderColor);
+            canvas.drawRoundRect(podRect, podRadius, podRadius, podBorderPaint);
+        }
 
         float cx = w / 2f;
         float cy = h / 2f;
@@ -121,7 +147,245 @@ public class ModernDockIconView extends View {
             case TYPE_VOICE:
                 drawVoice(canvas, cx, cy, r);
                 break;
+            case TYPE_GEAR:      drawGear(canvas, cx, cy, r); break;
+            case TYPE_BOLT:      drawBolt(canvas, cx, cy, r); break;
+            case TYPE_TORCH:     drawTorch(canvas, cx, cy, r); break;
+            case TYPE_RADIO:     drawRadio(canvas, cx, cy, r); break;
+            case TYPE_SIREN:     drawSiren(canvas, cx, cy, r); break;
+            case TYPE_GAUGE:     drawGauge(canvas, cx, cy, r); break;
+            case TYPE_COMPASS:   drawCompass(canvas, cx, cy, r); break;
+            case TYPE_WEATHER:   drawWeather(canvas, cx, cy, r); break;
+            case TYPE_TELESCOPE: drawTelescope(canvas, cx, cy, r); break;
+            case TYPE_DISH:      drawDish(canvas, cx, cy, r); break;
+            case TYPE_SPARK:     drawSpark(canvas, cx, cy, r); break;
+            case TYPE_FUEL:      drawFuel(canvas, cx, cy, r); break;
+            case TYPE_IDCARD:    drawIdCard(canvas, cx, cy, r); break;
+            case TYPE_SCALES:    drawScales(canvas, cx, cy, r); break;
+            case TYPE_BOOKS:     drawBooks(canvas, cx, cy, r); break;
         }
+    }
+
+    /** Map a tile's emoji glyph to a drawn type, or -1 to keep the glyph. */
+    public static int typeForGlyph(String glyph) {
+        if (glyph == null) return -1;
+        String g = glyph.replace("️", "").trim();
+        switch (g) {
+            case "⚙":             return TYPE_GEAR;       // gear
+            case "⚡":             return TYPE_BOLT;       // high voltage
+            case "🔦":       return TYPE_TORCH;      // flashlight
+            case "📻":       return TYPE_RADIO;      // radio
+            case "🚨":       return TYPE_SIREN;      // police light
+            case "🎛":       return TYPE_GAUGE;      // control knobs
+            case "🧭":       return TYPE_COMPASS;    // compass
+            case "🌤":       return TYPE_WEATHER;    // sun behind small cloud
+            case "🔭":       return TYPE_TELESCOPE;  // telescope
+            case "📡":       return TYPE_DISH;       // satellite antenna
+            case "✨":             return TYPE_SPARK;      // sparkles
+            case "⛽":             return TYPE_FUEL;       // fuel pump
+            case "🪪":       return TYPE_IDCARD;     // identification card
+            case "⚖":             return TYPE_SCALES;     // scales
+            case "📚":       return TYPE_BOOKS;      // books
+            default:                   return -1;
+        }
+    }
+
+    private void prep() {
+        strokePaint.setColor(primaryColor);
+        strokePaint.setStyle(Paint.Style.STROKE);
+        strokePaint.setStrokeWidth(dpf(1.8f));
+        strokePaint.setStrokeCap(Paint.Cap.ROUND);
+        strokePaint.setStrokeJoin(Paint.Join.ROUND);
+    }
+
+    private void drawGear(Canvas c, float cx, float cy, float r) {
+        prep();
+        c.drawCircle(cx, cy, r * 0.5f, strokePaint);
+        c.drawCircle(cx, cy, r * 0.18f, strokePaint);
+        for (int i = 0; i < 8; i++) {
+            double a = Math.toRadians(i * 45);
+            float x1 = cx + (float) Math.cos(a) * r * 0.58f, y1 = cy + (float) Math.sin(a) * r * 0.58f;
+            float x2 = cx + (float) Math.cos(a) * r * 0.86f, y2 = cy + (float) Math.sin(a) * r * 0.86f;
+            c.drawLine(x1, y1, x2, y2, strokePaint);
+        }
+    }
+
+    private void drawBolt(Canvas c, float cx, float cy, float r) {
+        prep();
+        iconPath.reset();
+        iconPath.moveTo(cx + r * 0.18f, cy - r * 0.85f);
+        iconPath.lineTo(cx - r * 0.38f, cy + r * 0.08f);
+        iconPath.lineTo(cx + r * 0.04f, cy + r * 0.08f);
+        iconPath.lineTo(cx - r * 0.18f, cy + r * 0.85f);
+        iconPath.lineTo(cx + r * 0.38f, cy - r * 0.08f);
+        iconPath.lineTo(cx - r * 0.04f, cy - r * 0.08f);
+        iconPath.close();
+        c.drawPath(iconPath, strokePaint);
+    }
+
+    private void drawTorch(Canvas c, float cx, float cy, float r) {
+        prep();
+        iconPath.reset();
+        iconPath.moveTo(cx - r * 0.42f, cy - r * 0.75f);
+        iconPath.lineTo(cx + r * 0.42f, cy - r * 0.75f);
+        iconPath.lineTo(cx + r * 0.22f, cy - r * 0.15f);
+        iconPath.lineTo(cx - r * 0.22f, cy - r * 0.15f);
+        iconPath.close();
+        c.drawPath(iconPath, strokePaint);
+        RectF body = new RectF(cx - r * 0.22f, cy - r * 0.15f, cx + r * 0.22f, cy + r * 0.85f);
+        c.drawRoundRect(body, r * 0.1f, r * 0.1f, strokePaint);
+        strokePaint.setColor(accentColor);
+        c.drawLine(cx, cy - r * 0.92f, cx, cy - r * 1.0f, strokePaint);
+        c.drawLine(cx - r * 0.3f, cy - r * 0.9f, cx - r * 0.36f, cy - r * 0.98f, strokePaint);
+        c.drawLine(cx + r * 0.3f, cy - r * 0.9f, cx + r * 0.36f, cy - r * 0.98f, strokePaint);
+    }
+
+    private void drawRadio(Canvas c, float cx, float cy, float r) {
+        prep();
+        RectF box = new RectF(cx - r * 0.85f, cy - r * 0.3f, cx + r * 0.85f, cy + r * 0.7f);
+        c.drawRoundRect(box, r * 0.15f, r * 0.15f, strokePaint);
+        c.drawLine(cx + r * 0.3f, cy - r * 0.3f, cx + r * 0.8f, cy - r * 0.85f, strokePaint);
+        c.drawCircle(cx - r * 0.4f, cy + r * 0.2f, r * 0.24f, strokePaint);
+        strokePaint.setColor(accentColor);
+        c.drawLine(cx + r * 0.15f, cy + r * 0.05f, cx + r * 0.6f, cy + r * 0.05f, strokePaint);
+        c.drawLine(cx + r * 0.15f, cy + r * 0.35f, cx + r * 0.6f, cy + r * 0.35f, strokePaint);
+    }
+
+    private void drawSiren(Canvas c, float cx, float cy, float r) {
+        prep();
+        RectF dome = new RectF(cx - r * 0.55f, cy - r * 0.5f, cx + r * 0.55f, cy + r * 0.6f);
+        c.drawArc(dome, 180, 180, false, strokePaint);
+        c.drawLine(cx - r * 0.55f, cy + r * 0.05f, cx - r * 0.55f, cy + r * 0.45f, strokePaint);
+        c.drawLine(cx + r * 0.55f, cy + r * 0.05f, cx + r * 0.55f, cy + r * 0.45f, strokePaint);
+        c.drawLine(cx - r * 0.8f, cy + r * 0.45f, cx + r * 0.8f, cy + r * 0.45f, strokePaint);
+        strokePaint.setColor(accentColor);
+        c.drawLine(cx, cy - r * 0.7f, cx, cy - r * 0.95f, strokePaint);
+        c.drawLine(cx - r * 0.5f, cy - r * 0.55f, cx - r * 0.68f, cy - r * 0.75f, strokePaint);
+        c.drawLine(cx + r * 0.5f, cy - r * 0.55f, cx + r * 0.68f, cy - r * 0.75f, strokePaint);
+    }
+
+    private void drawGauge(Canvas c, float cx, float cy, float r) {
+        prep();
+        RectF arc = new RectF(cx - r * 0.85f, cy - r * 0.6f, cx + r * 0.85f, cy + r * 1.1f);
+        c.drawArc(arc, 200, 140, false, strokePaint);
+        c.drawLine(cx, cy + r * 0.25f, cx + r * 0.45f, cy - r * 0.3f, strokePaint);
+        fillPaint.setColor(accentColor);
+        c.drawCircle(cx, cy + r * 0.25f, r * 0.1f, fillPaint);
+    }
+
+    private void drawCompass(Canvas c, float cx, float cy, float r) {
+        prep();
+        c.drawCircle(cx, cy, r * 0.82f, strokePaint);
+        iconPath.reset();
+        iconPath.moveTo(cx, cy - r * 0.55f);
+        iconPath.lineTo(cx + r * 0.2f, cy);
+        iconPath.lineTo(cx, cy + r * 0.55f);
+        iconPath.lineTo(cx - r * 0.2f, cy);
+        iconPath.close();
+        c.drawPath(iconPath, strokePaint);
+        subPath.reset();
+        subPath.moveTo(cx, cy - r * 0.55f);
+        subPath.lineTo(cx + r * 0.2f, cy);
+        subPath.lineTo(cx - r * 0.2f, cy);
+        subPath.close();
+        fillPaint.setColor(accentColor);
+        c.drawPath(subPath, fillPaint);
+    }
+
+    private void drawWeather(Canvas c, float cx, float cy, float r) {
+        prep();
+        float sx = cx - r * 0.3f, sy = cy - r * 0.3f;
+        c.drawCircle(sx, sy, r * 0.28f, strokePaint);
+        for (int i = 0; i < 4; i++) {
+            double a = Math.toRadians(-90 + i * 45 - 45);
+            c.drawLine(sx + (float) Math.cos(a) * r * 0.4f, sy + (float) Math.sin(a) * r * 0.4f,
+                       sx + (float) Math.cos(a) * r * 0.58f, sy + (float) Math.sin(a) * r * 0.58f, strokePaint);
+        }
+        strokePaint.setColor(accentColor);
+        RectF cloud = new RectF(cx - r * 0.35f, cy + r * 0.05f, cx + r * 0.85f, cy + r * 0.6f);
+        c.drawRoundRect(cloud, r * 0.28f, r * 0.28f, strokePaint);
+        c.drawArc(new RectF(cx - r * 0.05f, cy - r * 0.25f, cx + r * 0.55f, cy + r * 0.35f), 180, 180, false, strokePaint);
+    }
+
+    private void drawTelescope(Canvas c, float cx, float cy, float r) {
+        prep();
+        strokePaint.setStrokeWidth(dpf(3.4f));
+        c.drawLine(cx - r * 0.55f, cy + r * 0.2f, cx + r * 0.6f, cy - r * 0.55f, strokePaint);
+        strokePaint.setStrokeWidth(dpf(1.8f));
+        c.drawLine(cx, cy - r * 0.1f, cx - r * 0.35f, cy + r * 0.85f, strokePaint);
+        c.drawLine(cx, cy - r * 0.1f, cx + r * 0.35f, cy + r * 0.85f, strokePaint);
+        strokePaint.setColor(accentColor);
+        c.drawCircle(cx + r * 0.68f, cy - r * 0.6f, r * 0.14f, strokePaint);
+    }
+
+    private void drawDish(Canvas c, float cx, float cy, float r) {
+        prep();
+        RectF bowl = new RectF(cx - r * 0.75f, cy - r * 0.75f, cx + r * 0.75f, cy + r * 0.75f);
+        c.drawArc(bowl, 130, 160, false, strokePaint);
+        c.drawLine(cx, cy + r * 0.2f, cx, cy + r * 0.8f, strokePaint);
+        c.drawLine(cx - r * 0.35f, cy + r * 0.8f, cx + r * 0.35f, cy + r * 0.8f, strokePaint);
+        strokePaint.setColor(accentColor);
+        c.drawLine(cx, cy + r * 0.1f, cx + r * 0.4f, cy - r * 0.45f, strokePaint);
+        fillPaint.setColor(accentColor);
+        c.drawCircle(cx + r * 0.45f, cy - r * 0.52f, r * 0.1f, fillPaint);
+    }
+
+    private void drawSpark(Canvas c, float cx, float cy, float r) {
+        prep();
+        RectF body = new RectF(cx - r * 0.22f, cy - r * 0.22f, cx + r * 0.22f, cy + r * 0.22f);
+        c.drawRoundRect(body, r * 0.06f, r * 0.06f, strokePaint);
+        c.drawLine(cx - r * 0.22f, cy, cx - r * 0.38f, cy, strokePaint);
+        c.drawLine(cx + r * 0.22f, cy, cx + r * 0.38f, cy, strokePaint);
+        strokePaint.setColor(accentColor);
+        c.drawRect(cx - r * 0.9f, cy - r * 0.18f, cx - r * 0.38f, cy + r * 0.18f, strokePaint);
+        c.drawRect(cx + r * 0.38f, cy - r * 0.18f, cx + r * 0.9f, cy + r * 0.18f, strokePaint);
+    }
+
+    private void drawFuel(Canvas c, float cx, float cy, float r) {
+        prep();
+        RectF pump = new RectF(cx - r * 0.6f, cy - r * 0.8f, cx + r * 0.2f, cy + r * 0.8f);
+        c.drawRoundRect(pump, r * 0.1f, r * 0.1f, strokePaint);
+        c.drawLine(cx - r * 0.75f, cy + r * 0.8f, cx + r * 0.35f, cy + r * 0.8f, strokePaint);
+        strokePaint.setColor(accentColor);
+        c.drawRect(cx - r * 0.42f, cy - r * 0.6f, cx + r * 0.02f, cy - r * 0.2f, strokePaint);
+        iconPath.reset();
+        iconPath.moveTo(cx + r * 0.2f, cy - r * 0.35f);
+        iconPath.lineTo(cx + r * 0.55f, cy - r * 0.35f);
+        iconPath.lineTo(cx + r * 0.55f, cy + r * 0.3f);
+        iconPath.lineTo(cx + r * 0.7f, cy + r * 0.3f);
+        c.drawPath(iconPath, strokePaint);
+    }
+
+    private void drawIdCard(Canvas c, float cx, float cy, float r) {
+        prep();
+        RectF card = new RectF(cx - r * 0.88f, cy - r * 0.55f, cx + r * 0.88f, cy + r * 0.55f);
+        c.drawRoundRect(card, r * 0.12f, r * 0.12f, strokePaint);
+        c.drawCircle(cx - r * 0.45f, cy - r * 0.12f, r * 0.16f, strokePaint);
+        c.drawArc(new RectF(cx - r * 0.72f, cy + r * 0.05f, cx - r * 0.18f, cy + r * 0.5f), 180, 180, false, strokePaint);
+        strokePaint.setColor(accentColor);
+        c.drawLine(cx + r * 0.05f, cy - r * 0.15f, cx + r * 0.62f, cy - r * 0.15f, strokePaint);
+        c.drawLine(cx + r * 0.05f, cy + r * 0.15f, cx + r * 0.45f, cy + r * 0.15f, strokePaint);
+    }
+
+    private void drawScales(Canvas c, float cx, float cy, float r) {
+        prep();
+        c.drawLine(cx, cy - r * 0.7f, cx, cy + r * 0.6f, strokePaint);
+        c.drawLine(cx - r * 0.4f, cy + r * 0.75f, cx + r * 0.4f, cy + r * 0.75f, strokePaint);
+        c.drawLine(cx - r * 0.7f, cy - r * 0.45f, cx + r * 0.7f, cy - r * 0.45f, strokePaint);
+        strokePaint.setColor(accentColor);
+        c.drawLine(cx - r * 0.7f, cy - r * 0.45f, cx - r * 0.7f, cy - r * 0.05f, strokePaint);
+        c.drawLine(cx + r * 0.7f, cy - r * 0.45f, cx + r * 0.7f, cy - r * 0.05f, strokePaint);
+        c.drawArc(new RectF(cx - r * 0.95f, cy - r * 0.35f, cx - r * 0.45f, cy + r * 0.25f), 0, 180, false, strokePaint);
+        c.drawArc(new RectF(cx + r * 0.45f, cy - r * 0.35f, cx + r * 0.95f, cy + r * 0.25f), 0, 180, false, strokePaint);
+    }
+
+    private void drawBooks(Canvas c, float cx, float cy, float r) {
+        prep();
+        c.drawRoundRect(new RectF(cx - r * 0.75f, cy - r * 0.55f, cx - r * 0.32f, cy + r * 0.75f), r * 0.05f, r * 0.05f, strokePaint);
+        c.drawRoundRect(new RectF(cx - r * 0.2f, cy - r * 0.78f, cx + r * 0.2f, cy + r * 0.75f), r * 0.05f, r * 0.05f, strokePaint);
+        c.drawRoundRect(new RectF(cx + r * 0.32f, cy - r * 0.5f, cx + r * 0.75f, cy + r * 0.75f), r * 0.05f, r * 0.05f, strokePaint);
+        strokePaint.setColor(accentColor);
+        c.drawLine(cx - r * 0.2f, cy - r * 0.45f, cx + r * 0.2f, cy - r * 0.45f, strokePaint);
+        c.drawLine(cx - r * 0.75f, cy - r * 0.25f, cx - r * 0.32f, cy - r * 0.25f, strokePaint);
     }
 
     private void drawIncident(Canvas canvas, float cx, float cy, float r) {

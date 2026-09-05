@@ -4413,11 +4413,21 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
         LinearLayout.LayoutParams iblp = new LinearLayout.LayoutParams(dp(44), dp(44));
         iconBox.setLayoutParams(iblp);
 
-        TextView tvIco = new TextView(this);
-        tvIco.setText(iconGlyph);
-        tvIco.setTextSize(20);
-        tvIco.setGravity(Gravity.CENTER);
-        iconBox.addView(tvIco);
+        int icoType = ModernDockIconView.typeForGlyph(iconGlyph);
+        if (icoType >= 0) {
+            // A drawn line icon in the tile's own box; only SOS keeps a status colour.
+            int icoPrimary = (badgeCol == colCrimson || badgeCol == 0xFFEF4444) ? glowCol : colPale;
+            ModernDockIconView ico = new ModernDockIconView(this, icoType, icoPrimary, colMuted);
+            ico.setDrawPod(false);
+            ico.setLayoutParams(new FrameLayout.LayoutParams(dp(30), dp(30), Gravity.CENTER));
+            iconBox.addView(ico);
+        } else {
+            TextView tvIco = new TextView(this);
+            tvIco.setText(iconGlyph);
+            tvIco.setTextSize(20);
+            tvIco.setGravity(Gravity.CENTER);
+            iconBox.addView(tvIco);
+        }
         top.addView(iconBox);
 
         View sp = new View(this);
@@ -4525,11 +4535,21 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
         LinearLayout.LayoutParams iblp = new LinearLayout.LayoutParams(dp(44), dp(44));
         iconBox.setLayoutParams(iblp);
 
-        TextView tvIco = new TextView(this);
-        tvIco.setText(iconGlyph);
-        tvIco.setTextSize(20);
-        tvIco.setGravity(Gravity.CENTER);
-        iconBox.addView(tvIco);
+        int icoType = ModernDockIconView.typeForGlyph(iconGlyph);
+        if (icoType >= 0) {
+            // A drawn line icon in the tile's own box; only SOS keeps a status colour.
+            int icoPrimary = (badgeCol == colCrimson || badgeCol == 0xFFEF4444) ? glowCol : colPale;
+            ModernDockIconView ico = new ModernDockIconView(this, icoType, icoPrimary, colMuted);
+            ico.setDrawPod(false);
+            ico.setLayoutParams(new FrameLayout.LayoutParams(dp(30), dp(30), Gravity.CENTER));
+            iconBox.addView(ico);
+        } else {
+            TextView tvIco = new TextView(this);
+            tvIco.setText(iconGlyph);
+            tvIco.setTextSize(20);
+            tvIco.setGravity(Gravity.CENTER);
+            iconBox.addView(tvIco);
+        }
         top.addView(iconBox);
 
         View sp = new View(this);
@@ -10495,7 +10515,7 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
         LinearLayout card = new LinearLayout(this);
         card.setOrientation(LinearLayout.HORIZONTAL);
         card.setGravity(Gravity.CENTER_VERTICAL);
-        card.setBackground(rounded(colPanel, dp(14)));
+        card.setBackground(outlined(colLineSubtle, dp(14)));
         card.setPadding(dp(14), dp(12), dp(14), dp(12));
         LinearLayout.LayoutParams clp = new LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
@@ -10503,7 +10523,7 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
         card.setLayoutParams(clp);
 
         FrameLayout iconFrame = new FrameLayout(this);
-        iconFrame.setBackground(rounded(0x2200E5FF, dp(8)));
+        iconFrame.setBackground(rounded(colPanel2, dp(8)));
         iconFrame.setPadding(dp(8), dp(8), dp(8), dp(8));
         LinearLayout.LayoutParams iflp = new LinearLayout.LayoutParams(dp(36), dp(36));
         iflp.rightMargin = dp(10);
@@ -10575,11 +10595,11 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
 
             final TextView pill = new TextView(this);
             pill.setText(catLabel);
-            pill.setTextSize(11);
-            pill.setTypeface(Typeface.create(Typeface.MONOSPACE, Typeface.BOLD));
-            pill.setPadding(dp(12), dp(6), dp(12), dp(6));
-            pill.setTextColor(isSelected ? colAccentInk : colPale);
-            pill.setBackground(rounded(isSelected ? colAccent : colPanel2, dp(8)));
+            pill.setTextSize(11.5f);
+            pill.setTypeface(Fonts.text(this, 500));
+            pill.setPadding(dp(14), dp(7), dp(14), dp(7));
+            pill.setTextColor(isSelected ? colAccent : colMuted);
+            pill.setBackground(isSelected ? rounded(colAccentSoft, dp(14)) : outlined(colLineSubtle, dp(14)));
 
             LinearLayout.LayoutParams plp = new LinearLayout.LayoutParams(
                     LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT);
@@ -10594,8 +10614,8 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
                         View child = filterRow.getChildAt(i);
                         if (child instanceof TextView) {
                             boolean sel = categories[i][0].equalsIgnoreCase(contactsActiveFilter);
-                            ((TextView) child).setTextColor(sel ? colAccentInk : colPale);
-                            child.setBackground(rounded(sel ? colAccent : colPanel2, dp(8)));
+                            ((TextView) child).setTextColor(sel ? colAccent : colMuted);
+                            child.setBackground(sel ? rounded(colAccentSoft, dp(14)) : outlined(colLineSubtle, dp(14)));
                         }
                     }
                     contactsContent.removeAllViews();
@@ -10746,11 +10766,12 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
     private TextView contactsSectionHeader(String title, int color) {
         TextView t = new TextView(this);
         t.setText(title);
-        t.setTextColor(color);
-        t.setTextSize(11);
-        t.setTypeface(Typeface.DEFAULT_BOLD);
-        t.setLetterSpacing(0.10f);
-        t.setPadding(dp(4), dp(14), dp(4), dp(6));
+        // Section labels are quiet; only the emergency header keeps its red.
+        t.setTextColor((color == colCrimson || color == 0xFFEF4444) ? color : colQuiet);
+        t.setTextSize(9.5f);
+        t.setTypeface(Fonts.mono(this, false));
+        t.setLetterSpacing(0.14f);
+        t.setPadding(dp(4), dp(16), dp(4), dp(6));
         return t;
     }
 
@@ -10758,9 +10779,8 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
                                      String badgeText, final int badgeColor, String avatarIcon) {
         LinearLayout card = new LinearLayout(this);
         card.setOrientation(LinearLayout.VERTICAL);
-        card.setBackground(rounded(colPanel, dp(16)));
-        card.setPadding(dp(14), dp(14), dp(14), dp(14));
-        card.setElevation(dp(3));
+        card.setBackground(outlined(colLineSubtle, dp(14)));
+        card.setPadding(dp(14), dp(13), dp(14), dp(13));
 
         LinearLayout.LayoutParams clp = new LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
@@ -10794,7 +10814,7 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
         nameTxt.setText(name);
         nameTxt.setTextColor(colPale);
         nameTxt.setTextSize(14.5f);
-        nameTxt.setTypeface(Typeface.DEFAULT_BOLD);
+        nameTxt.setTypeface(Fonts.text(this, 600));
         nameTxt.setSingleLine(true);
         nameTxt.setEllipsize(android.text.TextUtils.TruncateAt.END);
         infoCol.addView(nameTxt);
@@ -10803,6 +10823,7 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
         subTxt.setText(subtitle);
         subTxt.setTextColor(colMuted);
         subTxt.setTextSize(11f);
+        subTxt.setTypeface(Fonts.text(this, 400));
         subTxt.setSingleLine(true);
         subTxt.setEllipsize(android.text.TextUtils.TruncateAt.END);
         subTxt.setPadding(0, dp(1), 0, 0);
@@ -10815,9 +10836,9 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
             badge.setText(badgeText);
             badge.setTextColor(badgeColor);
             badge.setTextSize(9.5f);
-            badge.setTypeface(Typeface.create(Typeface.MONOSPACE, Typeface.BOLD));
-            badge.setPadding(dp(7), dp(3), dp(7), dp(3));
-            badge.setBackground(rounded(colPanel2, dp(6)));
+            badge.setLetterSpacing(0.08f);
+            badge.setTypeface(Fonts.mono(this, false));
+            badge.setPadding(dp(6), dp(3), 0, dp(3));
             LinearLayout.LayoutParams blp = new LinearLayout.LayoutParams(
                     LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT);
             blp.leftMargin = dp(8);
@@ -10830,9 +10851,10 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
         // 2. Middle Row: Formatted Phone Number with 1-Tap Copy
         final String formattedNum = formatPhoneNumber(phoneDisplay);
         TextView numTxt = new TextView(this);
-        numTxt.setText("📞 " + formattedNum);
+        numTxt.setText(formattedNum);
         numTxt.setTextColor(colAccent);
-        numTxt.setTextSize(12.5f);
+        numTxt.setTextSize(13f);
+        numTxt.setTypeface(Fonts.mono(this, true));
         numTxt.setTypeface(Typeface.create(Typeface.MONOSPACE, Typeface.BOLD));
         numTxt.setPadding(0, dp(8), 0, dp(4));
         numTxt.setOnClickListener(new View.OnClickListener() {
@@ -11465,12 +11487,12 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
         container.setPadding(0, dp(4), 0, dp(56));
 
         // 1. Settings Header Card
-        container.addView(formSectionLabel("⚙️ GATEHOUSE CONFIGURATION & PREFERENCES"));
+        container.addView(formSectionLabel("Configuration & preferences"));
 
         // 2. Active Display Theme Selector
         LinearLayout themeCard = new LinearLayout(this);
         themeCard.setOrientation(LinearLayout.VERTICAL);
-        themeCard.setBackground(rounded(colPanel, dp(14)));
+        themeCard.setBackground(outlined(colLineSubtle, dp(14)));
         themeCard.setPadding(dp(14), dp(14), dp(14), dp(14));
         LinearLayout.LayoutParams tclp = new LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
@@ -11478,10 +11500,11 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
         themeCard.setLayoutParams(tclp);
 
         TextView tTitle = new TextView(this);
-        tTitle.setText("🎨 ACTIVE DISPLAY THEME");
-        tTitle.setTextColor(colAccent);
-        tTitle.setTextSize(11f);
-        tTitle.setTypeface(Typeface.create(Typeface.MONOSPACE, Typeface.BOLD));
+        tTitle.setText("DISPLAY THEME");
+        tTitle.setTextColor(colQuiet);
+        tTitle.setTextSize(9.5f);
+        tTitle.setLetterSpacing(0.14f);
+        tTitle.setTypeface(Fonts.mono(this, false));
         tTitle.setPadding(0, 0, 0, dp(8));
         themeCard.addView(tTitle);
 
@@ -11490,8 +11513,8 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
             {"0-Lux Red", "Night vision preservation & zero light bleed", String.valueOf(THEME_RED)},
             {"NVG Phosphor Green", "High-contrast night perimeter surveillance", String.valueOf(THEME_NVG)},
             {"Cyber Violet", "Low-glare indoor gatehouse console", String.valueOf(THEME_VIOLET)},
-            {"☀️ Daylight Executive", "Crisp high-contrast daylight silver, white & royal amber", String.valueOf(THEME_DAYLIGHT)},
-            {"🏜️ Desert Sand", "Warm linen parchment & deep bronze daylight theme", String.valueOf(THEME_DESERT_SAND)}
+            {"Daylight Executive", "Crisp high-contrast daylight silver, white & royal amber", String.valueOf(THEME_DAYLIGHT)},
+            {"Desert Sand", "Warm linen parchment & deep bronze daylight theme", String.valueOf(THEME_DESERT_SAND)}
         };
 
         for (int i = 0; i < themes.length; i++) {
@@ -11501,7 +11524,7 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
             final LinearLayout row = new LinearLayout(this);
             row.setOrientation(LinearLayout.HORIZONTAL);
             row.setGravity(Gravity.CENTER_VERTICAL);
-            row.setBackground(rounded(isSelected ? colAccentSoft : colPanel2, dp(10)));
+            row.setBackground(isSelected ? rounded(colAccentSoft, dp(10)) : hairlinePressable(dp(10)));
             row.setPadding(dp(12), dp(10), dp(12), dp(10));
             LinearLayout.LayoutParams rlp = new LinearLayout.LayoutParams(
                     LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
@@ -11509,8 +11532,9 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
             row.setLayoutParams(rlp);
 
             final TextView radio = new TextView(this);
-            radio.setText(isSelected ? "🔘" : "⚪");
-            radio.setTextSize(16);
+            radio.setText(isSelected ? "●" : "○");
+            radio.setTextSize(14);
+            radio.setTextColor(isSelected ? colAccent : colQuiet);
             radio.setPadding(0, 0, dp(10), 0);
             row.addView(radio);
 
@@ -11522,14 +11546,15 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
             TextView title = new TextView(this);
             title.setText(themes[i][0]);
             title.setTextColor(isSelected ? colAccent : colPale);
-            title.setTextSize(13);
-            title.setTypeface(Typeface.DEFAULT_BOLD);
+            title.setTextSize(13.5f);
+            title.setTypeface(Fonts.text(this, 500));
             textCol.addView(title);
 
             TextView desc = new TextView(this);
             desc.setText(themes[i][1]);
             desc.setTextColor(colMuted);
-            desc.setTextSize(10.5f);
+            desc.setTextSize(11f);
+            desc.setTypeface(Fonts.text(this, 400));
             textCol.addView(desc);
             row.addView(textCol);
 
@@ -11548,11 +11573,11 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
         container.addView(themeCard);
 
         // 3. Officer Credential Vault & QLD Security Licence
-        container.addView(formSectionLabel("🪪 OFFICER CREDENTIALS & SECURITY LICENCE"));
+        container.addView(formSectionLabel("Officer credentials & security licence"));
         final LicenceVerificationManager.LicenceStatus licStatus = LicenceVerificationManager.getLicenceStatus(this);
         LinearLayout licCard = new LinearLayout(this);
         licCard.setOrientation(LinearLayout.VERTICAL);
-        licCard.setBackground(rounded(colPanel, dp(14)));
+        licCard.setBackground(outlined(colLineSubtle, dp(14)));
         licCard.setPadding(dp(14), dp(14), dp(14), dp(14));
         LinearLayout.LayoutParams lclp = new LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
@@ -11583,7 +11608,7 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
         licCard.addView(licHeader);
 
         TextView licDesc = new TextView(this);
-        licDesc.setText("Static Security Guard · QLD Class 1 · Verified with Fair Trading QLD.\nTap below to inspect 3D holographic certificate & audit timeline.");
+        licDesc.setText("Static security guard · QLD Class 1 · expiry tracked from the licence dates entered.\nTap below to inspect the certificate & audit timeline.");
         licDesc.setTextColor(colMuted);
         licDesc.setTextSize(11f);
         licDesc.setPadding(0, dp(4), 0, dp(8));
@@ -11600,13 +11625,13 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
         container.addView(licCard);
 
         // 4. Terminal Hardware Profile
-        container.addView(formSectionLabel("📱 TERMINAL HARDWARE & SYSTEM STATUS"));
+        container.addView(formSectionLabel("Terminal hardware & system status"));
         container.addView(terminalProfileCard());
 
         // 5. Deputy Sync & OTA Updates Suite
         LinearLayout syncCard = new LinearLayout(this);
         syncCard.setOrientation(LinearLayout.VERTICAL);
-        syncCard.setBackground(rounded(colPanel, dp(14)));
+        syncCard.setBackground(outlined(colLineSubtle, dp(14)));
         syncCard.setPadding(dp(14), dp(14), dp(14), dp(14));
         LinearLayout.LayoutParams sclp = new LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
@@ -11614,7 +11639,7 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
         syncCard.setLayoutParams(sclp);
 
         TextView sTitle = new TextView(this);
-        sTitle.setText("🔄 DEPUTY BUSINESS & OTA SYSTEM SYNC");
+        sTitle.setText("ROSTERING & SYSTEM SYNC");
         sTitle.setTextColor(colCyan);
         sTitle.setTextSize(11f);
         sTitle.setTypeface(Typeface.create(Typeface.MONOSPACE, Typeface.BOLD));
@@ -11706,8 +11731,8 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
             {"0-Lux Red", "Night vision preservation & zero light bleed", String.valueOf(THEME_RED)},
             {"NVG Phosphor Green", "High-contrast night perimeter surveillance", String.valueOf(THEME_NVG)},
             {"Cyber Violet", "Low-glare indoor gatehouse console", String.valueOf(THEME_VIOLET)},
-            {"☀️ Daylight Executive", "Crisp high-contrast daylight silver, white & royal amber", String.valueOf(THEME_DAYLIGHT)},
-            {"🏜️ Desert Sand", "Warm linen parchment & deep bronze daylight theme", String.valueOf(THEME_DESERT_SAND)}
+            {"Daylight Executive", "Crisp high-contrast daylight silver, white & royal amber", String.valueOf(THEME_DAYLIGHT)},
+            {"Desert Sand", "Warm linen parchment & deep bronze daylight theme", String.valueOf(THEME_DESERT_SAND)}
         };
 
         final Dialog dlg = createDialogSheet(box);
@@ -11719,7 +11744,7 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
             final LinearLayout row = new LinearLayout(this);
             row.setOrientation(LinearLayout.HORIZONTAL);
             row.setGravity(Gravity.CENTER_VERTICAL);
-            row.setBackground(rounded(isSelected ? colAccentSoft : colPanel2, dp(10)));
+            row.setBackground(isSelected ? rounded(colAccentSoft, dp(10)) : hairlinePressable(dp(10)));
             row.setPadding(dp(12), dp(10), dp(12), dp(10));
             LinearLayout.LayoutParams rlp = new LinearLayout.LayoutParams(
                     LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
@@ -11728,8 +11753,9 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
 
             // Signal-style Radio Circle
             final TextView radio = new TextView(this);
-            radio.setText(isSelected ? "🔘" : "⚪");
-            radio.setTextSize(16);
+            radio.setText(isSelected ? "●" : "○");
+            radio.setTextSize(14);
+            radio.setTextColor(isSelected ? colAccent : colQuiet);
             radio.setPadding(0, 0, dp(10), 0);
             row.addView(radio);
 
@@ -11741,14 +11767,15 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
             TextView title = new TextView(this);
             title.setText(themes[i][0]);
             title.setTextColor(isSelected ? colAccent : colPale);
-            title.setTextSize(13);
-            title.setTypeface(Typeface.DEFAULT_BOLD);
+            title.setTextSize(13.5f);
+            title.setTypeface(Fonts.text(this, 500));
             textCol.addView(title);
 
             TextView desc = new TextView(this);
             desc.setText(themes[i][1]);
             desc.setTextColor(colMuted);
-            desc.setTextSize(10.5f);
+            desc.setTextSize(11f);
+            desc.setTypeface(Fonts.text(this, 400));
             textCol.addView(desc);
 
             row.addView(textCol);
@@ -15167,12 +15194,12 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
 
     private TextView formSectionLabel(String text) {
         TextView t = new TextView(this);
-        t.setText(text);
+        t.setText(text.toUpperCase(Locale.US));
         t.setTextColor(colQuiet);
-        t.setTextSize(10);
-        t.setTypeface(Typeface.DEFAULT_BOLD);
-        t.setLetterSpacing(0.12f);
-        t.setPadding(0, dp(10), 0, dp(6));
+        t.setTextSize(9.5f);
+        t.setTypeface(Fonts.mono(this, false));
+        t.setLetterSpacing(0.14f);
+        t.setPadding(dp(2), dp(14), 0, dp(6));
         return t;
     }
 
