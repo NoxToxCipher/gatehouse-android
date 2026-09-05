@@ -10530,8 +10530,9 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
         iconFrame.setLayoutParams(iflp);
 
         TextView icon = new TextView(this);
-        icon.setText("📱");
-        icon.setTextSize(16);
+        icon.setText("");
+        icon.setTextSize(1);
+        icon.setVisibility(View.GONE);
         icon.setGravity(Gravity.CENTER);
         iconFrame.addView(icon);
         card.addView(iconFrame);
@@ -10544,12 +10545,13 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
         TextView title = new TextView(this);
         title.setText(getHutPhoneFullName());
         title.setTextColor(colPale);
-        title.setTextSize(13f);
-        title.setTypeface(Typeface.DEFAULT_BOLD);
+        title.setTextSize(14f);
+        title.setTypeface(Fonts.display(this, false));
         infoCol.addView(title);
 
         TextView sub = new TextView(this);
-        sub.setText("Hardcoded Terminal Hardware · Post 01 Gatehouse");
+        sub.setText("Post 01 · Gatehouse");
+        sub.setTypeface(Fonts.mono(this, false));
         sub.setTextColor(colMuted);
         sub.setTextSize(10.5f);
         infoCol.addView(sub);
@@ -10557,11 +10559,11 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
 
         TextView badge = new TextView(this);
         badge.setText(getHutPhoneHardwareTag());
-        badge.setTextColor(colEmerald);
+        badge.setTextColor(colMuted);
         badge.setTextSize(9.5f);
         badge.setTypeface(Typeface.MONOSPACE);
         badge.setPadding(dp(8), dp(3), dp(8), dp(3));
-        badge.setBackground(rounded(0x2210B981, dp(4)));
+        badge.setBackground(null);
         card.addView(badge);
 
         return card;
@@ -10582,10 +10584,10 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
         filterRow.setPadding(dp(4), 0, dp(4), 0);
 
         final String[][] categories = {
-            {"ALL", "🌐 ALL (14)"},
-            {"EMERGENCY", "🚨 EMERGENCY (4)"},
-            {"SECURITY", "🛡️ SECURITY & SITE (3)"},
-            {"HUME", "🏭 HUME AFTER HOURS (7)"}
+            {"ALL", "All (14)"},
+            {"EMERGENCY", "Emergency (4)"},
+            {"SECURITY", "Security & site (3)"},
+            {"HUME", "Hume after hours (7)"}
         };
 
         for (final String[] cat : categories) {
@@ -10634,7 +10636,7 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
 
         // 3. 🚨 EMERGENCY SERVICES (24/7)
         if (showAll || "EMERGENCY".equalsIgnoreCase(contactsActiveFilter)) {
-            container.addView(contactsSectionHeader("🚨 EMERGENCY SERVICES (24/7 PRIORITY)", 0xFFEF4444));
+            container.addView(contactsSectionHeader("EMERGENCY SERVICES · 24/7", 0xFFEF4444));
 
             // Emergency Tri-Pod Speed-Dial Banner
             LinearLayout speedDial = new LinearLayout(this);
@@ -10654,7 +10656,7 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
 
         // 4. 🛡️ SITE GATEHOUSE & SECURITY (With Live Deputy Roster Contacts Search)
         if (showAll || "SECURITY".equalsIgnoreCase(contactsActiveFilter)) {
-            container.addView(contactsSectionHeader("🛡️ SITE GATEHOUSE & SECURITY PERSONNEL", colEmerald));
+            container.addView(contactsSectionHeader("GATEHOUSE & SECURITY PERSONNEL", colQuiet));
 
             // Explicit Priority Guard Hierarchy: 1. Petrea Doherty -> 2. Lochran Doherty -> 3. Claren Doherty
             java.util.Set<String> processedGuards = new java.util.HashSet<>();
@@ -10709,7 +10711,7 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
 
         // 5. 🏭 HUME DOORS AFTER HOURS CONTACTS
         if (showAll || "HUME".equalsIgnoreCase(contactsActiveFilter)) {
-            container.addView(contactsSectionHeader("🏭 HUME DOORS AFTER HOURS KEYHOLDERS & STAFF", colCyan));
+            container.addView(contactsSectionHeader("HUME DOORS AFTER-HOURS KEYHOLDERS & STAFF", colQuiet));
             container.addView(contactCard("Noel Johns (Keyholder)", "Hume Doors After Hours Staff Contact", "0403195061", "KEYHOLDER", colAccent, "🔑"));
             container.addView(contactCard("Trevor Crane (Keyholder)", "Hume Doors After Hours Staff Contact", "0403195062", "KEYHOLDER", colAccent, "🔑"));
             container.addView(contactCard("Rees Brandon", "Hume Doors After Hours Staff Contact", "0403362525", "AFTER HOURS", colAccent, "🏭"));
@@ -10726,31 +10728,33 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
         LinearLayout tile = new LinearLayout(this);
         tile.setOrientation(LinearLayout.VERTICAL);
         tile.setGravity(Gravity.CENTER);
-        tile.setBackground(rounded(colPanel, dp(12)));
+        tile.setBackground(hairlinePressable(dp(12)));
         tile.setPadding(dp(8), dp(10), dp(8), dp(10));
         LinearLayout.LayoutParams tlp = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
         tlp.setMargins(dp(3), 0, dp(3), 0);
         tile.setLayoutParams(tlp);
 
         TextView iconTxt = new TextView(this);
-        iconTxt.setText(icon);
-        iconTxt.setTextSize(18);
+        iconTxt.setText("");
+        iconTxt.setTextSize(1);
+        iconTxt.setVisibility(View.GONE);
         iconTxt.setGravity(Gravity.CENTER);
         tile.addView(iconTxt);
 
         TextView titleTxt = new TextView(this);
         titleTxt.setText(title);
-        titleTxt.setTextColor(color);
-        titleTxt.setTextSize(13);
-        titleTxt.setTypeface(Typeface.create(Typeface.MONOSPACE, Typeface.BOLD));
+        // Only Triple Zero keeps its red; the other quick dials are bone.
+        titleTxt.setTextColor((color == colCrimson || color == 0xFFEF4444) ? color : colPale);
+        titleTxt.setTextSize(14);
+        titleTxt.setTypeface(Fonts.mono(this, true));
         titleTxt.setPadding(0, dp(2), 0, 0);
         tile.addView(titleTxt);
 
         TextView subTxt = new TextView(this);
         subTxt.setText(sub);
         subTxt.setTextColor(colMuted);
-        subTxt.setTextSize(9);
-        subTxt.setTypeface(Typeface.MONOSPACE);
+        subTxt.setTextSize(9.5f);
+        subTxt.setTypeface(Fonts.mono(this, false));
         tile.addView(subTxt);
 
         tile.setOnClickListener(new View.OnClickListener() {
@@ -10834,7 +10838,9 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
         if (badgeText != null && !badgeText.isEmpty()) {
             TextView badge = new TextView(this);
             badge.setText(badgeText);
-            badge.setTextColor(badgeColor);
+            // A badge keeps its colour only when it is a status (emergency, on site).
+            boolean badgeSemantic = (badgeColor == colCrimson || badgeColor == 0xFFEF4444 || badgeColor == colEmerald);
+            badge.setTextColor(badgeSemantic ? badgeColor : colMuted);
             badge.setTextSize(9.5f);
             badge.setLetterSpacing(0.08f);
             badge.setTypeface(Fonts.mono(this, false));
@@ -10929,13 +10935,13 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
 
             // Call Action Pill
             TextView btnCall = new TextView(this);
-            btnCall.setText("📞 Call");
-            btnCall.setTextColor(colAccentInk);
-            btnCall.setTextSize(11.5f);
-            btnCall.setTypeface(Typeface.DEFAULT_BOLD);
+            btnCall.setText("Call");
+            btnCall.setTextColor(colAccent);
+            btnCall.setTextSize(12f);
+            btnCall.setTypeface(Fonts.text(this, 600));
             btnCall.setGravity(Gravity.CENTER);
             btnCall.setPadding(dp(8), dp(9), dp(8), dp(9));
-            btnCall.setBackground(rounded(colAccent, dp(8)));
+            btnCall.setBackground(hairlinePressable(dp(8)));
             LinearLayout.LayoutParams cllp = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1.0f);
             btnCall.setLayoutParams(cllp);
             btnCall.setOnClickListener(new View.OnClickListener() {
@@ -10949,13 +10955,16 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
         } else {
             // Landline / Emergency Call
             TextView btnCall = new TextView(this);
-            btnCall.setText(phoneDisplay.equals("000") ? "🚨 CALL TRIPLE ZERO (000)" : ("📞 CALL " + formattedNum));
-            btnCall.setTextColor(phoneDisplay.equals("000") ? 0xFFFFFFFF : colAccentInk);
-            btnCall.setTextSize(12f);
-            btnCall.setTypeface(Typeface.DEFAULT_BOLD);
+            // Triple Zero is the one act-now button and keeps its red fill;
+            // every other call is brass text on a hairline.
+            boolean isTripleZero = phoneDisplay.equals("000");
+            btnCall.setText(isTripleZero ? "Call Triple Zero (000)" : ("Call " + formattedNum));
+            btnCall.setTextColor(isTripleZero ? 0xFFFFFFFF : colAccent);
+            btnCall.setTextSize(12.5f);
+            btnCall.setTypeface(Fonts.text(this, 600));
             btnCall.setGravity(Gravity.CENTER);
-            btnCall.setPadding(dp(12), dp(10), dp(12), dp(10));
-            btnCall.setBackground(rounded(phoneDisplay.equals("000") ? colCrimson : colAccent, dp(8)));
+            btnCall.setPadding(dp(12), dp(11), dp(12), dp(11));
+            btnCall.setBackground(isTripleZero ? rounded(colCrimson, dp(10)) : hairlinePressable(dp(10)));
             LinearLayout.LayoutParams cllp = new LinearLayout.LayoutParams(
                     LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
             btnCall.setLayoutParams(cllp);
@@ -11614,7 +11623,14 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
         licDesc.setPadding(0, dp(4), 0, dp(8));
         licCard.addView(licDesc);
 
-        TextView btnOpenVault = actionButton("🪪 Inspect Credential Vault", colPanel2, colAccent);
+        TextView btnOpenVault = actionButton("Inspect credential vault", colPanel2, colAccent);
+        // actionButton() returns row params (0 width, weight 1); inside this
+        // vertical card that weight stretched it into a tall empty block.
+        LinearLayout.LayoutParams ovlp = new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+        ovlp.topMargin = dp(4);
+        btnOpenVault.setLayoutParams(ovlp);
+        btnOpenVault.setBackground(hairlinePressable(dp(12)));
         btnOpenVault.setOnClickListener(new View.OnClickListener() {
             public void onClick(View v) {
                 hapticClick();
@@ -11640,16 +11656,17 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
 
         TextView sTitle = new TextView(this);
         sTitle.setText("ROSTERING & SYSTEM SYNC");
-        sTitle.setTextColor(colCyan);
-        sTitle.setTextSize(11f);
-        sTitle.setTypeface(Typeface.create(Typeface.MONOSPACE, Typeface.BOLD));
+        sTitle.setTextColor(colQuiet);
+        sTitle.setTextSize(9.5f);
+        sTitle.setLetterSpacing(0.14f);
+        sTitle.setTypeface(Fonts.mono(this, false));
         sTitle.setPadding(0, 0, 0, dp(8));
         syncCard.addView(sTitle);
 
         LinearLayout rSyncBtns = new LinearLayout(this);
         rSyncBtns.setOrientation(LinearLayout.HORIZONTAL);
 
-        TextView btnSyncDeputy = actionButton("🔄 Sync Deputy Roster", colPanel2, colCyan);
+        TextView btnSyncDeputy = actionButton("Sync roster", colPanel2, colAccent);
         btnSyncDeputy.setOnClickListener(new View.OnClickListener() {
             public void onClick(View v) {
                 hapticHeavyClick();
@@ -11678,7 +11695,7 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
         btnSyncDeputy.setLayoutParams(dslp);
         rSyncBtns.addView(btnSyncDeputy);
 
-        TextView btnOta = actionButton("⚡ Check OTA Update", colPanel2, colEmerald);
+        TextView btnOta = actionButton("Check for update", colPanel2, colMuted);
         btnOta.setOnClickListener(new View.OnClickListener() {
             public void onClick(View v) {
                 hapticHeavyClick();
@@ -15242,7 +15259,7 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
         btn.setText(text);
         btn.setTextColor(textCol);
         btn.setTextSize(14);
-        btn.setTypeface(Typeface.DEFAULT_BOLD);
+        btn.setTypeface(Fonts.text(this, 600));
         btn.setGravity(Gravity.CENTER);
         btn.setBackground(pressable(fill, dp(14)));
         btn.setPadding(dp(14), dp(14), dp(14), dp(14));

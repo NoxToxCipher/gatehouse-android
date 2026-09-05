@@ -148,32 +148,33 @@ public class LicenceVerificationManager {
         s.isWithin3Months = s.daysRemaining > 30 && s.daysRemaining <= 90;
 
         if (s.isExpired) {
-            s.statusBadgeText = "⛔ LICENCE EXPIRED";
+            s.statusBadgeText = "LICENCE EXPIRED";
             s.statusColor = 0xFFEF4444; // Crimson
             s.statusBgColor = 0x33EF4444;
             s.advisoryMessage = "Licence expired " + Math.abs(s.daysRemaining) + " days ago. Officer cannot perform security duties until renewed.";
         } else if (s.isDayOfExpiry) {
-            s.statusBadgeText = "🚨 EXPIRES TODAY";
+            s.statusBadgeText = "EXPIRES TODAY";
             s.statusColor = 0xFFEF4444;
             s.statusBgColor = 0x33EF4444;
             s.advisoryMessage = "Licence expires TODAY (" + s.formattedExpiryDate + "). Urgent renewal submission required immediately.";
         } else if (s.isWithin1Fortnight) {
-            s.statusBadgeText = "🚨 " + s.daysRemaining + " DAYS (1 FORTNIGHT)";
+            s.statusBadgeText = s.daysRemaining + " DAYS LEFT";
             s.statusColor = 0xFFF97316; // Orange
             s.statusBgColor = 0x33F97316;
             s.advisoryMessage = "Critical: Licence expires in " + s.daysRemaining + " days (" + s.formattedExpiryDate + "). Finalise QLD Fair Trading renewal.";
         } else if (s.isWithin1Month) {
-            s.statusBadgeText = "⚠️ " + s.daysRemaining + " DAYS (1 MONTH)";
+            s.statusBadgeText = s.daysRemaining + " DAYS LEFT";
             s.statusColor = 0xFFF59E0B; // Amber
             s.statusBgColor = 0x33F59E0B;
             s.advisoryMessage = "Advisory: Licence expires in " + s.daysRemaining + " days (" + s.formattedExpiryDate + "). Submit fingerprint & renewal docs.";
         } else if (s.isWithin3Months) {
-            s.statusBadgeText = "🔔 " + s.daysRemaining + " DAYS (3 MONTHS)";
+            s.statusBadgeText = s.daysRemaining + " DAYS LEFT";
             s.statusColor = 0xFF06B6D4; // Cyan
             s.statusBgColor = 0x2206B6D4;
             s.advisoryMessage = "Advance Notice: Licence renewal window opens in " + s.daysRemaining + " days (" + s.formattedExpiryDate + ").";
         } else {
-            s.statusBadgeText = "✓ VERIFIED ACTIVE";
+            // What the app actually knows: the entered expiry date has not passed.
+            s.statusBadgeText = "LICENCE CURRENT";
             s.statusColor = 0xFF10B981; // Emerald
             s.statusBgColor = 0x2210B981;
             s.advisoryMessage = "Licence is fully current and compliant with QLD Fair Trading. Valid for next " + s.daysRemaining + " days.";
