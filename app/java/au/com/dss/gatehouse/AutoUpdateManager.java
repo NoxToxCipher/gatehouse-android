@@ -33,7 +33,7 @@ public final class AutoUpdateManager {
     private static final String KEY_LAST_CHECK = "last_check_ms";
     private static final String KEY_LAST_SHA = "last_installed_sha";
     private static final String KEY_LAST_NOTIFIED_SHA = "last_notified_sha";
-    private static final String CHANNEL_UPDATES = "gatehouse_updates_v2"; // v2: Gatehouse chime
+    private static final String CHANNEL_UPDATES = "gatehouse_updates_v3"; // v3: Gatehouse notice tone (tier three)
     private static final int NOTIF_ID_UPDATE = 8801;
     public static final String ACTION_CHECK_UPDATE = "au.com.dss.gatehouse.ACTION_CHECK_UPDATE";
 
@@ -89,7 +89,7 @@ public final class AutoUpdateManager {
                 chan.enableVibration(true);
                 chan.enableLights(true);
                 chan.setLightColor(0xFFF59E0B);
-                GatehouseSounds.applyChime(chan, context);
+                GatehouseSounds.applyNotice(chan, context);
                 nm.createNotificationChannel(chan);
             }
         }
@@ -173,7 +173,13 @@ public final class AutoUpdateManager {
                     SharedPreferences prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE);
                     prefs.edit().putLong(KEY_LAST_CHECK, System.currentTimeMillis()).apply();
 
-                    if (downloadedSha != null && !downloadedSha.equalsIgnoreCase(currentAppSha)) {
+                    // Never wind a phone back. A different SHA is not "newer": compare the
+                    // version code build.sh stamps from the commit count, and only offer
+                    // a build that is strictly ahead of what is installed.
+                    long remoteCode = archiveVersionCode(context, tempApk);
+                    long localCode = installedVersionCode(context);
+                    boolean strictlyNewer = remoteCode > 0 && remoteCode > localCode;
+                    if (strictlyNewer && downloadedSha != null && !downloadedSha.equalsIgnoreCase(currentAppSha)) {
                         // New build available!
                         final String newSha = downloadedSha;
                         final long bytes = tempApk.length();
@@ -282,6 +288,25 @@ public final class AutoUpdateManager {
 
             nm.notify(NOTIF_ID_UPDATE, nb.build());
         } catch (Exception e) {}
+    }
+
+    private static long installedVersionCode(Context context) {
+        try {
+            PackageInfo p = context.getPackageManager().getPackageInfo(context.getPackageName(), 0);
+            return Build.VERSION.SDK_INT >= 28 ? p.getLongVersionCode() : p.versionCode;
+        } catch (Exception e) {
+            return 0;
+        }
+    }
+
+    private static long archiveVersionCode(Context context, File apk) {
+        try {
+            PackageInfo p = context.getPackageManager().getPackageArchiveInfo(apk.getAbsolutePath(), 0);
+            if (p == null) return 0;
+            return Build.VERSION.SDK_INT >= 28 ? p.getLongVersionCode() : p.versionCode;
+        } catch (Exception e) {
+            return 0;
+        }
     }
 
     public static String computeFileSha256(File file) {

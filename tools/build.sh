@@ -177,13 +177,19 @@ for f in app/res/*/*; do
 done
 ok
 
+# The version code is 1000 + the commit count, so every commit on master is a
+# strictly higher number and the updater can refuse to wind a phone back. The
+# old fixed 126 let a same-version reinstall replace a newer build with an older one.
+COMMITS=$(git rev-list --count HEAD 2>/dev/null || echo 0)
+VERSION_CODE=$((1000 + COMMITS))
+VERSION_NAME="1.6.$COMMITS"
 say "manifest and resource table"
 MSYS_NO_PATHCONV=1 "$BT/aapt2.exe" link \
   -o "${W}${BS}build${BS}base.apk" \
   -I "$JARW" \
   --manifest "${W}${BS}app${BS}AndroidManifest.xml" \
   -A "${W}${BS}app${BS}assets" \
-  --version-code 126 --version-name "1.0.26" \
+  --version-code "$VERSION_CODE" --version-name "$VERSION_NAME" \
   --min-sdk-version 26 --target-sdk-version 35 \
   $(for fl in "$OUT"/res/*.flat; do printf "%s " "${W}${BS}build${BS}res${BS}$(basename "$fl")"; done) > build/aapt2.log 2>&1 \
   || { echo "FAILED"; cat build/aapt2.log; exit 1; }

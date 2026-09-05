@@ -31,6 +31,19 @@ public final class GatehouseSounds {
         return Uri.parse("android.resource://" + ctx.getPackageName() + "/raw/gatehouse_alert");
     }
 
+    /** Tier three: one soft note for things that can wait (satellite passes, fuel, sky radar, updates). */
+    public static Uri notice(Context ctx) {
+        return Uri.parse("android.resource://" + ctx.getPackageName() + "/raw/gatehouse_notice");
+    }
+
+    public static void applyNotice(NotificationChannel chan, Context ctx) {
+        chan.setSound(notice(ctx), attrs());
+    }
+
+    public static void applyNotice(NotificationChannel chan) {
+        chan.setSound(Uri.parse("android.resource://au.com.dss.gatehouse/raw/gatehouse_notice"), attrs());
+    }
+
     public static AudioAttributes attrs() {
         return new AudioAttributes.Builder()
                 .setUsage(AudioAttributes.USAGE_NOTIFICATION)

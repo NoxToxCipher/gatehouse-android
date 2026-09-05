@@ -11803,14 +11803,21 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
         LinearLayout toneRow = new LinearLayout(this);
         toneRow.setOrientation(LinearLayout.HORIZONTAL);
         toneRow.setPadding(0, dp(2), 0, dp(4));
-        TextView btnChime = actionButton("Play chime", colPanel2, colPale);
+        TextView btnNotice = actionButton("Notice", colPanel2, colMuted);
+        btnNotice.setBackground(hairlinePressable(dp(10)));
+        ((LinearLayout.LayoutParams) btnNotice.getLayoutParams()).rightMargin = dp(6);
+        btnNotice.setOnClickListener(new View.OnClickListener() {
+            public void onClick(View v) { hapticClick(); GatehouseSounds.preview(MainActivity.this, GatehouseSounds.notice(MainActivity.this)); }
+        });
+        toneRow.addView(btnNotice);
+        TextView btnChime = actionButton("Chime", colPanel2, colPale);
         btnChime.setBackground(hairlinePressable(dp(10)));
         ((LinearLayout.LayoutParams) btnChime.getLayoutParams()).rightMargin = dp(6);
         btnChime.setOnClickListener(new View.OnClickListener() {
             public void onClick(View v) { hapticClick(); GatehouseSounds.preview(MainActivity.this, GatehouseSounds.chime(MainActivity.this)); }
         });
         toneRow.addView(btnChime);
-        TextView btnAlertTone = actionButton("Play alert", colPanel2, colCrimson);
+        TextView btnAlertTone = actionButton("Alert", colPanel2, colCrimson);
         btnAlertTone.setBackground(hairlinePressable(dp(10)));
         ((LinearLayout.LayoutParams) btnAlertTone.getLayoutParams()).leftMargin = dp(6);
         btnAlertTone.setOnClickListener(new View.OnClickListener() {
@@ -11818,7 +11825,7 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
         });
         toneRow.addView(btnAlertTone);
         container.addView(toneRow);
-        container.addView(quietLine("Chime: roster, reminders, radar and sky notices. Alert: fire, lightning and hail."));
+        container.addView(quietLine("Notice: satellite passes, fuel, sky radar, updates. Chime: roster, shift weather, licence. Alert: fire, lightning, hail."));
 
         return container;
     }

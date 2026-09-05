@@ -26,7 +26,7 @@ import java.util.concurrent.Executors;
  */
 public class FuelPriceManager {
     private static final String TAG = "FuelPriceManager";
-    public static final String CHANNEL_FUEL_ALERTS = "fuel_shift_alerts_v2"; // v2: Gatehouse chime
+    public static final String CHANNEL_FUEL_ALERTS = "fuel_shift_alerts_v3"; // v3: Gatehouse notice tone (tier three)
     private static final String PREFS_NAME = "fuel_price_prefs";
     private static final String KEY_CACHED_JSON = "cached_fuel_json";
     private static final String KEY_LAST_FETCH_TS = "last_fetch_ts";
@@ -100,7 +100,7 @@ public class FuelPriceManager {
             chan.setLightColor(0xFFF59E0B);
             chan.enableVibration(true);
             chan.setShowBadge(true);
-            GatehouseSounds.applyChime(chan);
+            GatehouseSounds.applyNotice(chan);
             nm.createNotificationChannel(chan);
         }
     }
