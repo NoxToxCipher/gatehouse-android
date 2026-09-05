@@ -29,6 +29,14 @@ public class ModernDockIconView extends View {
     public static final int TYPE_IDCARD = 16;
     public static final int TYPE_SCALES = 17;
     public static final int TYPE_BOOKS = 18;
+    // Contact avatars
+    public static final int TYPE_SHIELD = 19;
+    public static final int TYPE_KEY = 20;
+    public static final int TYPE_FACTORY = 21;
+    public static final int TYPE_BADGE = 22;
+    public static final int TYPE_FIRETRUCK = 23;
+    public static final int TYPE_PHONE = 24;
+    public static final int TYPE_LAPTOP = 25;
 
     /** When false the icon draws with no pod of its own (for use inside a tile's box). */
     private boolean drawPod = true;
@@ -162,6 +170,13 @@ public class ModernDockIconView extends View {
             case TYPE_IDCARD:    drawIdCard(canvas, cx, cy, r); break;
             case TYPE_SCALES:    drawScales(canvas, cx, cy, r); break;
             case TYPE_BOOKS:     drawBooks(canvas, cx, cy, r); break;
+            case TYPE_SHIELD:    drawShield(canvas, cx, cy, r); break;
+            case TYPE_KEY:       drawKey(canvas, cx, cy, r); break;
+            case TYPE_FACTORY:   drawFactory(canvas, cx, cy, r); break;
+            case TYPE_BADGE:     drawBadge(canvas, cx, cy, r); break;
+            case TYPE_FIRETRUCK: drawFireTruck(canvas, cx, cy, r); break;
+            case TYPE_PHONE:     drawPhone(canvas, cx, cy, r); break;
+            case TYPE_LAPTOP:    drawLaptop(canvas, cx, cy, r); break;
         }
     }
 
@@ -185,6 +200,15 @@ public class ModernDockIconView extends View {
             case "🪪":       return TYPE_IDCARD;     // identification card
             case "⚖":             return TYPE_SCALES;     // scales
             case "📚":       return TYPE_BOOKS;      // books
+            case "🛡":       return TYPE_SHIELD;     // shield
+            case "🔑":       return TYPE_KEY;        // key
+            case "🏭":       return TYPE_FACTORY;    // factory
+            case "🚓":       return TYPE_BADGE;      // police car -> badge
+            case "👮":       return TYPE_BADGE;      // police officer -> badge
+            case "🚒":       return TYPE_FIRETRUCK;  // fire engine
+            case "📱":       return TYPE_PHONE;      // mobile phone
+            case "📞":       return TYPE_PHONE;      // telephone receiver
+            case "💻":       return TYPE_LAPTOP;     // laptop
             default:                   return -1;
         }
     }
@@ -386,6 +410,105 @@ public class ModernDockIconView extends View {
         strokePaint.setColor(accentColor);
         c.drawLine(cx - r * 0.2f, cy - r * 0.45f, cx + r * 0.2f, cy - r * 0.45f, strokePaint);
         c.drawLine(cx - r * 0.75f, cy - r * 0.25f, cx - r * 0.32f, cy - r * 0.25f, strokePaint);
+    }
+
+    private void drawShield(Canvas c, float cx, float cy, float r) {
+        prep();
+        iconPath.reset();
+        iconPath.moveTo(cx, cy - r * 0.85f);
+        iconPath.lineTo(cx + r * 0.7f, cy - r * 0.55f);
+        iconPath.lineTo(cx + r * 0.62f, cy + r * 0.1f);
+        iconPath.quadTo(cx + r * 0.5f, cy + r * 0.6f, cx, cy + r * 0.88f);
+        iconPath.quadTo(cx - r * 0.5f, cy + r * 0.6f, cx - r * 0.62f, cy + r * 0.1f);
+        iconPath.lineTo(cx - r * 0.7f, cy - r * 0.55f);
+        iconPath.close();
+        c.drawPath(iconPath, strokePaint);
+        strokePaint.setColor(accentColor);
+        c.drawLine(cx - r * 0.28f, cy, cx - r * 0.05f, cy + r * 0.25f, strokePaint);
+        c.drawLine(cx - r * 0.05f, cy + r * 0.25f, cx + r * 0.32f, cy - r * 0.2f, strokePaint);
+    }
+
+    private void drawKey(Canvas c, float cx, float cy, float r) {
+        prep();
+        c.drawCircle(cx - r * 0.42f, cy - r * 0.3f, r * 0.34f, strokePaint);
+        c.drawLine(cx - r * 0.18f, cy - r * 0.06f, cx + r * 0.75f, cy + r * 0.85f, strokePaint);
+        strokePaint.setColor(accentColor);
+        c.drawLine(cx + r * 0.45f, cy + r * 0.55f, cx + r * 0.7f, cy + r * 0.3f, strokePaint);
+        c.drawLine(cx + r * 0.25f, cy + r * 0.35f, cx + r * 0.48f, cy + r * 0.12f, strokePaint);
+    }
+
+    private void drawFactory(Canvas c, float cx, float cy, float r) {
+        prep();
+        iconPath.reset();
+        iconPath.moveTo(cx - r * 0.85f, cy + r * 0.75f);
+        iconPath.lineTo(cx - r * 0.85f, cy - r * 0.6f);
+        iconPath.lineTo(cx - r * 0.55f, cy - r * 0.6f);
+        iconPath.lineTo(cx - r * 0.55f, cy - r * 0.05f);
+        iconPath.lineTo(cx - r * 0.15f, cy - r * 0.35f);
+        iconPath.lineTo(cx - r * 0.15f, cy - r * 0.05f);
+        iconPath.lineTo(cx + r * 0.25f, cy - r * 0.35f);
+        iconPath.lineTo(cx + r * 0.25f, cy - r * 0.05f);
+        iconPath.lineTo(cx + r * 0.65f, cy - r * 0.35f);
+        iconPath.lineTo(cx + r * 0.65f, cy + r * 0.75f);
+        iconPath.close();
+        c.drawPath(iconPath, strokePaint);
+        strokePaint.setColor(accentColor);
+        c.drawLine(cx - r * 0.85f, cy + r * 0.75f, cx + r * 0.85f, cy + r * 0.75f, strokePaint);
+    }
+
+    private void drawBadge(Canvas c, float cx, float cy, float r) {
+        prep();
+        iconPath.reset();
+        for (int i = 0; i < 7; i++) {
+            double a = Math.toRadians(-90 + i * (360.0 / 7));
+            float x = cx + (float) Math.cos(a) * r * 0.82f, y = cy + (float) Math.sin(a) * r * 0.82f;
+            double b = a + Math.toRadians(360.0 / 14);
+            float x2 = cx + (float) Math.cos(b) * r * 0.62f, y2 = cy + (float) Math.sin(b) * r * 0.62f;
+            if (i == 0) iconPath.moveTo(x, y); else iconPath.lineTo(x, y);
+            iconPath.lineTo(x2, y2);
+        }
+        iconPath.close();
+        c.drawPath(iconPath, strokePaint);
+        strokePaint.setColor(accentColor);
+        c.drawCircle(cx, cy, r * 0.28f, strokePaint);
+    }
+
+    private void drawFireTruck(Canvas c, float cx, float cy, float r) {
+        prep();
+        RectF cab = new RectF(cx - r * 0.85f, cy - r * 0.35f, cx - r * 0.25f, cy + r * 0.35f);
+        c.drawRoundRect(cab, r * 0.08f, r * 0.08f, strokePaint);
+        RectF body = new RectF(cx - r * 0.25f, cy - r * 0.55f, cx + r * 0.85f, cy + r * 0.35f);
+        c.drawRoundRect(body, r * 0.08f, r * 0.08f, strokePaint);
+        c.drawCircle(cx - r * 0.5f, cy + r * 0.55f, r * 0.2f, strokePaint);
+        c.drawCircle(cx + r * 0.45f, cy + r * 0.55f, r * 0.2f, strokePaint);
+        strokePaint.setColor(accentColor);
+        c.drawLine(cx - r * 0.1f, cy - r * 0.78f, cx + r * 0.7f, cy - r * 0.78f, strokePaint);
+    }
+
+    private void drawPhone(Canvas c, float cx, float cy, float r) {
+        prep();
+        iconPath.reset();
+        iconPath.moveTo(cx - r * 0.7f, cy - r * 0.55f);
+        iconPath.quadTo(cx - r * 0.75f, cy - r * 0.85f, cx - r * 0.4f, cy - r * 0.8f);
+        iconPath.lineTo(cx - r * 0.15f, cy - r * 0.35f);
+        iconPath.lineTo(cx - r * 0.35f, cy - r * 0.15f);
+        iconPath.quadTo(cx - r * 0.1f, cy + r * 0.35f, cx + r * 0.15f, cy + r * 0.35f);
+        iconPath.lineTo(cx + r * 0.35f, cy + r * 0.15f);
+        iconPath.lineTo(cx + r * 0.8f, cy + r * 0.4f);
+        iconPath.quadTo(cx + r * 0.85f, cy + r * 0.75f, cx + r * 0.55f, cy + r * 0.7f);
+        iconPath.quadTo(cx - r * 0.55f, cy + r * 0.55f, cx - r * 0.7f, cy - r * 0.55f);
+        iconPath.close();
+        c.drawPath(iconPath, strokePaint);
+    }
+
+    private void drawLaptop(Canvas c, float cx, float cy, float r) {
+        prep();
+        RectF lid = new RectF(cx - r * 0.65f, cy - r * 0.6f, cx + r * 0.65f, cy + r * 0.25f);
+        c.drawRoundRect(lid, r * 0.08f, r * 0.08f, strokePaint);
+        strokePaint.setColor(accentColor);
+        c.drawLine(cx - r * 0.9f, cy + r * 0.5f, cx + r * 0.9f, cy + r * 0.5f, strokePaint);
+        c.drawLine(cx - r * 0.75f, cy + r * 0.25f, cx - r * 0.9f, cy + r * 0.5f, strokePaint);
+        c.drawLine(cx + r * 0.75f, cy + r * 0.25f, cx + r * 0.9f, cy + r * 0.5f, strokePaint);
     }
 
     private void drawIncident(Canvas canvas, float cx, float cy, float r) {

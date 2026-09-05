@@ -10802,11 +10802,21 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
         aflp.rightMargin = dp(12);
         avatarFrame.setLayoutParams(aflp);
 
-        TextView aIcon = new TextView(this);
-        aIcon.setText(avatarIcon);
-        aIcon.setTextSize(20);
-        aIcon.setGravity(Gravity.CENTER);
-        avatarFrame.addView(aIcon);
+        int avType = ModernDockIconView.typeForGlyph(avatarIcon);
+        if (avType >= 0) {
+            // A drawn avatar; only the Triple Zero siren keeps its red.
+            int avPrimary = (avType == ModernDockIconView.TYPE_SIREN) ? colCrimson : colPale;
+            ModernDockIconView av = new ModernDockIconView(this, avType, avPrimary, colMuted);
+            av.setDrawPod(false);
+            av.setLayoutParams(new FrameLayout.LayoutParams(dp(30), dp(30), Gravity.CENTER));
+            avatarFrame.addView(av);
+        } else {
+            TextView aIcon = new TextView(this);
+            aIcon.setText(avatarIcon);
+            aIcon.setTextSize(20);
+            aIcon.setGravity(Gravity.CENTER);
+            avatarFrame.addView(aIcon);
+        }
         topRow.addView(avatarFrame);
 
         LinearLayout infoCol = new LinearLayout(this);
@@ -10888,13 +10898,13 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
         if (isMobile) {
             // WhatsApp Action Pill with Official Brand Green
             TextView btnWa = new TextView(this);
-            btnWa.setText("💬 WhatsApp");
-            btnWa.setTextColor(0xFFFFFFFF);
-            btnWa.setTextSize(11.5f);
-            btnWa.setTypeface(Typeface.DEFAULT_BOLD);
+            btnWa.setText("WhatsApp");
+            btnWa.setTextColor(colPale);
+            btnWa.setTextSize(12f);
+            btnWa.setTypeface(Fonts.text(this, 600));
             btnWa.setGravity(Gravity.CENTER);
             btnWa.setPadding(dp(8), dp(9), dp(8), dp(9));
-            btnWa.setBackground(rounded(0xFF25D366, dp(8)));
+            btnWa.setBackground(hairlinePressable(dp(8)));
             LinearLayout.LayoutParams walp = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1.25f);
             walp.rightMargin = dp(6);
             btnWa.setLayoutParams(walp);
@@ -10909,13 +10919,13 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
 
             // SMS Action Pill
             TextView btnSms = new TextView(this);
-            btnSms.setText("✉️ SMS");
-            btnSms.setTextColor(colCyan);
-            btnSms.setTextSize(11.5f);
-            btnSms.setTypeface(Typeface.DEFAULT_BOLD);
+            btnSms.setText("SMS");
+            btnSms.setTextColor(colPale);
+            btnSms.setTextSize(12f);
+            btnSms.setTypeface(Fonts.text(this, 600));
             btnSms.setGravity(Gravity.CENTER);
             btnSms.setPadding(dp(8), dp(9), dp(8), dp(9));
-            btnSms.setBackground(rounded(colPanel2, dp(8)));
+            btnSms.setBackground(hairlinePressable(dp(8)));
             LinearLayout.LayoutParams slp = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 0.95f);
             slp.rightMargin = dp(6);
             btnSms.setLayoutParams(slp);
@@ -20481,9 +20491,9 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
             rclp.leftMargin = dp(10);
             rightCol.setLayoutParams(rclp);
 
-            rightCol.addView(contactsSectionHeader("📅 DEPUTY CONFIRMED ROSTER (CURRENT CYCLE)", 0xFF00E5FF));
+            rightCol.addView(contactsSectionHeader("CONFIRMED ROSTER · CURRENT CYCLE", colQuiet));
             rightCol.addView(deputyScheduleContainer);
-            rightCol.addView(contactsSectionHeader("📋 DEPUTY SHIFT TASKS (3 OF 4 COMPLETE)", 0xFF10B981));
+            rightCol.addView(contactsSectionHeader("SHIFT TASKS · 3 OF 4 COMPLETE", colQuiet));
             rightCol.addView(taskBox);
             rightCol.addView(depActions);
 
@@ -20493,9 +20503,9 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
         } else {
             depLayout.addView(orgCard);
             depLayout.addView(clockCard);
-            depLayout.addView(contactsSectionHeader("📅 DEPUTY CONFIRMED ROSTER (CURRENT CYCLE)", 0xFF00E5FF));
+            depLayout.addView(contactsSectionHeader("CONFIRMED ROSTER · CURRENT CYCLE", colQuiet));
             depLayout.addView(deputyScheduleContainer);
-            depLayout.addView(contactsSectionHeader("📋 DEPUTY SHIFT TASKS (3 OF 4 COMPLETE)", 0xFF10B981));
+            depLayout.addView(contactsSectionHeader("SHIFT TASKS · 3 OF 4 COMPLETE", colQuiet));
             depLayout.addView(taskBox);
             depLayout.addView(depActions);
         }
@@ -20736,7 +20746,7 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
             officerCard.addView(offInfo);
             leftCol.addView(officerCard);
 
-            leftCol.addView(contactsSectionHeader("📅 SELECT TIMELINE DAY", colCyan));
+            leftCol.addView(contactsSectionHeader("SELECT TIMELINE DAY", colQuiet));
             rosterScrubber = new FluidRosterDayScrubberView(this);
             LinearLayout.LayoutParams rslp = new LinearLayout.LayoutParams(
                     LinearLayout.LayoutParams.MATCH_PARENT, dp(64));
@@ -20744,7 +20754,7 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
             rosterScrubber.setLayoutParams(rslp);
             leftCol.addView(rosterScrubber);
 
-            leftCol.addView(contactsSectionHeader("📊 FORTNIGHTLY WORKLOAD & PENALTIES", colCyan));
+            leftCol.addView(contactsSectionHeader("FORTNIGHTLY WORKLOAD & PENALTIES", colQuiet));
             leftCol.addView(buildRosterFortnightCard());
 
             LinearLayout actionsRow = new LinearLayout(this);
@@ -20774,10 +20784,10 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
             actionsRow.addView(btnNotes);
             leftCol.addView(actionsRow);
 
-            rightCol.addView(contactsSectionHeader("🗓️ FULL-WEEK TEAM ROSTER BOARD (SWIPE ACROSS)", colAccent));
+            rightCol.addView(contactsSectionHeader("FULL-WEEK TEAM ROSTER · SWIPE ACROSS", colQuiet));
             rightCol.addView(buildFullWeekTeamGrid());
 
-            rightCol.addView(contactsSectionHeader("🗂️ SELECTED SHIFT FOCUS & HANDOVER", colEmerald));
+            rightCol.addView(contactsSectionHeader("SELECTED SHIFT FOCUS & HANDOVER", colQuiet));
             rosterDetailContainer = new LinearLayout(this);
             rosterDetailContainer.setOrientation(LinearLayout.VERTICAL);
             rightCol.addView(rosterDetailContainer);
@@ -20842,7 +20852,7 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
         rLayout.addView(officerCard);
 
         // 4. Interactive 7-Day Timeline Scrubber
-        rLayout.addView(contactsSectionHeader("📅 SELECT TIMELINE DAY", colCyan));
+        rLayout.addView(contactsSectionHeader("SELECT TIMELINE DAY", colQuiet));
 
         rosterScrubber = new FluidRosterDayScrubberView(this);
         LinearLayout.LayoutParams rslp = new LinearLayout.LayoutParams(
@@ -20852,18 +20862,18 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
         rLayout.addView(rosterScrubber);
 
         // 5. 🗓️ FULL-WEEK TEAM GRID BOARD (Horizontal 7-Column Master Schedule)
-        rLayout.addView(contactsSectionHeader("🗓️ FULL-WEEK TEAM ROSTER BOARD (SWIPE ACROSS)", colAccent));
+        rLayout.addView(contactsSectionHeader("FULL-WEEK TEAM ROSTER · SWIPE ACROSS", colQuiet));
         rLayout.addView(buildFullWeekTeamGrid());
 
         // 6. Dynamic Shift Detail Focus Container
-        rLayout.addView(contactsSectionHeader("🗂️ SELECTED SHIFT FOCUS & HANDOVER", colEmerald));
+        rLayout.addView(contactsSectionHeader("SELECTED SHIFT FOCUS & HANDOVER", colQuiet));
         rosterDetailContainer = new LinearLayout(this);
         rosterDetailContainer.setOrientation(LinearLayout.VERTICAL);
         rLayout.addView(rosterDetailContainer);
         updateRosterDayDetail(getTodayWeekIndex()); // Default to Today
 
         // 7. Fortnightly Hours & Penalty Progress Deck
-        rLayout.addView(contactsSectionHeader("📊 FORTNIGHTLY WORKLOAD & PENALTIES", colCyan));
+        rLayout.addView(contactsSectionHeader("FORTNIGHTLY WORKLOAD & PENALTIES", colQuiet));
         rLayout.addView(buildRosterFortnightCard());
 
         // 8. Shift Actions Bar (Swap Request & Handover)
