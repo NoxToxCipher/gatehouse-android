@@ -3681,12 +3681,12 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
         filterRow.setPadding(dp(4), 0, dp(4), 0);
 
         final String[][] categories = {
-            {"ALL", "🌟 All Tools"},
-            {"SYSTEM", "⚙️ System & Hub"},
-            {"HARDWARE", "⚡ Comms & Gear"},
-            {"SENSORS", "🛰️ Radar & Sensors"},
-            {"VAULT", "🪪 Vault & Docs"},
-            {"GAMES", "🎮 Board Games (8)"}
+            {"ALL", "All"},
+            {"SYSTEM", "System"},
+            {"HARDWARE", "Comms"},
+            {"SENSORS", "Sensors"},
+            {"VAULT", "Vault"},
+            {"GAMES", "Games"}
         };
 
         final List<TextView> pillViews = new ArrayList<>();
@@ -3697,12 +3697,12 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
             final TextView pill = new TextView(this);
             pill.setText(catLabel);
             pill.setTextSize(11f);
-            pill.setTypeface(Typeface.DEFAULT_BOLD);
-            pill.setPadding(dp(12), dp(6), dp(12), dp(6));
+            pill.setTypeface(Fonts.text(this, 500));
+            pill.setPadding(dp(14), dp(7), dp(14), dp(7));
 
             boolean isSelected = toolsActiveFilter.equalsIgnoreCase(catKey);
-            pill.setTextColor(isSelected ? colAccentInk : colPale);
-            pill.setBackground(rounded(isSelected ? colAccent : 0xFF1E293B, dp(14)));
+            pill.setTextColor(isSelected ? colAccent : colMuted);
+            pill.setBackground(isSelected ? rounded(colAccentSoft, dp(14)) : outlined(colLineSubtle, dp(14)));
 
             LinearLayout.LayoutParams plp = new LinearLayout.LayoutParams(
                     LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT);
@@ -3715,8 +3715,8 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
                     toolsActiveFilter = catKey;
                     for (int i = 0; i < categories.length; i++) {
                         boolean sel = categories[i][0].equalsIgnoreCase(toolsActiveFilter);
-                        pillViews.get(i).setTextColor(sel ? colAccentInk : colPale);
-                        pillViews.get(i).setBackground(rounded(sel ? colAccent : 0xFF1E293B, dp(14)));
+                        pillViews.get(i).setTextColor(sel ? colAccent : colMuted);
+                        pillViews.get(i).setBackground(sel ? rounded(colAccentSoft, dp(14)) : outlined(colLineSubtle, dp(14)));
                     }
                     applyToolsCategoryFilter(container);
                 }
@@ -3751,7 +3751,7 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
 
         // 1. ⚙️ PREFERENCES & SYSTEM HUB (Placed at top for testing & instant access)
         if (showAll || "SYSTEM".equalsIgnoreCase(toolsActiveFilter)) {
-            container.addView(sectionHeader("⚙️ PREFERENCES & SYSTEM HUB", null));
+            container.addView(sectionHeader("Preferences & system", null));
 
             // Hero Card: Tester Feedback Hub
             container.addView(buildTesterFeedbackCard());
@@ -3804,7 +3804,7 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
 
         // 2. ⚡ COMMS & OPERATIONAL GEAR
         if (showAll || "HARDWARE".equalsIgnoreCase(toolsActiveFilter)) {
-            container.addView(sectionHeader("⚡ COMMS & OPERATIONAL GEAR", null));
+            container.addView(sectionHeader("Comms & gear", null));
 
             // Hero Live Torch & PTT Duo Card
             LinearLayout r1 = new LinearLayout(this);
@@ -3841,7 +3841,7 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
 
         // 3. 🛰️ RADAR & SENSORS
         if (showAll || "SENSORS".equalsIgnoreCase(toolsActiveFilter)) {
-            container.addView(sectionHeader("🛰️ SENSORS & ENVIRONMENTAL RADAR", null));
+            container.addView(sectionHeader("Sensors & radar", null));
             LinearLayout r3 = new LinearLayout(this);
             r3.setOrientation(LinearLayout.HORIZONTAL);
             r3.addView(buildCompactToolTile("🧭", "Site Compass", "360° LIVE", colCyan, "Live azimuth & shortest-path heading", new View.OnClickListener() {
@@ -3893,7 +3893,7 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
 
         // 4. 🪪 OFFICER VAULT & COMPLIANCE
         if (showAll || "VAULT".equalsIgnoreCase(toolsActiveFilter)) {
-            container.addView(sectionHeader("🪪 OFFICER VAULT & COMPLIANCE", null));
+            container.addView(sectionHeader("Officer vault & compliance", null));
             LinearLayout r5 = new LinearLayout(this);
             r5.setOrientation(LinearLayout.HORIZONTAL);
             r5.addView(buildCompactToolTile("🪪", "Officer Vault", GatehouseVault.isAvailable() ? "RUST AES-GCM" : "LIC #41207", 0xFF38BDF8, "Hardware-bound cryptographic vault & ID", new View.OnClickListener() {
@@ -3933,7 +3933,7 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
 
         // 5. 🎮 RECREATION & BOARD GAMES ARCADE (Consolidated Single Card)
         if (showAll || "GAMES".equalsIgnoreCase(toolsActiveFilter)) {
-            container.addView(sectionHeader("🎮 OFFICER RECREATION & ARCADE", null));
+            container.addView(sectionHeader("Recreation", null));
             container.addView(buildUnifiedRecreationCard());
         }
     }
@@ -4376,14 +4376,15 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
 
     private View buildGameCard(String iconGlyph, String titleStr, String badgeStr, int badgeCol, String descStr, String metaSpecs, final View.OnClickListener onClick) {
         final int glowCol = (badgeCol != 0 ? badgeCol : colCyan);
-        final RippleCardFrameLayout rippleTile = new RippleCardFrameLayout(this, 18f, glowCol);
+        // Only a status colour survives on a tile; everything else is bone and ash.
+        final boolean semantic = (badgeCol == colEmerald || badgeCol == colCrimson || badgeCol == 0xFFEF4444);
+        final RippleCardFrameLayout rippleTile = new RippleCardFrameLayout(this, 14f, colAccent);
 
-        android.graphics.drawable.GradientDrawable cardBg = new android.graphics.drawable.GradientDrawable(
-            android.graphics.drawable.GradientDrawable.Orientation.TOP_BOTTOM,
-            new int[]{0xFF161E2E, 0xFF0E1422}
-        );
-        cardBg.setCornerRadius(dp(18));
-        cardBg.setStroke(dp(1), 0x28000000 | (glowCol & 0x00FFFFFF));
+        // On the ground behind a hairline: no gradient card, no coloured glow.
+        android.graphics.drawable.GradientDrawable cardBg = new android.graphics.drawable.GradientDrawable();
+        cardBg.setColor(Color.TRANSPARENT);
+        cardBg.setCornerRadius(dp(14));
+        cardBg.setStroke(dp(1), colLineSubtle);
         rippleTile.setBackground(cardBg);
 
         LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.MATCH_PARENT, 1f);
@@ -4404,12 +4405,10 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
 
         // 44x44dp Squircle Icon Box with glowing inner aura
         FrameLayout iconBox = new FrameLayout(this);
-        android.graphics.drawable.GradientDrawable ibBg = new android.graphics.drawable.GradientDrawable(
-            android.graphics.drawable.GradientDrawable.Orientation.TL_BR,
-            new int[]{0x40000000 | (glowCol & 0x00FFFFFF), 0x18000000 | (glowCol & 0x00FFFFFF)}
-        );
+        android.graphics.drawable.GradientDrawable ibBg = new android.graphics.drawable.GradientDrawable();
+        ibBg.setColor(colPanel2);
         ibBg.setCornerRadius(dp(12));
-        ibBg.setStroke(dp(1), 0x66000000 | (glowCol & 0x00FFFFFF));
+        ibBg.setStroke(dp(1), colLineSubtle);
         iconBox.setBackground(ibBg);
         LinearLayout.LayoutParams iblp = new LinearLayout.LayoutParams(dp(44), dp(44));
         iconBox.setLayoutParams(iblp);
@@ -4428,12 +4427,12 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
 
         if (badgeStr != null) {
             TextView bg = new TextView(this);
-            bg.setText("● " + badgeStr);
-            bg.setTextColor(glowCol);
-            bg.setTextSize(8.5f);
-            bg.setTypeface(Typeface.MONOSPACE);
-            bg.setPadding(dp(8), dp(4), dp(8), dp(4));
-            bg.setBackground(rounded(0x2E000000 | (glowCol & 0x00FFFFFF), dp(7)));
+            bg.setText(badgeStr);
+            bg.setTextColor(semantic ? glowCol : colMuted);
+            bg.setTextSize(9f);
+            bg.setLetterSpacing(0.08f);
+            bg.setTypeface(Fonts.mono(this, false));
+            bg.setPadding(dp(4), dp(4), 0, dp(4));
             top.addView(bg);
         }
         tile.addView(top);
@@ -4446,9 +4445,9 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
 
         TextView title = new TextView(this);
         title.setText(titleStr);
-        title.setTextColor(0xFFFFFFFF);
+        title.setTextColor(colPale);
         title.setTextSize(13.5f);
-        title.setTypeface(Typeface.DEFAULT_BOLD);
+        title.setTypeface(Fonts.text(this, 500));
         title.setSingleLine(true);
         title.setEllipsize(android.text.TextUtils.TruncateAt.END);
         LinearLayout.LayoutParams tlp = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
@@ -4457,9 +4456,9 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
 
         TextView arrow = new TextView(this);
         arrow.setText("›");
-        arrow.setTextColor(glowCol);
+        arrow.setTextColor(colQuiet);
         arrow.setTextSize(16);
-        arrow.setTypeface(Typeface.DEFAULT_BOLD);
+        arrow.setTypeface(Fonts.text(this, 400));
         arrow.setPadding(dp(4), 0, dp(2), 0);
         titleRow.addView(arrow);
 
@@ -4468,8 +4467,9 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
         // 3. Description
         TextView desc = new TextView(this);
         desc.setText(descStr);
-        desc.setTextColor(0xFF94A3B8);
+        desc.setTextColor(colMuted);
         desc.setTextSize(11f);
+        desc.setTypeface(Fonts.text(this, 400));
         desc.setLines(2);
         desc.setMaxLines(2);
         desc.setEllipsize(android.text.TextUtils.TruncateAt.END);
@@ -4488,14 +4488,15 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
 
     private View buildCompactToolTile(String iconGlyph, String titleStr, String badgeStr, int badgeCol, String descStr, final View.OnClickListener onClick) {
         final int glowCol = (badgeCol != 0 ? badgeCol : colCyan);
-        final RippleCardFrameLayout rippleTile = new RippleCardFrameLayout(this, 18f, glowCol);
+        // Only a status colour survives on a tile; everything else is bone and ash.
+        final boolean semantic = (badgeCol == colEmerald || badgeCol == colCrimson || badgeCol == 0xFFEF4444);
+        final RippleCardFrameLayout rippleTile = new RippleCardFrameLayout(this, 14f, colAccent);
 
-        android.graphics.drawable.GradientDrawable cardBg = new android.graphics.drawable.GradientDrawable(
-            android.graphics.drawable.GradientDrawable.Orientation.TOP_BOTTOM,
-            new int[]{0xFF161E2E, 0xFF0E1422}
-        );
-        cardBg.setCornerRadius(dp(18));
-        cardBg.setStroke(dp(1), 0x28000000 | (glowCol & 0x00FFFFFF));
+        // On the ground behind a hairline: no gradient card, no coloured glow.
+        android.graphics.drawable.GradientDrawable cardBg = new android.graphics.drawable.GradientDrawable();
+        cardBg.setColor(Color.TRANSPARENT);
+        cardBg.setCornerRadius(dp(14));
+        cardBg.setStroke(dp(1), colLineSubtle);
         rippleTile.setBackground(cardBg);
 
         LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.MATCH_PARENT, 1f);
@@ -4516,12 +4517,10 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
 
         // Modern 44x44dp Bento Squircle Icon Box with 2-Tone Gradient & Border
         FrameLayout iconBox = new FrameLayout(this);
-        android.graphics.drawable.GradientDrawable ibBg = new android.graphics.drawable.GradientDrawable(
-            android.graphics.drawable.GradientDrawable.Orientation.TL_BR,
-            new int[]{0x40000000 | (glowCol & 0x00FFFFFF), 0x18000000 | (glowCol & 0x00FFFFFF)}
-        );
+        android.graphics.drawable.GradientDrawable ibBg = new android.graphics.drawable.GradientDrawable();
+        ibBg.setColor(colPanel2);
         ibBg.setCornerRadius(dp(12));
-        ibBg.setStroke(dp(1), 0x66000000 | (glowCol & 0x00FFFFFF));
+        ibBg.setStroke(dp(1), colLineSubtle);
         iconBox.setBackground(ibBg);
         LinearLayout.LayoutParams iblp = new LinearLayout.LayoutParams(dp(44), dp(44));
         iconBox.setLayoutParams(iblp);
@@ -4540,12 +4539,12 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
 
         if (badgeStr != null) {
             TextView bg = new TextView(this);
-            bg.setText("● " + badgeStr);
-            bg.setTextColor(glowCol);
-            bg.setTextSize(8.5f);
-            bg.setTypeface(Typeface.MONOSPACE);
-            bg.setPadding(dp(8), dp(4), dp(8), dp(4));
-            bg.setBackground(rounded(0x2E000000 | (glowCol & 0x00FFFFFF), dp(7)));
+            bg.setText(badgeStr);
+            bg.setTextColor(semantic ? glowCol : colMuted);
+            bg.setTextSize(9f);
+            bg.setLetterSpacing(0.08f);
+            bg.setTypeface(Fonts.mono(this, false));
+            bg.setPadding(dp(4), dp(4), 0, dp(4));
             top.addView(bg);
         }
         tile.addView(top);
@@ -4558,9 +4557,9 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
 
         TextView title = new TextView(this);
         title.setText(titleStr);
-        title.setTextColor(0xFFFFFFFF);
+        title.setTextColor(colPale);
         title.setTextSize(13.5f);
-        title.setTypeface(Typeface.DEFAULT_BOLD);
+        title.setTypeface(Fonts.text(this, 500));
         title.setSingleLine(true);
         title.setEllipsize(android.text.TextUtils.TruncateAt.END);
         LinearLayout.LayoutParams tlp = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
@@ -4569,9 +4568,9 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
 
         TextView arrow = new TextView(this);
         arrow.setText("›");
-        arrow.setTextColor(glowCol);
+        arrow.setTextColor(colQuiet);
         arrow.setTextSize(16);
-        arrow.setTypeface(Typeface.DEFAULT_BOLD);
+        arrow.setTypeface(Fonts.text(this, 400));
         arrow.setPadding(dp(4), 0, dp(2), 0);
         titleRow.addView(arrow);
 
@@ -4579,8 +4578,9 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
 
         TextView desc = new TextView(this);
         desc.setText(descStr);
-        desc.setTextColor(0xFF94A3B8);
+        desc.setTextColor(colMuted);
         desc.setTextSize(11f);
+        desc.setTypeface(Fonts.text(this, 400));
         desc.setLines(2);
         desc.setMaxLines(2);
         desc.setEllipsize(android.text.TextUtils.TruncateAt.END);
@@ -10332,7 +10332,7 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
             rightCol.addView(buildPttRadioBar());
 
             rightCol.addView(buildLogbookEntranceCard());
-            rightCol.addView(buildAussieSportsCard());
+            // Footy radar lives on the Tools tab, off the guard's patrol screen.
 
             primary = new TextView(this);
             primary.setTextSize(15);
@@ -10439,7 +10439,7 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
             container.addView(buildPttRadioBar());
 
             container.addView(buildLogbookEntranceCard());
-            container.addView(buildAussieSportsCard());
+            // Footy radar lives on the Tools tab, off the guard's patrol screen.
 
             primary = new TextView(this);
             primary.setTextSize(15);
@@ -11055,12 +11055,11 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
         final LinearLayout card = new LinearLayout(this);
         card.setOrientation(LinearLayout.VERTICAL);
         android.graphics.drawable.GradientDrawable gd = new android.graphics.drawable.GradientDrawable();
-        gd.setColor(colPanel);
+        gd.setColor(Color.TRANSPARENT);
         gd.setCornerRadius(dp(14));
         gd.setStroke(dp(1), colLineSubtle);
         card.setBackground(gd);
-        card.setPadding(dp(14), dp(12), dp(14), dp(12));
-        card.setElevation(dp(2));
+        card.setPadding(dp(16), dp(13), dp(14), dp(13));
         LinearLayout.LayoutParams clp = new LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
         clp.topMargin = dp(8);
@@ -11073,8 +11072,9 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
         top.setGravity(Gravity.CENTER_VERTICAL);
 
         TextView icon = new TextView(this);
-        icon.setText("🏉");
-        icon.setTextSize(20);
+        icon.setText("");
+        icon.setTextSize(1);
+        icon.setVisibility(View.GONE);
         icon.setPadding(0, 0, dp(10), 0);
         top.addView(icon);
 
@@ -11084,26 +11084,27 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
         textCol.setLayoutParams(tclp);
 
         TextView title = new TextView(this);
-        title.setText("AUSSIE FOOTY RADAR");
+        title.setText("Footy radar");
         title.setTextColor(colPale);
-        title.setTextSize(13f);
-        title.setTypeface(Typeface.DEFAULT_BOLD);
+        title.setTextSize(14f);
+        title.setTypeface(Fonts.display(this, false));
         textCol.addView(title);
 
         TextView sub = new TextView(this);
-        sub.setText("NRL · Super Rugby · AFL · Live Scores & TV Guide");
+        sub.setText("NRL · Super Rugby · AFL · live scores & TV guide");
         sub.setTextColor(colMuted);
-        sub.setTextSize(10.5f);
+        sub.setTextSize(11f);
+        sub.setTypeface(Fonts.text(this, 400));
         textCol.addView(sub);
         top.addView(textCol);
 
         TextView badge = new TextView(this);
-        badge.setText("OPEN RADAR ◹");
+        badge.setText("Open ›");
         badge.setTextColor(colAccent);
-        badge.setTextSize(10f);
-        badge.setTypeface(Typeface.create(Typeface.MONOSPACE, Typeface.BOLD));
-        badge.setPadding(dp(8), dp(4), dp(8), dp(4));
-        badge.setBackground(rounded(colPanel2, dp(6)));
+        badge.setTextSize(12f);
+        badge.setTypeface(Fonts.text(this, 600));
+        badge.setPadding(dp(12), dp(8), dp(12), dp(8));
+        badge.setBackground(hairlinePressable(dp(10)));
         top.addView(badge);
         card.addView(top);
 
@@ -12170,7 +12171,7 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
         LinearLayout bar = new LinearLayout(this);
         bar.setOrientation(LinearLayout.HORIZONTAL);
         bar.setGravity(Gravity.CENTER_VERTICAL);
-        bar.setBackground(rounded(colPanel, dp(14)));
+        bar.setBackground(outlined(colLineSubtle, dp(12)));
         bar.setPadding(dp(8), dp(6), dp(8), dp(6));
         LinearLayout.LayoutParams blp = new LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
@@ -12180,13 +12181,13 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
 
         // PTT Transmit Button (Hold to Talk)
         pttBtn = new TextView(this);
-        pttBtn.setText("🎙️ PTT · HOLD");
-        pttBtn.setTextColor(colAccentInk);
-        pttBtn.setTextSize(11.5f);
-        pttBtn.setTypeface(Typeface.DEFAULT_BOLD);
+        pttBtn.setText("Hold to talk");
+        pttBtn.setTextColor(colAccent);
+        pttBtn.setTextSize(12f);
+        pttBtn.setTypeface(Fonts.text(this, 600));
         pttBtn.setGravity(Gravity.CENTER);
         pttBtn.setPadding(dp(12), dp(10), dp(12), dp(10));
-        pttBtn.setBackground(rounded(colAccent, dp(10)));
+        pttBtn.setBackground(hairlinePressable(dp(10)));
         LinearLayout.LayoutParams plp = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1.4f);
         pttBtn.setLayoutParams(plp);
 
@@ -12196,17 +12197,17 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
                 switch (event.getActionMasked()) {
                     case MotionEvent.ACTION_DOWN:
                         hapticDoublePulse();
-                        pttBtn.setText("🔴 TALKING...");
+                        pttBtn.setText("Talking");
                         pttBtn.setTextColor(0xFFFFFFFF);
-                        pttBtn.setBackground(rounded(0xFFEF4444, dp(10)));
+                        pttBtn.setBackground(rounded(colCrimson, dp(10)));
                         PttRadioEngine.getInstance(MainActivity.this).startTransmit();
                         break;
                     case MotionEvent.ACTION_UP:
                     case MotionEvent.ACTION_CANCEL:
                         hapticClick();
-                        pttBtn.setText("🎙️ PTT · HOLD");
-                        pttBtn.setTextColor(colAccentInk);
-                        pttBtn.setBackground(rounded(colAccent, dp(10)));
+                        pttBtn.setText("Hold to talk");
+                        pttBtn.setTextColor(colAccent);
+                        pttBtn.setBackground(hairlinePressable(dp(10)));
                         PttRadioEngine.getInstance(MainActivity.this).stopTransmit();
                         break;
                 }
@@ -12217,10 +12218,10 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
 
         // Center Status / Channel Readout
         pttStatusText = new TextView(this);
-        pttStatusText.setText("📻 CH 01 · STANDBY");
-        pttStatusText.setTextColor(colPale);
-        pttStatusText.setTextSize(10f);
-        pttStatusText.setTypeface(Typeface.create(Typeface.MONOSPACE, Typeface.BOLD));
+        pttStatusText.setText("CH 01 · Standby");
+        pttStatusText.setTextColor(colMuted);
+        pttStatusText.setTextSize(11f);
+        pttStatusText.setTypeface(Fonts.mono(this, false));
         pttStatusText.setGravity(Gravity.CENTER);
         pttStatusText.setPadding(dp(4), 0, dp(4), 0);
         LinearLayout.LayoutParams slp = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1.8f);
@@ -12234,13 +12235,13 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
 
         // Replay Button
         pttReplayBtn = new TextView(this);
-        pttReplayBtn.setText("🔄 REPLAY");
-        pttReplayBtn.setTextColor(colCyan);
-        pttReplayBtn.setTextSize(10f);
-        pttReplayBtn.setTypeface(Typeface.DEFAULT_BOLD);
+        pttReplayBtn.setText("Replay");
+        pttReplayBtn.setTextColor(colPale);
+        pttReplayBtn.setTextSize(11.5f);
+        pttReplayBtn.setTypeface(Fonts.text(this, 500));
         pttReplayBtn.setGravity(Gravity.CENTER);
         pttReplayBtn.setPadding(dp(8), dp(10), dp(8), dp(10));
-        pttReplayBtn.setBackground(rounded(colPanel2, dp(10)));
+        pttReplayBtn.setBackground(hairlinePressable(dp(10)));
         LinearLayout.LayoutParams rlp = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1.0f);
         pttReplayBtn.setLayoutParams(rlp);
         pttReplayBtn.setOnClickListener(new View.OnClickListener() {
@@ -12258,8 +12259,10 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
 
         // Settings / Info Button
         TextView pttInfoBtn = new TextView(this);
-        pttInfoBtn.setText("⚙️");
-        pttInfoBtn.setTextSize(14f);
+        pttInfoBtn.setText("Setup");
+        pttInfoBtn.setTextSize(10.5f);
+        pttInfoBtn.setTextColor(colMuted);
+        pttInfoBtn.setTypeface(Fonts.mono(this, false));
         pttInfoBtn.setGravity(Gravity.CENTER);
         pttInfoBtn.setPadding(dp(8), dp(6), dp(8), dp(6));
         pttInfoBtn.setOnClickListener(new View.OnClickListener() {
@@ -12277,8 +12280,8 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
                 runOnUiThread(new Runnable() {
                     public void run() {
                         if (pttStatusText != null) {
-                            pttStatusText.setText(isTransmitting ? "🔴 TRANSMITTING" : "📻 CH 01 · STANDBY");
-                            pttStatusText.setTextColor(isTransmitting ? 0xFFEF4444 : colPale);
+                            pttStatusText.setText(isTransmitting ? "Transmitting" : "CH 01 · Standby");
+                            pttStatusText.setTextColor(isTransmitting ? colCrimson : colMuted);
                         }
                     }
                 });
@@ -12289,8 +12292,8 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
                 runOnUiThread(new Runnable() {
                     public void run() {
                         if (pttStatusText != null) {
-                            pttStatusText.setText(isReceiving ? ("🔊 " + (senderName.isEmpty() ? "DESK" : senderName).toUpperCase()) : "📻 CH 01 · STANDBY");
-                            pttStatusText.setTextColor(isReceiving ? colEmerald : colPale);
+                            pttStatusText.setText(isReceiving ? ("Receiving · " + (senderName.isEmpty() ? "Desk" : senderName)) : "CH 01 · Standby");
+                            pttStatusText.setTextColor(isReceiving ? colEmerald : colMuted);
                         }
                     }
                 });
@@ -12302,8 +12305,8 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
                     public void run() {
                         if (pttStatusText != null && !PttRadioEngine.getInstance(MainActivity.this).isTransmitting() && !PttRadioEngine.getInstance(MainActivity.this).isReceiving()) {
                             int peers = PttRadioEngine.getInstance(MainActivity.this).getActivePeerCount();
-                            pttStatusText.setText(peers > 0 ? ("● " + peers + " PEER" + (peers > 1 ? "S" : "") + " LINKED") : "📻 CH 01 · STANDBY");
-                            pttStatusText.setTextColor(peers > 0 ? colEmerald : colPale);
+                            pttStatusText.setText(peers > 0 ? (peers + (peers > 1 ? " peers linked" : " peer linked")) : "CH 01 · Standby");
+                            pttStatusText.setTextColor(peers > 0 ? colEmerald : colMuted);
                         }
                     }
                 });
