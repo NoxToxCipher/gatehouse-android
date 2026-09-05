@@ -4045,7 +4045,7 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
         String subText = "10 Ancient & Retro Games · Off-Grid AI";
         if (!topList.isEmpty()) {
             RecreationLeaderboardManager.OfficerScoreRecord topR = topList.get(0);
-            subText = "🥇 #1 " + topR.officerName + " · " + topR.totalWins + " Wins (" + topR.chessElo + " ELO)";
+            subText = "#1 " + topR.officerName + " · " + topR.totalWins + " wins · " + topR.chessElo + " Elo";
         }
 
         TextView tSub = new TextView(this);
