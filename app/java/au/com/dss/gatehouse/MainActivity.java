@@ -865,7 +865,7 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
                         float dx = ev.getX() - peekDownX;
                         float dy = Math.abs(ev.getY() - peekDownY);
                         boolean isTab = getResources().getConfiguration().smallestScreenWidthDp >= 600;
-                        float maxEdge = isTab ? dp(100) : dp(32);
+                        float maxEdge = isTab ? dp(100) : dp(40);
                         boolean canOpen = !isDeputyOpen && peekDownX < maxEdge && dx > dp(18) && dx > dy * 1.2f;
                         boolean canClose = isDeputyOpen && dx < -dp(14) && Math.abs(dx) > dy * 1.1f;
                         if (canOpen || canClose) {
@@ -961,6 +961,22 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
         deputyScroll.addView(buildDeputyView());
         deputyContainer.addView(deputyScroll);
         rootFrame.addView(deputyContainer);
+
+        // Gesture navigation reserves the left edge for the system Back swipe, so
+        // the peek drag never reached the app on the CMF. Hand a 200dp band of the
+        // edge back to us (the most Android allows per edge), centred on the screen.
+        rootFrame.addOnLayoutChangeListener(new View.OnLayoutChangeListener() {
+            public void onLayoutChange(View v, int l, int t, int r, int b,
+                                       int ol, int ot, int or, int ob) {
+                if (Build.VERSION.SDK_INT >= 29) {
+                    int h = b - t;
+                    int band = dp(200);
+                    int top = Math.max(0, h / 2 - band / 2);
+                    v.setSystemGestureExclusionRects(java.util.Arrays.asList(
+                            new android.graphics.Rect(0, top, dp(40), top + band)));
+                }
+            }
+        });
 
         // 2. SCRIM OVER DEPUTY
         deputyScrim = new View(this);
@@ -1240,6 +1256,25 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
         mainSurfaceContainer.addView(screenLayout);
 
         rootFrame.addView(mainSurfaceContainer);
+
+        // A slim brass handle on the left edge: it marks where the peek lives and,
+        // tapped, opens the roster without needing the drag at all.
+        View peekHandle = new View(this);
+        FrameLayout.LayoutParams phlp = new FrameLayout.LayoutParams(dp(4), dp(56), Gravity.LEFT | Gravity.CENTER_VERTICAL);
+        peekHandle.setLayoutParams(phlp);
+        GradientDrawable phBg = new GradientDrawable();
+        phBg.setColor(colAccentSoft);
+        phBg.setCornerRadius(dp(2));
+        phBg.setStroke(dp(1), colAccent);
+        peekHandle.setBackground(phBg);
+        peekHandle.setContentDescription("Open roster");
+        peekHandle.setOnClickListener(new View.OnClickListener() {
+            public void onClick(View v) {
+                hapticHeavyClick();
+                openDeputy(true);
+            }
+        });
+        rootFrame.addView(peekHandle);
 
         // 🦜 7. SUN CONURE FLIGHT OVERLAY
         conureOverlay = new SunConureFlightOverlayView(this);
