@@ -3984,13 +3984,12 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
     }
 
     private View buildUnifiedRecreationCard() {
-        final RippleCardFrameLayout rippleCard = new RippleCardFrameLayout(this, 18f, colAccent);
-        android.graphics.drawable.GradientDrawable bg = new android.graphics.drawable.GradientDrawable(
-                android.graphics.drawable.GradientDrawable.Orientation.TL_BR,
-                new int[]{0xFF1C2234, 0xFF0F1424}
-        );
-        bg.setCornerRadius(dp(18));
-        bg.setStroke(dp(1), 0x3338BDF8);
+        final RippleCardFrameLayout rippleCard = new RippleCardFrameLayout(this, 14f, colAccent);
+        // On the ground behind a hairline, like every other tile on Tools.
+        android.graphics.drawable.GradientDrawable bg = new android.graphics.drawable.GradientDrawable();
+        bg.setColor(Color.TRANSPARENT);
+        bg.setCornerRadius(dp(14));
+        bg.setStroke(dp(1), colLineSubtle);
         rippleCard.setBackground(bg);
 
         LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(
@@ -4008,13 +4007,22 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
         top.setGravity(Gravity.CENTER_VERTICAL);
 
         FrameLayout iconBox = new FrameLayout(this);
-        iconBox.setBackground(rounded(0x3338BDF8, dp(12)));
+        android.graphics.drawable.GradientDrawable ibBg = new android.graphics.drawable.GradientDrawable();
+        ibBg.setColor(colPanel2);
+        ibBg.setCornerRadius(dp(12));
+        ibBg.setStroke(dp(1), colLineSubtle);
+        iconBox.setBackground(ibBg);
         LinearLayout.LayoutParams iblp = new LinearLayout.LayoutParams(dp(42), dp(42));
         iconBox.setLayoutParams(iblp);
 
         TextView tvIco = new TextView(this);
-        tvIco.setText("🎮");
-        tvIco.setTextSize(20);
+        tvIco.setText("");
+        tvIco.setTextSize(1);
+        tvIco.setVisibility(View.GONE);
+        ModernDockIconView padIco = new ModernDockIconView(this, ModernDockIconView.TYPE_GAMEPAD, colPale, colMuted);
+        padIco.setDrawPod(false);
+        padIco.setLayoutParams(new FrameLayout.LayoutParams(dp(28), dp(28), Gravity.CENTER));
+        iconBox.addView(padIco);
         tvIco.setGravity(Gravity.CENTER);
         iconBox.addView(tvIco);
         top.addView(iconBox);
@@ -4026,10 +4034,10 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
         titleCol.setLayoutParams(tclp);
 
         TextView tTitle = new TextView(this);
-        tTitle.setText("Officer Recreation Suite (10)");
-        tTitle.setTextColor(0xFFFFFFFF);
-        tTitle.setTextSize(14f);
-        tTitle.setTypeface(Typeface.DEFAULT_BOLD);
+        tTitle.setText("Recreation · 10 games");
+        tTitle.setTextColor(colPale);
+        tTitle.setTextSize(15f);
+        tTitle.setTypeface(Fonts.display(this, false));
         titleCol.addView(tTitle);
 
         RecreationLeaderboardManager lm = RecreationLeaderboardManager.getInstance(this);
@@ -4042,19 +4050,19 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
 
         TextView tSub = new TextView(this);
         tSub.setText(subText);
-        tSub.setTextColor(0xFF38BDF8);
-        tSub.setTextSize(10.5f);
-        tSub.setTypeface(Typeface.create(Typeface.MONOSPACE, Typeface.BOLD));
+        tSub.setTextColor(colMuted);
+        tSub.setTextSize(11f);
+        tSub.setTypeface(Fonts.text(this, 400));
         titleCol.addView(tSub);
         top.addView(titleCol);
 
         TextView btnScores = new TextView(this);
-        btnScores.setText("🏆 Scores");
-        btnScores.setTextColor(0xFF38BDF8);
-        btnScores.setTextSize(10f);
-        btnScores.setTypeface(Typeface.create(Typeface.MONOSPACE, Typeface.BOLD));
+        btnScores.setText("Scores");
+        btnScores.setTextColor(colAccent);
+        btnScores.setTextSize(12f);
+        btnScores.setTypeface(Fonts.text(this, 600));
         btnScores.setPadding(dp(8), dp(4), dp(8), dp(4));
-        btnScores.setBackground(rounded(0x2838BDF8, dp(6)));
+        btnScores.setBackground(hairlinePressable(dp(8)));
         btnScores.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
@@ -4076,19 +4084,19 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
 
         // Game Launch Chips (Row 1: 5 games)
         String[][] gamesRow1 = {
-                {"♟️ Chess", "chess"},
-                {"⚪ Baduk", "baduk"},
-                {"🏺 Ur", "royal_ur"},
-                {"🪲 Senet", "senet"},
-                {"🐺 Tafl", "hnefatafl"}
+                {"Chess", "chess"},
+                {"Baduk", "baduk"},
+                {"Ur", "royal_ur"},
+                {"Senet", "senet"},
+                {"Tafl", "hnefatafl"}
         };
         // Game Launch Chips (Row 2: 5 games)
         String[][] gamesRow2 = {
-                {"🎲 Gammon", "backgammon"},
-                {"🏛️ Morris", "morris"},
-                {"🔴 Connect4", "connect4"},
-                {"👾 Invaders", "invaders"},
-                {"🧱 Tetris", "tetris"}
+                {"Gammon", "backgammon"},
+                {"Morris", "morris"},
+                {"Connect4", "connect4"},
+                {"Invaders", "invaders"},
+                {"Tetris", "tetris"}
         };
 
         box.addView(buildGameChipsRow(gamesRow1));
@@ -4110,13 +4118,13 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
             TextView chip = new TextView(this);
             chip.setText(label);
             chip.setTextColor(colPale);
-            chip.setTextSize(9.5f);
-            chip.setTypeface(Typeface.DEFAULT_BOLD);
+            chip.setTextSize(11f);
+            chip.setTypeface(Fonts.text(this, 500));
             chip.setGravity(Gravity.CENTER);
             chip.setSingleLine(true);
             chip.setEllipsize(android.text.TextUtils.TruncateAt.END);
             chip.setPadding(dp(2), dp(8), dp(2), dp(8));
-            chip.setBackground(rounded(0x1FFFFFFF, dp(6)));
+            chip.setBackground(hairlinePressable(dp(8)));
             chip.setOnClickListener(new View.OnClickListener() {
                 @Override
                 public void onClick(View v) {

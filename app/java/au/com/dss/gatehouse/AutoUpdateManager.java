@@ -33,7 +33,7 @@ public final class AutoUpdateManager {
     private static final String KEY_LAST_CHECK = "last_check_ms";
     private static final String KEY_LAST_SHA = "last_installed_sha";
     private static final String KEY_LAST_NOTIFIED_SHA = "last_notified_sha";
-    private static final String CHANNEL_UPDATES = "gatehouse_updates";
+    private static final String CHANNEL_UPDATES = "gatehouse_updates_v2"; // v2: Gatehouse chime
     private static final int NOTIF_ID_UPDATE = 8801;
     public static final String ACTION_CHECK_UPDATE = "au.com.dss.gatehouse.ACTION_CHECK_UPDATE";
 
@@ -89,6 +89,7 @@ public final class AutoUpdateManager {
                 chan.enableVibration(true);
                 chan.enableLights(true);
                 chan.setLightColor(0xFFF59E0B);
+                GatehouseSounds.applyChime(chan, context);
                 nm.createNotificationChannel(chan);
             }
         }

@@ -34,7 +34,7 @@ import java.util.concurrent.Executors;
 public class AirspaceRadarManager {
     private static final String TAG = "AirspaceRadar";
 
-    public static final String CHANNEL_AIRSPACE_ALERTS = "airspace_flight_alerts";
+    public static final String CHANNEL_AIRSPACE_ALERTS = "airspace_flight_alerts_v2"; // v2: Gatehouse chime
     private static final String PREFS_NAME = "airspace_radar_state";
     private static final String KEY_LAST_POLAIR_ALERT_TS = "last_polair_alert_ts";
 
@@ -157,6 +157,7 @@ public class AirspaceRadarManager {
             chanAir.enableVibration(true);
             chanAir.setVibrationPattern(new long[]{0, 150, 80, 150, 80, 300});
             chanAir.setShowBadge(true);
+            GatehouseSounds.applyChime(chanAir, context);
             nm.createNotificationChannel(chanAir);
         }
     }

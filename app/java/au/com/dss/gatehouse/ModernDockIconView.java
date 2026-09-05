@@ -37,6 +37,7 @@ public class ModernDockIconView extends View {
     public static final int TYPE_FIRETRUCK = 23;
     public static final int TYPE_PHONE = 24;
     public static final int TYPE_LAPTOP = 25;
+    public static final int TYPE_GAMEPAD = 26;
 
     /** When false the icon draws with no pod of its own (for use inside a tile's box). */
     private boolean drawPod = true;
@@ -177,6 +178,7 @@ public class ModernDockIconView extends View {
             case TYPE_FIRETRUCK: drawFireTruck(canvas, cx, cy, r); break;
             case TYPE_PHONE:     drawPhone(canvas, cx, cy, r); break;
             case TYPE_LAPTOP:    drawLaptop(canvas, cx, cy, r); break;
+            case TYPE_GAMEPAD:   drawGamepad(canvas, cx, cy, r); break;
         }
     }
 
@@ -209,6 +211,7 @@ public class ModernDockIconView extends View {
             case "📱":       return TYPE_PHONE;      // mobile phone
             case "📞":       return TYPE_PHONE;      // telephone receiver
             case "💻":       return TYPE_LAPTOP;     // laptop
+            case "🎮":       return TYPE_GAMEPAD;    // video game
             default:                   return -1;
         }
     }
@@ -499,6 +502,20 @@ public class ModernDockIconView extends View {
         iconPath.quadTo(cx - r * 0.55f, cy + r * 0.55f, cx - r * 0.7f, cy - r * 0.55f);
         iconPath.close();
         c.drawPath(iconPath, strokePaint);
+    }
+
+    private void drawGamepad(Canvas c, float cx, float cy, float r) {
+        prep();
+        RectF body = new RectF(cx - r * 0.9f, cy - r * 0.42f, cx + r * 0.9f, cy + r * 0.42f);
+        c.drawRoundRect(body, r * 0.42f, r * 0.42f, strokePaint);
+        // d-pad
+        c.drawLine(cx - r * 0.5f, cy - r * 0.18f, cx - r * 0.5f, cy + r * 0.18f, strokePaint);
+        c.drawLine(cx - r * 0.68f, cy, cx - r * 0.32f, cy, strokePaint);
+        // buttons
+        strokePaint.setColor(accentColor);
+        fillPaint.setColor(accentColor);
+        c.drawCircle(cx + r * 0.42f, cy - r * 0.12f, r * 0.07f, fillPaint);
+        c.drawCircle(cx + r * 0.62f, cy + r * 0.1f, r * 0.07f, fillPaint);
     }
 
     private void drawLaptop(Canvas c, float cx, float cy, float r) {

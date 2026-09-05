@@ -40,8 +40,8 @@ import java.util.concurrent.Executors;
 public class DeputyNotifier {
     private static final String TAG = "DeputyNotifier";
 
-    public static final String CHANNEL_ROSTER_CHANGES = "deputy_roster_updates";
-    public static final String CHANNEL_SHIFT_WEATHER = "deputy_shift_weather";
+    public static final String CHANNEL_ROSTER_CHANGES = "deputy_roster_updates_v2"; // v2: Gatehouse chime
+    public static final String CHANNEL_SHIFT_WEATHER = "deputy_shift_weather_v2";   // v2: Gatehouse chime
 
     private static final String PREFS_NAME = "deputy_notifications";
     private static final String KEY_LAST_KNOWN_SHIFTS = "last_known_shifts_digest";
@@ -69,6 +69,7 @@ public class DeputyNotifier {
             chanChanges.setLightColor(0xFF14B8A6);
             chanChanges.enableVibration(true);
             chanChanges.setShowBadge(true);
+            GatehouseSounds.applyChime(chanChanges, context);
             nm.createNotificationChannel(chanChanges);
 
             // 2. Channel for 12h Pre-Shift Reminders & Weather Forecast (Gold / Amber Aura)
@@ -82,6 +83,7 @@ public class DeputyNotifier {
             chanWeather.setLightColor(0xFFF59E0B);
             chanWeather.enableVibration(true);
             chanWeather.setShowBadge(true);
+            GatehouseSounds.applyChime(chanWeather, context);
             nm.createNotificationChannel(chanWeather);
         }
     }

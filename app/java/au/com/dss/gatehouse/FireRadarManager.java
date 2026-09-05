@@ -37,9 +37,9 @@ import java.util.concurrent.Executors;
 public class FireRadarManager {
     private static final String TAG = "FireRadarManager";
 
-    public static final String CHANNEL_FIRE_HAZARDS = "fire_hazard_alerts";
-    public static final String CHANNEL_LIGHTNING_ALERTS = "lightning_proximity_alerts";
-    public static final String CHANNEL_HAIL_ALERTS = "hail_severe_alerts";
+    public static final String CHANNEL_FIRE_HAZARDS = "fire_hazard_alerts_v2";           // v2: Gatehouse alert tone
+    public static final String CHANNEL_LIGHTNING_ALERTS = "lightning_proximity_alerts_v2"; // v2: Gatehouse alert tone
+    public static final String CHANNEL_HAIL_ALERTS = "hail_severe_alerts_v2";             // v2: Gatehouse alert tone
     private static final String PREFS_NAME = "fire_radar_state";
     private static final String KEY_LAST_DANGER_RATING = "last_known_danger_rating";
     private static final String KEY_LAST_NOTIFIED_INCIDENT = "last_notified_fire_id_";
@@ -232,6 +232,7 @@ public class FireRadarManager {
             chanFire.enableVibration(true);
             chanFire.setVibrationPattern(new long[]{0, 250, 100, 250, 100, 400});
             chanFire.setShowBadge(true);
+            GatehouseSounds.applyAlert(chanFire, context);
             nm.createNotificationChannel(chanFire);
 
             NotificationChannel chanLight = new NotificationChannel(
@@ -245,6 +246,7 @@ public class FireRadarManager {
             chanLight.enableVibration(true);
             chanLight.setVibrationPattern(new long[]{0, 200, 80, 200, 80, 500});
             chanLight.setShowBadge(true);
+            GatehouseSounds.applyAlert(chanLight, context);
             nm.createNotificationChannel(chanLight);
 
             NotificationChannel chanHail = new NotificationChannel(
@@ -258,6 +260,7 @@ public class FireRadarManager {
             chanHail.enableVibration(true);
             chanHail.setVibrationPattern(new long[]{0, 300, 100, 300, 100, 300, 100, 600});
             chanHail.setShowBadge(true);
+            GatehouseSounds.applyAlert(chanHail, context);
             nm.createNotificationChannel(chanHail);
         }
     }

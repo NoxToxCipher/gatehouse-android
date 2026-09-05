@@ -33,7 +33,7 @@ import java.util.TimeZone;
 public class LicenceVerificationManager {
     private static final String TAG = "LicenceVerification";
 
-    public static final String CHANNEL_LICENCE_ALERTS = "security_licence_alerts";
+    public static final String CHANNEL_LICENCE_ALERTS = "security_licence_alerts_v2"; // v2: Gatehouse chime
     private static final String PREFS_NAME = "licence_verification_state";
     private static final String PREF_KEY_LICENCE_NUM = "lic_number";
     private static final String PREF_KEY_EXPIRY_TS = "lic_expiry_ts";
@@ -103,6 +103,7 @@ public class LicenceVerificationManager {
             chan.enableVibration(true);
             chan.setVibrationPattern(new long[]{0, 200, 100, 200, 100, 400});
             chan.setShowBadge(true);
+            GatehouseSounds.applyChime(chan, context);
             nm.createNotificationChannel(chan);
         }
     }

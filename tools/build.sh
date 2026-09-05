@@ -171,7 +171,7 @@ ok
 
 # ---- resources ------------------------------------------------------------
 say "resources"
-for f in app/res/*/*.xml; do
+for f in app/res/*/*; do
   MSYS_NO_PATHCONV=1 "$BT/aapt2.exe" compile \
     -o "${W}${BS}build${BS}res" "${W}${BS}$(native "$f")"
 done

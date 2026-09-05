@@ -37,7 +37,7 @@ public class AdsbSkyRadarService {
     public static final double FACILITY_LAT = -27.6533;
     public static final double FACILITY_LON = 153.1167;
     public static final double DEFAULT_RADIUS_NM = 25.0; // ~46 km
-    public static final String NOTIF_CHANNEL_ID = "gatehouse_skywatch_alerts";
+    public static final String NOTIF_CHANNEL_ID = "gatehouse_skywatch_alerts_v2"; // v2: Gatehouse chime
 
     public enum AircraftCategory {
         MILITARY_TRANSPORT("🎖️ Military Transport", 0xFFF59E0B),
@@ -448,6 +448,7 @@ public class AdsbSkyRadarService {
             channel.setDescription("Pushes heads-up alerts when rare warbirds, military transports, or aeromedical helicopters fly low overhead.");
             channel.enableVibration(true);
             NotificationManager nm = appContext.getSystemService(NotificationManager.class);
+            GatehouseSounds.applyChime(channel);
             if (nm != null) nm.createNotificationChannel(channel);
         }
     }

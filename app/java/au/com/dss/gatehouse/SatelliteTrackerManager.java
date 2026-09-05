@@ -40,7 +40,7 @@ import java.util.TimeZone;
 public class SatelliteTrackerManager {
 
     private static final String TAG = "SatelliteTracker";
-    public static final String CHANNEL_SATELLITE_ALERTS = "satellite_sky_passes";
+    public static final String CHANNEL_SATELLITE_ALERTS = "satellite_sky_passes_v2"; // v2: Gatehouse chime
     private static final String PREFS_NAME = "satellite_tracker_prefs";
     private static final String KEY_N2YO_API_KEY = "n2yo_api_key";
     private static final String KEY_LAST_ALERT_PASS_ID = "last_alert_pass_id";
@@ -193,6 +193,7 @@ public class SatelliteTrackerManager {
             chan.enableVibration(true);
             chan.setVibrationPattern(new long[]{0, 200, 100, 200, 100, 400});
             chan.setShowBadge(true);
+            GatehouseSounds.applyChime(chan, context);
             nm.createNotificationChannel(chan);
         }
     }
