@@ -11798,6 +11798,28 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
         syncCard.addView(rSyncBtns);
         container.addView(syncCard);
 
+        // Notification tones: audition both tiers without firing a real alert.
+        container.addView(formSectionLabel("Notification tones"));
+        LinearLayout toneRow = new LinearLayout(this);
+        toneRow.setOrientation(LinearLayout.HORIZONTAL);
+        toneRow.setPadding(0, dp(2), 0, dp(4));
+        TextView btnChime = actionButton("Play chime", colPanel2, colPale);
+        btnChime.setBackground(hairlinePressable(dp(10)));
+        ((LinearLayout.LayoutParams) btnChime.getLayoutParams()).rightMargin = dp(6);
+        btnChime.setOnClickListener(new View.OnClickListener() {
+            public void onClick(View v) { hapticClick(); GatehouseSounds.preview(MainActivity.this, GatehouseSounds.chime(MainActivity.this)); }
+        });
+        toneRow.addView(btnChime);
+        TextView btnAlertTone = actionButton("Play alert", colPanel2, colCrimson);
+        btnAlertTone.setBackground(hairlinePressable(dp(10)));
+        ((LinearLayout.LayoutParams) btnAlertTone.getLayoutParams()).leftMargin = dp(6);
+        btnAlertTone.setOnClickListener(new View.OnClickListener() {
+            public void onClick(View v) { hapticHeavyClick(); GatehouseSounds.preview(MainActivity.this, GatehouseSounds.alert(MainActivity.this)); }
+        });
+        toneRow.addView(btnAlertTone);
+        container.addView(toneRow);
+        container.addView(quietLine("Chime: roster, reminders, radar and sky notices. Alert: fire, lightning and hail."));
+
         return container;
     }
 

@@ -48,6 +48,17 @@ public final class GatehouseSounds {
         chan.setSound(alert(ctx), attrs());
     }
 
+    /** Play a tone once at notification volume, so Settings can audition it without firing an alert. */
+    public static void preview(Context ctx, Uri uri) {
+        try {
+            android.media.Ringtone r = android.media.RingtoneManager.getRingtone(ctx, uri);
+            if (r != null) {
+                r.setAudioAttributes(attrs());
+                r.play();
+            }
+        } catch (Throwable ignored) {}
+    }
+
     // The package is fixed by the manifest, so callers without a Context in
     // scope can still adopt the tones.
     private static final String PKG = "au.com.dss.gatehouse";
