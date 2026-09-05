@@ -116,6 +116,11 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
     // The record line (instrument): updated in place by refresh(), never rebuilt.
     private TextView recordState, recordVerified;
     private View recordDot;
+    // The roster deck (instrument): status dot, clock label/meta, elapsed track.
+    private View deputyStatusDot, deputyClockDot, deputyTrackFill, deputyTrackKnob;
+    private View peekHandle; // the brass edge handle; hidden while the deck is open
+    private TextView deputyClockK, deputyClockMeta;
+    private FrameLayout deputyTrack;
     private RosterProvider.Result latestDeputyResult;
     private TextView deputyStatusBadge;
     private LinearLayout deputyScheduleContainer;
@@ -1259,7 +1264,7 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
 
         // A slim brass handle on the left edge: it marks where the peek lives and,
         // tapped, opens the roster without needing the drag at all.
-        View peekHandle = new View(this);
+        peekHandle = new View(this);
         FrameLayout.LayoutParams phlp = new FrameLayout.LayoutParams(dp(4), dp(56), Gravity.LEFT | Gravity.CENTER_VERTICAL);
         peekHandle.setLayoutParams(phlp);
         GradientDrawable phBg = new GradientDrawable();
@@ -3007,9 +3012,10 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
 
         // The same three figures as one line under the ring, no tiles.
         int nowMin = nowMinutes();
+        int[] win = shiftWindowMins();
         int currentMinWrapped = nowMin % 1440;
-        if (currentMinWrapped < 12 * 60) currentMinWrapped += 1440;
-        float shiftProgress = Math.max(0f, Math.min(1f, (currentMinWrapped - 1080) * 1.0f / (12 * 60)));
+        if (currentMinWrapped < win[0]) currentMinWrapped += 1440;
+        float shiftProgress = Math.max(0f, Math.min(1f, (currentMinWrapped - win[0]) * 1.0f / win[1]));
         int pct = (int) (shiftProgress * 100);
 
         long elapsedWelfareMs = SystemClock.elapsedRealtime() - lastActivityTimeMs;
@@ -3363,13 +3369,15 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
                 canvas.drawLine(x1, y1, x2, y2, tickPaint);
             }
 
-            // 2. Compute Shift Progress
+            // 2. Compute Shift Progress from the same window the roster shows
             int nowMin = nowMinutes();
-            int shiftStartMin = 18 * 60;
+            int[] win = shiftWindowMins();
+            int shiftStartMin = win[0];
+            int shiftLenMin = win[1];
             int currentMinWrapped = nowMin % 1440;
-            if (currentMinWrapped < 12 * 60) currentMinWrapped += 1440;
+            if (currentMinWrapped < shiftStartMin) currentMinWrapped += 1440;
 
-            float shiftProgress = Math.max(0f, Math.min(1f, (currentMinWrapped - shiftStartMin) * 1.0f / (12 * 60)));
+            float shiftProgress = Math.max(0f, Math.min(1f, (currentMinWrapped - shiftStartMin) * 1.0f / shiftLenMin));
             float outerSweep = Math.max(0.01f, shiftProgress * 270f);
 
             // Dawn color shift if between 04:30 and 06:05 (first light)
@@ -3454,12 +3462,13 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
             double leftRad = Math.toRadians(135.0);
             float lx = cx + (float) Math.cos(leftRad) * (rOuter + dpf(16f));
             float ly = cy + (float) Math.sin(leftRad) * (rOuter + dpf(16f));
-            canvas.drawText("18:00", lx - dpf(2f), ly + dpf(8f), labelPaint);
+            canvas.drawText(String.format(Locale.US, "%02d:%02d", shiftStartMin / 60, shiftStartMin % 60), lx - dpf(2f), ly + dpf(8f), labelPaint);
 
             double rightRad = Math.toRadians(45.0);
             float rx = cx + (float) Math.cos(rightRad) * (rOuter + dpf(16f));
             float ry = cy + (float) Math.sin(rightRad) * (rOuter + dpf(16f));
-            canvas.drawText("06:00", rx + dpf(2f), ry + dpf(8f), labelPaint);
+            int shiftEndMin = (shiftStartMin + shiftLenMin) % 1440;
+            canvas.drawText(String.format(Locale.US, "%02d:%02d", shiftEndMin / 60, shiftEndMin % 60), rx + dpf(2f), ry + dpf(8f), labelPaint);
 
             // Pulse live clock updates every second
             postInvalidateDelayed(1000);
@@ -3470,9 +3479,10 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
         final LinearLayout box = dialogContainer("⏱️ Shift Telemetry & Solar Dawn", "REAL-TIME AUDIT", colAccent);
 
         int nowMin = nowMinutes();
+        int[] win = shiftWindowMins();
         int currentMinWrapped = nowMin % 1440;
-        if (currentMinWrapped < 12 * 60) currentMinWrapped += 1440;
-        float shiftProgress = Math.max(0f, Math.min(1f, (currentMinWrapped - 1080) * 1.0f / (12 * 60)));
+        if (currentMinWrapped < win[0]) currentMinWrapped += 1440;
+        float shiftProgress = Math.max(0f, Math.min(1f, (currentMinWrapped - win[0]) * 1.0f / win[1]));
         int pct = (int) (shiftProgress * 100);
 
         long elapsedWelfareMs = SystemClock.elapsedRealtime() - lastActivityTimeMs;
@@ -19737,6 +19747,7 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
         final int w = rootFrame.getWidth();
         if (w <= 0) return;
         isDeputyOpen = true;
+        if (peekHandle != null) peekHandle.setVisibility(View.GONE);
         hapticHeavyClick();
 
         boolean isTablet = getResources().getConfiguration().smallestScreenWidthDp >= 600;
@@ -19825,6 +19836,7 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
     public void closeDeputy(boolean animate) {
         if (mainSurfaceContainer == null || rootFrame == null) return;
         isDeputyOpen = false;
+        if (peekHandle != null) peekHandle.setVisibility(View.VISIBLE);
         hapticClick();
 
         boolean isTablet = getResources().getConfiguration().smallestScreenWidthDp >= 600;
@@ -20004,9 +20016,9 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
     public void syncDeputyData(final boolean userInitiated) {
         if (deputyApi == null) return;
         if (deputyStatusBadge != null) {
-            deputyStatusBadge.setText("● SYNCING...");
-            deputyStatusBadge.setTextColor(0xFF38BDF8);
-            deputyStatusBadge.setBackground(rounded(0x2238BDF8, dp(4)));
+            deputyStatusBadge.setText("Syncing…");
+            deputyStatusBadge.setTextColor(colMuted);
+            deputyStatusBadge.setBackground(null);
         }
         deputyApi.syncRoster(new RosterProvider.Callback<RosterProvider.Result>() {
             @Override
@@ -20038,82 +20050,541 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
 
     private void updateDeputyUi(RosterProvider.Result result) {
         if (result == null) return;
+        final int colWatch = 0xFFFFB020;
+        long nowMs = System.currentTimeMillis();
+        long nowSec = nowMs / 1000L;
 
-        // 1. Status Badge
+        // 1. The status line tells the truth, from the provider's own fields.
         if (deputyStatusBadge != null) {
+            // syncDeputyData() styles this as a mid-sync pill; put it back to a plain line.
+            deputyStatusBadge.setTextColor(colPale);
+            deputyStatusBadge.setBackground(null);
+            String provider = (deputyApi != null) ? deputyApi.providerName() : "Roster";
             if (result.isLive) {
-                deputyStatusBadge.setText("● LIVE CONNECTED");
-                deputyStatusBadge.setTextColor(0xFF10B981);
-                deputyStatusBadge.setBackground(rounded(0x2210B981, dp(4)));
-            } else if (!deputyApi.hasToken()) {
-                deputyStatusBadge.setText("● API KEY NEEDED");
-                deputyStatusBadge.setTextColor(0xFFF59E0B);
-                deputyStatusBadge.setBackground(rounded(0x22F59E0B, dp(4)));
+                String t = new SimpleDateFormat("HH:mm", Locale.US).format(new Date(result.syncTimestamp > 0 ? result.syncTimestamp : nowMs));
+                deputyStatusBadge.setText("Live · synced " + t + " · " + provider);
+                if (deputyStatusDot != null) deputyStatusDot.setBackground(rounded(colEmerald, dp(4)));
+            } else if (deputyApi != null && !deputyApi.hasToken() && !"Manual".equals(provider)) {
+                deputyStatusBadge.setText("Sample roster · not connected");
+                if (deputyStatusDot != null) deputyStatusDot.setBackground(rounded(colQuiet, dp(4)));
+            } else if (result.syncTimestamp > 0) {
+                long ageMin = Math.max(0, (nowMs - result.syncTimestamp) / 60000L);
+                String age = ageMin < 60 ? ageMin + " min" : ageMin < 1440 ? (ageMin / 60) + " h" : (ageMin / 1440) + " days";
+                deputyStatusBadge.setText("Cached · " + age + " old · " + provider);
+                if (deputyStatusDot != null) deputyStatusDot.setBackground(rounded(ageMin >= 1440 ? colWatch : colEmerald, dp(4)));
             } else {
-                SimpleDateFormat sdf = new SimpleDateFormat("HH:mm", Locale.US);
-                String timeStr = result.syncTimestamp > 0 ? sdf.format(new Date(result.syncTimestamp)) : "--:--";
-                deputyStatusBadge.setText("● CACHED (" + timeStr + ")");
-                deputyStatusBadge.setTextColor(0xFF38BDF8);
-                deputyStatusBadge.setBackground(rounded(0x2238BDF8, dp(4)));
+                deputyStatusBadge.setText("Cached · age unknown · " + provider);
+                if (deputyStatusDot != null) deputyStatusDot.setBackground(rounded(colWatch, dp(4)));
             }
         }
 
-        // 2. Org Header
-        if (deputyOrgName != null && result.companyName != null && !result.companyName.isEmpty()) {
-            deputyOrgName.setText(result.companyName);
+        // 2. Title and cycle summary
+        if (deputyOrgName != null) {
+            String site = result.companyName != null ? result.companyName.replaceAll("\\s*\\(.*\\)\\s*$", "").trim() : "";
+            deputyOrgName.setText(site.isEmpty() ? "Roster" : "Roster · " + site);
         }
-        if (deputyOrgRole != null && result.userName != null && !result.userName.isEmpty()) {
-            deputyOrgRole.setText("🛡️ Officer " + result.userName + " · LIC #41207 · Post 01 Gatehouse");
+        if (deputyOrgRole != null) {
+            int n = result.weekShifts != null ? result.weekShifts.size() : 0;
+            java.util.HashSet<String> guards = new java.util.HashSet<>();
+            if (result.weekShifts != null) for (RosterProvider.Shift s : result.weekShifts) if (s.guardName != null && !s.guardName.isEmpty()) guards.add(s.guardName);
+            deputyOrgRole.setText("Current cycle · " + n + (n == 1 ? " shift" : " shifts") + " · " + guards.size() + (guards.size() == 1 ? " guard" : " guards"));
         }
 
-        // 3. Live Shift Clock Card
-        if (result.activeShift != null) {
-            if (deputyClockStatus != null) {
-                deputyClockStatus.setText(result.activeShift.isLiveNow ? "● CLOCKED ON" : "● SCHEDULED");
-                deputyClockStatus.setTextColor(result.activeShift.isLiveNow ? 0xFF10B981 : 0xFF38BDF8);
-                deputyClockStatus.setBackground(rounded(result.activeShift.isLiveNow ? 0x2210B981 : 0x2238BDF8, dp(6)));
-            }
-            if (deputyClockTime != null) {
-                deputyClockTime.setText(result.activeShift.getFormattedHoursRange());
-            }
+        // 3. Your shift, the hero
+        RosterProvider.Shift a = result.activeShift;
+        if (a != null && a.startTs > 0 && a.endTs > a.startTs) {
+            boolean night = isNightWindow(a.startTs);
+            if (deputyClockK != null) deputyClockK.setText(a.isLiveNow ? (night ? "YOUR SHIFT · TONIGHT" : "YOUR SHIFT · TODAY") : "YOUR NEXT SHIFT");
+            if (deputyClockTime != null) deputyClockTime.setText(fmtHm(a.startTs) + " – " + fmtHm(a.endTs));
             if (deputyClockSub != null) {
-                deputyClockSub.setText("Shift: " + result.activeShift.operationalUnit + " · Award MA000115 (Night Rate)");
+                double hrs = a.totalHours > 0 ? a.totalHours : (a.endTs - a.startTs) / 3600.0;
+                deputyClockSub.setText(String.format(Locale.US, "%.1fh · %s · MA000115 %s", hrs, a.operationalUnit, night ? "night" : "day"));
+            }
+            if (deputyClockStatus != null && deputyClockMeta != null) {
+                if (a.isLiveNow) {
+                    long inMin = Math.max(0, (nowSec - a.startTs) / 60L);
+                    deputyClockStatus.setText("Clocked on");
+                    deputyClockMeta.setText(fmtHm(a.startTs) + " · " + (inMin / 60) + "h " + (inMin % 60) + "m in");
+                    if (deputyClockDot != null) deputyClockDot.setBackground(rounded(colEmerald, dp(4)));
+                } else {
+                    long untilMin = Math.max(0, (a.startTs - nowSec) / 60L);
+                    deputyClockStatus.setText("Scheduled");
+                    deputyClockMeta.setText("starts in " + (untilMin / 60) + "h " + (untilMin % 60) + "m");
+                    if (deputyClockDot != null) deputyClockDot.setBackground(rounded(colQuiet, dp(4)));
+                }
+            }
+            final float frac = Math.max(0f, Math.min(1f, (nowSec - a.startTs) * 1.0f / (a.endTs - a.startTs)));
+            if (deputyTrack != null) {
+                deputyTrack.post(new Runnable() {
+                    public void run() {
+                        int w = deputyTrack.getWidth();
+                        if (w <= 0) return;
+                        if (deputyTrackFill != null) {
+                            FrameLayout.LayoutParams f = (FrameLayout.LayoutParams) deputyTrackFill.getLayoutParams();
+                            f.width = (int) (w * frac);
+                            deputyTrackFill.setLayoutParams(f);
+                        }
+                        if (deputyTrackKnob != null) {
+                            FrameLayout.LayoutParams k = (FrameLayout.LayoutParams) deputyTrackKnob.getLayoutParams();
+                            k.leftMargin = Math.max(0, (int) (w * frac) - dp(5));
+                            deputyTrackKnob.setLayoutParams(k);
+                        }
+                    }
+                });
             }
         } else {
-            if (deputyClockStatus != null) {
-                deputyClockStatus.setText("○ OFF DUTY");
-                deputyClockStatus.setTextColor(0xFF94A3B8);
-                deputyClockStatus.setBackground(rounded(0x2294A3B8, dp(6)));
-            }
-            if (deputyClockTime != null) {
-                deputyClockTime.setText("Next shift scheduled in Deputy");
-            }
-            if (deputyClockSub != null) {
-                deputyClockSub.setText("No active timesheet currently clocked on");
-            }
+            if (deputyClockK != null) deputyClockK.setText("NO ACTIVE SHIFT");
+            if (deputyClockTime != null) deputyClockTime.setText("Off duty");
+            if (deputyClockSub != null) deputyClockSub.setText("Your next shift is on the roster below");
+            if (deputyClockStatus != null) deputyClockStatus.setText("Not clocked on");
+            if (deputyClockMeta != null) deputyClockMeta.setText("");
+            if (deputyClockDot != null) deputyClockDot.setBackground(rounded(colQuiet, dp(4)));
         }
 
-        // 4. Weekly Roster List
+        // 4. The roster: rows grouped by day, exceptions only get a chip
         if (deputyScheduleContainer != null) {
             deputyScheduleContainer.removeAllViews();
-            if (result.weekShifts != null && !result.weekShifts.isEmpty()) {
-                for (RosterProvider.Shift shift : result.weekShifts) {
-                    deputyScheduleContainer.addView(buildDeputyShiftCard(
-                            shift.getDayDisplayLabel(),
-                            shift.getFormattedHoursRange(),
-                            shift.guardName + " · " + shift.operationalUnit,
-                            shift.isLiveNow
-                    ));
+            if (result.weekShifts == null || result.weekShifts.isEmpty()) {
+                deputyScheduleContainer.addView(quietLine("No roster for this cycle yet."));
+                return;
+            }
+            long newestStart = 0;
+            for (RosterProvider.Shift s : result.weekShifts) newestStart = Math.max(newestStart, s.startTs);
+            if (!result.isLive && newestStart > 0 && newestStart < nowSec - 24 * 3600L) {
+                TextView stale = quietLine("This is an older cycle · nothing newer has synced");
+                stale.setTextColor(colWatch);
+                deputyScheduleContainer.addView(stale);
+            }
+            String lastDay = null;
+            for (RosterProvider.Shift s : result.weekShifts) {
+                if (s.startTs <= 0) continue;
+                String day = new SimpleDateFormat("yyyy-MM-dd", Locale.US).format(new Date(s.startTs * 1000L));
+                if (!day.equals(lastDay)) {
+                    deputyScheduleContainer.addView(contactsSectionHeader(dayEyebrow(s.startTs), colQuiet));
+                    lastDay = day;
                 }
-            } else {
-                TextView empty = new TextView(this);
-                empty.setText("No shifts returned from Deputy for current cycle.");
-                empty.setTextColor(0xFF64748B);
-                empty.setTextSize(12);
-                empty.setPadding(0, dp(8), 0, dp(8));
-                deputyScheduleContainer.addView(empty);
+                deputyScheduleContainer.addView(buildDeputyShiftRow(s));
+                // DSS has no meal breaks: one in the roster data is an error, not a feature.
+                if (s.notes != null && s.notes.toLowerCase(Locale.US).contains("break")) {
+                    TextView err = quietLine("Break recorded in Deputy for " + s.guardName + " · DSS has no breaks, check this shift");
+                    err.setTextColor(colWatch);
+                    deputyScheduleContainer.addView(err);
+                }
             }
         }
+    }
+
+    private TextView quietLine(String text) {
+        TextView t = new TextView(this);
+        t.setText(text);
+        t.setTextColor(colMuted);
+        t.setTextSize(12f);
+        t.setTypeface(Fonts.text(this, 400));
+        t.setPadding(dp(2), dp(10), dp(2), dp(10));
+        return t;
+    }
+
+    private String fmtHm(long epochSec) {
+        return new SimpleDateFormat("HH:mm", Locale.US).format(new Date(epochSec * 1000L));
+    }
+
+    private boolean isNightWindow(long startSec) {
+        Calendar c = Calendar.getInstance();
+        c.setTimeInMillis(startSec * 1000L);
+        int h = c.get(Calendar.HOUR_OF_DAY);
+        return h >= 18 || h < 6;
+    }
+
+    /** "TONIGHT · SAT 6 SEP", "TOMORROW · SUN 7 SEP", else "MON 8 SEP". */
+    private String dayEyebrow(long startSec) {
+        Calendar c = Calendar.getInstance();
+        c.setTimeInMillis(startSec * 1000L);
+        String base = new SimpleDateFormat("EEE d MMM", Locale.US).format(c.getTime()).toUpperCase(Locale.US);
+        Calendar now = Calendar.getInstance();
+        boolean sameDay = now.get(Calendar.YEAR) == c.get(Calendar.YEAR) && now.get(Calendar.DAY_OF_YEAR) == c.get(Calendar.DAY_OF_YEAR);
+        if (sameDay) return "TONIGHT · " + base;
+        now.add(Calendar.DAY_OF_YEAR, 1);
+        boolean tomorrow = now.get(Calendar.YEAR) == c.get(Calendar.YEAR) && now.get(Calendar.DAY_OF_YEAR) == c.get(Calendar.DAY_OF_YEAR);
+        return tomorrow ? "TOMORROW · " + base : base;
+    }
+
+    /** Start minute-of-day and length in minutes for the ring: the live shift when the roster has one, else 18:00 for 12h. */
+    private int[] shiftWindowMins() {
+        RosterProvider.Result r = latestDeputyResult;
+        if (r != null && r.activeShift != null && r.activeShift.startTs > 0 && r.activeShift.endTs > r.activeShift.startTs) {
+            Calendar c = Calendar.getInstance();
+            c.setTimeInMillis(r.activeShift.startTs * 1000L);
+            int start = c.get(Calendar.HOUR_OF_DAY) * 60 + c.get(Calendar.MINUTE);
+            int len = (int) ((r.activeShift.endTs - r.activeShift.startTs) / 60L);
+            return new int[]{start, Math.max(60, len)};
+        }
+        return new int[]{18 * 60, 12 * 60};
+    }
+
+    /** One roster row: time · hours · shield · name · post, brass rule on your own shift, chips only for exceptions. */
+    private View buildDeputyShiftRow(final RosterProvider.Shift s) {
+        LinearLayout row = new LinearLayout(this);
+        row.setOrientation(LinearLayout.HORIZONTAL);
+        row.setGravity(Gravity.CENTER_VERTICAL);
+        row.setPadding(dp(s.isCurrentGuard ? 10 : 2), dp(11), dp(2), dp(11));
+        if (s.isCurrentGuard) {
+            android.graphics.drawable.LayerDrawable ld = new android.graphics.drawable.LayerDrawable(new android.graphics.drawable.Drawable[]{ new android.graphics.drawable.ColorDrawable(colAccent) });
+            ld.setLayerInset(0, 0, dp(6), 0, dp(6));
+            ld.setLayerWidth(0, dp(3));
+            row.setBackground(ld);
+        }
+
+        TextView t = new TextView(this);
+        t.setText(fmtHm(s.startTs) + "–" + fmtHm(s.endTs));
+        t.setTextColor(colPale);
+        t.setTextSize(12.5f);
+        t.setTypeface(Fonts.mono(this, false));
+        t.setMinWidth(dp(92));
+        row.addView(t);
+
+        TextView hrs = new TextView(this);
+        double h = s.totalHours > 0 ? s.totalHours : (s.endTs - s.startTs) / 3600.0;
+        hrs.setText(String.format(Locale.US, "%.1fh", h));
+        hrs.setTextColor(colQuiet);
+        hrs.setTextSize(11f);
+        hrs.setTypeface(Fonts.mono(this, false));
+        hrs.setMinWidth(dp(40));
+        row.addView(hrs);
+
+        boolean open = s.isOpenShift || (s.guardName == null || s.guardName.trim().isEmpty());
+        if (!open) {
+            ModernDockIconView sh = new ModernDockIconView(this, ModernDockIconView.TYPE_SHIELD, colMuted, colQuiet);
+            sh.setDrawPod(false);
+            LinearLayout.LayoutParams shlp = new LinearLayout.LayoutParams(dp(18), dp(18));
+            shlp.rightMargin = dp(6);
+            sh.setLayoutParams(shlp);
+            row.addView(sh);
+        }
+
+        TextView nm = new TextView(this);
+        nm.setText(open ? "Open shift" : s.guardName);
+        nm.setTextColor(open ? colMuted : colPale);
+        nm.setTextSize(13f);
+        nm.setTypeface(Fonts.text(this, s.isCurrentGuard ? 500 : 400));
+        nm.setSingleLine(true);
+        nm.setEllipsize(android.text.TextUtils.TruncateAt.END);
+        nm.setLayoutParams(new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f));
+        row.addView(nm);
+
+        if (open) {
+            TextView claim = new TextView(this);
+            claim.setText("Claim ›");
+            claim.setTextColor(colAccent);
+            claim.setTextSize(12f);
+            claim.setTypeface(Fonts.text(this, 600));
+            claim.setPadding(dp(10), dp(5), dp(10), dp(5));
+            claim.setBackground(hairlinePressable(dp(8)));
+            claim.setOnClickListener(new View.OnClickListener() {
+                public void onClick(View v) {
+                    hapticHeavyClick();
+                    if (deputyApi == null) return;
+                    deputyApi.claimOpenShift(s.id, new RosterProvider.Callback<String>() {
+                        public void onSuccess(String msg) { Toast.makeText(MainActivity.this, msg, Toast.LENGTH_SHORT).show(); syncDeputyData(true); }
+                        public void onError(String err) { Toast.makeText(MainActivity.this, err, Toast.LENGTH_SHORT).show(); }
+                    });
+                }
+            });
+            row.addView(claim);
+        } else if (s.status != null && (s.status.equalsIgnoreCase("UNCONFIRMED") || s.status.equalsIgnoreCase("PENDING"))) {
+            TextView un = new TextView(this);
+            un.setText("UNCONFIRMED");
+            un.setTextColor(0xFFFFB020);
+            un.setTextSize(9.5f);
+            un.setLetterSpacing(0.06f);
+            un.setTypeface(Fonts.mono(this, false));
+            row.addView(un);
+        } else {
+            TextView post = new TextView(this);
+            String unit = s.operationalUnit != null ? s.operationalUnit.replace(" Gatehouse", "") : "";
+            post.setText(unit);
+            post.setTextColor(colQuiet);
+            post.setTextSize(10.5f);
+            post.setTypeface(Fonts.mono(this, false));
+            row.addView(post);
+        }
+        return row;
+    }
+
+    private View buildDeputyView() {
+        LinearLayout depLayout = new LinearLayout(this);
+        depLayout.setOrientation(LinearLayout.VERTICAL);
+        depLayout.setFitsSystemWindows(true); // takes the status-bar inset as its top padding
+        // fitsSystemWindows replaces a view's padding with the insets, which is why
+        // the old deck sat flush against the left edge; the real margins live here.
+        LinearLayout body = new LinearLayout(this);
+        body.setOrientation(LinearLayout.VERTICAL);
+        body.setPadding(dp(18), dp(12), dp(18), dp(44));
+        depLayout.addView(body);
+
+        // 1. Top row: back, sync, settings. Plain text and drawn icons, no pills.
+        LinearLayout topBar = new LinearLayout(this);
+        topBar.setOrientation(LinearLayout.HORIZONTAL);
+        topBar.setGravity(Gravity.CENTER_VERTICAL);
+        topBar.setPadding(0, dp(6), 0, dp(4));
+
+        TextView btnReturn = new TextView(this);
+        btnReturn.setText("‹ Patrol");
+        btnReturn.setTextColor(colMuted);
+        btnReturn.setTextSize(13f);
+        btnReturn.setTypeface(Fonts.text(this, 500));
+        btnReturn.setPadding(dp(2), dp(8), dp(12), dp(8));
+        btnReturn.setBackground(pressable(Color.TRANSPARENT, dp(8)));
+        btnReturn.setOnClickListener(new View.OnClickListener() {
+            public void onClick(View v) { hapticClick(); closeDeputy(true); }
+        });
+        topBar.addView(btnReturn);
+
+        View spacer = new View(this);
+        spacer.setLayoutParams(new LinearLayout.LayoutParams(0, 1, 1f));
+        topBar.addView(spacer);
+
+        TextView btnSync = new TextView(this);
+        btnSync.setText("Sync");
+        btnSync.setTextColor(colMuted);
+        btnSync.setTextSize(11.5f);
+        btnSync.setTypeface(Fonts.mono(this, false));
+        btnSync.setPadding(dp(12), dp(7), dp(12), dp(7));
+        btnSync.setBackground(hairlinePressable(dp(8)));
+        btnSync.setOnClickListener(new View.OnClickListener() {
+            public void onClick(View v) { hapticDoublePulse(); syncDeputyData(true); }
+        });
+        LinearLayout.LayoutParams bslp = new LinearLayout.LayoutParams(LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+        bslp.rightMargin = dp(10);
+        btnSync.setLayoutParams(bslp);
+        topBar.addView(btnSync);
+
+        ModernDockIconView btnConfig = new ModernDockIconView(this, ModernDockIconView.TYPE_GEAR, colMuted, colQuiet);
+        btnConfig.setDrawPod(false);
+        btnConfig.setLayoutParams(new LinearLayout.LayoutParams(dp(26), dp(26)));
+        btnConfig.setContentDescription("Roster settings");
+        btnConfig.setOnClickListener(new View.OnClickListener() {
+            public void onClick(View v) { hapticClick(); showDeputyApiConfigDialog(); }
+        });
+        topBar.addView(btnConfig);
+        body.addView(topBar);
+
+        // 2. Status line: the truth about the data, from the provider's fields.
+        LinearLayout status = new LinearLayout(this);
+        status.setOrientation(LinearLayout.HORIZONTAL);
+        status.setGravity(Gravity.CENTER_VERTICAL);
+        status.setPadding(dp(2), dp(6), dp(2), dp(4));
+        deputyStatusDot = new View(this);
+        LinearLayout.LayoutParams sdlp = new LinearLayout.LayoutParams(dp(7), dp(7));
+        sdlp.rightMargin = dp(9);
+        deputyStatusDot.setLayoutParams(sdlp);
+        deputyStatusDot.setBackground(rounded(colQuiet, dp(4)));
+        status.addView(deputyStatusDot);
+        deputyStatusBadge = new TextView(this);
+        deputyStatusBadge.setText("Checking roster…");
+        deputyStatusBadge.setTextColor(colPale);
+        deputyStatusBadge.setTextSize(12.5f);
+        deputyStatusBadge.setTypeface(Fonts.text(this, 500));
+        status.addView(deputyStatusBadge);
+        status.setOnClickListener(new View.OnClickListener() {
+            public void onClick(View v) { showDeputyApiConfigDialog(); }
+        });
+        body.addView(status);
+
+        // 3. Title and cycle summary (no repeat of the Patrol header)
+        deputyOrgName = new TextView(this);
+        deputyOrgName.setText("Roster");
+        deputyOrgName.setTextColor(colPale);
+        deputyOrgName.setTextSize(15f);
+        deputyOrgName.setTypeface(Fonts.display(this, false));
+        deputyOrgName.setPadding(dp(2), dp(6), dp(2), 0);
+        body.addView(deputyOrgName);
+        deputyOrgRole = new TextView(this);
+        deputyOrgRole.setText("");
+        deputyOrgRole.setTextColor(colMuted);
+        deputyOrgRole.setTextSize(11f);
+        deputyOrgRole.setTypeface(Fonts.mono(this, false));
+        deputyOrgRole.setPadding(dp(2), dp(3), dp(2), 0);
+        body.addView(deputyOrgRole);
+        deputyOrgSub = new TextView(this); // kept for older references; not shown
+
+        // 4. Your shift: the hero. No card.
+        LinearLayout clock = new LinearLayout(this);
+        clock.setOrientation(LinearLayout.VERTICAL);
+        clock.setPadding(dp(2), dp(18), dp(2), dp(6));
+
+        deputyClockK = new TextView(this);
+        deputyClockK.setText("YOUR SHIFT");
+        deputyClockK.setTextColor(colQuiet);
+        deputyClockK.setTextSize(9f);
+        deputyClockK.setLetterSpacing(0.14f);
+        deputyClockK.setTypeface(Fonts.mono(this, false));
+        clock.addView(deputyClockK);
+
+        deputyClockTime = new TextView(this);
+        deputyClockTime.setText("18:00 – 06:00");
+        deputyClockTime.setTextColor(colPale);
+        deputyClockTime.setTextSize(31f);
+        deputyClockTime.setTypeface(Fonts.display(this, true));
+        deputyClockTime.setPadding(0, dp(4), 0, 0);
+        clock.addView(deputyClockTime);
+
+        deputyClockSub = new TextView(this);
+        deputyClockSub.setText("");
+        deputyClockSub.setTextColor(colMuted);
+        deputyClockSub.setTextSize(11f);
+        deputyClockSub.setTypeface(Fonts.mono(this, false));
+        deputyClockSub.setPadding(0, dp(6), 0, 0);
+        clock.addView(deputyClockSub);
+
+        deputyTrack = new FrameLayout(this);
+        deputyTrack.setBackground(rounded(colLineSubtle, dp(2)));
+        LinearLayout.LayoutParams tklp = new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, dp(3));
+        tklp.topMargin = dp(14);
+        tklp.bottomMargin = dp(12);
+        deputyTrack.setLayoutParams(tklp);
+        deputyTrackFill = new View(this);
+        deputyTrackFill.setBackground(rounded(colAccent, dp(2)));
+        deputyTrackFill.setLayoutParams(new FrameLayout.LayoutParams(0, FrameLayout.LayoutParams.MATCH_PARENT));
+        deputyTrack.addView(deputyTrackFill);
+        deputyTrackKnob = new View(this);
+        GradientDrawable knob = new GradientDrawable();
+        knob.setShape(GradientDrawable.OVAL);
+        knob.setColor(colBg);
+        knob.setStroke(dp(2), colAccent);
+        deputyTrackKnob.setBackground(knob);
+        FrameLayout.LayoutParams knlp = new FrameLayout.LayoutParams(dp(10), dp(10), Gravity.CENTER_VERTICAL);
+        deputyTrackKnob.setLayoutParams(knlp);
+        deputyTrack.addView(deputyTrackKnob);
+        deputyTrack.setClipChildren(false);
+        clock.addView(deputyTrack);
+
+        LinearLayout clocked = new LinearLayout(this);
+        clocked.setOrientation(LinearLayout.HORIZONTAL);
+        clocked.setGravity(Gravity.CENTER_VERTICAL);
+        deputyClockDot = new View(this);
+        LinearLayout.LayoutParams cdlp = new LinearLayout.LayoutParams(dp(7), dp(7));
+        cdlp.rightMargin = dp(8);
+        deputyClockDot.setLayoutParams(cdlp);
+        deputyClockDot.setBackground(rounded(colQuiet, dp(4)));
+        clocked.addView(deputyClockDot);
+        deputyClockStatus = new TextView(this);
+        deputyClockStatus.setText("Clocked on");
+        deputyClockStatus.setTextColor(colPale);
+        deputyClockStatus.setTextSize(12.5f);
+        deputyClockStatus.setTypeface(Fonts.text(this, 500));
+        deputyClockStatus.setPadding(0, 0, dp(8), 0);
+        clocked.addView(deputyClockStatus);
+        deputyClockMeta = new TextView(this);
+        deputyClockMeta.setText("");
+        deputyClockMeta.setTextColor(colMuted);
+        deputyClockMeta.setTextSize(11.5f);
+        deputyClockMeta.setTypeface(Fonts.mono(this, false));
+        clocked.addView(deputyClockMeta);
+        clock.addView(clocked);
+
+        // Ending the shift is the one act-now on this page. There is no meal break:
+        // DSS guards work the shift through, and a break in the data is an error.
+        TextView btnClockOut = new TextView(this);
+        btnClockOut.setText("Clock out");
+        btnClockOut.setTextColor(colCrimson);
+        btnClockOut.setTextSize(12.5f);
+        btnClockOut.setTypeface(Fonts.text(this, 600));
+        btnClockOut.setGravity(Gravity.CENTER);
+        btnClockOut.setPadding(dp(14), dp(11), dp(14), dp(11));
+        btnClockOut.setBackground(hairlinePressable(dp(10)));
+        LinearLayout.LayoutParams colp = new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+        colp.topMargin = dp(14);
+        btnClockOut.setLayoutParams(colp);
+        btnClockOut.setOnClickListener(new View.OnClickListener() {
+            public void onClick(View v) {
+                hapticHeavyClick();
+                Toast.makeText(MainActivity.this, "Clock-out is recorded by the roster at shift end", Toast.LENGTH_SHORT).show();
+            }
+        });
+        clock.addView(btnClockOut);
+
+        // 5. The roster, grouped by day
+        deputyScheduleContainer = new LinearLayout(this);
+        deputyScheduleContainer.setOrientation(LinearLayout.VERTICAL);
+        deputyScheduleContainer.setShowDividers(LinearLayout.SHOW_DIVIDER_MIDDLE);
+        deputyScheduleContainer.setDividerDrawable(hairlineDivider());
+
+        // 6. Shift tasks (unchanged content, quieter surface)
+        LinearLayout taskBox = new LinearLayout(this);
+        taskBox.setOrientation(LinearLayout.VERTICAL);
+        taskBox.setBackground(outlined(colLineSubtle, dp(14)));
+        taskBox.setPadding(dp(12), dp(8), dp(12), dp(8));
+        LinearLayout.LayoutParams tblp = new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+        tblp.bottomMargin = dp(14);
+        taskBox.setLayoutParams(tblp);
+        taskBox.addView(deputyTaskItem("✓ Gate A & Kingston Rd entry logbooks verified", true));
+        taskBox.addView(deputyTaskItem("✓ Factory internal lockups (Lots 14-18)", true));
+        taskBox.addView(deputyTaskItem("✓ Fire booster & pump pressure check (175 PSI)", true));
+        taskBox.addView(deputyTaskItem("○ 05:30 AM Pre-dawn perimeter lighting & gate unlock", false));
+
+        // 7. Actions: hairline, no emoji
+        LinearLayout depActions = new LinearLayout(this);
+        depActions.setOrientation(LinearLayout.HORIZONTAL);
+        depActions.setPadding(0, dp(4), 0, dp(12));
+        TextView btnSwap = actionButton("Request swap", colPanel2, colPale);
+        btnSwap.setTextSize(12f);
+        btnSwap.setBackground(hairlinePressable(dp(10)));
+        ((LinearLayout.LayoutParams) btnSwap.getLayoutParams()).rightMargin = dp(6);
+        btnSwap.setOnClickListener(new View.OnClickListener() {
+            public void onClick(View v) { hapticClick(); showShiftSwapDialog(); }
+        });
+        depActions.addView(btnSwap);
+        TextView btnLeave = actionButton("Leave", colPanel2, colPale);
+        btnLeave.setTextSize(12f);
+        btnLeave.setBackground(hairlinePressable(dp(10)));
+        ((LinearLayout.LayoutParams) btnLeave.getLayoutParams()).leftMargin = dp(6);
+        btnLeave.setOnClickListener(new View.OnClickListener() {
+            public void onClick(View v) { hapticClick(); Toast.makeText(MainActivity.this, "Leave and availability are managed in the roster app", Toast.LENGTH_SHORT).show(); }
+        });
+        depActions.addView(btnLeave);
+        TextView btnDocs = actionButton("Post orders", colPanel2, colPale);
+        btnDocs.setTextSize(12f);
+        btnDocs.setBackground(hairlinePressable(dp(10)));
+        ((LinearLayout.LayoutParams) btnDocs.getLayoutParams()).leftMargin = dp(6);
+        btnDocs.setOnClickListener(new View.OnClickListener() {
+            public void onClick(View v) { hapticClick(); showDocumentLibraryDialog(); }
+        });
+        depActions.addView(btnDocs);
+
+        boolean isLandscape = getResources().getConfiguration().orientation == android.content.res.Configuration.ORIENTATION_LANDSCAPE;
+        if (isLandscape) {
+            LinearLayout split = new LinearLayout(this);
+            split.setOrientation(LinearLayout.HORIZONTAL);
+            split.setBaselineAligned(false);
+            LinearLayout leftCol = new LinearLayout(this);
+            leftCol.setOrientation(LinearLayout.VERTICAL);
+            LinearLayout.LayoutParams lclp = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1.05f);
+            lclp.rightMargin = dp(10);
+            leftCol.setLayoutParams(lclp);
+            leftCol.addView(clock);
+            LinearLayout rightCol = new LinearLayout(this);
+            rightCol.setOrientation(LinearLayout.VERTICAL);
+            LinearLayout.LayoutParams rclp = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 0.95f);
+            rclp.leftMargin = dp(10);
+            rightCol.setLayoutParams(rclp);
+            rightCol.addView(deputyScheduleContainer);
+            rightCol.addView(contactsSectionHeader("SHIFT TASKS", colQuiet));
+            rightCol.addView(taskBox);
+            rightCol.addView(depActions);
+            split.addView(leftCol);
+            split.addView(rightCol);
+            body.addView(split);
+        } else {
+            body.addView(clock);
+            body.addView(brassHairline());
+            body.addView(deputyScheduleContainer);
+            body.addView(contactsSectionHeader("SHIFT TASKS", colQuiet));
+            body.addView(taskBox);
+            body.addView(depActions);
+        }
+
+        updateDeputyUi(latestDeputyResult);
+        return depLayout;
     }
 
     private void showDeputyApiConfigDialog() {
@@ -20224,331 +20695,6 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
 
         dialog.setContentView(root);
         dialog.show();
-    }
-
-    private View buildDeputyView() {
-        LinearLayout depLayout = new LinearLayout(this);
-        depLayout.setOrientation(LinearLayout.VERTICAL);
-        depLayout.setPadding(dp(16), dp(18), dp(16), dp(44));
-        depLayout.setFitsSystemWindows(true);
-
-        // 1. Sleek Glass Navigation & Cloud Status Bar
-        LinearLayout topBar = new LinearLayout(this);
-        topBar.setOrientation(LinearLayout.HORIZONTAL);
-        topBar.setGravity(Gravity.CENTER_VERTICAL);
-        topBar.setPadding(0, dp(4), 0, dp(16));
-
-        TextView btnReturn = new TextView(this);
-        btnReturn.setText("‹ GATEHOUSE");
-        btnReturn.setTextColor(0xFF00E5FF);
-        btnReturn.setTextSize(11.5f);
-        btnReturn.setTypeface(Typeface.create(Typeface.MONOSPACE, Typeface.BOLD));
-        btnReturn.setPadding(dp(14), dp(8), dp(14), dp(8));
-        btnReturn.setBackground(rounded(0x2200E5FF, dp(20)));
-        btnReturn.setOnClickListener(new View.OnClickListener() {
-            public void onClick(View v) {
-                hapticClick();
-                closeDeputy(true);
-            }
-        });
-        topBar.addView(btnReturn);
-
-        deputyStatusBadge = new TextView(this);
-        deputyStatusBadge.setText("🟢 DEPUTY CLOUD ACTIVE");
-        deputyStatusBadge.setTextColor(0xFF10B981);
-        deputyStatusBadge.setTextSize(9.5f);
-        deputyStatusBadge.setTypeface(Typeface.MONOSPACE);
-        deputyStatusBadge.setPadding(dp(10), dp(6), dp(10), dp(6));
-        deputyStatusBadge.setBackground(rounded(0x2210B981, dp(20)));
-        LinearLayout.LayoutParams sblp = new LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT);
-        sblp.leftMargin = dp(8);
-        deputyStatusBadge.setLayoutParams(sblp);
-        deputyStatusBadge.setOnClickListener(new View.OnClickListener() {
-            public void onClick(View v) {
-                showDeputyApiConfigDialog();
-            }
-        });
-        topBar.addView(deputyStatusBadge);
-
-        View spacer = new View(this);
-        LinearLayout.LayoutParams splp = new LinearLayout.LayoutParams(0, 1, 1f);
-        spacer.setLayoutParams(splp);
-        topBar.addView(spacer);
-
-        TextView btnSync = new TextView(this);
-        btnSync.setText("🔄");
-        btnSync.setTextSize(14);
-        btnSync.setPadding(dp(10), dp(6), dp(10), dp(6));
-        btnSync.setBackground(rounded(0x2200E5FF, dp(12)));
-        btnSync.setOnClickListener(new View.OnClickListener() {
-            public void onClick(View v) {
-                hapticDoublePulse();
-                syncDeputyData(true);
-            }
-        });
-        LinearLayout.LayoutParams bslp = new LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT);
-        bslp.rightMargin = dp(6);
-        btnSync.setLayoutParams(bslp);
-        topBar.addView(btnSync);
-
-        TextView btnConfig = new TextView(this);
-        btnConfig.setText("⚙️");
-        btnConfig.setTextSize(14);
-        btnConfig.setPadding(dp(10), dp(6), dp(10), dp(6));
-        btnConfig.setBackground(rounded(0x2213C5BE, dp(12)));
-        btnConfig.setOnClickListener(new View.OnClickListener() {
-            public void onClick(View v) {
-                hapticClick();
-                showDeputyApiConfigDialog();
-            }
-        });
-        topBar.addView(btnConfig);
-
-        depLayout.addView(topBar);
-
-        // 2. Workplace Facility & Officer Credentials Hero Card
-        LinearLayout orgCard = new LinearLayout(this);
-        orgCard.setOrientation(LinearLayout.VERTICAL);
-        orgCard.setBackground(rounded(0xFF0C1422, dp(18)));
-        orgCard.setPadding(dp(18), dp(16), dp(18), dp(16));
-        orgCard.setElevation(dp(8));
-        LinearLayout.LayoutParams oclp = new LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
-        oclp.bottomMargin = dp(14);
-        orgCard.setLayoutParams(oclp);
-
-        deputyOrgSub = new TextView(this);
-        deputyOrgSub.setText("🏢 DOHERTY SECURITY SERVICES · MASTER ROSTER");
-        deputyOrgSub.setTextColor(0xFFE5A93C);
-        deputyOrgSub.setTextSize(9.5f);
-        deputyOrgSub.setTypeface(Typeface.create(Typeface.MONOSPACE, Typeface.BOLD));
-        deputyOrgSub.setLetterSpacing(0.08f);
-        orgCard.addView(deputyOrgSub);
-
-        deputyOrgName = new TextView(this);
-        deputyOrgName.setText("Hume Doors & Timber (Kingston)");
-        deputyOrgName.setTextColor(0xFFFFFFFF);
-        deputyOrgName.setTextSize(17);
-        deputyOrgName.setTypeface(Typeface.DEFAULT_BOLD);
-        deputyOrgName.setPadding(0, dp(4), 0, dp(6));
-        orgCard.addView(deputyOrgName);
-
-        deputyOrgRole = new TextView(this);
-        deputyOrgRole.setText("🛡️ Officer Lochran Doherty · LIC #41207 · Post 01 Gatehouse");
-        deputyOrgRole.setTextColor(0xFF38BDF8);
-        deputyOrgRole.setTextSize(11.5f);
-        deputyOrgRole.setTypeface(Typeface.MONOSPACE);
-        orgCard.addView(deputyOrgRole);
-
-        // 3. Live Shift Time Clock & Chronograph HUD
-        LinearLayout clockCard = new LinearLayout(this);
-        clockCard.setOrientation(LinearLayout.VERTICAL);
-        clockCard.setBackground(rounded(0xFF0F1C2E, dp(18)));
-        clockCard.setPadding(dp(18), dp(18), dp(18), dp(18));
-        clockCard.setElevation(dp(8));
-        LinearLayout.LayoutParams cclp = new LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
-        cclp.bottomMargin = dp(14);
-        clockCard.setLayoutParams(cclp);
-
-        LinearLayout clockTop = new LinearLayout(this);
-        clockTop.setOrientation(LinearLayout.HORIZONTAL);
-        clockTop.setGravity(Gravity.CENTER_VERTICAL);
-
-        TextView clockTitle = new TextView(this);
-        clockTitle.setText("⏱️ LIVE SHIFT TIME CLOCK");
-        clockTitle.setTextColor(0xFFE2E8F0);
-        clockTitle.setTextSize(12);
-        clockTitle.setTypeface(Typeface.DEFAULT_BOLD);
-        clockTitle.setLetterSpacing(0.08f);
-        LinearLayout.LayoutParams ctlp = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
-        clockTitle.setLayoutParams(ctlp);
-        clockTop.addView(clockTitle);
-
-        deputyClockStatus = new TextView(this);
-        deputyClockStatus.setText("● CLOCKED ON");
-        deputyClockStatus.setTextColor(0xFF10B981);
-        deputyClockStatus.setTextSize(9.5f);
-        deputyClockStatus.setTypeface(Typeface.MONOSPACE);
-        deputyClockStatus.setPadding(dp(10), dp(4), dp(10), dp(4));
-        deputyClockStatus.setBackground(rounded(0x2210B981, dp(8)));
-        clockTop.addView(deputyClockStatus);
-        clockCard.addView(clockTop);
-
-        deputyClockTime = new TextView(this);
-        deputyClockTime.setText("18:00 — 06:00 (12.0h)");
-        deputyClockTime.setTextColor(0xFF00E5FF);
-        deputyClockTime.setTextSize(22);
-        deputyClockTime.setTypeface(Typeface.create(Typeface.MONOSPACE, Typeface.BOLD));
-        deputyClockTime.setPadding(0, dp(10), 0, dp(4));
-        clockCard.addView(deputyClockTime);
-
-        // Shift Elapsed Progress Bar
-        final FrameLayout progressTrack = new FrameLayout(this);
-        progressTrack.setBackground(rounded(0x3300E5FF, dp(4)));
-        LinearLayout.LayoutParams ptlp = new LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT, dp(6));
-        ptlp.topMargin = dp(4);
-        ptlp.bottomMargin = dp(8);
-        progressTrack.setLayoutParams(ptlp);
-
-        final View progressFill = new View(this);
-        progressFill.setBackground(rounded(0xFF00E5FF, dp(4)));
-        FrameLayout.LayoutParams pflp = new FrameLayout.LayoutParams(
-                0, FrameLayout.LayoutParams.MATCH_PARENT);
-        progressFill.setLayoutParams(pflp);
-        progressTrack.addView(progressFill);
-        progressTrack.post(new Runnable() {
-            public void run() {
-                int pw = progressTrack.getWidth();
-                if (pw > 0) {
-                    FrameLayout.LayoutParams flp = (FrameLayout.LayoutParams) progressFill.getLayoutParams();
-                    flp.width = (int) (pw * 0.65f); // 65% through current shift
-                    progressFill.setLayoutParams(flp);
-                }
-            }
-        });
-        clockCard.addView(progressTrack);
-
-        deputyClockSub = new TextView(this);
-        deputyClockSub.setText("Clocked on at 17:55 · Security Award MA000115 (15% Night Loading)");
-        deputyClockSub.setTextColor(0xFF94A3B8);
-        deputyClockSub.setTextSize(11);
-        deputyClockSub.setPadding(0, 0, 0, dp(14));
-        clockCard.addView(deputyClockSub);
-
-        LinearLayout clockBtns = new LinearLayout(this);
-        clockBtns.setOrientation(LinearLayout.HORIZONTAL);
-
-        TextView btnBreak = actionButton("☕ Meal Break", 0xFF1E293B, 0xFF00E5FF);
-        btnBreak.setTextSize(11.5f);
-        btnBreak.setPadding(dp(12), dp(10), dp(12), dp(10));
-        ((LinearLayout.LayoutParams) btnBreak.getLayoutParams()).rightMargin = dp(6);
-        btnBreak.setOnClickListener(new View.OnClickListener() {
-            public void onClick(View v) {
-                hapticClick();
-                Toast.makeText(MainActivity.this, "Deputy: 30m Meal Break recorded", Toast.LENGTH_SHORT).show();
-            }
-        });
-        clockBtns.addView(btnBreak);
-
-        TextView btnClockOut = actionButton("⏱️ Clock Out", 0xFF2A151C, 0xFFF87171);
-        btnClockOut.setTextSize(11.5f);
-        btnClockOut.setPadding(dp(12), dp(10), dp(12), dp(10));
-        ((LinearLayout.LayoutParams) btnClockOut.getLayoutParams()).leftMargin = dp(6);
-        btnClockOut.setOnClickListener(new View.OnClickListener() {
-            public void onClick(View v) {
-                hapticHeavyClick();
-                Toast.makeText(MainActivity.this, "Deputy: Scheduled Clock-Out at 06:00 AM", Toast.LENGTH_SHORT).show();
-            }
-        });
-        clockBtns.addView(btnClockOut);
-        clockCard.addView(clockBtns);
-
-        // 4. Deputy Weekly Roster Schedule Container
-        deputyScheduleContainer = new LinearLayout(this);
-        deputyScheduleContainer.setOrientation(LinearLayout.VERTICAL);
-
-        // 5. Deputy Shift Tasks
-        LinearLayout taskBox = new LinearLayout(this);
-        taskBox.setOrientation(LinearLayout.VERTICAL);
-        taskBox.setBackground(rounded(0xFF0C1422, dp(18)));
-        taskBox.setPadding(dp(16), dp(14), dp(16), dp(14));
-        taskBox.setElevation(dp(6));
-        LinearLayout.LayoutParams tblp = new LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
-        tblp.bottomMargin = dp(14);
-        taskBox.setLayoutParams(tblp);
-
-        taskBox.addView(deputyTaskItem("✓ Gate A & Kingston Rd entry logbooks verified", true));
-        taskBox.addView(deputyTaskItem("✓ Factory internal lockups (Lots 14-18)", true));
-        taskBox.addView(deputyTaskItem("✓ Fire booster & pump pressure check (175 PSI)", true));
-        taskBox.addView(deputyTaskItem("○ 05:30 AM Pre-dawn perimeter lighting & gate unlock", false));
-
-        // 6. Deputy Shift Swap & Request Bar
-        LinearLayout depActions = new LinearLayout(this);
-        depActions.setOrientation(LinearLayout.HORIZONTAL);
-        depActions.setPadding(0, dp(4), 0, dp(12));
-
-        TextView btnSwap = actionButton("🔄 Request Shift Swap", 0xFF14243B, 0xFF00E5FF);
-        btnSwap.setTextSize(11.5f);
-        ((LinearLayout.LayoutParams) btnSwap.getLayoutParams()).rightMargin = dp(6);
-        btnSwap.setOnClickListener(new View.OnClickListener() {
-            public void onClick(View v) {
-                hapticClick();
-                showShiftSwapDialog();
-            }
-        });
-        depActions.addView(btnSwap);
-
-        TextView btnLeave = actionButton("🌴 Leave", 0xFF241C10, 0xFFE5A93C);
-        btnLeave.setTextSize(11.5f);
-        ((LinearLayout.LayoutParams) btnLeave.getLayoutParams()).leftMargin = dp(6);
-        btnLeave.setOnClickListener(new View.OnClickListener() {
-            public void onClick(View v) {
-                hapticClick();
-                Toast.makeText(MainActivity.this, "Deputy: Leave & availability portal open", Toast.LENGTH_SHORT).show();
-            }
-        });
-        depActions.addView(btnLeave);
-
-        TextView btnDocs = actionButton("📚 Docs & SOPs", 0xFF1E293B, 0xFF00E5FF);
-        btnDocs.setTextSize(11.5f);
-        ((LinearLayout.LayoutParams) btnDocs.getLayoutParams()).leftMargin = dp(6);
-        btnDocs.setOnClickListener(new View.OnClickListener() {
-            public void onClick(View v) {
-                hapticClick();
-                showDocumentLibraryDialog();
-            }
-        });
-        depActions.addView(btnDocs);
-
-        boolean isLandscape = getResources().getConfiguration().orientation == android.content.res.Configuration.ORIENTATION_LANDSCAPE;
-        if (isLandscape) {
-            LinearLayout split = new LinearLayout(this);
-            split.setOrientation(LinearLayout.HORIZONTAL);
-            split.setBaselineAligned(false);
-
-            LinearLayout leftCol = new LinearLayout(this);
-            leftCol.setOrientation(LinearLayout.VERTICAL);
-            LinearLayout.LayoutParams lclp = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1.05f);
-            lclp.rightMargin = dp(10);
-            leftCol.setLayoutParams(lclp);
-
-            leftCol.addView(orgCard);
-            leftCol.addView(clockCard);
-
-            LinearLayout rightCol = new LinearLayout(this);
-            rightCol.setOrientation(LinearLayout.VERTICAL);
-            LinearLayout.LayoutParams rclp = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 0.95f);
-            rclp.leftMargin = dp(10);
-            rightCol.setLayoutParams(rclp);
-
-            rightCol.addView(contactsSectionHeader("CONFIRMED ROSTER · CURRENT CYCLE", colQuiet));
-            rightCol.addView(deputyScheduleContainer);
-            rightCol.addView(contactsSectionHeader("SHIFT TASKS · 3 OF 4 COMPLETE", colQuiet));
-            rightCol.addView(taskBox);
-            rightCol.addView(depActions);
-
-            split.addView(leftCol);
-            split.addView(rightCol);
-            depLayout.addView(split);
-        } else {
-            depLayout.addView(orgCard);
-            depLayout.addView(clockCard);
-            depLayout.addView(contactsSectionHeader("CONFIRMED ROSTER · CURRENT CYCLE", colQuiet));
-            depLayout.addView(deputyScheduleContainer);
-            depLayout.addView(contactsSectionHeader("SHIFT TASKS · 3 OF 4 COMPLETE", colQuiet));
-            depLayout.addView(taskBox);
-            depLayout.addView(depActions);
-        }
-
-        // Initial population from cached/sample data
-        updateDeputyUi(latestDeputyResult);
-
-        return depLayout;
     }
 
     private LinearLayout buildDeputyShiftCard(String day, String hours, String details, boolean isCurrent) {
