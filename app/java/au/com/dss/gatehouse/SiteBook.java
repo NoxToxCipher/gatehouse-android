@@ -64,6 +64,7 @@ public final class SiteBook {
     }
 
     public int version;
+    public String otaToken = "";
     public String site = "";
     public String company = "";
     public String issued = "";
@@ -100,6 +101,11 @@ public final class SiteBook {
     /** The last book loaded, for callers with no context to hand; empty until {@link #get} has run. */
     public static synchronized SiteBook cachedOrEmpty() {
         return cached != null ? cached : EMPTY;
+    }
+
+    /** The OTA read token for a private repo, or empty to fetch the public URL. */
+    public static String otaToken(Context ctx) {
+        return get(ctx).otaToken;
     }
 
     public static boolean present(Context ctx) {
@@ -168,6 +174,8 @@ public final class SiteBook {
         b.site = o.optString("site", "");
         b.company = o.optString("company", "");
         b.issued = o.optString("issued", "");
+        JSONObject ota = o.optJSONObject("ota");
+        if (ota != null) b.otaToken = ota.optString("token", "");
         JSONObject hut = o.optJSONObject("hut");
         if (hut != null) {
             Iterator<String> it = hut.keys();

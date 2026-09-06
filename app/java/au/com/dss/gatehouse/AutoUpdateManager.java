@@ -40,6 +40,31 @@ public final class AutoUpdateManager {
     // Primary GitHub master APK endpoint
     private static final String APK_DOWNLOAD_URL =
             "https://raw.githubusercontent.com/NoxToxCipher/gatehouse-android/master/build/gatehouse.apk";
+    // Private-repo fetch: the GitHub contents API streams the raw file when the
+    // repo is private, given a read token. Used only when a token is on the phone.
+    private static final String APK_API_URL =
+            "https://api.github.com/repos/NoxToxCipher/gatehouse-android/contents/build/gatehouse.apk?ref=master";
+
+    /** Opens the APK either from the public raw URL or, when the site book holds a
+     *  read token, from the authenticated contents API (so a private repo still updates). */
+    private static HttpURLConnection openApkConnection(Context ctx) throws java.io.IOException {
+        String token = "";
+        try { token = SiteBook.otaToken(ctx); } catch (Throwable ignored) {}
+        boolean priv = token != null && !token.isEmpty();
+        URL url = new URL(priv ? APK_API_URL : APK_DOWNLOAD_URL);
+        HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+        conn.setConnectTimeout(15000);
+        conn.setReadTimeout(30000);
+        conn.setUseCaches(false);
+        conn.setInstanceFollowRedirects(true);
+        conn.setRequestProperty("User-Agent", "Gatehouse-OTA/" + getAppVersion(ctx));
+        if (priv) {
+            conn.setRequestProperty("Authorization", "Bearer " + token);
+            conn.setRequestProperty("Accept", "application/vnd.github.raw");
+            conn.setRequestProperty("X-GitHub-Api-Version", "2022-11-28");
+        }
+        return conn;
+    }
 
     public interface UpdateCheckCallback {
         void onUpdateFound(String newSha, long bytes);
@@ -113,12 +138,7 @@ public final class AutoUpdateManager {
                     String currentAppSha = computeFileSha256(new File(context.getPackageCodePath()));
                     File tempApk = new File(context.getCacheDir(), "gatehouse-update.apk");
 
-                    URL url = new URL(APK_DOWNLOAD_URL);
-                    HttpURLConnection conn = (HttpURLConnection) url.openConnection();
-                    conn.setConnectTimeout(15000);
-                    conn.setReadTimeout(30000);
-                    conn.setUseCaches(false);
-                    conn.setRequestProperty("User-Agent", "Gatehouse-OTA/" + getAppVersion(context));
+                    HttpURLConnection conn = openApkConnection(context);
                     conn.connect();
 
                     int responseCode = conn.getResponseCode();
@@ -184,7 +204,7 @@ public final class AutoUpdateManager {
                             public void run() {
                                 if (callback != null) callback.onNoUpdateAvailable();
                                 if (isManual) {
-                                    Toast.makeText(context, "✓ GateHouse is up to date", Toast.LENGTH_SHORT).show();
+                                    Toast.makeText(context, "Gatehouse is up to date", Toast.LENGTH_SHORT).show();
                                 }
                             }
                         });
