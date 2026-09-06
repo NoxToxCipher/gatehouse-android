@@ -15160,7 +15160,7 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
 
         final EditText descField = modernInputField("Photo Subject (e.g. Main gate padlock, Lot 16 mesh)");
 
-        // Forensic LSB Steganography & Watermark Status Badge
+        // Photo watermark status badge
         LinearLayout stegBanner = new LinearLayout(this);
         stegBanner.setOrientation(LinearLayout.HORIZONTAL);
         stegBanner.setGravity(Gravity.CENTER_VERTICAL);
@@ -15178,7 +15178,7 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
         stegBanner.addView(stegIcon);
 
         TextView stegText = new TextView(this);
-        stegText.setText("Forensic Watermark & LSB Steganography Ready");
+        stegText.setText("Photo watermark ready");
         stegText.setTextColor(colEmerald);
         stegText.setTextSize(10.5f);
         stegText.setTypeface(Typeface.DEFAULT_BOLD);
@@ -15187,7 +15187,7 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
         stegBanner.addView(stegText);
 
         TextView btnInspectSteg = new TextView(this);
-        btnInspectSteg.setText("AUDIT LSB");
+        btnInspectSteg.setText("CHECK WATERMARK");
         btnInspectSteg.setTextColor(colAccentInk);
         btnInspectSteg.setTextSize(9.5f);
         btnInspectSteg.setTypeface(Typeface.MONOSPACE);
@@ -15305,9 +15305,9 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
                 String opticTag = (isNightOpticOn[0]) ? " [NIGHT-OPTIC]" : "";
                 String noteText;
                 if (d.isEmpty()) {
-                    noteText = "[PHOTO #" + hashSnippet + "]" + opticTag + " [FORENSIC WATERMARKED · LSB ENCRYPTED] Attached to PDF for Client";
+                    noteText = "[PHOTO #" + hashSnippet + "]" + opticTag + " [watermarked] Attached to PDF for Client";
                 } else {
-                    noteText = "[PHOTO #" + hashSnippet + "]" + opticTag + " [FORENSIC WATERMARKED · LSB ENCRYPTED] " + d + " · Attached to PDF for Client";
+                    noteText = "[PHOTO #" + hashSnippet + "]" + opticTag + " [watermarked] " + d + " · Attached to PDF for Client";
                 }
                 if (!oneLine(noteText)) {
                     banner.setText("notes must be one line");
@@ -15315,7 +15315,7 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
                     return;
                 }
                 note(Core.TOPIC_ROUTINE, noteText);
-                Toast.makeText(MainActivity.this, "✓ Forensically Signed & Attached to Client PDF", Toast.LENGTH_SHORT).show();
+                Toast.makeText(MainActivity.this, "Watermarked and attached to the PDF", Toast.LENGTH_SHORT).show();
                 dlg.dismiss();
             }
         });
@@ -15373,7 +15373,7 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
         statusCard.addView(statTitle);
 
         TextView statSub = new TextView(this);
-        statSub.setText("CRC32 checksum · blue-channel LSB watermark");
+        statSub.setText("Checksum and blue-channel watermark");
         statSub.setTextColor(colMuted);
         statSub.setTextSize(10.5f);
         statusCard.addView(statSub);
@@ -23609,7 +23609,7 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
                 btnAttest.setText("ATTESTED BY OFFICER");
                 btnAttest.setBackground(rounded(colPanel2, dp(8)));
                 btnAttest.setTextColor(colEmerald);
-                banner.setText("Attestation logged to shift record: " + doc.id);
+                banner.setText("Logged to the shift record: " + doc.id);
                 banner.setVisibility(View.VISIBLE);
             }
         });
