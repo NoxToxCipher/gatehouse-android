@@ -42,7 +42,7 @@ public class PttRadioService extends Service implements PttRadioEngine.PttListen
         engine.start();
 
         try {
-            startForeground(NOTIFICATION_ID, buildServiceNotification("● DSS Digital Radio Active · Channel 01"));
+            startForeground(NOTIFICATION_ID, buildServiceNotification("Channel 1 · standby"));
             Log.i(TAG, "PttRadioService started in foreground");
         } catch (Throwable t) {
             Log.w(TAG, "Foreground notification start deferred: " + t.getMessage());
@@ -79,63 +79,34 @@ public class PttRadioService extends Service implements PttRadioEngine.PttListen
     }
 
     private void initNotificationChannel() {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            NotificationChannel chan = new NotificationChannel(
-                    CHANNEL_ID,
-                    "DSS Digital Push-to-Talk Radio",
-                    NotificationManager.IMPORTANCE_LOW
-            );
-            chan.setDescription("Maintains background connectivity for 2-way digital radio audio reception");
-            chan.setShowBadge(false);
-            if (notificationManager != null) {
-                notificationManager.createNotificationChannel(chan);
-            }
-        }
+        GatehouseNotify.prepare(this);
+        NotificationChannel chan = new NotificationChannel(CHANNEL_ID, "Push-to-talk", NotificationManager.IMPORTANCE_LOW);
+        chan.setDescription("Keeps the radio connected in the background");
+        chan.setShowBadge(false);
+        try { chan.setGroup(GatehouseNotify.GROUP_APP); } catch (Throwable ignored) {}
+        if (notificationManager != null) notificationManager.createNotificationChannel(chan);
     }
 
     private Notification buildServiceNotification(String statusText) {
         Intent appIntent = new Intent(this, MainActivity.class);
         appIntent.setFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP | Intent.FLAG_ACTIVITY_CLEAR_TOP);
+        PendingIntent pi = GatehouseNotify.open(this, 0, appIntent);
 
-        PendingIntent pi = PendingIntent.getActivity(
-                this, 0, appIntent,
-                PendingIntent.FLAG_UPDATE_CURRENT | (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M ? PendingIntent.FLAG_IMMUTABLE : 0)
-        );
-
-        Notification.Builder builder;
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            builder = new Notification.Builder(this, CHANNEL_ID);
-        } else {
-            builder = new Notification.Builder(this);
-            builder.setPriority(Notification.PRIORITY_LOW);
-        }
-
-        int iconStat = getResources().getIdentifier("ic_stat_gatehouse", "drawable", getPackageName());
-        if (iconStat == 0) iconStat = getApplicationInfo().icon;
-
-        builder.setSmallIcon(iconStat)
-                .setContentTitle("🛡️ DSS Push-to-Talk Radio")
+        return GatehouseNotify.builder(this, CHANNEL_ID, GatehouseNotify.Tier.NOTICE)
+                .setCategory(Notification.CATEGORY_SERVICE)
+                .setContentTitle("Push-to-talk radio")
                 .setContentText(statusText)
-                .setSubText("Gatehouse")
                 .setContentIntent(pi)
                 .setOngoing(true)
-                .setShowWhen(false);
-
-        try {
-            builder.setLargeIcon(BitmapFactory.decodeResource(getResources(), getApplicationInfo().icon));
-        } catch (Throwable ignored) {}
-
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
-            builder.setColor(0xFFFFD166); // DSS Gold
-        }
-
-        return builder.build();
+                .setAutoCancel(false)
+                .setShowWhen(false)
+                .build();
     }
 
     @Override
     public void onTxStateChanged(boolean isTransmitting) {
         if (notificationManager != null) {
-            String text = isTransmitting ? "🔴 TRANSMITTING AUDIO · Channel 01" : "● DSS Digital Radio Active · Channel 01";
+            String text = isTransmitting ? "Transmitting · channel 1" : "Channel 1 · standby";
             notificationManager.notify(NOTIFICATION_ID, buildServiceNotification(text));
         }
     }
@@ -143,7 +114,7 @@ public class PttRadioService extends Service implements PttRadioEngine.PttListen
     @Override
     public void onRxStateChanged(boolean isReceiving, String senderName) {
         if (notificationManager != null) {
-            String text = isReceiving ? ("🔊 INCOMING RADIO: " + (senderName.isEmpty() ? "Desk" : senderName)) : "● DSS Digital Radio Active · Channel 01";
+            String text = isReceiving ? ("Receiving · " + (senderName.isEmpty() ? "Desk" : senderName)) : "Channel 1 · standby";
             notificationManager.notify(NOTIFICATION_ID, buildServiceNotification(text));
         }
     }

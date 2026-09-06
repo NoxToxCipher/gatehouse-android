@@ -36,12 +36,21 @@ public final class AlertDispatcher {
     private static final String PREFS = "gatehouse_alerts";
     private static final String SMS_SENT_ACTION = "au.com.dss.gatehouse.SMS_SENT";
 
-    // The control pair. Defaults are the numbers already carried in the
-    // Contacts screen; each can be overridden in prefs later without a rebuild.
-    private static final String[][] DEFAULT_CONTROL = {
-            {"Petrea", "0401371724"},
-            {"Lochran", "0480749075"}
-    };
+    /**
+     * Numbers and names come from the site book on this phone ({@link SiteBook}),
+     * never from the source and never from a handset's own contacts. Each number
+     * can still be overridden in prefs ("num_" + key) without a rebuild.
+     */
+    /** The control pair: every alert goes to them. */
+    private static String[] controlKeys(Context ctx) {
+        SiteBook b = SiteBook.get(ctx);
+        return b.control.isEmpty() ? new String[]{"petrea", "lochran"} : b.control.toArray(new String[0]);
+    }
+    /** Told when a finder says the fallen guard is not all right. */
+    private static String[] emergencyKeys(Context ctx) {
+        SiteBook b = SiteBook.get(ctx);
+        return b.emergency.isEmpty() ? new String[]{"petrea", "claren", "lochran"} : b.emergency.toArray(new String[0]);
+    }
 
     private static boolean receiverRegistered = false;
 
@@ -93,15 +102,64 @@ public final class AlertDispatcher {
                 == android.content.pm.PackageManager.PERMISSION_GRANTED;
     }
 
+    /** The number on file for a phone-book key, with the prefs override honoured. */
+    public static String numberFor(Context ctx, String key) {
+        if (key == null) return "";
+        SharedPreferences p = ctx.getSharedPreferences(PREFS, Context.MODE_PRIVATE);
+        String legacy = p.getString("control_num_" + key, null);
+        String override = p.getString("num_" + key, legacy);
+        if (override != null && !override.trim().isEmpty()) return override.trim();
+        return SiteBook.get(ctx).numberFor(key);
+    }
+
+    public static String displayName(Context ctx, String key) {
+        return SiteBook.get(ctx).displayName(key);
+    }
+
+    /** The book key for a roster name, or null; the matching lives in {@link SiteBook#guardForName}. */
+    public static String keyForGuard(Context ctx, String guardName) {
+        SiteBook.Guard g = SiteBook.get(ctx).guardForName(guardName);
+        return g != null ? g.key : null;
+    }
+
     /** {name, number} for each control recipient. */
     public static List<String[]> getControlRecipients(Context ctx) {
         List<String[]> out = new ArrayList<>();
-        SharedPreferences p = ctx.getSharedPreferences(PREFS, Context.MODE_PRIVATE);
-        for (String[] d : DEFAULT_CONTROL) {
-            String num = p.getString("control_num_" + d[0].toLowerCase(Locale.US), d[1]);
-            out.add(new String[]{d[0], num});
-        }
+        for (String k : controlKeys(ctx)) addUnique(out, displayName(ctx, k), numberFor(ctx, k));
         return out;
+    }
+
+    /**
+     * Everyone a site alert goes to: the control pair, and when the roster has a
+     * second guard on site, that guard's own phone and the other hut phone. The
+     * sending phone never texts itself.
+     */
+    public static List<String[]> siteRecipients(Context ctx) {
+        List<String[]> out = getControlRecipients(ctx);
+        try {
+            String other = FallDetection.otherGuardOnSite(ctx);
+            if (other != null && !other.isEmpty()) {
+                String k = keyForGuard(ctx, other);
+                if (k != null) addUnique(out, displayName(ctx, k), numberFor(ctx, k));
+                String tag = MainActivity.getHutPhoneHardwareTag();
+                if (tag.endsWith("#1")) addUnique(out, displayName(ctx, "hut2"), numberFor(ctx, "hut2"));
+                else if (tag.endsWith("#2")) addUnique(out, displayName(ctx, "hut1"), numberFor(ctx, "hut1"));
+            }
+        } catch (Throwable ignored) {}
+        return out;
+    }
+
+    /** Petrea, Claren and Lochran: for a finder who says the fallen guard is not all right. */
+    public static List<String[]> emergencyRecipients(Context ctx) {
+        List<String[]> out = new ArrayList<>();
+        for (String k : emergencyKeys(ctx)) addUnique(out, displayName(ctx, k), numberFor(ctx, k));
+        return out;
+    }
+
+    private static void addUnique(List<String[]> list, String name, String number) {
+        if (number == null || number.trim().isEmpty()) return;
+        for (String[] r : list) if (r[1].equals(number)) return;
+        list.add(new String[]{name, number});
     }
 
     /** Lightning stand-down alert to the control pair. Returns a status line. */
@@ -126,13 +184,56 @@ public final class AlertDispatcher {
         return dispatch(ctx, body, "welfare");
     }
 
+    /**
+     * Fall alert to the control pair. The phone felt a hard impact, then no
+     * movement, and nobody answered the check-in. Written to be read at 2 a.m.
+     * on a lock screen: what, who, when, where, then the one thing to do.
+     * Plain GSM characters only, so it arrives as one message on any handset.
+     */
+    public static String sendFallAlert(Context ctx, String officer, String phoneTag, String impactClock,
+                                       int checkInSecs, String locationLink, String locationNote,
+                                       String alsoOnSite, boolean isTest) {
+        StringBuilder b = new StringBuilder();
+        b.append(isTest ? "TEST - DSS GATEHOUSE FALL ALERT\n" : "DSS GATEHOUSE FALL ALERT\n");
+        b.append("Hume Doors & Timber, Kingston\n");
+        b.append("Officer ").append(officer).append(" may have fallen. ")
+         .append(phoneTag).append(" felt a hard impact at ").append(impactClock)
+         .append(", then no movement, and the ").append(checkInSecs).append("s check-in went unanswered.\n");
+        if (locationLink != null && !locationLink.isEmpty()) {
+            b.append("Map: ").append(locationLink);
+            if (locationNote != null && !locationNote.isEmpty()) b.append(" (").append(locationNote).append(")");
+            b.append("\n");
+        } else {
+            b.append("No location fix on the phone.\n");
+        }
+        // alsoOnSite: a name, "" when the roster says the officer is alone, null when the roster is unknown.
+        if (alsoOnSite != null && !alsoOnSite.isEmpty()) {
+            b.append("Ring this number first, then ").append(alsoOnSite)
+             .append(" on the other hut phone. No answer: treat as a medical emergency.");
+        } else if (alsoOnSite != null) {
+            b.append("Ring this number first. No answer: treat as a medical emergency. Nobody else is rostered on site.");
+        } else {
+            b.append("Ring this number first. No answer: treat as a medical emergency.");
+        }
+        if (isTest) b.append("\nThis is a test. Nobody has fallen.");
+        return dispatch(ctx, b.toString(), isTest ? "fall-test" : "fall");
+    }
+
+    /** Sent when the officer answers after the fall alert has already gone out. */
+    public static String sendFallAllClear(Context ctx, String officer, String impactClock, boolean isTest) {
+        String body = (isTest ? "TEST - " : "") + "DSS GATEHOUSE: Officer " + officer
+                + " has answered the phone after the fall alert at " + impactClock + ". Stand down."
+                + (isTest ? "\nThis is a test." : "");
+        return dispatch(ctx, body, isTest ? "fall-clear-test" : "fall-clear");
+    }
+
     private static String dispatch(Context ctx, String body, String kind) {
         if (!hasSmsPermission(ctx)) {
             Log.w(TAG, "SEND_SMS not granted; skipping " + kind + " SMS");
             record(ctx, "SMS permission not granted (" + kind + ")");
             return "SMS permission not granted";
         }
-        List<String[]> rcpts = getControlRecipients(ctx);
+        List<String[]> rcpts = siteRecipients(ctx);
         int ok = 0;
         StringBuilder names = new StringBuilder();
         for (String[] r : rcpts) {

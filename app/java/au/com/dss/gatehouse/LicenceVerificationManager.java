@@ -88,24 +88,9 @@ public class LicenceVerificationManager {
     }
 
     public static void initChannels(Context context) {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            NotificationManager nm = (NotificationManager) context.getSystemService(Context.NOTIFICATION_SERVICE);
-            if (nm == null) return;
-
-            NotificationChannel chan = new NotificationChannel(
-                    CHANNEL_LICENCE_ALERTS,
-                    "Security Licence Compliance & Expiry",
-                    NotificationManager.IMPORTANCE_HIGH
-            );
-            chan.setDescription("Official reminders for Queensland Security Provider Licence renewals (3 months, 1 month, 1 fortnight, day of expiry)");
-            chan.enableLights(true);
-            chan.setLightColor(0xFFF59E0B);
-            chan.enableVibration(true);
-            chan.setVibrationPattern(new long[]{0, 200, 100, 200, 100, 400});
-            chan.setShowBadge(true);
-            GatehouseSounds.applyChime(chan, context);
-            nm.createNotificationChannel(chan);
-        }
+        GatehouseNotify.createChannel(context, CHANNEL_LICENCE_ALERTS,
+                "Licence", "Security licence renewal reminders",
+                GatehouseNotify.Tier.CHIME, GatehouseNotify.GROUP_ROSTER);
     }
 
     public static long getExpiryTimestamp(Context context) {
@@ -233,24 +218,24 @@ public class LicenceVerificationManager {
 
         if (s.isExpired) {
             milestoneKey = "EXPIRED";
-            alertTitle = "⛔ Critical: QLD Security Licence EXPIRED";
-            alertText = "Officer " + s.officerName + " · Licence #" + s.licenceNumber + " expired " + Math.abs(s.daysRemaining) + " days ago. Renew immediately.";
+            alertTitle = "Licence expired " + Math.abs(s.daysRemaining) + " days ago";
+            alertText = "Licence " + s.licenceNumber + " expired on " + s.formattedExpiryDate + ". Renew before the next shift.";
         } else if (s.isDayOfExpiry) {
             milestoneKey = "DAY_OF";
-            alertTitle = "🚨 Final Notice: QLD Security Licence Expires TODAY";
-            alertText = "Officer " + s.officerName + " · Licence #" + s.licenceNumber + " expires today (" + s.formattedExpiryDate + ").";
+            alertTitle = "Licence expires today";
+            alertText = "Licence " + s.licenceNumber + " expires today. Renew it now.";
         } else if (s.isWithin1Fortnight) {
             milestoneKey = "14_DAYS";
-            alertTitle = "🚨 1 Fortnight Notice: Security Licence Renewal Due";
-            alertText = "Licence #" + s.licenceNumber + " expires in " + s.daysRemaining + " days (" + s.formattedExpiryDate + "). Finalise renewal.";
+            alertTitle = "Licence expires in " + s.daysRemaining + " days";
+            alertText = "Licence " + s.licenceNumber + ", " + s.formattedExpiryDate + ". Finish the renewal.";
         } else if (s.isWithin1Month) {
             milestoneKey = "30_DAYS";
-            alertTitle = "⚠️ 1 Month Notice: Security Licence Renewal Due";
-            alertText = "Licence #" + s.licenceNumber + " expires in " + s.daysRemaining + " days (" + s.formattedExpiryDate + "). Submit paperwork to Fair Trading QLD.";
+            alertTitle = "Licence expires in " + s.daysRemaining + " days";
+            alertText = "Licence " + s.licenceNumber + ", " + s.formattedExpiryDate + ". Lodge the renewal with Fair Trading.";
         } else if (s.isWithin3Months) {
             milestoneKey = "90_DAYS";
-            alertTitle = "🔔 3 Months Notice: Security Licence Renewal Advisory";
-            alertText = "Licence #" + s.licenceNumber + " expires in " + s.daysRemaining + " days (" + s.formattedExpiryDate + "). Renewal window is now open.";
+            alertTitle = "Licence expires in " + s.daysRemaining + " days";
+            alertText = "Licence " + s.licenceNumber + ", " + s.formattedExpiryDate + ". Renewals are open.";
         }
 
         if (milestoneKey != null) {
@@ -271,49 +256,25 @@ public class LicenceVerificationManager {
             Intent intent = new Intent(context, MainActivity.class);
             intent.setFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP | Intent.FLAG_ACTIVITY_CLEAR_TOP);
             intent.putExtra("OPEN_CREDENTIAL_VAULT", true);
+            PendingIntent pi = GatehouseNotify.open(context, 41207, intent);
 
-            PendingIntent pi = PendingIntent.getActivity(
-                    context, 41207, intent,
-                    PendingIntent.FLAG_UPDATE_CURRENT | (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M ? PendingIntent.FLAG_IMMUTABLE : 0)
-            );
-
-            Notification.Builder builder;
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                builder = new Notification.Builder(context, CHANNEL_LICENCE_ALERTS);
-            } else {
-                builder = new Notification.Builder(context);
-                builder.setPriority(Notification.PRIORITY_HIGH);
-            }
-
-            int iconShield = context.getResources().getIdentifier("ic_stat_gatehouse", "drawable", context.getPackageName());
-            if (iconShield == 0) iconShield = context.getResources().getIdentifier("ic_shield_gold", "drawable", context.getPackageName());
-            if (iconShield == 0) iconShield = context.getApplicationInfo().icon;
-
-            builder.setSmallIcon(iconShield)
+            Notification.Builder builder = GatehouseNotify.builder(context, CHANNEL_LICENCE_ALERTS, GatehouseNotify.Tier.CHIME)
+                    .setCategory(Notification.CATEGORY_REMINDER)
                     .setContentTitle(title)
                     .setContentText(message)
-                    .setStyle(new Notification.BigTextStyle().bigText(
-                            message + "\n\n" +
-                            "📋 Licence: #" + status.licenceNumber + " (" + status.licenceClass + ")\n" +
-                            "🏛️ Authority: " + status.jurisdiction + "\n" +
-                            "📅 Expiry: " + status.formattedExpiryDate + " (" + status.daysRemaining + " days remaining)\n\n" +
-                            "Tap to open Officer Credential Vault & Compliance Sheet."
-                    ))
+                    .setStyle(new Notification.BigTextStyle().bigText(GatehouseNotify.lines(
+                            message,
+                            "Licence " + status.licenceNumber + " (" + status.licenceClass + ") · " + status.jurisdiction,
+                            status.isExpired
+                                    ? "Expired " + status.formattedExpiryDate
+                                    : "Expires " + status.formattedExpiryDate + " · " + status.daysRemaining + " days",
+                            "Tap for the renewal details.")))
                     .setContentIntent(pi)
-                    .addAction(iconShield, "[ RENEWAL DETAILS ]", pi)
-                    .setVibrate(new long[]{0, 150, 100, 150})
-                    .setAutoCancel(true);
-
-            try {
-                builder.setLargeIcon(BitmapFactory.decodeResource(context.getResources(), context.getApplicationInfo().icon));
-            } catch (Throwable ignored) {}
-
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
-                builder.setColor(status.statusColor);
-            }
+                    .addAction(GatehouseNotify.action(context, "Renewal details", pi));
+            if (status.isExpired || status.isDayOfExpiry) builder.setColor(GatehouseNotify.CRIMSON);
 
             nm.notify(41207, builder.build());
-            Log.i(TAG, "Posted luxury licence reminder: " + title);
+            Log.i(TAG, "Posted licence reminder: " + title);
         } catch (Exception e) {
             Log.e(TAG, "Failed to post licence reminder: " + e.getMessage(), e);
         }

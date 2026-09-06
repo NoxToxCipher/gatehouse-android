@@ -45,6 +45,44 @@ public class FireRadarManager {
     private static final String KEY_LAST_NOTIFIED_INCIDENT = "last_notified_fire_id_";
     private static final String KEY_LAST_LIGHTNING_NOTIFIED_TS = "last_lightning_alert_ts";
     private static final String KEY_STANDDOWN_SMS_ACTIVE = "standdown_sms_active";
+
+    private static final String KEY_STANDDOWN_SINCE = "standdown_since_ms";
+    private static final String KEY_STANDDOWN_KM = "standdown_closest_km";
+    private static final String KEY_STANDDOWN_DIR = "standdown_dir";
+    private static final String KEY_STANDDOWN_STRIKES = "standdown_strikes";
+
+    /** What a live stand-down is about, for the home screen. */
+    public static final class StandDown {
+        public long sinceMs;
+        public double closestKm;
+        public String direction = "";
+        public int strikes;
+    }
+
+    /** The live stand-down's facts, or null when none is in force. */
+    public static StandDown standDown(Context ctx) {
+        try {
+            SharedPreferences p = ctx.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE);
+            if (!p.getBoolean(KEY_STANDDOWN_SMS_ACTIVE, false)) return null;
+            StandDown sd = new StandDown();
+            sd.sinceMs = p.getLong(KEY_STANDDOWN_SINCE, 0L);
+            sd.closestKm = p.getFloat(KEY_STANDDOWN_KM, 0f);
+            sd.direction = p.getString(KEY_STANDDOWN_DIR, "");
+            sd.strikes = p.getInt(KEY_STANDDOWN_STRIKES, 0);
+            return sd;
+        } catch (Throwable t) {
+            return null;
+        }
+    }
+
+    /** True while a real lightning stand-down is in force: the control pair has been texted and it has not cleared. */
+    public static boolean isStandDownActive(Context ctx) {
+        try {
+            return ctx.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE).getBoolean(KEY_STANDDOWN_SMS_ACTIVE, false);
+        } catch (Throwable t) {
+            return false;
+        }
+    }
     private static final String KEY_LAST_HAIL_NOTIFIED_TS = "last_hail_alert_ts";
 
     public static final String KEY_LIGHTNING_PROXIMITY_KM = "lightning_thresh_proximity_km";
@@ -217,52 +255,15 @@ public class FireRadarManager {
     }
 
     public static void initChannels(Context context) {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            NotificationManager nm = (NotificationManager) context.getSystemService(Context.NOTIFICATION_SERVICE);
-            if (nm == null) return;
-
-            NotificationChannel chanFire = new NotificationChannel(
-                    CHANNEL_FIRE_HAZARDS,
-                    "Fire & Emergency Hazard Radar",
-                    NotificationManager.IMPORTANCE_HIGH
-            );
-            chanFire.setDescription("Priority alerts for fires detected within 10km radius and Fire Danger Rating level updates");
-            chanFire.enableLights(true);
-            chanFire.setLightColor(0xFFEF4444);
-            chanFire.enableVibration(true);
-            chanFire.setVibrationPattern(new long[]{0, 250, 100, 250, 100, 400});
-            chanFire.setShowBadge(true);
-            GatehouseSounds.applyAlert(chanFire, context);
-            nm.createNotificationChannel(chanFire);
-
-            NotificationChannel chanLight = new NotificationChannel(
-                    CHANNEL_LIGHTNING_ALERTS,
-                    "Real-Time Lightning Proximity Alerts",
-                    NotificationManager.IMPORTANCE_HIGH
-            );
-            chanLight.setDescription("Immediate outdoor stand-down alarms when lightning strikes breach proximity or cluster quantity thresholds");
-            chanLight.enableLights(true);
-            chanLight.setLightColor(0xFFF59E0B);
-            chanLight.enableVibration(true);
-            chanLight.setVibrationPattern(new long[]{0, 200, 80, 200, 80, 500});
-            chanLight.setShowBadge(true);
-            GatehouseSounds.applyAlert(chanLight, context);
-            nm.createNotificationChannel(chanLight);
-
-            NotificationChannel chanHail = new NotificationChannel(
-                    CHANNEL_HAIL_ALERTS,
-                    "Severe Thunderstorm & Hail Warning Radar",
-                    NotificationManager.IMPORTANCE_HIGH
-            );
-            chanHail.setDescription("Emergency alerts when severe thunderstorm cells with damaging hail risk approach Kingston");
-            chanHail.enableLights(true);
-            chanHail.setLightColor(0xFF38BDF8);
-            chanHail.enableVibration(true);
-            chanHail.setVibrationPattern(new long[]{0, 300, 100, 300, 100, 300, 100, 600});
-            chanHail.setShowBadge(true);
-            GatehouseSounds.applyAlert(chanHail, context);
-            nm.createNotificationChannel(chanHail);
-        }
+        GatehouseNotify.createChannel(context, CHANNEL_FIRE_HAZARDS,
+                "Fire", "Fires within 10 km, and fire danger rating changes",
+                GatehouseNotify.Tier.ALERT, GatehouseNotify.GROUP_SAFETY);
+        GatehouseNotify.createChannel(context, CHANNEL_LIGHTNING_ALERTS,
+                "Lightning", "Stand-down when strikes come within range",
+                GatehouseNotify.Tier.ALERT, GatehouseNotify.GROUP_SAFETY);
+        GatehouseNotify.createChannel(context, CHANNEL_HAIL_ALERTS,
+                "Hail", "Severe storm cells with hail approaching Kingston",
+                GatehouseNotify.Tier.ALERT, GatehouseNotify.GROUP_SAFETY);
     }
 
     /**
@@ -369,13 +370,13 @@ public class FireRadarManager {
                         } else {
                             snapshot.hailRiskLevel = "ELEVATED (<2cm)";
                         }
-                        snapshot.hailAdvisoryText = "Move patrol vehicle under canopy/timber shed. Secure loose yard assets & shelter in Guard Hut.";
+                        snapshot.hailAdvisoryText = "Move the patrol vehicle under the timber shed, secure loose yard items and shelter in the guard hut.";
                     } else {
                         snapshot.hasHailWarning = false;
                         snapshot.hailRiskLevel = "NONE";
                         snapshot.hailProbabilityPercent = 0;
                         snapshot.estimatedHailSizeMm = 0;
-                        snapshot.hailAdvisoryText = "No hail risk detected in local sector.";
+                        snapshot.hailAdvisoryText = "No hail risk in the local sector.";
                     }
 
                     evaluateHailWarning(context, snapshot);
@@ -447,15 +448,15 @@ public class FireRadarManager {
             snapshot.isLightningStandDownActive = true;
             if (snapshot.closestLightningKm <= 3.0) {
                 snapshot.lightningStandDownReason = String.format(Locale.US,
-                        "🚨 RED STAND-DOWN: Strike %.1f km %s (Immediate Yard Shelter Required)",
+                        "Red stand-down: strike %.1f km %s. Shelter now.",
                         snapshot.closestLightningKm, snapshot.closestLightningDir);
             } else if (breachProximity) {
                 snapshot.lightningStandDownReason = String.format(Locale.US,
-                        "⚠️ AMBER ADVISORY: Strike %.1f km %s breached %.0f km safety perimeter",
+                        "Amber: strike %.1f km %s, inside the %.0f km perimeter.",
                         snapshot.closestLightningKm, snapshot.closestLightningDir, proxThresh);
             } else {
                 snapshot.lightningStandDownReason = String.format(Locale.US,
-                        "⚠️ AMBER CLUSTER: %d strikes detected in 10km sector (Threshold: %d)",
+                        "Amber: %d strikes within 10 km (threshold %d).",
                         snapshot.totalLightningStrikes, qtyThresh);
             }
 
@@ -473,7 +474,12 @@ public class FireRadarManager {
             // and only on real strike data so placeholder strikes never text out.
             boolean smsAlreadyActive = prefs.getBoolean(KEY_STANDDOWN_SMS_ACTIVE, false);
             if (snapshot.lightningStrikesAreReal && !smsAlreadyActive) {
-                prefs.edit().putBoolean(KEY_STANDDOWN_SMS_ACTIVE, true).apply();
+                prefs.edit().putBoolean(KEY_STANDDOWN_SMS_ACTIVE, true)
+                        .putLong(KEY_STANDDOWN_SINCE, System.currentTimeMillis())
+                        .putFloat(KEY_STANDDOWN_KM, (float) snapshot.closestLightningKm)
+                        .putString(KEY_STANDDOWN_DIR, snapshot.closestLightningDir != null ? snapshot.closestLightningDir : "")
+                        .putInt(KEY_STANDDOWN_STRIKES, snapshot.totalLightningStrikes)
+                        .apply();
                 AlertDispatcher.sendStandDown(context, snapshot.lightningStandDownReason,
                         String.format(Locale.US, "Closest %.1f km %s, %d strikes in 10km",
                                 snapshot.closestLightningKm, snapshot.closestLightningDir,
@@ -481,11 +487,13 @@ public class FireRadarManager {
             }
         } else {
             snapshot.isLightningStandDownActive = false;
-            snapshot.lightningStandDownReason = "All lightning activity outside active safety threshold (" + String.format(Locale.US, "%.0f km", proxThresh) + ")";
+            snapshot.lightningStandDownReason = "No lightning inside the " + String.format(Locale.US, "%.0f km", proxThresh) + " perimeter";
             // Reset the edge so the next genuine episode alerts again.
             SharedPreferences prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE);
             if (prefs.getBoolean(KEY_STANDDOWN_SMS_ACTIVE, false)) {
-                prefs.edit().putBoolean(KEY_STANDDOWN_SMS_ACTIVE, false).apply();
+                prefs.edit().putBoolean(KEY_STANDDOWN_SMS_ACTIVE, false)
+                        .remove(KEY_STANDDOWN_SINCE).remove(KEY_STANDDOWN_KM)
+                        .remove(KEY_STANDDOWN_DIR).remove(KEY_STANDDOWN_STRIKES).apply();
             }
         }
     }
@@ -496,44 +504,24 @@ public class FireRadarManager {
             if (nm == null) return;
 
             Intent appIntent = new Intent(context, MainActivity.class);
-            PendingIntent pi = PendingIntent.getActivity(
-                    context, 8888, appIntent,
-                    PendingIntent.FLAG_UPDATE_CURRENT | (Build.VERSION.SDK_INT >= 23 ? PendingIntent.FLAG_IMMUTABLE : 0)
-            );
-
-            Notification.Builder b = (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O)
-                    ? new Notification.Builder(context, CHANNEL_LIGHTNING_ALERTS)
-                    : new Notification.Builder(context);
+            PendingIntent pi = GatehouseNotify.open(context, 8888, appIntent);
 
             String title = snapshot.closestLightningKm <= 3.0
-                    ? String.format(Locale.US, "⚡ RED LIGHTNING STAND-DOWN: Strike %.1f km %s", snapshot.closestLightningKm, snapshot.closestLightningDir)
-                    : String.format(Locale.US, "⚡ LIGHTNING PROXIMITY ALERT: %d Strikes (<%.0f km)", snapshot.totalLightningStrikes, snapshot.proximityThresholdKm);
+                    ? String.format(Locale.US, "Lightning %.1f km %s", snapshot.closestLightningKm, snapshot.closestLightningDir)
+                    : String.format(Locale.US, "Lightning · %d strikes within 10 km", snapshot.totalLightningStrikes);
+            String text = "Stand down under hard cover until it clears.";
 
-            String text = snapshot.lightningStandDownReason;
-
-            int iconShield = context.getResources().getIdentifier("ic_stat_gatehouse", "drawable", context.getPackageName());
-            if (iconShield == 0) iconShield = context.getResources().getIdentifier("ic_shield_gold", "drawable", context.getPackageName());
-            if (iconShield == 0) iconShield = context.getApplicationInfo().icon;
-
-            b.setSmallIcon(iconShield)
+            Notification.Builder b = GatehouseNotify.builder(context, CHANNEL_LIGHTNING_ALERTS, GatehouseNotify.Tier.ALERT)
                     .setContentTitle(title)
                     .setContentText(text)
-                    .setStyle(new Notification.BigTextStyle().bigText(
-                            "⚡ REAL-TIME LIGHTNING RADAR ALERT\n" +
-                            "Status: " + snapshot.lightningStandDownReason + "\n" +
-                            "Closest Strike: " + String.format(Locale.US, "%.1f km %s", snapshot.closestLightningKm, snapshot.closestLightningDir) + "\n" +
-                            "Active Strikes in 10km: " + snapshot.totalLightningStrikes + "\n" +
-                            "Threshold Trigger: Distance < " + String.format(Locale.US, "%.0f km", snapshot.proximityThresholdKm) + " or Quantity ≥ " + snapshot.quantityThreshold + "\n\n" +
-                            "WHS Advisory: Cease open timber yard rounds. Stand down inside Guard Hut until storm clears."
-                    ))
-                    .setColor(snapshot.closestLightningKm <= 3.0 ? 0xFFEF4444 : 0xFFF59E0B)
-                    .setAutoCancel(true)
+                    .setStyle(new Notification.BigTextStyle().bigText(GatehouseNotify.lines(
+                            String.format(Locale.US, "Closest strike %.1f km %s · %d strikes within 10 km",
+                                    snapshot.closestLightningKm, snapshot.closestLightningDir, snapshot.totalLightningStrikes),
+                            "Trigger: closer than " + String.format(Locale.US, "%.0f km", snapshot.proximityThresholdKm)
+                                    + ", or " + snapshot.quantityThreshold + " or more strikes.",
+                            "Cease yard rounds. Stay in the guard hut until it clears.")))
                     .setContentIntent(pi)
-                    .setPriority(Notification.PRIORITY_MAX);
-
-            try {
-                b.setLargeIcon(BitmapFactory.decodeResource(context.getResources(), context.getApplicationInfo().icon));
-            } catch (Throwable ignored) {}
+                    .setTimeoutAfter(2 * GatehouseNotify.HOUR);
 
             nm.notify(8888, b.build());
         } catch (Exception e) {
@@ -560,40 +548,20 @@ public class FireRadarManager {
             if (nm == null) return;
 
             Intent appIntent = new Intent(context, MainActivity.class);
-            PendingIntent pi = PendingIntent.getActivity(
-                    context, 8889, appIntent,
-                    PendingIntent.FLAG_UPDATE_CURRENT | (Build.VERSION.SDK_INT >= 23 ? PendingIntent.FLAG_IMMUTABLE : 0)
-            );
+            PendingIntent pi = GatehouseNotify.open(context, 8889, appIntent);
 
-            Notification.Builder b = (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O)
-                    ? new Notification.Builder(context, CHANNEL_HAIL_ALERTS)
-                    : new Notification.Builder(context);
+            String title = String.format(Locale.US, "Hail up to %.0f mm possible", snapshot.estimatedHailSizeMm);
+            String text = "Get the vehicle under cover and shelter in the guard hut.";
 
-            String title = String.format(Locale.US, "🧊 SEVERE HAIL WARNING: %s (Est. %.0fmm)", snapshot.hailRiskLevel, snapshot.estimatedHailSizeMm);
-            String text = "Severe storm cell detected over Kingston. Move patrol vehicle under cover & shelter in Guard Hut.";
-
-            int iconShield = context.getResources().getIdentifier("ic_stat_gatehouse", "drawable", context.getPackageName());
-            if (iconShield == 0) iconShield = context.getResources().getIdentifier("ic_shield_gold", "drawable", context.getPackageName());
-            if (iconShield == 0) iconShield = context.getApplicationInfo().icon;
-
-            b.setSmallIcon(iconShield)
+            Notification.Builder b = GatehouseNotify.builder(context, CHANNEL_HAIL_ALERTS, GatehouseNotify.Tier.ALERT)
                     .setContentTitle(title)
                     .setContentText(text)
-                    .setStyle(new Notification.BigTextStyle().bigText(
-                            "🧊 SEVERE THUNDERSTORM & HAIL WARNING\n" +
-                            "Risk Level: " + snapshot.hailRiskLevel + " (Probability: " + snapshot.hailProbabilityPercent + "%)\n" +
-                            "Estimated Diameter: ~" + String.format(Locale.US, "%.0f mm", snapshot.estimatedHailSizeMm) + "\n" +
-                            "Action Required: " + snapshot.hailAdvisoryText + "\n\n" +
-                            "WHS Advisory: Seek immediate solid shelter in Guard Hut. Avoid open yard and unreinforced glass canopies."
-                    ))
-                    .setColor(0xFF38BDF8)
-                    .setAutoCancel(true)
+                    .setStyle(new Notification.BigTextStyle().bigText(GatehouseNotify.lines(
+                            GatehouseNotify.sentence(snapshot.hailRiskLevel) + " · " + snapshot.hailProbabilityPercent + "% chance",
+                            snapshot.hailAdvisoryText,
+                            "Avoid the open yard and glass canopies.")))
                     .setContentIntent(pi)
-                    .setPriority(Notification.PRIORITY_HIGH);
-
-            try {
-                b.setLargeIcon(BitmapFactory.decodeResource(context.getResources(), context.getApplicationInfo().icon));
-            } catch (Throwable ignored) {}
+                    .setTimeoutAfter(2 * GatehouseNotify.HOUR);
 
             nm.notify(8889, b.build());
         } catch (Exception e) {
@@ -743,37 +711,18 @@ public class FireRadarManager {
         if (nm == null) return;
 
         Intent appIntent = new Intent(context, MainActivity.class);
-        PendingIntent pi = PendingIntent.getActivity(
-                context, 9001, appIntent,
-                PendingIntent.FLAG_UPDATE_CURRENT | (Build.VERSION.SDK_INT >= 23 ? PendingIntent.FLAG_IMMUTABLE : 0)
-        );
+        PendingIntent pi = GatehouseNotify.open(context, 9001, appIntent);
 
-        Notification.Builder b = (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O)
-                ? new Notification.Builder(context, CHANNEL_FIRE_HAZARDS)
-                : new Notification.Builder(context);
-
-        int iconShield = context.getResources().getIdentifier("ic_stat_gatehouse", "drawable", context.getPackageName());
-        if (iconShield == 0) iconShield = context.getResources().getIdentifier("ic_shield_gold", "drawable", context.getPackageName());
-        if (iconShield == 0) iconShield = context.getApplicationInfo().icon;
-
-        b.setSmallIcon(iconShield)
-                .setContentTitle("🔥 FIRE DANGER RATING: " + newRating.label)
-                .setContentText("Rating updated from " + oldRating.label + " → " + newRating.label + ". " + newRating.advice)
-                .setStyle(new Notification.BigTextStyle().bigText(
-                        "🔥 REGIONAL FIRE RISK LEVEL CHANGED\n" +
-                        "New Rating: " + newRating.label + "\n" +
-                        "Previous: " + oldRating.label + "\n" +
-                        "Instructions: " + newRating.advice + "\n" +
-                        "Location: Hume Doors & Timber Guard Hut (Kingston)"
-                ))
-                .setColor(newRating.color)
-                .setAutoCancel(true)
+        Notification.Builder b = GatehouseNotify.builder(context, CHANNEL_FIRE_HAZARDS, GatehouseNotify.Tier.ALERT)
+                .setContentTitle("Fire danger now " + GatehouseNotify.sentence(newRating.label))
+                .setContentText(newRating.advice)
+                .setStyle(new Notification.BigTextStyle().bigText(GatehouseNotify.lines(
+                        "Was " + GatehouseNotify.sentence(oldRating.label).toLowerCase(Locale.US) + ". " + newRating.advice,
+                        "Hume guard hut, Kingston.")))
                 .setContentIntent(pi)
-                .setPriority(Notification.PRIORITY_MAX);
-
-        try {
-            b.setLargeIcon(BitmapFactory.decodeResource(context.getResources(), context.getApplicationInfo().icon));
-        } catch (Throwable ignored) {}
+                .setTimeoutAfter(12 * GatehouseNotify.HOUR);
+        // A rating easing below High is news, not an alert: it carries the brass.
+        if (newRating.ordinal() < FireDangerRating.HIGH.ordinal()) b.setColor(GatehouseNotify.BRASS);
 
         nm.notify(9001, b.build());
     }
@@ -783,38 +732,22 @@ public class FireRadarManager {
         if (nm == null) return;
 
         Intent appIntent = new Intent(context, MainActivity.class);
-        PendingIntent pi = PendingIntent.getActivity(
-                context, 9002 + inc.id.hashCode(), appIntent,
-                PendingIntent.FLAG_UPDATE_CURRENT | (Build.VERSION.SDK_INT >= 23 ? PendingIntent.FLAG_IMMUTABLE : 0)
-        );
+        PendingIntent pi = GatehouseNotify.open(context, 9002 + inc.id.hashCode(), appIntent);
 
-        Notification.Builder b = (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O)
-                ? new Notification.Builder(context, CHANNEL_FIRE_HAZARDS)
-                : new Notification.Builder(context);
+        String title = String.format(Locale.US, "Fire %.1f km %s", inc.distanceKm, inc.compassDir);
+        String text = inc.name + " · wind " + windDir + " " + String.format(Locale.US, "%.0f km/h", windSpeed);
 
-        int iconShield = context.getResources().getIdentifier("ic_stat_gatehouse", "drawable", context.getPackageName());
-        if (iconShield == 0) iconShield = context.getResources().getIdentifier("ic_shield_gold", "drawable", context.getPackageName());
-        if (iconShield == 0) iconShield = context.getApplicationInfo().icon;
-
-        b.setSmallIcon(iconShield)
-                .setContentTitle("🚨 FIRE WITHIN 10KM: " + String.format(Locale.US, "%.1f km %s", inc.distanceKm, inc.compassDir))
-                .setContentText(inc.name + " · Wind: " + windDir + " " + String.format(Locale.US, "%.0f km/h", windSpeed))
-                .setStyle(new Notification.BigTextStyle().bigText(
-                        "🚨 LOCAL FIRE RADAR ALERT (<10KM RADIUS)\n" +
-                        "Incident: " + inc.name + " (" + inc.alertLevel + ")\n" +
-                        "Distance: " + String.format(Locale.US, "%.1f km %s (Bearing %.0f°)", inc.distanceKm, inc.compassDir, inc.bearingDeg) + "\n" +
-                        "Wind Vector: " + windDir + " @ " + String.format(Locale.US, "%.1f km/h", windSpeed) + "\n" +
-                        "Site Hazard Potential: " + inc.hazardPotential + "\n" +
-                        "Location: Hume Doors & Timber Guard Hut (Kingston)"
-                ))
-                .setColor(resolveAlertColor(inc.alertLevel))
-                .setAutoCancel(true)
+        Notification.Builder b = GatehouseNotify.builder(context, CHANNEL_FIRE_HAZARDS, GatehouseNotify.Tier.ALERT)
+                .setContentTitle(title)
+                .setContentText(text)
+                .setStyle(new Notification.BigTextStyle().bigText(GatehouseNotify.lines(
+                        inc.name + " · " + GatehouseNotify.sentence(inc.alertLevel),
+                        String.format(Locale.US, "%.1f km %s, bearing %.0f° · wind %s %.0f km/h",
+                                inc.distanceKm, inc.compassDir, inc.bearingDeg, windDir, windSpeed),
+                        GatehouseNotify.sentence(inc.hazardPotential),
+                        "Hume guard hut, Kingston.")))
                 .setContentIntent(pi)
-                .setPriority(Notification.PRIORITY_MAX);
-
-        try {
-            b.setLargeIcon(BitmapFactory.decodeResource(context.getResources(), context.getApplicationInfo().icon));
-        } catch (Throwable ignored) {}
+                .setTimeoutAfter(6 * GatehouseNotify.HOUR);
 
         nm.notify(9002 + inc.id.hashCode(), b.build());
     }

@@ -6,3 +6,4 @@ crates/**/target/
 .zig-cache/
 native/**/.zig-cache/
 
+private/

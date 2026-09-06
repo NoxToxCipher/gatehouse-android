@@ -298,7 +298,7 @@ public class AdsbSkyRadarService {
             t.category = AircraftCategory.MILITARY_TRANSPORT;
             t.typeName = getMilitaryTypeName(type, cs);
             t.isSpecial = true;
-            t.alertSummary = "🎖️ RAAF Transport Overhead (" + t.typeName + ")";
+            t.alertSummary = "RAAF transport (" + t.typeName + ")";
             return;
         }
 
@@ -308,7 +308,7 @@ public class AdsbSkyRadarService {
             t.category = AircraftCategory.FAST_JET;
             t.typeName = type.contains("F35") ? "RAAF F-35A Lightning II" : (type.contains("F18") ? "RAAF F/A-18F Super Hornet" : "Fast Combat Jet");
             t.isSpecial = true;
-            t.alertSummary = "⚡ Combat Fast Jet Overhead (" + t.typeName + ")";
+            t.alertSummary = "Fast jet (" + t.typeName + ")";
             return;
         }
 
@@ -318,7 +318,7 @@ public class AdsbSkyRadarService {
             t.category = AircraftCategory.RESCUE_MEDEVAC;
             t.typeName = "LifeFlight / CareFlight Aeromedical (" + (type.isEmpty() ? "AW139" : type) + ")";
             t.isSpecial = true;
-            t.alertSummary = "🚁 Emergency Rescue Medevac Overhead (" + t.callsign + ")";
+            t.alertSummary = "Aeromedical helicopter (" + t.callsign + ")";
             return;
         }
 
@@ -327,7 +327,7 @@ public class AdsbSkyRadarService {
             t.category = AircraftCategory.POLAIR;
             t.typeName = "Queensland Police Polair (Bell 429)";
             t.isSpecial = true;
-            t.alertSummary = "🚓 QPS Polair Air Wing Overhead";
+            t.alertSummary = "Police helicopter";
             return;
         }
 
@@ -337,7 +337,7 @@ public class AdsbSkyRadarService {
             t.category = AircraftCategory.VINTAGE_WARBIRD;
             t.typeName = getWarbirdTypeName(type);
             t.isSpecial = true;
-            t.alertSummary = "🛩️ Vintage Warbird Overhead (" + t.typeName + ")";
+            t.alertSummary = "Vintage warbird (" + t.typeName + ")";
             return;
         }
 
@@ -346,14 +346,14 @@ public class AdsbSkyRadarService {
             t.category = AircraftCategory.GOVERNMENT_VIP;
             t.typeName = "RAAF 34 Squadron VIP Transport";
             t.isSpecial = true;
-            t.alertSummary = "👑 VIP Government Aircraft Overhead";
+            t.alertSummary = "Government VIP aircraft";
             return;
         }
 
         t.category = AircraftCategory.CIVIL_GENERAL;
         t.typeName = type.isEmpty() ? "Civil Aircraft" : ("Aircraft " + type);
         t.isSpecial = false;
-        t.alertSummary = "✈️ " + t.typeName + " (" + t.callsign + ")";
+        t.alertSummary = t.typeName + " (" + t.callsign + ")";
     }
 
     private String getMilitaryTypeName(String type, String cs) {
@@ -439,51 +439,30 @@ public class AdsbSkyRadarService {
     }
 
     private void createNotificationChannel() {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            NotificationChannel channel = new NotificationChannel(
-                NOTIF_CHANNEL_ID,
-                "Look Up: Military & Warbird Sky Alerts",
-                NotificationManager.IMPORTANCE_HIGH
-            );
-            channel.setDescription("Pushes heads-up alerts when rare warbirds, military transports, or aeromedical helicopters fly low overhead.");
-            channel.enableVibration(true);
-            NotificationManager nm = appContext.getSystemService(NotificationManager.class);
-            GatehouseSounds.applyNotice(channel);
-            if (nm != null) nm.createNotificationChannel(channel);
-        }
+        GatehouseNotify.createChannel(appContext, NOTIF_CHANNEL_ID,
+                "Sky radar", "Rare aircraft low overhead: military, warbirds, aeromedical",
+                GatehouseNotify.Tier.NOTICE, GatehouseNotify.GROUP_SKY);
     }
 
     private void pushLookUpNotification(TrackedAircraft ac) {
-        String title = String.format(Locale.US, "🔭 LOOK UP: %s Overhead!", ac.typeName);
-        String text = String.format(Locale.US, "Alt: %,d ft · %.1f km (%s) @ %d kts · %s",
+        String title = ac.typeName + " overhead";
+        String text = String.format(Locale.US, "%,d ft · %.1f km %s · %d kt · %s",
             ac.altitudeFt, ac.distanceKm, getBearingCompassStr(ac.bearingDeg), ac.speedKts, ac.callsign);
 
         Intent intent = new Intent(appContext, MainActivity.class);
         intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TOP);
-        PendingIntent pi = PendingIntent.getActivity(appContext, ac.hex.hashCode(), intent, PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
+        PendingIntent pi = GatehouseNotify.open(appContext, ac.hex.hashCode(), intent);
 
-        Notification.Builder builder;
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            builder = new Notification.Builder(appContext, NOTIF_CHANNEL_ID);
-        } else {
-            builder = new Notification.Builder(appContext);
-        }
-
-        builder.setSmallIcon(android.R.drawable.ic_menu_compass)
+        Notification.Builder builder = GatehouseNotify.builder(appContext, NOTIF_CHANNEL_ID, GatehouseNotify.Tier.NOTICE)
             .setContentTitle(title)
             .setContentText(text)
-            .setStyle(new Notification.BigTextStyle().bigText(
-                text + "\n⚡ " + ac.alertSummary + "\n📍 Hume Facility Overhead Geofence Trigger"
-            ))
-            .setPriority(Notification.PRIORITY_HIGH)
-            .setColor(ac.category.color)
-            .setAutoCancel(true)
-            .setContentIntent(pi);
+            .setStyle(new Notification.BigTextStyle().bigText(GatehouseNotify.lines(
+                text, ac.alertSummary, "Over the Hume geofence.")))
+            .setContentIntent(pi)
+            .setTimeoutAfter(20 * GatehouseNotify.MINUTE);
 
         NotificationManager nm = (NotificationManager) appContext.getSystemService(Context.NOTIFICATION_SERVICE);
-        if (nm != null) {
-            nm.notify(ac.hex.hashCode(), builder.build());
-        }
+        if (nm != null) nm.notify(ac.hex.hashCode(), builder.build());
     }
 
     public void cancelAllAlerts() {

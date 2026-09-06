@@ -112,14 +112,14 @@ public class AirspaceRadarManager {
 
             if (category == AircraftCategory.POLAIR_QPS) {
                 this.statusText = isOrbiting
-                        ? "🚨 ACTIVE SEARCH ORBIT OVER SECTOR (" + String.format(Locale.US, "%d ft)", altitudeFt)
-                        : "🔵 POLICE PATROL TRANSITING (" + String.format(Locale.US, "%d ft)", altitudeFt);
+                        ? "Search orbit over the sector (" + String.format(Locale.US, "%d ft)", altitudeFt)
+                        : "Police patrol passing through (" + String.format(Locale.US, "%d ft)", altitudeFt);
             } else if (category == AircraftCategory.AEROMEDICAL_RESCUE) {
-                this.statusText = "🚑 INBOUND LOGAN HOSPITAL (" + String.format(Locale.US, "%d ft)", altitudeFt) + ")";
+                this.statusText = "Inbound to Logan Hospital (" + String.format(Locale.US, "%d ft)", altitudeFt);
             } else if (category == AircraftCategory.DRONE_UAS) {
-                this.statusText = "⚠️ LOW-ALTITUDE DRONE SIGHTING (" + String.format(Locale.US, "%d ft AGL)", altitudeFt);
+                this.statusText = "Low-altitude drone (" + String.format(Locale.US, "%d ft AGL)", altitudeFt);
             } else {
-                this.statusText = "✈️ CIVIL TRANSIT · " + String.format(Locale.US, "%d ft · %d km/h", altitudeFt, speedKmh);
+                this.statusText = "Civil transit · " + String.format(Locale.US, "%d ft · %d km/h", altitudeFt, speedKmh);
             }
         }
     }
@@ -142,24 +142,9 @@ public class AirspaceRadarManager {
     }
 
     public static void initChannels(Context context) {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            NotificationManager nm = (NotificationManager) context.getSystemService(Context.NOTIFICATION_SERVICE);
-            if (nm == null) return;
-
-            NotificationChannel chanAir = new NotificationChannel(
-                    CHANNEL_AIRSPACE_ALERTS,
-                    "POLAIR & Airspace Radar",
-                    NotificationManager.IMPORTANCE_HIGH
-            );
-            chanAir.setDescription("Alerts when QPS POLAIR police helicopters orbit within 3km or low-altitude drones are detected");
-            chanAir.enableLights(true);
-            chanAir.setLightColor(0xFF00E5FF);
-            chanAir.enableVibration(true);
-            chanAir.setVibrationPattern(new long[]{0, 150, 80, 150, 80, 300});
-            chanAir.setShowBadge(true);
-            GatehouseSounds.applyNotice(chanAir, context);
-            nm.createNotificationChannel(chanAir);
-        }
+        GatehouseNotify.createChannel(context, CHANNEL_AIRSPACE_ALERTS,
+                "Airspace", "Police helicopters orbiting low nearby",
+                GatehouseNotify.Tier.NOTICE, GatehouseNotify.GROUP_SKY);
     }
 
     /**
@@ -336,43 +321,23 @@ public class AirspaceRadarManager {
             if (nm == null) return;
 
             Intent appIntent = new Intent(context, MainActivity.class);
-            PendingIntent pi = PendingIntent.getActivity(
-                    context, 7777, appIntent,
-                    PendingIntent.FLAG_UPDATE_CURRENT | (Build.VERSION.SDK_INT >= 23 ? PendingIntent.FLAG_IMMUTABLE : 0)
-            );
+            PendingIntent pi = GatehouseNotify.open(context, 7777, appIntent);
 
-            Notification.Builder b = (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O)
-                    ? new Notification.Builder(context, CHANNEL_AIRSPACE_ALERTS)
-                    : new Notification.Builder(context);
+            String title = String.format(Locale.US, "Police helicopter %.1f km %s", track.distanceKm, track.compassDir);
+            String text = String.format(Locale.US, "Low orbit at %d ft. Possibly a pursuit or search near Kingston.", track.altitudeFt);
 
-            String title = String.format(Locale.US, "🚁 POLAIR ACTIVITY: %s (%.1f km %s)", track.callsign, track.distanceKm, track.compassDir);
-            String text = String.format(Locale.US, "Low-altitude orbit detected at %d ft AGL. Possible police pursuit or search operation near Kingston.", track.altitudeFt);
-
-            int iconShield = context.getResources().getIdentifier("ic_stat_gatehouse", "drawable", context.getPackageName());
-            if (iconShield == 0) iconShield = context.getResources().getIdentifier("ic_shield_gold", "drawable", context.getPackageName());
-            if (iconShield == 0) iconShield = context.getApplicationInfo().icon;
-
-            b.setSmallIcon(iconShield)
+            Notification.Builder b = GatehouseNotify.builder(context, CHANNEL_AIRSPACE_ALERTS, GatehouseNotify.Tier.NOTICE)
                     .setContentTitle(title)
                     .setContentText(text)
-                    .setStyle(new Notification.BigTextStyle().bigText(
-                            "🚁 QPS POLAIR AIRSPACE ALERT\n" +
-                            "Callsign: " + track.callsign + " (" + track.aircraftModel + ")\n" +
-                            "Distance: " + String.format(Locale.US, "%.1f km %s (Bearing %.0f°)", track.distanceKm, track.compassDir, track.bearingDeg) + "\n" +
-                            "Altitude: " + String.format(Locale.US, "%d ft AGL · Speed: %d km/h", track.altitudeFt, track.speedKmh) + "\n" +
-                            "Flight Status: " + track.statusText + "\n\n" +
-                            "Guard Advisory: Maintain heightened site vigilance and monitor perimeter boundaries."
-                    ))
-                    .setColor(0xFFFF5252)
-                    .setAutoCancel(true)
+                    .setStyle(new Notification.BigTextStyle().bigText(GatehouseNotify.lines(
+                            track.callsign + " · " + track.aircraftModel,
+                            String.format(Locale.US, "%.1f km %s, bearing %.0f° · %d ft · %d km/h",
+                                    track.distanceKm, track.compassDir, track.bearingDeg, track.altitudeFt, track.speedKmh),
+                            track.statusText,
+                            "Keep an eye on the perimeter.")))
                     .setContentIntent(pi)
-                    .addAction(iconShield, "[ AIRSPACE RADAR ]", pi)
-                    .setVibrate(new long[]{0, 200, 100, 200, 100, 200})
-                    .setPriority(Notification.PRIORITY_HIGH);
-
-            try {
-                b.setLargeIcon(BitmapFactory.decodeResource(context.getResources(), context.getApplicationInfo().icon));
-            } catch (Throwable ignored) {}
+                    .addAction(GatehouseNotify.action(context, "Open airspace", pi))
+                    .setTimeoutAfter(45 * GatehouseNotify.MINUTE);
 
             nm.notify(7777, b.build());
         } catch (Exception e) {

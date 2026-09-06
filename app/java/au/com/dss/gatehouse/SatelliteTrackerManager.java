@@ -166,10 +166,10 @@ public class SatelliteTrackerManager {
         }
 
         public String getBrightnessDescription() {
-            if (visualMag <= -3.0) return "Extremely Bright (Mag " + String.format(Locale.US, "%.1f", visualMag) + " · Outshines Jupiter)";
-            if (visualMag <= -1.5) return "Very Bright (Mag " + String.format(Locale.US, "%.1f", visualMag) + " · Vivid Naked Eye)";
-            if (visualMag <= 1.0) return "Bright (Mag " + String.format(Locale.US, "%.1f", visualMag) + " · Easily Visible)";
-            return "Visible (Mag " + String.format(Locale.US, "%.1f", visualMag) + " · Dark Sky Required)";
+            if (visualMag <= -3.0) return "Extremely bright, outshines Jupiter.";
+            if (visualMag <= -1.5) return "Very bright, vivid to the naked eye.";
+            if (visualMag <= 1.0) return "Bright, easily visible.";
+            return "Visible under a dark sky.";
         }
     }
 
@@ -178,24 +178,9 @@ public class SatelliteTrackerManager {
     }
 
     public static void initChannels(Context context) {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            NotificationManager nm = (NotificationManager) context.getSystemService(Context.NOTIFICATION_SERVICE);
-            if (nm == null) return;
-
-            NotificationChannel chan = new NotificationChannel(
-                    CHANNEL_SATELLITE_ALERTS,
-                    "Night Sky Satellite & Starlink Alerts",
-                    NotificationManager.IMPORTANCE_HIGH
-            );
-            chan.setDescription("Dispatches pass alerts 2 minutes before the ISS or Starlink trains cross the night sky above Kingston Gatehouse");
-            chan.enableLights(true);
-            chan.setLightColor(0xFF00E5FF);
-            chan.enableVibration(true);
-            chan.setVibrationPattern(new long[]{0, 200, 100, 200, 100, 400});
-            chan.setShowBadge(true);
-            GatehouseSounds.applyNotice(chan, context);
-            nm.createNotificationChannel(chan);
-        }
+        GatehouseNotify.createChannel(context, CHANNEL_SATELLITE_ALERTS,
+                "Satellite passes", "Two minutes before the ISS or a Starlink train",
+                GatehouseNotify.Tier.NOTICE, GatehouseNotify.GROUP_SKY);
     }
 
     public static String getApiKey(Context context) {
@@ -546,15 +531,11 @@ public class SatelliteTrackerManager {
         try {
             if (pass == null) return;
 
-            // Deduplication: prevent repeat notifications for the same pass
+            // One alert per pass, ever.
             SharedPreferences prefs = context.getSharedPreferences("satellite_tracker_prefs", Context.MODE_PRIVATE);
             String passKey = "notified_pass_" + (pass.passId != null ? pass.passId : (pass.satId + "_" + pass.startUtcMillis));
-            if (!isTest && prefs.getBoolean(passKey, false)) {
-                return;
-            }
-            if (!isTest) {
-                prefs.edit().putBoolean(passKey, true).apply();
-            }
+            if (!isTest && prefs.getBoolean(passKey, false)) return;
+            if (!isTest) prefs.edit().putBoolean(passKey, true).apply();
 
             initChannels(context);
             NotificationManager nm = (NotificationManager) context.getSystemService(Context.NOTIFICATION_SERVICE);
@@ -562,52 +543,32 @@ public class SatelliteTrackerManager {
 
             Intent appIntent = new Intent(context, MainActivity.class);
             appIntent.putExtra("open_satellite_radar", true);
-            PendingIntent pi = PendingIntent.getActivity(
-                    context, 8888, appIntent,
-                    PendingIntent.FLAG_UPDATE_CURRENT | (Build.VERSION.SDK_INT >= 23 ? PendingIntent.FLAG_IMMUTABLE : 0)
-            );
+            PendingIntent pi = GatehouseNotify.open(context, 8888, appIntent);
 
-            Notification.Builder b = (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O)
-                    ? new Notification.Builder(context, CHANNEL_SATELLITE_ALERTS)
-                    : new Notification.Builder(context);
+            String what = pass.isStarlinkTrain ? "Starlink train" : pass.satName;
+            String title = (isTest ? "Test · " : "") + what + " in 2 min";
+            String text = String.format(Locale.US, "Rises %s, peaks %.0f° at %s · %d min",
+                    pass.startAzCompass, pass.maxEl, pass.getPeakTimeString(), Math.max(1, pass.durationSec / 60));
+            String closing = pass.isStarlinkTrain
+                    ? "A string of " + pass.trainSatCount + " Starlink satellites crosses above the hut."
+                    : "Look to the " + pass.startAzCompass + " horizon. It crosses steadily towards the " + pass.endAzCompass + " without blinking.";
 
-            String titlePrefix = pass.isStarlinkTrain ? "✨ STARLINK TRAIN PASS" : ("🛰️ " + pass.satName + " PASS");
-            String title = isTest
-                    ? ("[TEST] " + titlePrefix + " IN 2 MIN (Mag " + String.format(Locale.US, "%.1f", pass.visualMag) + ")")
-                    : (titlePrefix + " IN 2 MIN (Mag " + String.format(Locale.US, "%.1f", pass.visualMag) + ")");
-
-            String summaryLine = pass.isStarlinkTrain
-                    ? String.format(Locale.US, "Look %s → Peak %.0f° at %s. %d luminous satellites in tight train.", pass.startAzCompass, pass.maxEl, pass.getPeakTimeString(), pass.trainSatCount)
-                    : String.format(Locale.US, "Look %s → Peak %.0f° %s at %s. %s", pass.startAzCompass, pass.maxEl, pass.maxAzCompass, pass.getPeakTimeString(), pass.getBrightnessDescription());
-
-            int icon = context.getResources().getIdentifier("ic_stat_gatehouse", "drawable", context.getPackageName());
-            if (icon == 0) icon = context.getResources().getIdentifier("ic_shield_gold", "drawable", context.getPackageName());
-            if (icon == 0) icon = context.getApplicationInfo().icon;
-
-            String bigText = (pass.isStarlinkTrain ? "✨ STARLINK SATELLITE TRAIN PASS OVERHEAD\n" : ("🛰️ " + pass.satName + " VISUAL PASS\n")) +
-                    "━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n" +
-                    "Rise Time:  " + pass.getRiseTimeString() + " AEST (" + pass.startAzCompass + " · " + String.format(Locale.US, "%.0f°", pass.startAz) + " Azimuth)\n" +
-                    "Max Peak:   " + pass.getPeakTimeString() + " AEST (" + String.format(Locale.US, "%.0f°", pass.maxEl) + " Zenith Elevation · " + pass.maxAzCompass + ")\n" +
-                    "Set Time:   " + pass.endAzCompass + " (" + String.format(Locale.US, "%.0f°", pass.endAz) + " Azimuth)\n" +
-                    "Duration:   " + (pass.durationSec / 60) + "m " + (pass.durationSec % 60) + "s · Mag " + String.format(Locale.US, "%.1f", pass.visualMag) + "\n\n" +
-                    (pass.isStarlinkTrain
-                            ? ("Guard Notice: A string of " + pass.trainSatCount + " SpaceX Starlink satellites will cross above Gatehouse Hut. Perfect visibility tonight.")
-                            : ("Guard Notice: Look towards the " + pass.startAzCompass + " horizon. The space station will glide swiftly towards " + pass.endAzCompass + " without blinking."));
-
-            b.setSmallIcon(icon)
+            Notification.Builder b = GatehouseNotify.builder(context, CHANNEL_SATELLITE_ALERTS, GatehouseNotify.Tier.NOTICE)
                     .setContentTitle(title)
-                    .setContentText(summaryLine)
-                    .setStyle(new Notification.BigTextStyle().bigText(bigText))
-                    .setColor(pass.category != null ? pass.category.color : 0xFF00E5FF)
-                    .setAutoCancel(true)
+                    .setContentText(text)
+                    .setStyle(new Notification.BigTextStyle().bigText(GatehouseNotify.lines(
+                            String.format(Locale.US, "Rises %s in the %s (%.0f°)", pass.getRiseTimeString(), pass.startAzCompass, pass.startAz),
+                            String.format(Locale.US, "Peaks %s at %.0f°, %s", pass.getPeakTimeString(), pass.maxEl, pass.maxAzCompass),
+                            String.format(Locale.US, "Sets in the %s (%.0f°) · %d min %d s · magnitude %.1f",
+                                    pass.endAzCompass, pass.endAz, pass.durationSec / 60, pass.durationSec % 60, pass.visualMag),
+                            pass.getBrightnessDescription(),
+                            closing)))
                     .setContentIntent(pi)
-                    .addAction(icon, "[ TRACK SKY DOME ]", pi)
-                    .setVibrate(new long[]{0, 100, 80, 100, 80, 180})
-                    .setPriority(Notification.PRIORITY_MAX);
+                    .addAction(GatehouseNotify.action(context, "Track pass", pi));
 
-            try {
-                b.setLargeIcon(BitmapFactory.decodeResource(context.getResources(), context.getApplicationInfo().icon));
-            } catch (Throwable ignored) {}
+            // Gone once the pass has set.
+            long untilSet = pass.startUtcMillis + pass.durationSec * 1000L - System.currentTimeMillis();
+            b.setTimeoutAfter(Math.max(5 * GatehouseNotify.MINUTE, untilSet));
 
             int notifId = 8000 + Math.abs(pass.satId % 1000);
             nm.notify(notifId, b.build());

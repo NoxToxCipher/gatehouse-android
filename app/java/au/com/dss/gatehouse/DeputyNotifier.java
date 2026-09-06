@@ -54,38 +54,12 @@ public class DeputyNotifier {
     private static final double KINGSTON_LON = 153.116;
 
     public static void initChannels(Context context) {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            NotificationManager nm = (NotificationManager) context.getSystemService(Context.NOTIFICATION_SERVICE);
-            if (nm == null) return;
-
-            // 1. Channel for Roster Changes (Teal / Emerald Aura)
-            NotificationChannel chanChanges = new NotificationChannel(
-                    CHANNEL_ROSTER_CHANGES,
-                    "Deputy Roster Updates",
-                    NotificationManager.IMPORTANCE_HIGH
-            );
-            chanChanges.setDescription("Real-time roster alerts for newly added, modified, or cancelled shifts in Deputy");
-            chanChanges.enableLights(true);
-            chanChanges.setLightColor(0xFF14B8A6);
-            chanChanges.enableVibration(true);
-            chanChanges.setShowBadge(true);
-            GatehouseSounds.applyChime(chanChanges, context);
-            nm.createNotificationChannel(chanChanges);
-
-            // 2. Channel for 12h Pre-Shift Reminders & Weather Forecast (Gold / Amber Aura)
-            NotificationChannel chanWeather = new NotificationChannel(
-                    CHANNEL_SHIFT_WEATHER,
-                    "12h Shift Reminders & Weather",
-                    NotificationManager.IMPORTANCE_HIGH
-            );
-            chanWeather.setDescription("Executive briefings 12 hours prior to scheduled shifts with local Kingston weather & uniform advice");
-            chanWeather.enableLights(true);
-            chanWeather.setLightColor(0xFFF59E0B);
-            chanWeather.enableVibration(true);
-            chanWeather.setShowBadge(true);
-            GatehouseSounds.applyChime(chanWeather, context);
-            nm.createNotificationChannel(chanWeather);
-        }
+        GatehouseNotify.createChannel(context, CHANNEL_ROSTER_CHANGES,
+                "Roster changes", "Shifts added, changed or cancelled",
+                GatehouseNotify.Tier.CHIME, GatehouseNotify.GROUP_ROSTER);
+        GatehouseNotify.createChannel(context, CHANNEL_SHIFT_WEATHER,
+                "Shift reminders", "Twelve hours before a shift, with the weather",
+                GatehouseNotify.Tier.CHIME, GatehouseNotify.GROUP_ROSTER);
     }
 
     public static void cancelShiftNotifications(Context context) {
@@ -202,12 +176,12 @@ public class DeputyNotifier {
 
         for (RosterProvider.Shift s : newShifts) {
             if (!oldMap.containsKey(s.id)) {
-                added.add("• NEW: " + s.guardName + " · " + s.getDayDisplayLabel() + " (" + s.getFormattedHoursRange() + ")");
+                added.add("Added · " + s.getDayDisplayLabel() + " " + s.getFormattedHoursRange() + " · " + s.guardName);
             } else {
                 String oldSig = oldMap.get(s.id);
                 String newSig = currentMap.get(s.id);
                 if (!oldSig.equals(newSig)) {
-                    modified.add("• UPDATED: " + s.guardName + " · " + s.getDayDisplayLabel() + " (" + s.getFormattedHoursRange() + ")");
+                    modified.add("Changed · " + s.getDayDisplayLabel() + " " + s.getFormattedHoursRange() + " · " + s.guardName);
                 }
             }
         }
@@ -216,7 +190,7 @@ public class DeputyNotifier {
             if (!currentMap.containsKey(entry.getKey())) {
                 String[] parts = entry.getValue().split(":");
                 String gName = parts.length > 1 ? parts[1] : "Guard";
-                removed.add("• CANCELLED: " + gName + " (Shift ID #" + entry.getKey() + ")");
+                removed.add("Cancelled · " + gName + " · shift " + entry.getKey());
             }
         }
 
@@ -241,63 +215,27 @@ public class DeputyNotifier {
             Intent intent = new Intent(context, MainActivity.class);
             intent.setAction(ACTION_OPEN_DEPUTY);
             intent.setFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP | Intent.FLAG_ACTIVITY_CLEAR_TOP);
+            PendingIntent pi = GatehouseNotify.open(context, 1001, intent);
 
-            PendingIntent pi = PendingIntent.getActivity(
-                    context,
-                    1001,
-                    intent,
-                    PendingIntent.FLAG_UPDATE_CURRENT | (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M ? PendingIntent.FLAG_IMMUTABLE : 0)
-            );
-
-            int layoutCollapsed = id(context, "notif_shift_weather_collapsed", "layout");
-            int layoutExpanded = id(context, "notif_roster_update_expanded", "layout");
-            int iconShield = id(context, "ic_stat_gatehouse", "drawable");
-            if (iconShield == 0) iconShield = id(context, "ic_shield_gold", "drawable");
-            if (iconShield == 0) iconShield = context.getApplicationInfo().icon;
-
-            Notification.Builder builder;
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                builder = new Notification.Builder(context, CHANNEL_ROSTER_CHANGES);
-            } else {
-                builder = new Notification.Builder(context);
+            String title = totalChanges == 1 ? "Roster changed" : "Roster changed · " + totalChanges + " shifts";
+            Notification.InboxStyle style = new Notification.InboxStyle();
+            int shown = 0;
+            for (String line : changeLines) {
+                if (shown == 6) { style.setSummaryText((changeLines.size() - shown) + " more"); break; }
+                style.addLine(line);
+                shown++;
             }
 
-            builder.setSmallIcon(iconShield)
-                   .setColor(0xFF14B8A6)
-                   .setContentTitle("📅 Deputy Roster: " + totalChanges + " change" + (totalChanges > 1 ? "s" : "") + " detected")
-                   .setContentText(changeLines.size() > 0 ? changeLines.get(0) : "Tap to inspect updated shifts")
-                   .setSubText("DOHERTY SECURITY SERVICES")
+            Notification.Builder builder = GatehouseNotify.builder(context, CHANNEL_ROSTER_CHANGES, GatehouseNotify.Tier.CHIME)
+                   .setContentTitle(title)
+                   .setContentText(changeLines.isEmpty() ? "Open the roster to see what moved." : changeLines.get(0))
+                   .setStyle(style)
                    .setContentIntent(pi)
-                   .setAutoCancel(true);
-
-            try {
-                builder.setLargeIcon(BitmapFactory.decodeResource(context.getResources(), context.getApplicationInfo().icon));
-            } catch (Throwable ignored) {}
-
-            if (layoutCollapsed != 0 && layoutExpanded != 0) {
-                RemoteViews collapsed = new RemoteViews(context.getPackageName(), layoutCollapsed);
-                safeSetText(collapsed, id(context, "notif_header_brand", "id"), "DOHERTY SECURITY SERVICES");
-                safeSetText(collapsed, id(context, "notif_header_badge", "id"), "ROSTER UPDATE");
-                safeSetText(collapsed, id(context, "notif_main_title", "id"), "📅 Deputy Roster: " + totalChanges + " change" + (totalChanges > 1 ? "s" : "") + " detected");
-                safeSetText(collapsed, id(context, "notif_main_subtitle", "id"), changeLines.size() > 0 ? changeLines.get(0) : "Tap to inspect updated shifts");
-
-                RemoteViews expanded = new RemoteViews(context.getPackageName(), layoutExpanded);
-                safeSetText(expanded, id(context, "notif_roster_headline", "id"), "📅 " + totalChanges + " Shift Update" + (totalChanges > 1 ? "s" : "") + " Synced via Deputy");
-                safeSetText(expanded, id(context, "notif_roster_changes_text", "id"), bodyText);
-
-                builder.setCustomContentView(collapsed)
-                       .setCustomBigContentView(expanded);
-
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
-                    builder.setStyle(new Notification.DecoratedCustomViewStyle());
-                }
-            } else {
-                builder.setStyle(new Notification.BigTextStyle().bigText(bodyText));
-            }
+                   .addAction(GatehouseNotify.action(context, "Open roster", pi));
 
             nm.notify(1001, builder.build());
         } catch (Exception e) {
-            Log.e(TAG, "Failed to post luxury roster notification: " + e.getMessage(), e);
+            Log.e(TAG, "Failed to post roster change notification: " + e.getMessage(), e);
         }
     }
 
@@ -402,39 +340,37 @@ public class DeputyNotifier {
             conn.disconnect();
         } catch (Exception e) {
             Log.w(TAG, "Failed to fetch live Open-Meteo forecast, using seasonal fallback: " + e.getMessage());
-            wf.condition = "Clear Night 🌙";
-            wf.gearAdvice = "Winter duty fleece & thermal underlayer advised.";
+            wf.condition = "Clear";
+            wf.gearAdvice = "Fleece and a thermal layer.";
         }
         return wf;
     }
 
     private static String parseWeatherCode(int code) {
-        if (code == 0) return "Clear Skies ☀️";
-        if (code >= 1 && code <= 3) return "Partly Cloudy 🌤️";
-        if (code == 45 || code == 48) return "Fog / Mist 🌫️";
-        if (code >= 51 && code <= 55) return "Light Drizzle 🌦️";
-        if (code >= 61 && code <= 65) return "Rain 🌧️";
-        if (code >= 80 && code <= 82) return "Showers 🌧️";
-        if (code >= 95) return "Thunderstorms ⛈️";
-        return "Clear Night 🌙";
+        if (code == 0) return "Clear";
+        if (code >= 1 && code <= 3) return "Partly cloudy";
+        if (code == 45 || code == 48) return "Fog";
+        if (code >= 51 && code <= 55) return "Light drizzle";
+        if (code >= 61 && code <= 65) return "Rain";
+        if (code >= 80 && code <= 82) return "Showers";
+        if (code >= 95) return "Thunderstorms";
+        return "Clear";
     }
 
     private static String computeGearRecommendation(double temp, double minTemp, int rainProb, double wind) {
         StringBuilder sb = new StringBuilder();
         if (rainProb >= 25) {
-            sb.append("🌧️ Rain risk (").append(rainProb).append("%): High-vis waterproof storm jacket & slip-resistant safety boots. ");
+            sb.append("Rain likely (").append(rainProb).append("%): waterproof jacket and slip-resistant boots. ");
         }
         if (minTemp <= 14.0) {
-            sb.append("❄️ Cold night (Low ").append(String.format(Locale.US, "%.1f°C", minTemp))
-              .append("): Winter duty fleece, thermal underlayer, & warm beanie advised. ");
+            sb.append(String.format(Locale.US, "Cold night, low %.0f°C: fleece, thermal layer and beanie. ", minTemp));
         } else if (temp >= 26.0) {
-            sb.append("☀️ Warm shift (").append(String.format(Locale.US, "%.1f°C", temp))
-              .append("): Summer patrol shirt & ensure minimum 2L hydration flask. ");
+            sb.append(String.format(Locale.US, "Warm, %.0f°C: summer shirt and at least two litres of water. ", temp));
         } else {
-            sb.append("🛡️ Mild weather: Standard Gatehouse duty uniform & torch. ");
+            sb.append("Mild: standard duty uniform and torch. ");
         }
         if (wind >= 25.0) {
-            sb.append("💨 Gusty winds (").append(String.format(Locale.US, "%.0f km/h", wind)).append("): Check perimeter gates.");
+            sb.append(String.format(Locale.US, "Gusty, %.0f km/h: check the perimeter gates.", wind));
         }
         return sb.toString().trim();
     }
@@ -450,83 +386,34 @@ public class DeputyNotifier {
             Intent intent = new Intent(context, MainActivity.class);
             intent.setAction(ACTION_OPEN_DEPUTY);
             intent.setFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP | Intent.FLAG_ACTIVITY_CLEAR_TOP);
+            PendingIntent pi = GatehouseNotify.open(context, notifId, intent);
 
-            PendingIntent pi = PendingIntent.getActivity(
-                    context,
-                    notifId,
-                    intent,
-                    PendingIntent.FLAG_UPDATE_CURRENT | (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M ? PendingIntent.FLAG_IMMUTABLE : 0)
-            );
+            // The range reads "20:00 – 00:00 (4.0h)"; the title keeps the times, the duration is implied.
+            String range = shift.getFormattedHoursRange();
+            int paren = range.indexOf(" (");
+            if (paren > 0) range = range.substring(0, paren);
+            String title = "Shift in " + hoursStr + " h · " + range;
+            String text = shift.guardName + " · " + shift.operationalUnit + " · " + wf.condition + ", " + String.format(Locale.US, "%.0f°C", wf.tempC);
 
-            int layoutCollapsed = id(context, "notif_shift_weather_collapsed", "layout");
-            int layoutExpanded = id(context, "notif_shift_weather_expanded", "layout");
-            int iconShield = id(context, "ic_stat_gatehouse", "drawable");
-            if (iconShield == 0) iconShield = id(context, "ic_shield_gold", "drawable");
-            if (iconShield == 0) iconShield = context.getApplicationInfo().icon;
+            Notification.Builder builder = GatehouseNotify.builder(context, CHANNEL_SHIFT_WEATHER, GatehouseNotify.Tier.CHIME)
+                    .setContentTitle(title)
+                    .setContentText(text)
+                    .setStyle(new Notification.BigTextStyle().bigText(GatehouseNotify.lines(
+                            shift.getDayDisplayLabel() + " " + shift.getFormattedHoursRange() + " · " + shift.operationalUnit,
+                            wf.condition + String.format(Locale.US, ", %.0f°C, low %.0f°C", wf.tempC, wf.minTempC)
+                                    + " · rain " + wf.rainProbPercent + "%"
+                                    + String.format(Locale.US, " · wind %.0f km/h", wf.windSpeedKmh),
+                            wf.gearAdvice)))
+                    .setContentIntent(pi)
+                    .addAction(GatehouseNotify.action(context, "Open roster", pi));
 
-            Notification.Builder builder;
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                builder = new Notification.Builder(context, CHANNEL_SHIFT_WEATHER);
-            } else {
-                builder = new Notification.Builder(context);
-            }
-
-            builder.setSmallIcon(iconShield)
-                   .setColor(0xFFF59E0B)
-                   .setContentTitle("🛡️ Shift in " + hoursStr + "h: Officer " + shift.guardName)
-                   .setContentText(shift.getFormattedHoursRange() + " · 🌤️ " + String.format(Locale.US, "%.1f°C", wf.tempC) + " · " + shift.operationalUnit)
-                   .setSubText("DOHERTY SECURITY SERVICES")
-                   .setContentIntent(pi)
-                   .addAction(iconShield, "[ OPEN ROSTER ]", pi)
-                   .setVibrate(new long[]{0, 150, 100, 150})
-                   .setAutoCancel(true);
-
-            try {
-                builder.setLargeIcon(BitmapFactory.decodeResource(context.getResources(), context.getApplicationInfo().icon));
-            } catch (Throwable ignored) {}
-
-            if (layoutCollapsed != 0 && layoutExpanded != 0) {
-                // 1. Bespoke Collapsed View
-                RemoteViews collapsed = new RemoteViews(context.getPackageName(), layoutCollapsed);
-                safeSetText(collapsed, id(context, "notif_header_brand", "id"), "DOHERTY SECURITY SERVICES");
-                safeSetText(collapsed, id(context, "notif_header_badge", "id"), "IN " + hoursStr + " HOURS");
-                safeSetText(collapsed, id(context, "notif_main_title", "id"), "Officer " + shift.guardName + " · " + shift.getFormattedHoursRange());
-                safeSetText(collapsed, id(context, "notif_main_subtitle", "id"), "📍 Post 01 · 🌤️ " + String.format(Locale.US, "%.1f°C", wf.tempC) + " (Low " + String.format(Locale.US, "%.1f°C", wf.minTempC) + ") · 💧 " + wf.rainProbPercent + "% Rain");
-
-                // 2. Bespoke Expanded View
-                RemoteViews expanded = new RemoteViews(context.getPackageName(), layoutExpanded);
-                safeSetText(expanded, id(context, "notif_exp_countdown", "id"), "IN " + hoursStr + " HOURS");
-                safeSetText(expanded, id(context, "notif_exp_guard_name", "id"), "🛡️ Officer " + shift.guardName);
-                safeSetText(expanded, id(context, "notif_exp_time_badge", "id"), shift.getFormattedHoursRange());
-                safeSetText(expanded, id(context, "notif_exp_station", "id"), "📍 " + shift.operationalUnit);
-
-                safeSetText(expanded, id(context, "notif_exp_temp", "id"), String.format(Locale.US, "%.1f°C", wf.tempC));
-                safeSetText(expanded, id(context, "notif_exp_temp_low", "id"), String.format(Locale.US, "Low %.1f°C", wf.minTempC));
-                safeSetText(expanded, id(context, "notif_exp_rain", "id"), wf.rainProbPercent + "% " + (wf.rainProbPercent >= 20 ? "(Risk)" : "(Dry)"));
-                safeSetText(expanded, id(context, "notif_exp_wind", "id"), String.format(Locale.US, "💨 %.0f km/h", wf.windSpeedKmh));
-                safeSetText(expanded, id(context, "notif_exp_condition", "id"), wf.condition);
-                safeSetText(expanded, id(context, "notif_exp_gear_advice", "id"), wf.gearAdvice);
-
-                builder.setCustomContentView(collapsed)
-                       .setCustomBigContentView(expanded);
-
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
-                    builder.setStyle(new Notification.DecoratedCustomViewStyle());
-                }
-            } else {
-                builder.setStyle(new Notification.BigTextStyle().bigText(
-                        shift.getDayDisplayLabel() + " · " + shift.getFormattedHoursRange() + "\n" +
-                        "📍 " + shift.operationalUnit + "\n\n" +
-                        "🌤️ Kingston Weather: " + wf.condition + " (" + String.format(Locale.US, "%.1f°C", wf.tempC) + ", Low " + String.format(Locale.US, "%.1f°C", wf.minTempC) + ")\n" +
-                        "💧 Rain: " + wf.rainProbPercent + "% · 💨 Wind: " + String.format(Locale.US, "%.0f km/h", wf.windSpeedKmh) + "\n\n" +
-                        "🦺 " + wf.gearAdvice
-                ));
-            }
+            long untilStart = shift.startTs * 1000L - System.currentTimeMillis();
+            if (untilStart > 0) builder.setTimeoutAfter(untilStart);
 
             nm.notify(notifId, builder.build());
-            Log.i(TAG, "Posted luxury 12h pre-shift weather briefing for shift #" + shift.id);
+            Log.i(TAG, "Posted pre-shift reminder for shift #" + shift.id);
         } catch (Exception e) {
-            Log.e(TAG, "Failed to post luxury 12h briefing: " + e.getMessage(), e);
+            Log.e(TAG, "Failed to post pre-shift reminder: " + e.getMessage(), e);
         }
     }
 

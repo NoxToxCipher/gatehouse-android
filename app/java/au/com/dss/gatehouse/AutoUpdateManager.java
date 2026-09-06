@@ -78,21 +78,9 @@ public final class AutoUpdateManager {
     }
 
     public static void initChannel(Context context) {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            NotificationManager nm = (NotificationManager) context.getSystemService(Context.NOTIFICATION_SERVICE);
-            if (nm != null) {
-                NotificationChannel chan = new NotificationChannel(
-                        CHANNEL_UPDATES,
-                        "GateHouse App Updates",
-                        NotificationManager.IMPORTANCE_HIGH);
-                chan.setDescription("Hourly automatic OTA application update notifications");
-                chan.enableVibration(true);
-                chan.enableLights(true);
-                chan.setLightColor(0xFFF59E0B);
-                GatehouseSounds.applyNotice(chan, context);
-                nm.createNotificationChannel(chan);
-            }
-        }
+        GatehouseNotify.createChannel(context, CHANNEL_UPDATES,
+                "Updates", "New builds ready to install",
+                GatehouseNotify.Tier.NOTICE, GatehouseNotify.GROUP_APP);
     }
 
     public static void scheduleHourlyAlarm(Context context) {
@@ -260,31 +248,17 @@ public final class AutoUpdateManager {
                     context, 1089, installIntent,
                     PendingIntent.FLAG_UPDATE_CURRENT | (Build.VERSION.SDK_INT >= 23 ? PendingIntent.FLAG_IMMUTABLE : 0));
 
-            android.app.Notification.Builder nb;
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                nb = new android.app.Notification.Builder(context, CHANNEL_UPDATES);
-            } else {
-                nb = new android.app.Notification.Builder(context);
-            }
-
-            int iconShield = context.getResources().getIdentifier("ic_stat_gatehouse", "drawable", context.getPackageName());
-            if (iconShield == 0) iconShield = context.getResources().getIdentifier("ic_shield_gold", "drawable", context.getPackageName());
-            if (iconShield == 0) iconShield = context.getApplicationInfo().icon;
-
             String shaShort = newSha.length() > 8 ? newSha.substring(0, 8) : newSha;
-            nb.setContentTitle("⚡ GateHouse OTA Update Ready")
-              .setContentText("Tap to install new build (SHA " + shaShort + ") · All shift data preserved")
-              .setSmallIcon(iconShield)
-              .setContentIntent(pi)
-              .setAutoCancel(true);
+            String versionName = archiveVersionName(context, apkFile);
+            String title = versionName != null ? "Update ready · " + versionName : "Update ready";
 
-            try {
-                nb.setLargeIcon(BitmapFactory.decodeResource(context.getResources(), context.getApplicationInfo().icon));
-            } catch (Throwable ignored) {}
-
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
-                nb.setColor(0xFFF59E0B);
-            }
+            android.app.Notification.Builder nb = GatehouseNotify.builder(context, CHANNEL_UPDATES, GatehouseNotify.Tier.NOTICE)
+                    .setContentTitle(title)
+                    .setContentText("Tap to install. Shift records are kept.")
+                    .setStyle(new android.app.Notification.BigTextStyle().bigText(
+                            "Build " + shaShort + ". Installing takes under a minute and keeps every record on this phone."))
+                    .setContentIntent(pi)
+                    .addAction(GatehouseNotify.action(context, "Install", pi));
 
             nm.notify(NOTIF_ID_UPDATE, nb.build());
         } catch (Exception e) {}
@@ -296,6 +270,16 @@ public final class AutoUpdateManager {
             return Build.VERSION.SDK_INT >= 28 ? p.getLongVersionCode() : p.versionCode;
         } catch (Exception e) {
             return 0;
+        }
+    }
+
+    private static String archiveVersionName(Context context, File apk) {
+        try {
+            android.content.pm.PackageInfo info = context.getPackageManager()
+                    .getPackageArchiveInfo(apk.getAbsolutePath(), 0);
+            return info != null ? info.versionName : null;
+        } catch (Throwable t) {
+            return null;
         }
     }
 

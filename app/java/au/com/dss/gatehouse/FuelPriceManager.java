@@ -87,22 +87,9 @@ public class FuelPriceManager {
     }
 
     private void initChannel() {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            NotificationManager nm = (NotificationManager) context.getSystemService(Context.NOTIFICATION_SERVICE);
-            if (nm == null) return;
-            NotificationChannel chan = new NotificationChannel(
-                    CHANNEL_FUEL_ALERTS,
-                    "End-of-Shift Fuel Radar",
-                    NotificationManager.IMPORTANCE_HIGH
-            );
-            chan.setDescription("Fuel price heads-up alerts 30 minutes before your shift ends with nearest station comparison");
-            chan.enableLights(true);
-            chan.setLightColor(0xFFF59E0B);
-            chan.enableVibration(true);
-            chan.setShowBadge(true);
-            GatehouseSounds.applyNotice(chan);
-            nm.createNotificationChannel(chan);
-        }
+        GatehouseNotify.createChannel(context, CHANNEL_FUEL_ALERTS,
+                "Fuel", "Cheapest fuel before the shift ends",
+                GatehouseNotify.Tier.NOTICE, GatehouseNotify.GROUP_SKY);
     }
 
     private void loadInitialStations() {
@@ -289,36 +276,22 @@ public class FuelPriceManager {
                     PendingIntent.FLAG_UPDATE_CURRENT | (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M ? PendingIntent.FLAG_IMMUTABLE : 0)
             );
 
-            int icon = context.getResources().getIdentifier("ic_stat_gatehouse", "drawable", context.getPackageName());
-            if (icon == 0) icon = context.getApplicationInfo().icon;
-
-            Notification.Builder builder;
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                builder = new Notification.Builder(context, CHANNEL_FUEL_ALERTS);
-            } else {
-                builder = new Notification.Builder(context);
-            }
-
             String oomPrice = String.format(Locale.US, "%.1f¢", (oom != null ? oom.priceUlp91 : 168.9));
-            String title = "⛽ Fuel Radar · Shift Ends in " + minutesRemaining + "m";
-            String summary = "⭐ OOM " + oomPrice + " (0.8km) · Save 6.0¢/L";
+            String title = "OOM Kingston " + oomPrice + " · 0.8 km";
+            String summary = "Shift ends in " + minutesRemaining + " min. 6¢ a litre under 7-Eleven.";
 
-            StringBuilder body = new StringBuilder();
-            body.append("🟢 OOM Kingston — ").append(oomPrice).append(" (0.8 km) · Lowest\n");
-            body.append("⚪ 7-Eleven — 174.9¢ (1.3 km)\n");
-            body.append("⚪ Ampol — 176.9¢ (2.1 km)\n");
-            body.append("💰 Save $3.60 on a 60L fill vs 7-Eleven");
-
-            builder.setSmallIcon(icon)
-                    .setColor(0xFFF59E0B)
+            Notification.Builder builder = GatehouseNotify.builder(context, CHANNEL_FUEL_ALERTS, GatehouseNotify.Tier.NOTICE)
                     .setContentTitle(title)
                     .setContentText(summary)
-                    .setSubText("Kingston Corridor")
-                    .setStyle(new Notification.BigTextStyle().bigText(body.toString()))
+                    .setStyle(new Notification.BigTextStyle().bigText(GatehouseNotify.lines(
+                            "OOM Kingston " + oomPrice + " · 0.8 km · lowest",
+                            "7-Eleven 174.9¢ · 1.3 km",
+                            "Ampol 176.9¢ · 2.1 km",
+                            "About $3.60 saved on a 60 L fill.")))
                     .setContentIntent(pi)
-                    .addAction(0, "🗺️ Drive to OOM", navPi)
-                    .addAction(0, "📊 Open Radar", pi)
-                    .setAutoCancel(true);
+                    .addAction(GatehouseNotify.action(context, "Directions", navPi))
+                    .addAction(GatehouseNotify.action(context, "Open fuel", pi))
+                    .setTimeoutAfter(3 * GatehouseNotify.HOUR);
 
             nm.notify(3001, builder.build());
         } catch (Exception e) {

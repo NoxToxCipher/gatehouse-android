@@ -77,7 +77,7 @@ public class GatehouseWidgetProvider extends AppWidgetProvider {
         int totalHours = 8;
 
         SimpleDateFormat sdfHour = new SimpleDateFormat("HH:mm", Locale.US);
-        SimpleDateFormat sdfTime = new SimpleDateFormat("HH:mm:ss", Locale.US);
+        SimpleDateFormat sdfTime = new SimpleDateFormat("HH:mm", Locale.US);
         sdfTime.setTimeZone(TimeZone.getDefault());
         String curTimeStr = sdfTime.format(new Date(nowSec * 1000L));
 
