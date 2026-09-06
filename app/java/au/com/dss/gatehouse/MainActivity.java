@@ -538,6 +538,13 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
                     }
                 });
             }
+        } else if (getIntent() != null && getIntent().getBooleanExtra("open_speakup", false)) {
+            final String spMode = getIntent().getStringExtra("speakup_mode");
+            if (rootFrame != null) {
+                rootFrame.post(new Runnable() {
+                    public void run() { showComplaintsDialog(spMode != null ? spMode : (isControlUser() ? "inbox" : "new")); }
+                });
+            }
         } else if (getIntent() != null && getIntent().getBooleanExtra("test_satellite_flyover", false)) {
             if (rootFrame != null) {
                 rootFrame.post(new Runnable() {
@@ -7637,6 +7644,50 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
     // answers the ticket, and the answer comes back here. No complaint ever carries
     // a name, and none is sealed into the shift record.
 
+    /** Name-free Gatehouse notification to control when a complaint is lodged. */
+    private void notifyComplaintLodged(ComplaintStore.Complaint c) {
+        try {
+            GatehouseNotify.createChannel(this, "gatehouse_speakup", "Speak up",
+                    "Complaints raised and answered", GatehouseNotify.Tier.CHIME, GatehouseNotify.GROUP_APP);
+            Intent open = new Intent(this, MainActivity.class)
+                    .putExtra("open_speakup", true).putExtra("speakup_mode", "inbox")
+                    .putExtra(Launcher.EXTRA_TAB, 2)
+                    .addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP | Intent.FLAG_ACTIVITY_CLEAR_TOP);
+            android.app.PendingIntent pi = GatehouseNotify.open(this, 5301, open);
+            String body = "Someone raised something in confidence. Ticket " + c.id + ". Tap to read it and answer.";
+            android.app.Notification.Builder b = GatehouseNotify.builder(this, "gatehouse_speakup", GatehouseNotify.Tier.CHIME)
+                    .setContentTitle("New complaint")
+                    .setContentText(body)
+                    .setStyle(new android.app.Notification.BigTextStyle().bigText(body + " No name is attached."))
+                    .setContentIntent(pi)
+                    .addAction(GatehouseNotify.action(this, "Open Speak up", pi));
+            android.app.NotificationManager nm = (android.app.NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
+            nm.notify(5300 + (c.id.hashCode() & 0xff), b.build());
+        } catch (Throwable ignored) {}
+    }
+
+    /** Name-free Gatehouse notification to the complainant when their ticket is answered. */
+    private void notifyComplaintAnswered(ComplaintStore.Complaint c) {
+        try {
+            GatehouseNotify.createChannel(this, "gatehouse_speakup", "Speak up",
+                    "Complaints raised and answered", GatehouseNotify.Tier.CHIME, GatehouseNotify.GROUP_APP);
+            Intent open = new Intent(this, MainActivity.class)
+                    .putExtra("open_speakup", true).putExtra("speakup_mode", "mine")
+                    .putExtra(Launcher.EXTRA_TAB, 2)
+                    .addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP | Intent.FLAG_ACTIVITY_CLEAR_TOP);
+            android.app.PendingIntent pi = GatehouseNotify.open(this, 5302, open);
+            String body = "Your complaint was answered. Ticket " + c.id + ". Tap to read the reply in Speak up.";
+            android.app.Notification.Builder b = GatehouseNotify.builder(this, "gatehouse_speakup", GatehouseNotify.Tier.CHIME)
+                    .setContentTitle("Complaint answered")
+                    .setContentText(body)
+                    .setStyle(new android.app.Notification.BigTextStyle().bigText(body))
+                    .setContentIntent(pi)
+                    .addAction(GatehouseNotify.action(this, "Read the reply", pi));
+            android.app.NotificationManager nm = (android.app.NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
+            nm.notify(5400 + (c.id.hashCode() & 0xff), b.build());
+        } catch (Throwable ignored) {}
+    }
+
     private boolean isControlUser() {
         String k = GuardSession.key(this);
         return k != null && SiteBook.get(this).control.contains(k);
@@ -7921,6 +7972,7 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
                 }
                 hapticHeavyClick();
                 ComplaintStore.Complaint c = ComplaintStore.lodge(MainActivity.this, picked[0], text);
+                notifyComplaintLodged(c);
                 showComplaintLodged(dlg, c);
             }
         });
@@ -8242,6 +8294,7 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
                 String by = GuardSession.name(MainActivity.this);
                 if (by.isEmpty()) by = "Control";
                 ComplaintStore.answer(MainActivity.this, c.id, r, by);
+                notifyComplaintAnswered(c);
                 dlg.dismiss();
                 if (rerender != null) rerender.run();
                 if (currentTab == 2) rebuildSingleTab(2);
@@ -20971,6 +21024,9 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
             showSatelliteRadarDialog();
         } else if (intent != null && intent.getBooleanExtra("open_tester_feedback", false)) {
             showTesterFeedbackScreen();
+        } else if (intent != null && intent.getBooleanExtra("open_speakup", false)) {
+            String spMode = intent.getStringExtra("speakup_mode");
+            showComplaintsDialog(spMode != null ? spMode : (isControlUser() ? "inbox" : "new"));
         } else if (intent != null && intent.getBooleanExtra("test_satellite_flyover", false)) {
             triggerSatelliteFlyover(null);
         } else if (intent != null && intent.getBooleanExtra("test_starlink_flyover", false)) {
