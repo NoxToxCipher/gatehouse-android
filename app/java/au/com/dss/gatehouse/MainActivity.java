@@ -1679,8 +1679,8 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
         pill.addView(themeSwitchButton("0-Lux Red", THEME_RED));
         pill.addView(themeSwitchButton("NVG Green", THEME_NVG));
         pill.addView(themeSwitchButton("Cyber Violet", THEME_VIOLET));
-        pill.addView(themeSwitchButton("☀️ Daylight", THEME_DAYLIGHT));
-        pill.addView(themeSwitchButton("🏜️ Desert Sand", THEME_DESERT_SAND));
+        pill.addView(themeSwitchButton("Daylight", THEME_DAYLIGHT));
+        pill.addView(themeSwitchButton("Desert Sand", THEME_DESERT_SAND));
 
         hsv.addView(pill);
         modeBar.addView(hsv);
@@ -2306,13 +2306,13 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
             }
         } catch (Exception e) {}
 
-        box.addView(telemetryAuditSection("🔋 DEVICE POWER & BATTERY TELEMETRY", colAccent));
+        box.addView(telemetryAuditSection("DEVICE POWER & BATTERY TELEMETRY", colAccent));
         box.addView(chronographStatRow("Battery Charge:", battLevel + "% (Est. " + String.format(Locale.US, "%.1fh", (battLevel / 100f) * 22.5f) + " runtime)"));
         box.addView(chronographStatRow("Battery Health / Temp:", "GOOD · " + battTemp + "°C"));
         box.addView(chronographStatRow("Cell Voltage:", battVoltage + " mV"));
         box.addView(chronographStatRow("OLED Display Power:", "0.14 W (0-Lux Pure Black Pixel Mode)"));
 
-        box.addView(telemetryAuditSection("🌤️ KINGSTON SITE ENVIRONMENTAL CONDITIONS", colCyan));
+        box.addView(telemetryAuditSection("KINGSTON SITE ENVIRONMENTAL CONDITIONS", colCyan));
         box.addView(chronographStatRow("Ambient Air Temp:", String.format(Locale.US, "%.1f°C (Kingston, QLD 4114)", curTempC)));
         box.addView(chronographStatRow("Relative Humidity:", "68% (Dew Point 12.2°C)"));
         box.addView(chronographStatRow("Hydration Advisory:", "500 mL / 2 Hours (Standard Night Patrol)"));
@@ -3736,9 +3736,9 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
         tcl.bottomMargin = dp(6);
         tabContainer.setLayoutParams(tcl);
 
-        tabPatrol = createTabButton("🛡️ Patrol", 0);
-        tabContacts = createTabButton("📞 Contacts", 1);
-        tabTools = createTabButton("🛠️ Tools", 2);
+        tabPatrol = createTabButton("Patrol", 0);
+        tabContacts = createTabButton("Contacts", 1);
+        tabTools = createTabButton("Tools", 2);
 
         tabContainer.addView(tabPatrol);
         tabContainer.addView(tabContacts);
@@ -7105,10 +7105,10 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
     }
 
     private String getStationBearing(String id) {
-        if ("oom_kingston".equalsIgnoreCase(id)) return "🧭 142° SE";
-        if ("7eleven_kingston".equalsIgnoreCase(id)) return "🧭 325° NW";
-        if ("ampol_logan_central".equalsIgnoreCase(id)) return "🧭 165° SSE";
-        return "🧭 180° S";
+        if ("oom_kingston".equalsIgnoreCase(id)) return "142° SE";
+        if ("7eleven_kingston".equalsIgnoreCase(id)) return "325° NW";
+        if ("ampol_logan_central".equalsIgnoreCase(id)) return "165° SSE";
+        return "180° S";
     }
 
     private LinearLayout buildFuelPriceChip(String fuelType, double priceCents, boolean isSelectedGrade, int color) {
@@ -7247,7 +7247,7 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
         top.setGravity(Gravity.CENTER_VERTICAL);
 
         TextView title = new TextView(this);
-        title.setText("⚡ HOURLY OTA AUTO-UPDATE");
+        title.setText("HOURLY OTA AUTO-UPDATE");
         title.setTextColor(colPale);
         title.setTextSize(13);
         title.setTypeface(Typeface.DEFAULT_BOLD);
@@ -7272,7 +7272,7 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
         desc.setPadding(0, dp(6), 0, dp(10));
         card.addView(desc);
 
-        final TextView btnCheck = actionButton("Check for Updates Now", colAccent, colAccentInk);
+        final TextView btnCheck = actionButton("Check for updates now", colAccent, colAccentInk);
         LinearLayout.LayoutParams blp = new LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
         blp.topMargin = dp(6);
@@ -7280,15 +7280,15 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
         btnCheck.setOnClickListener(new View.OnClickListener() {
             public void onClick(View v) {
                 hapticHeavyClick();
-                btnCheck.setText("⏳ Checking GitHub Master...");
+                btnCheck.setText("Checking GitHub master...");
                 Toast.makeText(MainActivity.this, "Checking for updates…", Toast.LENGTH_SHORT).show(); AutoUpdateManager.checkForUpdateAsync(MainActivity.this, true, new AutoUpdateManager.UpdateCheckCallback() {
                     @Override
                     public void onUpdateFound(final String newSha, final long bytes) {
                         runOnUiThread(new Runnable() {
                             @Override
                             public void run() {
-                                btnCheck.setText("✓ New Build Found · Installing...");
-                                banner.setText("New OTA update ready (SHA " + (newSha.length() > 8 ? newSha.substring(0, 8) : newSha) + ") · Installing");
+                                btnCheck.setText("New build found · installing...");
+                                banner.setText("New OTA update ready (SHA " + (newSha.length() > 8 ? newSha.substring(0, 8) : newSha) + ") · installing");
                                 banner.setVisibility(View.VISIBLE);
                             }
                         });
@@ -7299,7 +7299,7 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
                         runOnUiThread(new Runnable() {
                             @Override
                             public void run() {
-                                btnCheck.setText("✓ App Up to Date");
+                                btnCheck.setText("App up to date");
                             }
                         });
                     }
@@ -7309,7 +7309,7 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
                         runOnUiThread(new Runnable() {
                             @Override
                             public void run() {
-                                btnCheck.setText("⚡ Check for Updates Now");
+                                btnCheck.setText("Check for updates now");
                             }
                         });
                     }
@@ -7513,22 +7513,21 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
 
         final LinearLayout box = new LinearLayout(this);
         box.setOrientation(LinearLayout.VERTICAL);
-        box.setBackground(rounded(0xFF1E293B, dp(18)));
+        box.setBackground(rounded(colPanel, dp(18)));
         box.setPadding(dp(20), dp(20), dp(20), dp(20));
         LinearLayout.LayoutParams blp = new LinearLayout.LayoutParams(dp(340), LinearLayout.LayoutParams.WRAP_CONTENT);
         box.setLayoutParams(blp);
 
         TextView title = new TextView(this);
-        title.setText("👤 GUARD & TESTER PROFILE");
-        title.setTextColor(0xFF00E5FF);
+        title.setText("Guard and tester profile");
+        title.setTextColor(colAccent);
         title.setTextSize(14);
-        title.setTypeface(Typeface.DEFAULT_BOLD);
-        title.setLetterSpacing(0.08f);
+        title.setTypeface(Fonts.display(this, false));
         box.addView(title);
 
         TextView desc = new TextView(this);
         desc.setText("Select or enter the guard profile for this duty phone. All bug reports and field suggestions will be attributed to this guard.");
-        desc.setTextColor(0xFF94A3B8);
+        desc.setTextColor(colMuted);
         desc.setTextSize(11.5f);
         desc.setPadding(0, dp(4), 0, dp(10));
         box.addView(desc);
@@ -7544,23 +7543,23 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
         presetCol.setPadding(0, dp(10), 0, dp(8));
 
         TextView presetHeader = new TextView(this);
-        presetHeader.setText("ROSTERED GUARDS & HUT PROFILES");
+        presetHeader.setText("ROSTERED GUARDS AND HUT PROFILES");
         presetHeader.setTextColor(colQuiet);
         presetHeader.setTextSize(9f);
-        presetHeader.setTypeface(Typeface.MONOSPACE);
+        presetHeader.setTypeface(Fonts.mono(this, false));
         presetHeader.setPadding(0, 0, 0, dp(5));
         presetCol.addView(presetHeader);
 
         final String currentGuard = getActiveGuardOnShiftName();
         final String[][] presets = {
-            {"👤 " + currentGuard + " (Hut #1)", currentGuard + " (Hut Phone #1)"},
-            {"👤 " + currentGuard + " (Hut #2)", currentGuard + " (Hut Phone #2)"},
-            {"📱 Brian Rush (Tue)", "Brian Rush (Hut Phone #1)"},
-            {"📱 Jon Naylor (Wed)", "Jon Naylor (Hut Phone #1)"},
-            {"📱 Claren (Thu)", "Claren (Hut Phone #1)"},
-            {"📱 Chris Ireton (Fri)", "Chris Ireton (Hut Phone #1)"},
-            {"👑 Overlord (Lochran)", "Overlord"},
-            {"🛡️ Kingston Guard", "Kingston Patrol Guard"}
+            {currentGuard + " (Hut #1)", currentGuard + " (Hut Phone #1)"},
+            {currentGuard + " (Hut #2)", currentGuard + " (Hut Phone #2)"},
+            {"Brian Rush (Tue)", "Brian Rush (Hut Phone #1)"},
+            {"Jon Naylor (Wed)", "Jon Naylor (Hut Phone #1)"},
+            {"Claren (Thu)", "Claren (Hut Phone #1)"},
+            {"Chris Ireton (Fri)", "Chris Ireton (Hut Phone #1)"},
+            {"Overlord (Lochran)", "Overlord"},
+            {"Kingston Guard", "Kingston Patrol Guard"}
         };
 
         for (int row = 0; row < presets.length; row += 2) {
@@ -7575,11 +7574,11 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
                     final String val = presets[idx][1];
                     TextView chip = new TextView(this);
                     chip.setText(label);
-                    chip.setTextColor(colCyan);
+                    chip.setTextColor(colPale);
                     chip.setTextSize(10f);
-                    chip.setTypeface(Typeface.DEFAULT_BOLD);
+                    chip.setTypeface(Fonts.text(this, 600));
                     chip.setPadding(dp(6), dp(5), dp(6), dp(5));
-                    chip.setBackground(rounded(0x2200E5FF, dp(6)));
+                    chip.setBackground(outlined(colLineSubtle, dp(6)));
                     LinearLayout.LayoutParams clp = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
                     if (col == 0) clp.rightMargin = dp(4);
                     else clp.leftMargin = dp(4);
@@ -7603,7 +7602,7 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
         btnRow.setOrientation(LinearLayout.HORIZONTAL);
         btnRow.setPadding(0, dp(10), 0, 0);
 
-        TextView btnCancel = actionButton("Cancel", 0xFF334155, 0xFF94A3B8);
+        TextView btnCancel = actionButton("Cancel", colPanel2, colMuted);
         btnCancel.setOnClickListener(new View.OnClickListener() {
             public void onClick(View v) {
                 hapticClick();
@@ -7612,7 +7611,7 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
         });
         btnRow.addView(btnCancel);
 
-        TextView btnSave = actionButton("Save Profile", 0xFF00E5FF, 0xFF0F172A);
+        TextView btnSave = actionButton("Save profile", colAccent, colAccentInk);
         LinearLayout.LayoutParams slp = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1.3f);
         slp.leftMargin = dp(8);
         btnSave.setLayoutParams(slp);
@@ -8344,8 +8343,8 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
         qkBug.setText("Log bug");
         qkBug.setTextSize(10.5f);
         qkBug.setTypeface(Fonts.text(this, 600));
-        qkBug.setTextColor(colAmber);
-        qkBug.setBackground(rounded(colAmberSoft, dp(8)));
+        qkBug.setTextColor(colPale);
+        qkBug.setBackground(rounded(colPanel2, dp(8)));
         qkBug.setPadding(dp(10), dp(6), dp(10), dp(6));
         LinearLayout.LayoutParams qblp = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
         qblp.rightMargin = dp(4);
@@ -8363,8 +8362,8 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
         qkFeat.setText("Suggestion");
         qkFeat.setTextSize(10.5f);
         qkFeat.setTypeface(Fonts.text(this, 600));
-        qkFeat.setTextColor(colEmerald);
-        qkFeat.setBackground(rounded(colEmeraldSoft, dp(8)));
+        qkFeat.setTextColor(colPale);
+        qkFeat.setBackground(rounded(colPanel2, dp(8)));
         qkFeat.setPadding(dp(10), dp(6), dp(10), dp(6));
         LinearLayout.LayoutParams qflp = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
         qflp.leftMargin = dp(2);
@@ -8383,8 +8382,8 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
         qkPatrol.setText("Patrol log");
         qkPatrol.setTextSize(10.5f);
         qkPatrol.setTypeface(Fonts.text(this, 600));
-        qkPatrol.setTextColor(colCyan);
-        qkPatrol.setBackground(rounded(colCyanSoft, dp(8)));
+        qkPatrol.setTextColor(colPale);
+        qkPatrol.setBackground(rounded(colPanel2, dp(8)));
         qkPatrol.setPadding(dp(10), dp(6), dp(10), dp(6));
         LinearLayout.LayoutParams qplp = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
         qplp.leftMargin = dp(4);
@@ -8420,7 +8419,7 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
         
         final ScrollView mainScroll = new ScrollView(this);
         mainScroll.setFillViewport(true);
-        mainScroll.setBackgroundColor(0xFF0F172A);
+        mainScroll.setBackgroundColor(colBg);
 
         final LinearLayout root = new LinearLayout(this);
         root.setOrientation(LinearLayout.VERTICAL);
@@ -8470,7 +8469,7 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
 
         TextView btnBack = new TextView(this);
         btnBack.setText("←");
-        btnBack.setTextColor(0xFFFFFFFF);
+        btnBack.setTextColor(colPale);
         btnBack.setTextSize(22);
         btnBack.setPadding(0, 0, dp(14), 0);
         btnBack.setOnClickListener(new View.OnClickListener() {
@@ -8482,10 +8481,10 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
         topBar.addView(btnBack);
 
         TextView barTitle = new TextView(this);
-        barTitle.setText("Tester Feedback & Bug Reports");
-        barTitle.setTextColor(0xFFFFFFFF);
+        barTitle.setText("Tester feedback and bug reports");
+        barTitle.setTextColor(colPale);
         barTitle.setTextSize(17);
-        barTitle.setTypeface(Typeface.DEFAULT_BOLD);
+        barTitle.setTypeface(Fonts.display(this, true));
         topBar.addView(barTitle);
         root.addView(topBar);
 
@@ -8493,7 +8492,7 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
         final LinearLayout idCard = new LinearLayout(this);
         idCard.setOrientation(LinearLayout.HORIZONTAL);
         idCard.setGravity(Gravity.CENTER_VERTICAL);
-        idCard.setBackground(rounded(0xFF1E293B, dp(14)));
+        idCard.setBackground(rounded(colPanel, dp(14)));
         idCard.setPadding(dp(14), dp(12), dp(14), dp(12));
         LinearLayout.LayoutParams idlp = new LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
@@ -8501,11 +8500,14 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
         idCard.setLayoutParams(idlp);
 
         FrameLayout idIcon = new FrameLayout(this);
-        idIcon.setBackground(rounded(0x2200E5FF, dp(8)));
+        idIcon.setBackground(rounded(colAccentSoft, dp(8)));
         idIcon.setPadding(dp(8), dp(8), dp(8), dp(8));
         TextView idIcoTv = new TextView(this);
-        idIcoTv.setText("👤");
-        idIcoTv.setTextSize(15);
+        idIcoTv.setText("ID");
+        idIcoTv.setTextColor(colAccent);
+        idIcoTv.setTextSize(13);
+        idIcoTv.setTypeface(Fonts.mono(this, true));
+        idIcoTv.setGravity(Gravity.CENTER);
         idIcon.addView(idIcoTv);
         idCard.addView(idIcon);
 
@@ -8517,25 +8519,25 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
 
         final TextView nameLbl = new TextView(this);
         nameLbl.setText("Tester: " + getTesterIdentityName());
-        nameLbl.setTextColor(0xFFFFFFFF);
+        nameLbl.setTextColor(colPale);
         nameLbl.setTextSize(13);
-        nameLbl.setTypeface(Typeface.DEFAULT_BOLD);
+        nameLbl.setTypeface(Fonts.text(this, 600));
         idDetails.addView(nameLbl);
 
         TextView licLbl = new TextView(this);
         licLbl.setText("Station Post 01 · Hume Doors Kingston");
-        licLbl.setTextColor(0xFF94A3B8);
+        licLbl.setTextColor(colMuted);
         licLbl.setTextSize(10.5f);
         idDetails.addView(licLbl);
         idCard.addView(idDetails);
 
         TextView btnEditName = new TextView(this);
         btnEditName.setText("Change");
-        btnEditName.setTextColor(0xFF00E5FF);
+        btnEditName.setTextColor(colAccent);
         btnEditName.setTextSize(11);
-        btnEditName.setTypeface(Typeface.DEFAULT_BOLD);
+        btnEditName.setTypeface(Fonts.text(this, 600));
         btnEditName.setPadding(dp(8), dp(4), dp(8), dp(4));
-        btnEditName.setBackground(rounded(0x2200E5FF, dp(6)));
+        btnEditName.setBackground(rounded(colAccentSoft, dp(6)));
         btnEditName.setOnClickListener(new View.OnClickListener() {
             public void onClick(View v) {
                 hapticClick();
@@ -8551,10 +8553,8 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
 
         // 3. Feedback Type Header & Badge
         final String[] categories = {"BUG_REPORT", "FEATURE_REQUEST", "PATROL_SECURITY", "RADAR_SENSORS"};
-        final String[] catTitles = {"Bug Report", "Feature Request", "Patrol & Security", "Radar & Sensors"};
-        final String[] catIcons = {"⚠️", "⭐", "🛡️", "📡"};
+        final String[] catTitles = {"Bug report", "Feature request", "Patrol and security", "Radar and sensors"};
         final String[] catBadges = {"BUG", "FEATURE", "PATROL", "RADAR"};
-        final int[] catColors = {0xFFFF4081, 0xFFFFB300, 0xFF00E5FF, 0xFF00E676};
 
         final int validInit = Math.max(0, Math.min(3, initialIndex));
         final int[] selectedIndex = {validInit};
@@ -8566,9 +8566,9 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
 
         final TextView typeLabel = new TextView(this);
         typeLabel.setText("FEEDBACK TYPE");
-        typeLabel.setTextColor(catColors[selectedIndex[0]]);
+        typeLabel.setTextColor(colAccent);
         typeLabel.setTextSize(11);
-        typeLabel.setTypeface(Typeface.MONOSPACE);
+        typeLabel.setTypeface(Fonts.mono(this, false));
         typeLabel.setLetterSpacing(0.08f);
         LinearLayout.LayoutParams tllp = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
         typeLabel.setLayoutParams(tllp);
@@ -8576,11 +8576,11 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
 
         final TextView catBadge = new TextView(this);
         catBadge.setText(catBadges[selectedIndex[0]]);
-        catBadge.setTextColor(catColors[selectedIndex[0]]);
+        catBadge.setTextColor(colAccent);
         catBadge.setTextSize(9);
-        catBadge.setTypeface(Typeface.MONOSPACE);
+        catBadge.setTypeface(Fonts.mono(this, false));
         catBadge.setPadding(dp(6), dp(2), dp(6), dp(2));
-        catBadge.setBackground(rounded(0x22000000 | (catColors[selectedIndex[0]] & 0x00FFFFFF), dp(4)));
+        catBadge.setBackground(rounded(colAccentSoft, dp(4)));
         typeTop.addView(catBadge);
         root.addView(typeTop);
 
@@ -8604,7 +8604,7 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
             final int idx = i;
             FrameLayout cBox = new FrameLayout(this);
             boolean isSel = (i == selectedIndex[0]);
-            cBox.setBackground(isSel ? outlined(catColors[i], dp(10)) : rounded(0xFF1E293B, dp(10)));
+            cBox.setBackground(isSel ? outlined(colAccent, dp(10)) : rounded(colPanel, dp(10)));
             cBox.setPadding(dp(12), dp(12), dp(12), dp(12));
             LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
             if (i % 2 == 1) lp.leftMargin = dp(8);
@@ -8614,17 +8614,11 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
             content.setOrientation(LinearLayout.HORIZONTAL);
             content.setGravity(Gravity.CENTER_VERTICAL);
 
-            TextView ic = new TextView(this);
-            ic.setText(catIcons[i]);
-            ic.setTextSize(14);
-            ic.setPadding(0, 0, dp(8), 0);
-            content.addView(ic);
-
             TextView txt = new TextView(this);
             txt.setText(catTitles[i]);
-            txt.setTextColor(isSel ? 0xFFFFFFFF : 0xFF94A3B8);
+            txt.setTextColor(isSel ? colPale : colMuted);
             txt.setTextSize(11.5f);
-            txt.setTypeface(Typeface.DEFAULT_BOLD);
+            txt.setTypeface(Fonts.text(this, 600));
             content.addView(txt);
 
             cBox.addView(content);
@@ -8634,16 +8628,16 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
                 public void onClick(View v) {
                     hapticClick();
                     selectedIndex[0] = idx;
-                    typeLabel.setTextColor(catColors[idx]);
+                    typeLabel.setTextColor(colAccent);
                     catBadge.setText(catBadges[idx]);
-                    catBadge.setTextColor(catColors[idx]);
-                    catBadge.setBackground(rounded(0x22000000 | (catColors[idx] & 0x00FFFFFF), dp(4)));
+                    catBadge.setTextColor(colAccent);
+                    catBadge.setBackground(rounded(colAccentSoft, dp(4)));
                     for (int k = 0; k < 4; k++) {
                         boolean selected = (k == idx);
-                        catCards[k].setBackground(selected ? outlined(catColors[k], dp(10)) : rounded(0xFF1E293B, dp(10)));
+                        catCards[k].setBackground(selected ? outlined(colAccent, dp(10)) : rounded(colPanel, dp(10)));
                         LinearLayout inner = (LinearLayout) catCards[k].getChildAt(0);
-                        TextView t = (TextView) inner.getChildAt(1);
-                        t.setTextColor(selected ? 0xFFFFFFFF : 0xFF94A3B8);
+                        TextView t = (TextView) inner.getChildAt(0);
+                        t.setTextColor(selected ? colPale : colMuted);
                     }
                 }
             });
@@ -8658,7 +8652,7 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
         // 4. Summary / Title Input Section
         LinearLayout sumBox = new LinearLayout(this);
         sumBox.setOrientation(LinearLayout.VERTICAL);
-        sumBox.setBackground(rounded(0xFF1E293B, dp(14)));
+        sumBox.setBackground(rounded(colPanel, dp(14)));
         sumBox.setPadding(dp(14), dp(14), dp(14), dp(14));
         LinearLayout.LayoutParams sblp = new LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
@@ -8666,17 +8660,17 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
         sumBox.setLayoutParams(sblp);
 
         TextView sumLbl = new TextView(this);
-        sumLbl.setText("Summary / Title");
-        sumLbl.setTextColor(0xFF94A3B8);
+        sumLbl.setText("Summary");
+        sumLbl.setTextColor(colMuted);
         sumLbl.setTextSize(11);
         sumBox.addView(sumLbl);
 
         final EditText etSummary = new EditText(this);
         etSummary.setHint("e.g. Floating candidate flicks feel slightly stiff");
-        etSummary.setHintTextColor(0xFF475569);
-        etSummary.setTextColor(0xFFFFFFFF);
+        etSummary.setHintTextColor(colQuiet);
+        etSummary.setTextColor(colPale);
         etSummary.setTextSize(13);
-        etSummary.setBackground(rounded(0xFF0F172A, dp(8)));
+        etSummary.setBackground(rounded(colBg, dp(8)));
         etSummary.setPadding(dp(12), dp(10), dp(12), dp(10));
         LinearLayout.LayoutParams etlp1 = new LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
@@ -8686,17 +8680,17 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
         sumBox.addView(etSummary);
 
         TextView detLbl = new TextView(this);
-        detLbl.setText("Details / Description");
-        detLbl.setTextColor(0xFF94A3B8);
+        detLbl.setText("Details");
+        detLbl.setTextColor(colMuted);
         detLbl.setTextSize(11);
         sumBox.addView(detLbl);
 
         final EditText etDetails = new EditText(this);
         etDetails.setHint("Describe what happened, what you expected, or words that were missed...");
-        etDetails.setHintTextColor(0xFF475569);
-        etDetails.setTextColor(0xFFFFFFFF);
+        etDetails.setHintTextColor(colQuiet);
+        etDetails.setTextColor(colPale);
         etDetails.setTextSize(12.5f);
-        etDetails.setBackground(rounded(0xFF0F172A, dp(8)));
+        etDetails.setBackground(rounded(colBg, dp(8)));
         etDetails.setPadding(dp(12), dp(10), dp(12), dp(10));
         etDetails.setMinLines(4);
         etDetails.setGravity(Gravity.TOP | Gravity.START);
@@ -8719,25 +8713,25 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
         scrCol.setLayoutParams(sclp);
 
         TextView scrTitle = new TextView(this);
-        scrTitle.setText("Attach Screenshot");
-        scrTitle.setTextColor(0xFFFFFFFF);
+        scrTitle.setText("Attach screenshot");
+        scrTitle.setTextColor(colPale);
         scrTitle.setTextSize(12.5f);
-        scrTitle.setTypeface(Typeface.DEFAULT_BOLD);
+        scrTitle.setTypeface(Fonts.text(this, 600));
         scrCol.addView(scrTitle);
 
         final TextView scrSub = new TextView(this);
         scrSub.setText("Attach an image to help explain");
-        scrSub.setTextColor(0xFF94A3B8);
+        scrSub.setTextColor(colMuted);
         scrSub.setTextSize(10.5f);
         scrCol.addView(scrSub);
         scrRow.addView(scrCol);
 
         final TextView btnAttach = new TextView(this);
-        btnAttach.setText("🖼️ Attach");
-        btnAttach.setTextColor(0xFFE2E8F0);
+        btnAttach.setText("Attach");
+        btnAttach.setTextColor(colPale);
         btnAttach.setTextSize(11);
         btnAttach.setPadding(dp(14), dp(8), dp(14), dp(8));
-        btnAttach.setBackground(rounded(0xFF334155, dp(8)));
+        btnAttach.setBackground(rounded(colPanel2, dp(8)));
         btnAttach.setOnClickListener(new View.OnClickListener() {
             public void onClick(View v) {
                 hapticClick();
@@ -8745,8 +8739,8 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
                     Intent intent = new Intent(Intent.ACTION_PICK);
                     intent.setType("image/*");
                     startActivityForResult(intent, 2004);
-                    scrSub.setText("✓ Gallery picker launched");
-                    scrSub.setTextColor(0xFF00E676);
+                    scrSub.setText("Gallery opened");
+                    scrSub.setTextColor(colEmerald);
                 } catch (Exception e) {
                     Toast.makeText(MainActivity.this, "Opening image selector...", Toast.LENGTH_SHORT).show();
                 }
@@ -8767,15 +8761,15 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
         flightCol.setLayoutParams(fclp);
 
         TextView flTitle = new TextView(this);
-        flTitle.setText("Attach Flight Recorder Snippet");
-        flTitle.setTextColor(0xFFFFFFFF);
+        flTitle.setText("Attach recent activity");
+        flTitle.setTextColor(colPale);
         flTitle.setTextSize(12.5f);
-        flTitle.setTypeface(Typeface.DEFAULT_BOLD);
+        flTitle.setTypeface(Fonts.text(this, 600));
         flightCol.addView(flTitle);
 
         TextView flSub = new TextView(this);
-        flSub.setText("Attaches last 30 actions & telemetry to help debug");
-        flSub.setTextColor(0xFF94A3B8);
+        flSub.setText("Adds the last 30 actions on this phone to help debug");
+        flSub.setTextColor(colMuted);
         flSub.setTextSize(10.5f);
         flightCol.addView(flSub);
         flightRow.addView(flightCol);
@@ -8785,15 +8779,15 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
         flightRow.addView(switchFlight);
         sumBox.addView(flightRow);
 
-        // Hero Submit Button (Vibrant Pink/Accent)
+        // Submit button (brass)
         final TextView btnSubmit = new TextView(this);
-        btnSubmit.setText("➤ Submit to Gatehouse Development");
-        btnSubmit.setTextColor(0xFF0F172A);
+        btnSubmit.setText("Submit feedback");
+        btnSubmit.setTextColor(colAccentInk);
         btnSubmit.setTextSize(13);
-        btnSubmit.setTypeface(Typeface.DEFAULT_BOLD);
+        btnSubmit.setTypeface(Fonts.text(this, 600));
         btnSubmit.setGravity(Gravity.CENTER);
         btnSubmit.setPadding(dp(16), dp(12), dp(16), dp(12));
-        btnSubmit.setBackground(rounded(catColors[selectedIndex[0]], dp(8)));
+        btnSubmit.setBackground(rounded(colAccent, dp(8)));
         sumBox.addView(btnSubmit);
 
         root.addView(sumBox);
@@ -8805,18 +8799,18 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
                 public void onClick(View v) {
                     hapticClick();
                     selectedIndex[0] = idx;
-                    typeLabel.setTextColor(catColors[idx]);
+                    typeLabel.setTextColor(colAccent);
                     catBadge.setText(catBadges[idx]);
-                    catBadge.setTextColor(catColors[idx]);
-                    catBadge.setBackground(rounded(0x22000000 | (catColors[idx] & 0x00FFFFFF), dp(4)));
-                    btnSubmit.setBackground(rounded(catColors[idx], dp(8)));
+                    catBadge.setTextColor(colAccent);
+                    catBadge.setBackground(rounded(colAccentSoft, dp(4)));
+                    btnSubmit.setBackground(rounded(colAccent, dp(8)));
 
                     for (int k = 0; k < 4; k++) {
                         boolean selected = (k == idx);
-                        catCards[k].setBackground(selected ? outlined(catColors[k], dp(10)) : rounded(0xFF1E293B, dp(10)));
+                        catCards[k].setBackground(selected ? outlined(colAccent, dp(10)) : rounded(colPanel, dp(10)));
                         LinearLayout cl = (LinearLayout) catCards[k].getChildAt(0);
-                        TextView tv = (TextView) cl.getChildAt(1);
-                        tv.setTextColor(selected ? 0xFFFFFFFF : 0xFF94A3B8);
+                        TextView tv = (TextView) cl.getChildAt(0);
+                        tv.setTextColor(selected ? colPale : colMuted);
                     }
                 }
             });
@@ -8852,28 +8846,28 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
                 rHeader.setPadding(0, dp(6), 0, dp(10));
 
                 TextView rTitle = new TextView(MainActivity.this);
-                rTitle.setText("TELEMETRY & FIELD FEEDBACK");
-                rTitle.setTextColor(0xFF00E5FF);
+                rTitle.setText("FIELD FEEDBACK");
+                rTitle.setTextColor(colAccent);
                 rTitle.setTextSize(11);
-                rTitle.setTypeface(Typeface.MONOSPACE);
+                rTitle.setTypeface(Fonts.mono(MainActivity.this, false));
                 rTitle.setLetterSpacing(0.08f);
                 LinearLayout.LayoutParams rhlp = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
                 rTitle.setLayoutParams(rhlp);
                 rHeader.addView(rTitle);
 
                 TextView btnSync = new TextView(MainActivity.this);
-                btnSync.setText("🔄 SYNC STATUS");
-                btnSync.setTextColor(0xFF10B981);
+                btnSync.setText("REFRESH");
+                btnSync.setTextColor(colAccent);
                 btnSync.setTextSize(9);
-                btnSync.setTypeface(Typeface.MONOSPACE);
+                btnSync.setTypeface(Fonts.mono(MainActivity.this, false));
                 btnSync.setPadding(dp(8), dp(3), dp(8), dp(3));
-                btnSync.setBackground(rounded(0x2210B981, dp(4)));
+                btnSync.setBackground(rounded(colAccentSoft, dp(4)));
                 btnSync.setOnClickListener(new View.OnClickListener() {
                     public void onClick(View v) {
                         hapticClick();
                         RemoteTelemetryClient.fetchRemoteFeedbackAsync(MainActivity.this, new Runnable() {
                             public void run() {
-                                Toast.makeText(MainActivity.this, "✓ Telemetry implementation status refreshed", Toast.LENGTH_SHORT).show();
+                                Toast.makeText(MainActivity.this, "Feedback refreshed", Toast.LENGTH_SHORT).show();
                             }
                         });
                     }
@@ -8882,11 +8876,11 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
 
                 TextView rCount = new TextView(MainActivity.this);
                 rCount.setText(totalReports + " REPORTS");
-                rCount.setTextColor(0xFF00E5FF);
+                rCount.setTextColor(colAccent);
                 rCount.setTextSize(9);
-                rCount.setTypeface(Typeface.MONOSPACE);
+                rCount.setTypeface(Fonts.mono(MainActivity.this, false));
                 rCount.setPadding(dp(6), dp(3), dp(6), dp(3));
-                rCount.setBackground(rounded(0x2200E5FF, dp(4)));
+                rCount.setBackground(rounded(colAccentSoft, dp(4)));
                 LinearLayout.LayoutParams rclp = new LinearLayout.LayoutParams(
                         LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT);
                 rclp.leftMargin = dp(6);
@@ -8897,7 +8891,7 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
                 // 2. Metrics Stat Box (Visible to everyone: Total Made, How Many Fixed, Resolution Rate)
                 LinearLayout statBox = new LinearLayout(MainActivity.this);
                 statBox.setOrientation(LinearLayout.HORIZONTAL);
-                statBox.setBackground(rounded(0xFF1E293B, dp(12)));
+                statBox.setBackground(rounded(colPanel, dp(12)));
                 statBox.setPadding(dp(12), dp(10), dp(12), dp(10));
                 LinearLayout.LayoutParams sblp = new LinearLayout.LayoutParams(
                         LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
@@ -8911,53 +8905,53 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
                 col1.setLayoutParams(new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f));
                 TextView val1 = new TextView(MainActivity.this);
                 val1.setText(String.valueOf(totalReports));
-                val1.setTextColor(0xFF00E5FF);
+                val1.setTextColor(colPale);
                 val1.setTextSize(16);
-                val1.setTypeface(Typeface.DEFAULT_BOLD);
+                val1.setTypeface(Fonts.mono(MainActivity.this, true));
                 col1.addView(val1);
                 TextView lbl1 = new TextView(MainActivity.this);
                 lbl1.setText("REPORTS MADE");
-                lbl1.setTextColor(0xFF94A3B8);
+                lbl1.setTextColor(colMuted);
                 lbl1.setTextSize(9);
-                lbl1.setTypeface(Typeface.MONOSPACE);
+                lbl1.setTypeface(Fonts.mono(MainActivity.this, false));
                 col1.addView(lbl1);
                 statBox.addView(col1);
 
-                // Col 2: Total Fixed
+                // Col 2: Total marked done
                 LinearLayout col2 = new LinearLayout(MainActivity.this);
                 col2.setOrientation(LinearLayout.VERTICAL);
                 col2.setGravity(Gravity.CENTER);
                 col2.setLayoutParams(new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f));
                 TextView val2 = new TextView(MainActivity.this);
                 val2.setText(String.valueOf(fixedReports));
-                val2.setTextColor(0xFF00E676);
+                val2.setTextColor(colEmerald);
                 val2.setTextSize(16);
-                val2.setTypeface(Typeface.DEFAULT_BOLD);
+                val2.setTypeface(Fonts.mono(MainActivity.this, true));
                 col2.addView(val2);
                 TextView lbl2 = new TextView(MainActivity.this);
-                lbl2.setText("FIXED & LIVE");
-                lbl2.setTextColor(0xFF94A3B8);
+                lbl2.setText("MARKED DONE");
+                lbl2.setTextColor(colMuted);
                 lbl2.setTextSize(9);
-                lbl2.setTypeface(Typeface.MONOSPACE);
+                lbl2.setTypeface(Fonts.mono(MainActivity.this, false));
                 col2.addView(lbl2);
                 statBox.addView(col2);
 
-                // Col 3: Resolution Pct
+                // Col 3: Done Pct
                 LinearLayout col3 = new LinearLayout(MainActivity.this);
                 col3.setOrientation(LinearLayout.VERTICAL);
                 col3.setGravity(Gravity.CENTER);
                 col3.setLayoutParams(new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f));
                 TextView val3 = new TextView(MainActivity.this);
                 val3.setText(resolutionPct + "%");
-                val3.setTextColor(0xFFFFD166);
+                val3.setTextColor(colAccent);
                 val3.setTextSize(16);
-                val3.setTypeface(Typeface.DEFAULT_BOLD);
+                val3.setTypeface(Fonts.mono(MainActivity.this, true));
                 col3.addView(val3);
                 TextView lbl3 = new TextView(MainActivity.this);
-                lbl3.setText("RESOLUTION");
-                lbl3.setTextColor(0xFF94A3B8);
+                lbl3.setText("RESOLVED");
+                lbl3.setTextColor(colMuted);
                 lbl3.setTextSize(9);
-                lbl3.setTypeface(Typeface.MONOSPACE);
+                lbl3.setTypeface(Fonts.mono(MainActivity.this, false));
                 col3.addView(lbl3);
                 statBox.addView(col3);
 
@@ -8978,7 +8972,7 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
                 if (displayItems.isEmpty()) {
                     LinearLayout noticeBox = new LinearLayout(MainActivity.this);
                     noticeBox.setOrientation(LinearLayout.VERTICAL);
-                    noticeBox.setBackground(rounded(0xFF132328, dp(12)));
+                    noticeBox.setBackground(rounded(colPanel2, dp(12)));
                     noticeBox.setPadding(dp(14), dp(12), dp(14), dp(12));
                     LinearLayout.LayoutParams nblp = new LinearLayout.LayoutParams(
                             LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
@@ -8986,19 +8980,19 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
                     noticeBox.setLayoutParams(nblp);
 
                     TextView nTitle = new TextView(MainActivity.this);
-                    nTitle.setText(isOverlord ? "No feedback reports in queue." : "🔒 DEVELOPMENT TICKET ARCHIVE");
-                    nTitle.setTextColor(0xFF00E676);
+                    nTitle.setText(isOverlord ? "No feedback yet" : "FEEDBACK LOG");
+                    nTitle.setTextColor(colAccent);
                     nTitle.setTextSize(11);
-                    nTitle.setTypeface(Typeface.MONOSPACE);
+                    nTitle.setTypeface(Fonts.mono(MainActivity.this, false));
                     noticeBox.addView(nTitle);
 
                     TextView nSub = new TextView(MainActivity.this);
                     if (isOverlord) {
-                        nSub.setText("All submitted bug reports and suggestions will appear here with verification milestones.");
+                        nSub.setText("Bug reports and suggestions you submit appear here.");
                     } else {
-                        nSub.setText("All " + fixedReports + " of " + totalReports + " system enhancements logged by Overlord have been deployed and verified active in this build.\n\nUse the form above to submit new bug reports or suggestions from this Hut Phone.");
+                        nSub.setText("Of the items logged by the owner, " + fixedReports + " of " + totalReports + " are marked done.\n\nUse the form above to log a bug or suggestion from this phone.");
                     }
-                    nSub.setTextColor(0xFF94A3B8);
+                    nSub.setTextColor(colMuted);
                     nSub.setTextSize(11);
                     nSub.setPadding(0, dp(4), 0, 0);
                     noticeBox.addView(nSub);
@@ -9012,7 +9006,7 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
                     LinearLayout fbCard = new LinearLayout(MainActivity.this);
                     fbCard.setOrientation(LinearLayout.VERTICAL);
                     boolean isResolved = (item.implementedMilestone > 0);
-                    fbCard.setBackground(isResolved ? rounded(0xFF0F261F, dp(12)) : rounded(0xFF1E293B, dp(12)));
+                    fbCard.setBackground(isResolved ? rounded(colEmeraldSoft, dp(12)) : rounded(colPanel, dp(12)));
                     fbCard.setPadding(dp(14), dp(12), dp(14), dp(12));
                     LinearLayout.LayoutParams fblp = new LinearLayout.LayoutParams(
                             LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
@@ -9025,18 +9019,18 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
 
                     TextView catTv = new TextView(MainActivity.this);
                     catTv.setText(item.category.replace("_", " "));
-                    catTv.setTextColor(isResolved ? 0xFF00E676 : 0xFF00E5FF);
+                    catTv.setTextColor(isResolved ? colEmerald : colAccent);
                     catTv.setTextSize(10);
-                    catTv.setTypeface(Typeface.DEFAULT_BOLD);
+                    catTv.setTypeface(Fonts.text(MainActivity.this, 600));
                     cardTop.addView(catTv);
 
                     TextView badgeTv = new TextView(MainActivity.this);
-                    badgeTv.setText(isResolved ? ("✓ IMPLEMENTED IN V1.0." + item.implementedMilestone) : "⏳ SUBMITTED · IN QUEUE");
-                    badgeTv.setTextColor(isResolved ? 0xFF00E676 : 0xFF38BDF8);
+                    badgeTv.setText(isResolved ? "MARKED DONE" : "LOGGED");
+                    badgeTv.setTextColor(isResolved ? colEmerald : colAccent);
                     badgeTv.setTextSize(8.5f);
-                    badgeTv.setTypeface(Typeface.MONOSPACE);
+                    badgeTv.setTypeface(Fonts.mono(MainActivity.this, false));
                     badgeTv.setPadding(dp(7), dp(3), dp(7), dp(3));
-                    badgeTv.setBackground(rounded(isResolved ? 0x2A00E676 : 0x2238BDF8, dp(4)));
+                    badgeTv.setBackground(rounded(isResolved ? colEmeraldSoft : colAccentSoft, dp(4)));
                     LinearLayout.LayoutParams btlp = new LinearLayout.LayoutParams(
                             LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT);
                     btlp.leftMargin = dp(8);
@@ -9050,7 +9044,7 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
 
                     TextView timeTv = new TextView(MainActivity.this);
                     timeTv.setText(sdf.format(new Date(item.timestamp)));
-                    timeTv.setTextColor(0xFF94A3B8);
+                    timeTv.setTextColor(colMuted);
                     timeTv.setTextSize(10.5f);
                     cardTop.addView(timeTv);
                     fbCard.addView(cardTop);
@@ -9058,9 +9052,9 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
                     if (item.title != null && !item.title.isEmpty()) {
                         TextView tTv = new TextView(MainActivity.this);
                         tTv.setText(item.title);
-                        tTv.setTextColor(0xFFFFFFFF);
+                        tTv.setTextColor(colPale);
                         tTv.setTextSize(12.5f);
-                        tTv.setTypeface(Typeface.DEFAULT_BOLD);
+                        tTv.setTypeface(Fonts.text(MainActivity.this, 600));
                         tTv.setPadding(0, dp(4), 0, dp(2));
                         fbCard.addView(tTv);
                     }
@@ -9068,17 +9062,17 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
                     if (item.description != null && !item.description.isEmpty()) {
                         TextView dTv = new TextView(MainActivity.this);
                         dTv.setText(item.description);
-                        dTv.setTextColor(0xFF94A3B8);
+                        dTv.setTextColor(colMuted);
                         dTv.setTextSize(11);
                         fbCard.addView(dTv);
                     }
 
                     if (isResolved) {
                         TextView resNotice = new TextView(MainActivity.this);
-                        resNotice.setText("✓ Verified & deployed in Gatehouse v1.0." + item.implementedMilestone + " build");
-                        resNotice.setTextColor(0xFF00E676);
+                        resNotice.setText("Marked done by the owner");
+                        resNotice.setTextColor(colEmerald);
                         resNotice.setTextSize(9.5f);
-                        resNotice.setTypeface(Typeface.MONOSPACE);
+                        resNotice.setTypeface(Fonts.mono(MainActivity.this, false));
                         resNotice.setPadding(0, dp(4), 0, 0);
                         fbCard.addView(resNotice);
                     }
@@ -9103,7 +9097,7 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
                 }
 
                 hapticHeavyClick();
-                btnSubmit.setText("⏳ Transmitting to Development AI...");
+                btnSubmit.setText("Saving feedback...");
                 btnSubmit.setEnabled(false);
 
                 // Build diagnostics payload
@@ -9131,9 +9125,9 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
                         new RemoteTelemetryClient.TelemetryCallback() {
                             @Override
                             public void onSuccess(String response) {
-                                btnSubmit.setText("✓ Submitted to Development AI");
+                                btnSubmit.setText("Saved");
                                 btnSubmit.setEnabled(true);
-                                Toast.makeText(MainActivity.this, "✓ Feedback dispatched wirelessly to Development AI", Toast.LENGTH_LONG).show();
+                                Toast.makeText(MainActivity.this, "Feedback saved on this phone", Toast.LENGTH_LONG).show();
                                 note(Core.TOPIC_ROUTINE, "[TESTER FEEDBACK] [" + cat + "] (" + tName + ") " + title + " - " + details);
                                 etSummary.setText("");
                                 etDetails.setText("");
@@ -9142,7 +9136,7 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
 
                             @Override
                             public void onError(String error) {
-                                btnSubmit.setText("➤ Submit to Gatehouse Development");
+                                btnSubmit.setText("Submit feedback");
                                 btnSubmit.setEnabled(true);
                                 refreshRecentList.run();
                             }
@@ -9161,29 +9155,29 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
         msHeader.setPadding(0, dp(6), 0, dp(10));
 
         TextView msTitle = new TextView(this);
-        msTitle.setText("🚀 SHIPPED IMPLEMENTATION MILESTONES");
-        msTitle.setTextColor(0xFF00E676);
+        msTitle.setText("RECENT CHANGES");
+        msTitle.setTextColor(colAccent);
         msTitle.setTextSize(11);
-        msTitle.setTypeface(Typeface.MONOSPACE);
+        msTitle.setTypeface(Fonts.mono(this, false));
         msTitle.setLetterSpacing(0.08f);
         LinearLayout.LayoutParams mslp = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
         msTitle.setLayoutParams(mslp);
         msHeader.addView(msTitle);
 
         TextView msCount = new TextView(this);
-        msCount.setText("LIVE V1.0." + AutoUpdateManager.getAppVersion(this));
-        msCount.setTextColor(0xFF00E676);
+        msCount.setText("V1.0." + AutoUpdateManager.getAppVersion(this));
+        msCount.setTextColor(colAccent);
         msCount.setTextSize(9);
-        msCount.setTypeface(Typeface.MONOSPACE);
+        msCount.setTypeface(Fonts.mono(this, false));
         msCount.setPadding(dp(6), dp(2), dp(6), dp(2));
-        msCount.setBackground(rounded(0x2200E676, dp(4)));
+        msCount.setBackground(rounded(colAccentSoft, dp(4)));
         msHeader.addView(msCount);
         msSection.addView(msHeader);
 
         String[][] milestones = {
             {"v1.0.25 (Milestone 125)", "BLE Decentralised Mesh Portal Redesign, Symmetrical 1:1 Action Docks across all dialogs, and In-App Live Milestone Changelog."},
             {"v1.0.24 (Milestone 124)", "Symmetrical 1:1 Action Decks with live quick-actions (BOM Live Refresh, True North Azimuth Reset, GNSS Fix Stamping) on Weather, Compass, and GNSS dialogs."},
-            {"v1.0.23 (Milestone 123)", "Interactive DSS 100% Passive Mesh Explainer, purged unbonded mock peers, balanced 1:1 action buttons across dialogs, and compacted header layout to eliminate micro-scrolls."},
+            {"v1.0.23 (Milestone 123)", "Interactive DSS passive mesh explainer, purged unbonded mock peers, balanced 1:1 action buttons across dialogs, and compacted header layout to eliminate micro-scrolls."},
             {"v1.0.22 (Milestone 122)", "Tools Tab Dual-Column Widescreen Split in Landscape mode and tactile spring physics on all tool tiles."},
             {"v1.0.21 (Milestone 121)", "Android 16 / Xiaomi Foreground Service Startup Hotfix (reclassified PttRadioService to connectedDevice|dataSync with defensive exception catching)."},
             {"v1.0.20 (Milestone 120)", "Symmetrical action decks, unblocked 7-day roster table horizontal swiping, and live meteorological satellite scan feed."},
@@ -9195,7 +9189,7 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
         for (String[] ms : milestones) {
             LinearLayout mCard = new LinearLayout(this);
             mCard.setOrientation(LinearLayout.VERTICAL);
-            mCard.setBackground(rounded(0xFF132328, dp(12)));
+            mCard.setBackground(rounded(colPanel2, dp(12)));
             mCard.setPadding(dp(14), dp(12), dp(14), dp(12));
             LinearLayout.LayoutParams mlp = new LinearLayout.LayoutParams(
                     LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
@@ -9203,15 +9197,15 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
             mCard.setLayoutParams(mlp);
 
             TextView vTv = new TextView(this);
-            vTv.setText("✓ " + ms[0]);
-            vTv.setTextColor(0xFF00E676);
+            vTv.setText(ms[0]);
+            vTv.setTextColor(colPale);
             vTv.setTextSize(12);
-            vTv.setTypeface(Typeface.DEFAULT_BOLD);
+            vTv.setTypeface(Fonts.text(this, 600));
             mCard.addView(vTv);
 
             TextView dTv = new TextView(this);
             dTv.setText(ms[1]);
-            dTv.setTextColor(0xFF94A3B8);
+            dTv.setTextColor(colMuted);
             dTv.setTextSize(11);
             dTv.setPadding(0, dp(4), 0, 0);
             mCard.addView(dTv);
@@ -9510,7 +9504,7 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
         top.addView(title);
 
         TextView badge = new TextView(this);
-        badge.setText("HOLOGRAPHIC");
+        badge.setText("LICENSED");
         badge.setTextColor(colAccent);
         badge.setTextSize(9);
         badge.setTypeface(Typeface.MONOSPACE);
@@ -9526,7 +9520,7 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
         sub.setPadding(0, dp(4), 0, dp(10));
         card.addView(sub);
 
-        TextView btnOpen = actionButton("🪪 Open Holographic Credential Vault", colAccent, colAccentInk);
+        TextView btnOpen = actionButton("Open credential vault", colAccent, colAccentInk);
         btnOpen.setOnClickListener(new View.OnClickListener() {
             public void onClick(View v) {
                 showOfficerCredentialVaultDialog();
@@ -9590,8 +9584,8 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
         row1.setOrientation(LinearLayout.HORIZONTAL);
         row1.setPadding(0, 0, 0, dp(8));
 
-        final TextView btnTorch = toolLightButton("🔦 Torch", "STEADY BEAM", false);
-        final TextView btnStrobe = toolLightButton("⚡ 10Hz Strobe", "DISORIENT", false);
+        final TextView btnTorch = toolLightButton("Torch", "STEADY BEAM", false);
+        final TextView btnStrobe = toolLightButton("10Hz Strobe", "DISORIENT", false);
 
         btnTorch.setOnClickListener(new View.OnClickListener() {
             public void onClick(View v) {
@@ -9616,8 +9610,8 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
         LinearLayout row2 = new LinearLayout(this);
         row2.setOrientation(LinearLayout.HORIZONTAL);
 
-        final TextView btnSos = toolLightButton("🆘 SOS Beacon", "MORSE PATTERN", false);
-        final TextView btnLantern = toolLightButton("🏮 0-Lux Red Lantern", "NIGHT VISION", false);
+        final TextView btnSos = toolLightButton("SOS Beacon", "MORSE PATTERN", false);
+        final TextView btnLantern = toolLightButton("0-Lux Red Lantern", "NIGHT VISION", false);
 
         btnSos.setOnClickListener(new View.OnClickListener() {
             public void onClick(View v) {
@@ -9809,11 +9803,6 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
         lantern.setBackgroundColor(0xFFFF1111);
         lantern.setPadding(dp(24), dp(24), dp(24), dp(24));
 
-        TextView icon = new TextView(this);
-        icon.setText("🏮");
-        icon.setTextSize(48);
-        icon.setGravity(Gravity.CENTER);
-        lantern.addView(icon);
 
         TextView title = new TextView(this);
         title.setText("0-LUX RED NIGHT LANTERN");
@@ -10137,13 +10126,13 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
         ScrollView sv = new ScrollView(this);
         LinearLayout root = new LinearLayout(this);
         root.setOrientation(LinearLayout.VERTICAL);
-        root.setBackground(rounded(0xFF0F172A, dp(16)));
+        root.setBackground(rounded(colPanel, dp(16)));
         root.setPadding(dp(20), dp(18), dp(20), dp(18));
 
         // Header
         TextView title = new TextView(this);
-        title.setText("⚡ REAL-TIME LIGHTNING & HAIL THRESHOLDS");
-        title.setTextColor(0xFF00E5FF);
+        title.setText("REAL-TIME LIGHTNING & HAIL THRESHOLDS");
+        title.setTextColor(colAccent);
         title.setTextSize(14);
         title.setTypeface(Typeface.DEFAULT_BOLD);
         root.addView(title);
@@ -10158,7 +10147,7 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
         // Distance Threshold Section
         TextView dLbl = new TextView(this);
         dLbl.setText("1. PROXIMITY DISTANCE TRIGGER (< KM)");
-        dLbl.setTextColor(0xFFF1F5F9);
+        dLbl.setTextColor(colPale);
         dLbl.setTextSize(11);
         dLbl.setTypeface(Typeface.DEFAULT_BOLD);
         dLbl.setPadding(0, dp(4), 0, dp(6));
@@ -10186,8 +10175,8 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
             b.setLayoutParams(lp);
 
             boolean isSelected = Math.abs(selectedDist[0] - dVal) < 0.1;
-            b.setBackground(rounded(isSelected ? 0xFF00E5FF : 0xFF1E293B, dp(8)));
-            b.setTextColor(isSelected ? 0xFF0A0F1D : 0xFF94A3B8);
+            b.setBackground(rounded(isSelected ? colAccent : colPanel2, dp(8)));
+            b.setTextColor(isSelected ? colAccentInk : colMuted);
 
             b.setOnClickListener(new View.OnClickListener() {
                 @Override
@@ -10196,8 +10185,8 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
                     selectedDist[0] = dVal;
                     for (int j = 0; j < distButtons.size(); j++) {
                         boolean sel = Math.abs(distOptions[j] - selectedDist[0]) < 0.1;
-                        distButtons.get(j).setBackground(rounded(sel ? 0xFF00E5FF : 0xFF1E293B, dp(8)));
-                        distButtons.get(j).setTextColor(sel ? 0xFF0A0F1D : 0xFF94A3B8);
+                        distButtons.get(j).setBackground(rounded(sel ? colAccent : colPanel2, dp(8)));
+                        distButtons.get(j).setTextColor(sel ? colAccentInk : colMuted);
                     }
                 }
             });
@@ -10209,7 +10198,7 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
         // Quantity Threshold Section
         TextView qLbl = new TextView(this);
         qLbl.setText("2. STRIKE CLUSTER QUANTITY TRIGGER (STRIKES / 15 MIN)");
-        qLbl.setTextColor(0xFFF1F5F9);
+        qLbl.setTextColor(colPale);
         qLbl.setTextSize(11);
         qLbl.setTypeface(Typeface.DEFAULT_BOLD);
         qLbl.setPadding(0, dp(14), 0, dp(6));
@@ -10237,8 +10226,8 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
             b.setLayoutParams(lp);
 
             boolean isSelected = selectedQty[0] == qVal;
-            b.setBackground(rounded(isSelected ? 0xFFF59E0B : 0xFF1E293B, dp(8)));
-            b.setTextColor(isSelected ? 0xFF0A0F1D : 0xFF94A3B8);
+            b.setBackground(rounded(isSelected ? colAccent : colPanel2, dp(8)));
+            b.setTextColor(isSelected ? colAccentInk : colMuted);
 
             b.setOnClickListener(new View.OnClickListener() {
                 @Override
@@ -10247,8 +10236,8 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
                     selectedQty[0] = qVal;
                     for (int j = 0; j < qtyButtons.size(); j++) {
                         boolean sel = qtyOptions[j] == selectedQty[0];
-                        qtyButtons.get(j).setBackground(rounded(sel ? 0xFFF59E0B : 0xFF1E293B, dp(8)));
-                        qtyButtons.get(j).setTextColor(sel ? 0xFF0A0F1D : 0xFF94A3B8);
+                        qtyButtons.get(j).setBackground(rounded(sel ? colAccent : colPanel2, dp(8)));
+                        qtyButtons.get(j).setTextColor(sel ? colAccentInk : colMuted);
                     }
                 }
             });
@@ -10262,7 +10251,7 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
         actions.setOrientation(LinearLayout.HORIZONTAL);
         actions.setPadding(0, dp(18), 0, 0);
 
-        TextView btnTest = actionButton("Test Lightning", 0xFF1E293B, 0xFFF59E0B);
+        TextView btnTest = actionButton("Test Lightning", colPanel2, colAmber);
         btnTest.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
@@ -10274,12 +10263,12 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
                 testSnap.closestLightningKm = 2.4;
                 testSnap.closestLightningDir = "SW";
                 testSnap.isLightningStandDownActive = true;
-                testSnap.lightningStandDownReason = "🚨 RED STAND-DOWN: Strike 2.4 km SW (Immediate Guard Hut Shelter Required)";
+                testSnap.lightningStandDownReason = "RED STAND-DOWN: Strike 2.4 km SW (Immediate Guard Hut Shelter Required)";
                 FireRadarManager.dispatchLightningNotification(MainActivity.this, testSnap);
                 // Also exercise the real control-pair SMS path so delivery can be verified.
                 String smsStatus = AlertDispatcher.sendStandDown(MainActivity.this,
                         testSnap.lightningStandDownReason, "TEST alert (manual trigger)");
-                banner.setText("⚡ Test Lightning Stand-Down dispatched · " + smsStatus);
+                banner.setText("Test Lightning Stand-Down dispatched · " + smsStatus);
                 banner.setVisibility(View.VISIBLE);
             }
         });
@@ -10287,7 +10276,7 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
         btnTest.setLayoutParams(tlp);
         actions.addView(btnTest);
 
-        TextView btnTestHail = actionButton("Test Hail", 0xFF1E293B, 0xFF38BDF8);
+        TextView btnTestHail = actionButton("Test Hail", colPanel2, colCyan);
         btnTestHail.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
@@ -10299,7 +10288,7 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
                 testSnap.hailProbabilityPercent = 75;
                 testSnap.hailAdvisoryText = "Move patrol vehicle under canopy/timber shed. Secure loose yard assets & shelter in Guard Hut.";
                 FireRadarManager.dispatchHailNotification(MainActivity.this, testSnap);
-                banner.setText("🧊 Test Severe Hail Warning dispatched to notification shade");
+                banner.setText("Test Severe Hail Warning dispatched to notification shade");
                 banner.setVisibility(View.VISIBLE);
             }
         });
@@ -10308,7 +10297,7 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
         btnTestHail.setLayoutParams(thlp);
         actions.addView(btnTestHail);
 
-        TextView btnSave = actionButton("Save & Apply", 0xFF00E5FF, 0xFF0A0F1D);
+        TextView btnSave = actionButton("Save & Apply", colAccent, colAccentInk);
         btnSave.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
@@ -10342,13 +10331,13 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
         ScrollView sv = new ScrollView(this);
         LinearLayout root = new LinearLayout(this);
         root.setOrientation(LinearLayout.VERTICAL);
-        root.setBackground(rounded(0xFF0F172A, dp(16)));
+        root.setBackground(rounded(colPanel, dp(16)));
         root.setPadding(dp(20), dp(18), dp(20), dp(18));
 
         // Header
         TextView title = new TextView(this);
-        title.setText("🛸 LOG LOW-ALTITUDE DRONE / UAS SIGHTING");
-        title.setTextColor(0xFFA855F7);
+        title.setText("LOG LOW-ALTITUDE DRONE / UAS SIGHTING");
+        title.setTextColor(colAccent);
         title.setTextSize(14);
         title.setTypeface(Typeface.DEFAULT_BOLD);
         root.addView(title);
@@ -10363,7 +10352,7 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
         // Sector Selection
         TextView sLbl = new TextView(this);
         sLbl.setText("1. SIGHTING SECTOR / LOCATION");
-        sLbl.setTextColor(0xFFF1F5F9);
+        sLbl.setTextColor(colPale);
         sLbl.setTextSize(11);
         sLbl.setTypeface(Typeface.DEFAULT_BOLD);
         sLbl.setPadding(0, dp(4), 0, dp(6));
@@ -10379,7 +10368,7 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
         for (int i = 0; i < sectors.length; i++) {
             final String sec = sectors[i];
             final TextView b = new TextView(this);
-            b.setText("📍 " + sec);
+            b.setText(sec);
             b.setTextSize(10f);
             b.setTypeface(Typeface.DEFAULT_BOLD);
             b.setPadding(dp(10), dp(8), dp(10), dp(8));
@@ -10389,8 +10378,8 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
             b.setLayoutParams(lp);
 
             boolean isSelected = sec.equals(selectedSector[0]);
-            b.setBackground(rounded(isSelected ? 0xFFA855F7 : 0xFF1E293B, dp(8)));
-            b.setTextColor(isSelected ? 0xFFFFFFFF : 0xFF94A3B8);
+            b.setBackground(rounded(isSelected ? colAccent : colPanel2, dp(8)));
+            b.setTextColor(isSelected ? colAccentInk : colMuted);
 
             b.setOnClickListener(new View.OnClickListener() {
                 @Override
@@ -10399,8 +10388,8 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
                     selectedSector[0] = sec;
                     for (int j = 0; j < sectorButtons.size(); j++) {
                         boolean sel = sectors[j].equals(selectedSector[0]);
-                        sectorButtons.get(j).setBackground(rounded(sel ? 0xFFA855F7 : 0xFF1E293B, dp(8)));
-                        sectorButtons.get(j).setTextColor(sel ? 0xFFFFFFFF : 0xFF94A3B8);
+                        sectorButtons.get(j).setBackground(rounded(sel ? colAccent : colPanel2, dp(8)));
+                        sectorButtons.get(j).setTextColor(sel ? colAccentInk : colMuted);
                     }
                 }
             });
@@ -10412,7 +10401,7 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
         // Altitude Selection
         TextView aLbl = new TextView(this);
         aLbl.setText("2. ESTIMATED ALTITUDE (AGL)");
-        aLbl.setTextColor(0xFFF1F5F9);
+        aLbl.setTextColor(colPale);
         aLbl.setTextSize(11);
         aLbl.setTypeface(Typeface.DEFAULT_BOLD);
         aLbl.setPadding(0, dp(14), 0, dp(6));
@@ -10438,8 +10427,8 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
             b.setLayoutParams(lp);
 
             boolean isSelected = selectedAlt[0] == aVal;
-            b.setBackground(rounded(isSelected ? 0xFFF59E0B : 0xFF1E293B, dp(8)));
-            b.setTextColor(isSelected ? 0xFF0A0F1D : 0xFF94A3B8);
+            b.setBackground(rounded(isSelected ? colAccent : colPanel2, dp(8)));
+            b.setTextColor(isSelected ? colAccentInk : colMuted);
 
             b.setOnClickListener(new View.OnClickListener() {
                 @Override
@@ -10448,8 +10437,8 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
                     selectedAlt[0] = aVal;
                     for (int j = 0; j < altButtons.size(); j++) {
                         boolean sel = altValues[j] == selectedAlt[0];
-                        altButtons.get(j).setBackground(rounded(sel ? 0xFFF59E0B : 0xFF1E293B, dp(8)));
-                        altButtons.get(j).setTextColor(sel ? 0xFF0A0F1D : 0xFF94A3B8);
+                        altButtons.get(j).setBackground(rounded(sel ? colAccent : colPanel2, dp(8)));
+                        altButtons.get(j).setTextColor(sel ? colAccentInk : colMuted);
                     }
                 }
             });
@@ -10463,7 +10452,7 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
         actions.setOrientation(LinearLayout.HORIZONTAL);
         actions.setPadding(0, dp(18), 0, 0);
 
-        TextView btnCancel = actionButton("Cancel", 0xFF1E293B, colQuiet);
+        TextView btnCancel = actionButton("Cancel", colPanel2, colQuiet);
         btnCancel.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
@@ -10474,7 +10463,7 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
         btnCancel.setLayoutParams(clp);
         actions.addView(btnCancel);
 
-        TextView btnCommit = actionButton("Commit to Shift Ledger", 0xFFA855F7, 0xFFFFFFFF);
+        TextView btnCommit = actionButton("Commit to Shift Ledger", colAccent, colAccentInk);
         btnCommit.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
@@ -11019,7 +11008,7 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
             leftCol.addView(page);
 
             btnShareReport = new TextView(this);
-            btnShareReport.setText("📤 SHARE MORNING HANDOVER REPORT");
+            btnShareReport.setText("SHARE MORNING HANDOVER REPORT");
             btnShareReport.setTextColor(colAccentInk);
             btnShareReport.setTextSize(14);
             btnShareReport.setTypeface(Typeface.DEFAULT_BOLD);
@@ -11236,7 +11225,7 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
             container.addView(page);
 
             btnShareReport = new TextView(this);
-            btnShareReport.setText("📤 SHARE MORNING HANDOVER REPORT");
+            btnShareReport.setText("Share morning handover report");
             btnShareReport.setTextColor(colAccentInk);
             btnShareReport.setTextSize(14);
             btnShareReport.setTypeface(Typeface.DEFAULT_BOLD);
@@ -12931,18 +12920,13 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
         LinearLayout docBtn = new LinearLayout(this);
         docBtn.setOrientation(LinearLayout.HORIZONTAL);
         docBtn.setGravity(Gravity.CENTER_VERTICAL);
-        docBtn.setBackground(rounded(0x2200E5FF, dp(10)));
+        docBtn.setBackground(rounded(colAccentSoft, dp(10)));
         docBtn.setPadding(dp(12), dp(9), dp(12), dp(9));
         LinearLayout.LayoutParams dblp = new LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
         dblp.topMargin = dp(10);
         docBtn.setLayoutParams(dblp);
 
-        TextView docIcon = new TextView(this);
-        docIcon.setText("📚");
-        docIcon.setTextSize(14f);
-        docIcon.setPadding(0, 0, dp(8), 0);
-        docBtn.addView(docIcon);
 
         LinearLayout docTextCol = new LinearLayout(this);
         docTextCol.setOrientation(LinearLayout.VERTICAL);
@@ -12951,7 +12935,7 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
 
         TextView docTitle = new TextView(this);
         docTitle.setText("DEPUTY COMPLIANCE & AWARD LIBRARY");
-        docTitle.setTextColor(0xFF00E5FF);
+        docTitle.setTextColor(colAccent);
         docTitle.setTextSize(10.5f);
         docTitle.setTypeface(Typeface.create(Typeface.MONOSPACE, Typeface.BOLD));
         docTextCol.addView(docTitle);
@@ -12966,11 +12950,11 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
 
         TextView docArrow = new TextView(this);
         docArrow.setText("READ →");
-        docArrow.setTextColor(0xFF00E5FF);
+        docArrow.setTextColor(colAccent);
         docArrow.setTextSize(10.5f);
         docArrow.setTypeface(Typeface.create(Typeface.MONOSPACE, Typeface.BOLD));
         docArrow.setPadding(dp(8), dp(4), dp(8), dp(4));
-        docArrow.setBackground(rounded(0x3300E5FF, dp(6)));
+        docArrow.setBackground(rounded(colAccentSoft, dp(6)));
         docBtn.addView(docArrow);
 
         docBtn.setOnClickListener(new View.OnClickListener() {
@@ -14644,11 +14628,11 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
         chipRow.setOrientation(LinearLayout.HORIZONTAL);
         chipRow.setPadding(0, 0, 0, dp(10));
 
-        chipRow.addView(buildConstellationPill("🟢 GPS (8)", 0xFF10B981, 0x2210B981));
-        chipRow.addView(buildConstellationPill("🔵 GALILEO (3)", 0xFF38BDF8, 0x2238BDF8));
-        chipRow.addView(buildConstellationPill("🟡 GLONASS (4)", 0xFFF59E0B, 0x22F59E0B));
-        chipRow.addView(buildConstellationPill("🔴 BEIDOU (2)", 0xFFEF4444, 0x22EF4444));
-        chipRow.addView(buildConstellationPill("🟣 QZSS (1)", 0xFFC084FC, 0x22C084FC));
+        chipRow.addView(buildConstellationPill("GPS (8)", colPale, colPanel2));
+        chipRow.addView(buildConstellationPill("GALILEO (3)", colPale, colPanel2));
+        chipRow.addView(buildConstellationPill("GLONASS (4)", colPale, colPanel2));
+        chipRow.addView(buildConstellationPill("BEIDOU (2)", colPale, colPanel2));
+        chipRow.addView(buildConstellationPill("QZSS (1)", colPale, colPanel2));
 
         HorizontalScrollView chipScroll = new HorizontalScrollView(this);
         chipScroll.setHorizontalScrollBarEnabled(false);
@@ -14923,15 +14907,15 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
     }
 
     private void showCameraAdvisoryDialog(final OnPhotoCapturedCallback cb) {
-        final LinearLayout box = dialogContainer("Photo Evidence & Smudge Check", "HARDWARE CAMERA", colEmerald);
+        final LinearLayout box = dialogContainer("Photo Evidence & Smudge Check", "HARDWARE CAMERA", colAccent);
 
         TextView smudgeAlert = new TextView(this);
-        smudgeAlert.setText("🛡️ LENS SMUDGE & NIGHT VISION ADVISORY\nEnsure camera lens is wiped clean of fingerprints. Night-time flashlight glare off oily residue causes severe light bloom and starbursting on padlocks and perimeter fences.");
-        smudgeAlert.setTextColor(colCyan);
+        smudgeAlert.setText("LENS SMUDGE & NIGHT VISION ADVISORY\nEnsure camera lens is wiped clean of fingerprints. Night-time flashlight glare off oily residue causes severe light bloom and starbursting on padlocks and perimeter fences.");
+        smudgeAlert.setTextColor(colMuted);
         smudgeAlert.setTextSize(11.5f);
         smudgeAlert.setTypeface(Typeface.DEFAULT_BOLD);
         smudgeAlert.setPadding(dp(12), dp(10), dp(12), dp(10));
-        smudgeAlert.setBackground(rounded(0x2206B6D4, dp(10)));
+        smudgeAlert.setBackground(rounded(colPanel2, dp(10)));
         box.addView(smudgeAlert);
 
         // Interactive Artificial Horizon Leveler Preview
@@ -14964,7 +14948,7 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
         });
         btnRow.addView(btnCancel);
 
-        TextView btnLaunch = actionButton("Launch Night Camera", colEmerald, colAccentInk);
+        TextView btnLaunch = actionButton("Launch Night Camera", colAccent, colAccentInk);
         btnLaunch.setOnClickListener(new View.OnClickListener() {
             public void onClick(View v) {
                 hapticDoublePulse();
@@ -15158,7 +15142,7 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
         anprBanner.setLayoutParams(abl);
 
         TextView anprIcon = new TextView(this);
-        anprIcon.setText("🚗");
+        anprIcon.setText("");
         anprIcon.setTextSize(16);
         anprIcon.setPadding(0, 0, dp(8), 0);
         anprBanner.addView(anprIcon);
@@ -15188,7 +15172,7 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
         stegBanner.setLayoutParams(sblp);
 
         TextView stegIcon = new TextView(this);
-        stegIcon.setText("🔒");
+        stegIcon.setText("");
         stegIcon.setTextSize(14);
         stegIcon.setPadding(0, 0, dp(6), 0);
         stegBanner.addView(stegIcon);
@@ -15263,7 +15247,7 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
                         public void run() {
                             anprBanner.setVisibility(View.VISIBLE);
                             anprText.setText("Plate Detected: " + result.formattedPlate + " (" + result.state + ")");
-                            btnRegoTag.setText("🚗 Record Plate [" + result.formattedPlate + "] in Logbook");
+                            btnRegoTag.setText("Record Plate [" + result.formattedPlate + "] in Logbook");
                             btnRegoTag.setBackground(rounded(0x33F59E0B, dp(10)));
                             btnRegoTag.setOnClickListener(new View.OnClickListener() {
                                 public void onClick(View v) {
@@ -15370,11 +15354,11 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
 
     private void showForensicAuditDialog(CameraProcessingEngine.ForensicAuditResult audit) {
         if (audit == null) return;
-        final LinearLayout box = dialogContainer("🔒 Forensic LSB Steganography", "BIT-PERFECT INTEGRITY", colEmerald);
+        final LinearLayout box = dialogContainer("Photo watermark", "LSB WATERMARK", colAccent);
 
         LinearLayout statusCard = new LinearLayout(this);
         statusCard.setOrientation(LinearLayout.VERTICAL);
-        statusCard.setBackground(rounded(audit.crcVerified ? 0x2210B981 : 0x22EF4444, dp(12)));
+        statusCard.setBackground(rounded(audit.crcVerified ? colEmeraldSoft : colCrimsonSoft, dp(12)));
         statusCard.setPadding(dp(12), dp(10), dp(12), dp(10));
         LinearLayout.LayoutParams sclp = new LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
@@ -15382,14 +15366,14 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
         statusCard.setLayoutParams(sclp);
 
         TextView statTitle = new TextView(this);
-        statTitle.setText(audit.crcVerified ? "✓ FORENSIC LSB PAYLOAD AUTHENTICATED" : "⚠️ LSB INTEGRITY CHECK FAILED");
+        statTitle.setText(audit.crcVerified ? "WATERMARK CHECKSUM VERIFIED" : "WATERMARK CHECKSUM FAILED");
         statTitle.setTextColor(audit.crcVerified ? colEmerald : colCrimson);
         statTitle.setTextSize(12.5f);
         statTitle.setTypeface(Typeface.DEFAULT_BOLD);
         statusCard.addView(statTitle);
 
         TextView statSub = new TextView(this);
-        statSub.setText("CRC32 Checksum Verified · Invisible Blue-Channel LSB Stream");
+        statSub.setText("CRC32 checksum · blue-channel LSB watermark");
         statSub.setTextColor(colMuted);
         statSub.setTextSize(10.5f);
         statusCard.addView(statSub);
@@ -15407,14 +15391,14 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
 
         list.addView(metricRow("Security Org", audit.orgName != null ? audit.orgName : "DSS Pty Ltd", colPale));
         list.addView(metricRow("Officer on Duty", (audit.officerName != null ? audit.officerName : "Guard") + " (LIC #" + (audit.licenceNum != null ? audit.licenceNum : "41207") + ")", colAccent));
-        list.addView(metricRow("Terminal Device", audit.terminalTag != null ? audit.terminalTag : getHutPhoneHardwareTag(), colCyan));
+        list.addView(metricRow("Terminal Device", audit.terminalTag != null ? audit.terminalTag : getHutPhoneHardwareTag(), colPale));
         list.addView(metricRow("Timestamp", audit.timestamp != null ? audit.timestamp : "Live", colPale));
-        list.addView(metricRow("GPS Coordinate", audit.gpsCoords != null ? audit.gpsCoords : "Site Post 01", colEmerald));
+        list.addView(metricRow("GPS Coordinate", audit.gpsCoords != null ? audit.gpsCoords : "Site Post 01", colPale));
 
         box.addView(list);
 
         final Dialog dlg = createDialogSheet(box);
-        TextView btnClose = actionButton("Close Forensic Report", colLine, colPale);
+        TextView btnClose = actionButton("Close", colLine, colPale);
         btnClose.setOnClickListener(new View.OnClickListener() {
             public void onClick(View v) {
                 hapticClick();
@@ -15736,7 +15720,7 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
     }
 
     private void showModernVoiceSheet() {
-        final LinearLayout box = dialogContainer("🎙️ Voice Memo", "AUDIO LOG", colAccent);
+        final LinearLayout box = dialogContainer("Voice Memo", "AUDIO LOG", colAccent);
 
         final TextView timerView = new TextView(this);
         timerView.setText("00:00");
@@ -15765,8 +15749,9 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
         micBtn.setLayoutParams(mbl);
 
         final TextView micIcon = new TextView(this);
-        micIcon.setText("🎙️");
+        micIcon.setText("●");
         micIcon.setTextSize(28);
+        micIcon.setTextColor(colAccent);
         micIcon.setGravity(Gravity.CENTER);
         micBtn.addView(micIcon);
         box.addView(micBtn);
@@ -15898,7 +15883,7 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
     }
 
     private void showModernIncidentSheet() {
-        final LinearLayout box = dialogContainer("🚨 Security Incident Report", "LEGAL AUDIT", colCrimson);
+        final LinearLayout box = dialogContainer("Security Incident Report", "INCIDENT LOG", colCrimson);
 
         final String[] categories = {
             "Intruder / Trespass", "Forced Entry / Damage",
@@ -15909,7 +15894,7 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
             "Perimeter Secured", "Intruders Fled", "000 Police Dispatched", "Supervisor Alerted"
         };
 
-        final String[] severities = {"🟡 LOW", "🟠 MEDIUM", "🔴 HIGH", "🚨 CRITICAL"};
+        final String[] severities = {"LOW", "MEDIUM", "HIGH", "CRITICAL"};
         final String[] selectedSeverity = {severities[0]};
 
         final String[] selectedCat = {categories[0]};
@@ -15921,7 +15906,7 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
         box.addView(buildChipGroup(severities, selectedSeverity, true, colCrimson));
 
         box.addView(formSectionLabel("2. INCIDENT CATEGORY"));
-        box.addView(buildChipGroup(categories, selectedCat, true, colCrimson));
+        box.addView(buildChipGroup(categories, selectedCat, true, colAccent));
 
         box.addView(formSectionLabel("3. QUICK SCENARIO TEMPLATES"));
         HorizontalScrollView incHsv = new HorizontalScrollView(this);
@@ -15944,12 +15929,12 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
 
         for (final String is : incSnippets) {
             TextView qPill = new TextView(this);
-            qPill.setText("⚡ " + is);
-            qPill.setTextColor(colCrimson);
+            qPill.setText(is);
+            qPill.setTextColor(colMuted);
             qPill.setTextSize(10f);
             qPill.setTypeface(Typeface.create(Typeface.MONOSPACE, Typeface.BOLD));
             qPill.setPadding(dp(8), dp(4), dp(8), dp(4));
-            qPill.setBackground(rounded(0x28EF4444, dp(6)));
+            qPill.setBackground(rounded(colPanel2, dp(6)));
             qPill.setOnClickListener(new View.OnClickListener() {
                 @Override
                 public void onClick(View v) {
@@ -15994,7 +15979,7 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
         });
         btnRow.addView(btnCancel);
 
-        TextView btnCommit = actionButton("🚨 Log Incident", colCrimson, colPale);
+        TextView btnCommit = actionButton("Log Incident", colCrimson, colPale);
         btnCommit.setOnClickListener(new View.OnClickListener() {
             public void onClick(View v) {
                 hapticSealThud();
@@ -16457,7 +16442,7 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
     }
 
     private void showRegoPlateEntryModal() {
-        final LinearLayout box = dialogContainer("🚗 Record Vehicle Movement", "MANUAL PLATE & ANPR", colAccent);
+        final LinearLayout box = dialogContainer("Record Vehicle Movement", "MANUAL ENTRY", colAccent);
         box.addView(formSectionLabel("QUEENSLAND REGISTRATION PLATE"));
         final EditText plateField = modernInputField("e.g. 834-XYZ or 123-AB4");
         plateField.setTextSize(20f);
@@ -16479,7 +16464,7 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
             }
         });
 
-        TextView btnCommit = actionButton("✓ Record Rego", colAccent, 0xFF1E1B4B);
+        TextView btnCommit = actionButton("Record Rego", colAccent, colAccentInk);
         btnCommit.setOnClickListener(new View.OnClickListener() {
             public void onClick(View v) {
                 hapticSealThud();
@@ -18520,7 +18505,7 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
             sendIntent.setType("text/plain");
             startActivity(android.content.Intent.createChooser(sendIntent, title));
         } catch (Exception e) {
-            Toast.makeText(this, "📋 " + title + " copied to clipboard!", Toast.LENGTH_SHORT).show();
+            Toast.makeText(this, title + " copied to clipboard.", Toast.LENGTH_SHORT).show();
         }
     }
 
@@ -18569,7 +18554,7 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
                     .append(details).append(" |\n");
         }
         sb.append("\n---\n*Sealed with a SHA-256 hash chain.*\n");
-        shareStatement("DSS Forensic Markdown Audit", sb.toString());
+        shareStatement("DSS Markdown Audit", sb.toString());
     }
 
     private void performExportLegalStatement(LogbookManager logMgr, List<LogbookManager.LogEntry> entries) {
@@ -18693,11 +18678,11 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
     }
 
     private void showOfficerCredentialModal() {
-        final LinearLayout box = dialogContainer("🛡️ Duty Officer Credential", "QLD LICENSED SECURITY", colAccent);
+        final LinearLayout box = dialogContainer("Duty Officer Credential", "QLD LICENSED SECURITY", colAccent);
 
         LinearLayout card = new LinearLayout(this);
         card.setOrientation(LinearLayout.VERTICAL);
-        card.setBackground(rounded(0xFF1E293B, dp(14)));
+        card.setBackground(rounded(colPanel2, dp(14)));
         card.setPadding(dp(16), dp(16), dp(16), dp(16));
         LinearLayout.LayoutParams clp = new LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
@@ -18728,7 +18713,7 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
 
         TextView tvSpark = new TextView(this);
         tvSpark.setText("SPARK CRYPTOGRAPHIC SEAL: SHA256-DSS-41207-SEALED");
-        tvSpark.setTextColor(0xFF94A3B8);
+        tvSpark.setTextColor(colMuted);
         tvSpark.setTextSize(9f);
         tvSpark.setTypeface(Typeface.MONOSPACE);
         tvSpark.setPadding(0, dp(4), 0, 0);
@@ -18738,7 +18723,7 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
 
         final Dialog dlg = createDialogSheet(box);
 
-        TextView btnFilterGuard = actionButton("🔍 Filter Occurrences (L. Doherty)", colLine, colCyan);
+        TextView btnFilterGuard = actionButton("Filter Occurrences (L. Doherty)", colLine, colCyan);
         LinearLayout.LayoutParams flp = new LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
         flp.bottomMargin = dp(8);
@@ -18767,23 +18752,18 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
     }
 
     private void showVoiceMemoLoggingDialog() {
-        final LinearLayout box = dialogContainer("🎙️ Voice Audio Memo", "AUDIO ATTESTATION", colEmerald);
+        final LinearLayout box = dialogContainer("Voice Audio Memo", "AUDIO ATTESTATION", colEmerald);
 
         LinearLayout card = new LinearLayout(this);
         card.setOrientation(LinearLayout.VERTICAL);
         card.setGravity(Gravity.CENTER);
-        card.setBackground(rounded(0xFF1E293B, dp(14)));
+        card.setBackground(rounded(colPanel2, dp(14)));
         card.setPadding(dp(16), dp(16), dp(16), dp(16));
         LinearLayout.LayoutParams clp = new LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
         clp.bottomMargin = dp(12);
         card.setLayoutParams(clp);
 
-        final TextView tvMic = new TextView(this);
-        tvMic.setText("🎙️");
-        tvMic.setTextSize(36f);
-        tvMic.setGravity(Gravity.CENTER);
-        card.addView(tvMic);
 
         final TextView tvStatus = new TextView(this);
         tvStatus.setText("Tap to Record Shift Audio Observation");
@@ -18796,7 +18776,7 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
 
         final TextView tvTimer = new TextView(this);
         tvTimer.setText("00:00 · 44.1 kHz WAV");
-        tvTimer.setTextColor(0xFF94A3B8);
+        tvTimer.setTextColor(colMuted);
         tvTimer.setTextSize(10f);
         tvTimer.setTypeface(Typeface.MONOSPACE);
         tvTimer.setGravity(Gravity.CENTER);
@@ -18824,7 +18804,7 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
         });
         btnRow.addView(btnCancel);
 
-        final TextView btnAttach = actionButton("✓ Attach Audio Log", colEmerald, 0xFF064E3B);
+        final TextView btnAttach = actionButton("✓ Attach Audio Log", colEmerald, colAccentInk);
         btnAttach.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
@@ -18836,7 +18816,7 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
                 String line = "[PHOTO #" + snippet + "] " + text + " · [AUDIO ATTACHED]";
                 note(Core.TOPIC_ROUTINE, line);
                 dlg.dismiss();
-                Toast.makeText(MainActivity.this, "🎙️ Audio memo attached to logbook", Toast.LENGTH_SHORT).show();
+                Toast.makeText(MainActivity.this, "Audio memo attached to logbook", Toast.LENGTH_SHORT).show();
             }
         });
         LinearLayout.LayoutParams cml = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1.2f);
@@ -18849,12 +18829,12 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
     }
 
     private void showAudioPlaybackModal(String text, String timeStr, String guardName) {
-        final LinearLayout box = dialogContainer("🎙️ Audio Memo Playback", "VOICE EVIDENCE", colEmerald);
+        final LinearLayout box = dialogContainer("Audio Memo Playback", "VOICE EVIDENCE", colEmerald);
 
         LinearLayout card = new LinearLayout(this);
         card.setOrientation(LinearLayout.VERTICAL);
         card.setGravity(Gravity.CENTER);
-        card.setBackground(rounded(0xFF1E293B, dp(14)));
+        card.setBackground(rounded(colPanel2, dp(14)));
         card.setPadding(dp(16), dp(16), dp(16), dp(16));
         LinearLayout.LayoutParams clp = new LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
@@ -18889,7 +18869,7 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
 
         TextView tvGuard = new TextView(this);
         tvGuard.setText("Officer: " + (guardName.contains("Lochran") ? "L. Doherty" : guardName) + " · Recorded at " + timeStr);
-        tvGuard.setTextColor(0xFF94A3B8);
+        tvGuard.setTextColor(colMuted);
         tvGuard.setTextSize(9.5f);
         tvGuard.setTypeface(Typeface.MONOSPACE);
         tvGuard.setGravity(Gravity.CENTER);
@@ -18911,7 +18891,7 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
         btnRow.setOrientation(LinearLayout.HORIZONTAL);
         btnRow.setPadding(0, dp(4), 0, 0);
 
-        final TextView btnPlayToggle = actionButton("❚❚ Pause", colEmerald, 0xFF064E3B);
+        final TextView btnPlayToggle = actionButton("❚❚ Pause", colEmerald, colAccentInk);
         final boolean[] isPlaying = {true};
         btnPlayToggle.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -19503,28 +19483,28 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
         final boolean isRego = contentStr.contains("[REGO:");
 
         if (isRego) {
-            tag = "🚗 VEHICLE REGO · ATTACHED TO PDF";
+            tag = "VEHICLE REGO · ATTACHED TO PDF";
             tagCol = isCarbonCopyMode ? 0xFFFCD34D : colAccent;
         } else if (hasPhoto) {
-            tag = "📷 PHOTO EVIDENCE · ATTACHED TO PDF";
+            tag = "PHOTO EVIDENCE · ATTACHED TO PDF";
             tagCol = isCarbonCopyMode ? 0xFF34D399 : colEmerald;
         } else if (contentStr.startsWith("[INCIDENT:")) {
-            tag = "🚨 INCIDENT";
+            tag = "INCIDENT";
             tagCol = colCrimson;
         } else if (contentStr.startsWith("[OBSERVATION") || contentStr.startsWith("[NOTE")) {
-            tag = "📝 NOTE";
+            tag = "NOTE";
             tagCol = isCarbonCopyMode ? 0xFF93C5FD : colCyan;
         } else if (contentStr.contains("Lot") || contentStr.contains("Factory")) {
-            tag = "🏭 LOT AUDIT";
+            tag = "LOT AUDIT";
             tagCol = isCarbonCopyMode ? 0xFF34D399 : colEmerald;
         } else if (contentStr.contains("External") || contentStr.contains("Perimeter")) {
-            tag = "🛡️ PERIMETER";
+            tag = "PERIMETER";
             tagCol = isCarbonCopyMode ? 0xFFFCD34D : colAccent;
         } else if (contentStr.contains("Pump") || contentStr.contains("Fire") || contentStr.contains("PSI")) {
-            tag = "🚒 FIRE SYSTEM";
-            tagCol = 0xFFF59E0B;
+            tag = "FIRE SYSTEM";
+            tagCol = colAmber;
         } else if (contentStr.contains("handover") || contentStr.contains("on site") || contentStr.contains("OFFICER")) {
-            tag = "📋 HANDOVER";
+            tag = "HANDOVER";
             tagCol = isCarbonCopyMode ? 0xFFFCD34D : colAccent;
         }
 
@@ -19545,7 +19525,7 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
             final String fTime = displayTime;
 
             TextView btnExpand = new TextView(this);
-            btnExpand.setText("🔍 EXPAND PHOTO ↗");
+            btnExpand.setText("EXPAND PHOTO ↗");
             btnExpand.setTextColor(isCarbonCopyMode ? 0xFFFDE047 : colAccent);
             btnExpand.setTextSize(8.5f);
             btnExpand.setTypeface(Typeface.create(Typeface.MONOSPACE, Typeface.BOLD));
@@ -19615,7 +19595,7 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
     }
 
     private void showPhotoExpandModal(final String hashSnippet, final String noteText, final String timeStr) {
-        final LinearLayout box = dialogContainer("📷 Photo Evidence", "ATTACHED TO PDF", colEmerald);
+        final LinearLayout box = dialogContainer("Photo Evidence", "ATTACHED TO PDF", colEmerald);
 
         // Look up bitmap from cache or storage
         Bitmap targetBmp = null;
@@ -19652,11 +19632,6 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
             ppl.bottomMargin = dp(12);
             placeholder.setLayoutParams(ppl);
 
-            TextView ic = new TextView(this);
-            ic.setText("📷");
-            ic.setTextSize(32);
-            ic.setGravity(Gravity.CENTER);
-            placeholder.addView(ic);
 
             TextView pTxt = new TextView(this);
             pTxt.setText("PHOTO EVIDENCE SECURED\nCryptographic SHA-256 Hash Verified");
@@ -19674,22 +19649,17 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
         LinearLayout pdfBanner = new LinearLayout(this);
         pdfBanner.setOrientation(LinearLayout.HORIZONTAL);
         pdfBanner.setGravity(Gravity.CENTER_VERTICAL);
-        pdfBanner.setBackground(rounded(0x2210B981, dp(10)));
+        pdfBanner.setBackground(rounded(colEmeraldSoft, dp(10)));
         pdfBanner.setPadding(dp(12), dp(10), dp(12), dp(10));
         LinearLayout.LayoutParams pbl = new LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
         pbl.bottomMargin = dp(12);
         pdfBanner.setLayoutParams(pbl);
 
-        TextView pdfIcon = new TextView(this);
-        pdfIcon.setText("📄");
-        pdfIcon.setTextSize(18);
-        pdfIcon.setPadding(0, 0, dp(10), 0);
-        pdfBanner.addView(pdfIcon);
 
         TextView pdfText = new TextView(this);
         pdfText.setText("ATTACHED TO PDF FOR CLIENT\nIncluded in 06:05 AM Executive Handover Report");
-        pdfText.setTextColor(0xFF34D399);
+        pdfText.setTextColor(colEmerald);
         pdfText.setTextSize(11.5f);
         pdfText.setTypeface(Typeface.DEFAULT_BOLD);
         pdfBanner.addView(pdfText);
@@ -20183,10 +20153,10 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
         final LinearLayout box = dialogContainer("Shift seal & handover", "FINAL ACTION", colAccent);
 
         TextView desc = new TextView(this);
-        desc.setText("Sealing locks tonight's record with " + n
+        desc.setText("Sealing closes tonight's record with " + n
                      + (n == 1 ? " entry" : " entries")
-                     + " permanently under SHA-256."
-                     + held + "\n\nTouch and hold the affirmation pad below to execute cryptographic seal:");
+                     + " and seals it with SHA-256."
+                     + held + "\n\nTouch and hold the pad below to seal the record.");
         desc.setTextColor(colMuted);
         desc.setTextSize(12);
         desc.setPadding(0, 0, 0, dp(14));
@@ -20337,17 +20307,17 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
         final long autoEscalateMs = 5 * 60 * 1000L;
         final boolean[] welfareEscalated = {false};
 
-        final LinearLayout box = dialogContainer("🦺 Lone Worker Welfare Check", "WHS COMPLIANCE", colEmerald);
+        final LinearLayout box = dialogContainer("Lone Worker Welfare Check", "WHS COMPLIANCE", colEmerald);
 
         TextView info = new TextView(this);
-        info.setText("No site activity has been logged in 90 minutes.\n\nPlease confirm your active on-duty status:");
+        info.setText("No site activity has been logged in 90 minutes.\n\nConfirm you are safe and on duty.");
         info.setTextColor(colPale);
         info.setTextSize(13);
         info.setPadding(0, 0, 0, dp(14));
         box.addView(info);
 
         final TextView timerView = new TextView(this);
-        timerView.setText("Auto-Escalating to DSS Control in 05:00");
+        timerView.setText("Auto-escalating to DSS Control in 05:00");
         timerView.setTextColor(colAccent);
         timerView.setTextSize(12);
         timerView.setTypeface(Typeface.MONOSPACE);
@@ -20355,7 +20325,7 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
         timerView.setPadding(0, 0, 0, dp(18));
         box.addView(timerView);
 
-        TextView btnConfirm = actionButton("✓ I AM SAFE · CONFIRM ON DUTY", colEmerald, colAccentInk);
+        TextView btnConfirm = actionButton("✓ I am safe and on duty", colEmerald, colAccentInk);
         btnConfirm.setTextSize(15);
         btnConfirm.setPadding(dp(18), dp(18), dp(18), dp(18));
         LinearLayout.LayoutParams cfl = new LinearLayout.LayoutParams(
@@ -20364,7 +20334,7 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
         btnConfirm.setLayoutParams(cfl);
         box.addView(btnConfirm);
 
-        TextView btnSos = actionButton("🚨 EMERGENCY ASSISTANCE (000)", colCrimson, colPale);
+        TextView btnSos = actionButton("Emergency assistance (000)", colCrimson, colPale);
         btnSos.setTextSize(13);
         btnSos.setPadding(dp(12), dp(12), dp(12), dp(12));
         LinearLayout.LayoutParams sfl = new LinearLayout.LayoutParams(
@@ -20380,8 +20350,8 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
                 if (isWelfareDialogShowing && dlg.isShowing()) {
                     long remain = autoEscalateMs - (SystemClock.elapsedRealtime() - promptTime);
                     if (remain <= 0) {
-                        timerView.setText("⚠️ UNCONFIRMED · ESCALATING TO CONTROL ROOM");
-                        timerView.setTextColor(colCrimson);
+                        timerView.setText("Unconfirmed · escalating to DSS Control");
+                        timerView.setTextColor(colAmber);
                         if (!welfareEscalated[0]) {
                             welfareEscalated[0] = true;
                             String locLink = (lastKnownLocation != null)
@@ -20395,7 +20365,7 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
                         }
                     } else {
                         int secs = (int) (remain / 1000);
-                        timerView.setText(String.format(Locale.US, "Auto-Escalating to DSS Control in %02d:%02d", secs / 60, secs % 60));
+                        timerView.setText(String.format(Locale.US, "Auto-escalating to DSS Control in %02d:%02d", secs / 60, secs % 60));
                         welfareTicker.postDelayed(this, 1000);
                     }
                 }
@@ -21601,13 +21571,13 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
 
         LinearLayout root = new LinearLayout(this);
         root.setOrientation(LinearLayout.VERTICAL);
-        root.setBackground(rounded(0xFF0F172A, dp(18)));
+        root.setBackground(rounded(colPanel, dp(18)));
         root.setPadding(dp(20), dp(18), dp(20), dp(18));
         root.setLayoutParams(new LinearLayout.LayoutParams(dp(340), LinearLayout.LayoutParams.WRAP_CONTENT));
 
         TextView title = new TextView(this);
-        title.setText("🔑 DEPUTY API CONFIGURATION");
-        title.setTextColor(0xFF13C5BE);
+        title.setText("DEPUTY API CONFIGURATION");
+        title.setTextColor(colAccent);
         title.setTextSize(14);
         title.setTypeface(Typeface.DEFAULT_BOLD);
         title.setLetterSpacing(0.08f);
@@ -21615,14 +21585,14 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
 
         TextView sub = new TextView(this);
         sub.setText("Enter permanent OAuth token from Deputy Business Settings.");
-        sub.setTextColor(0xFF94A3B8);
+        sub.setTextColor(colMuted);
         sub.setTextSize(11);
         sub.setPadding(0, dp(4), 0, dp(12));
         root.addView(sub);
 
         TextView tokenLbl = new TextView(this);
         tokenLbl.setText("API TOKEN (BEARER / OAUTH):");
-        tokenLbl.setTextColor(0xFFCBD5E1);
+        tokenLbl.setTextColor(colMuted);
         tokenLbl.setTextSize(9.5f);
         tokenLbl.setTypeface(Typeface.MONOSPACE);
         root.addView(tokenLbl);
@@ -21630,11 +21600,11 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
         final EditText etToken = new EditText(this);
         etToken.setText(deputyApi.getToken());
         etToken.setHint("Paste Deputy API Token");
-        etToken.setHintTextColor(0xFF475569);
-        etToken.setTextColor(0xFFFFFFFF);
+        etToken.setHintTextColor(colQuiet);
+        etToken.setTextColor(colPale);
         etToken.setTextSize(12);
         etToken.setTypeface(Typeface.MONOSPACE);
-        etToken.setBackground(rounded(0xFF1E293B, dp(8)));
+        etToken.setBackground(rounded(colPanel2, dp(8)));
         etToken.setPadding(dp(12), dp(10), dp(12), dp(10));
         LinearLayout.LayoutParams etlp = new LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
@@ -21652,7 +21622,7 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
         LinearLayout btnRow = new LinearLayout(this);
         btnRow.setOrientation(LinearLayout.HORIZONTAL);
 
-        TextView btnTest = actionButton("🧪 Test", 0xFF1E293B, 0xFF38BDF8);
+        TextView btnTest = actionButton("Test", colPanel2, colAccent);
         btnTest.setTextSize(11.5f);
         ((LinearLayout.LayoutParams) btnTest.getLayoutParams()).rightMargin = dp(4);
         btnTest.setOnClickListener(new View.OnClickListener() {
@@ -21660,18 +21630,18 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
                 hapticClick();
                 final String t = etToken.getText().toString().trim();
                 tvFeedback.setVisibility(View.VISIBLE);
-                tvFeedback.setTextColor(0xFF38BDF8);
+                tvFeedback.setTextColor(colMuted);
                 tvFeedback.setText("Testing Deputy API connection...");
                 deputyApi.testConnection(t, new RosterProvider.Callback<String>() {
                     @Override
                     public void onSuccess(String msg) {
-                        tvFeedback.setTextColor(0xFF10B981);
+                        tvFeedback.setTextColor(colEmerald);
                         tvFeedback.setText("✓ " + msg);
                     }
 
                     @Override
                     public void onError(String err) {
-                        tvFeedback.setTextColor(0xFFF87171);
+                        tvFeedback.setTextColor(colCrimson);
                         tvFeedback.setText("✗ " + err);
                     }
                 });
@@ -21679,7 +21649,7 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
         });
         btnRow.addView(btnTest);
 
-        TextView btnSave = actionButton("💾 Save & Sync", 0xFF13C5BE, 0xFF000000);
+        TextView btnSave = actionButton("Save & Sync", colAccent, colAccentInk);
         btnSave.setTextSize(11.5f);
         ((LinearLayout.LayoutParams) btnSave.getLayoutParams()).leftMargin = dp(4);
         btnSave.setOnClickListener(new View.OnClickListener() {
@@ -21702,7 +21672,7 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
     private LinearLayout buildDeputyShiftCard(String day, String hours, String details, boolean isCurrent) {
         LinearLayout card = new LinearLayout(this);
         card.setOrientation(LinearLayout.VERTICAL);
-        card.setBackground(rounded(isCurrent ? 0xFF14243B : 0xFF0B1220, dp(16)));
+        card.setBackground(rounded(isCurrent ? colPanel2 : colPanel, dp(16)));
         card.setPadding(dp(16), dp(14), dp(16), dp(14));
         card.setElevation(isCurrent ? dp(6) : dp(2));
         LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(
@@ -21716,7 +21686,7 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
 
         TextView tvDay = new TextView(this);
         tvDay.setText(day);
-        tvDay.setTextColor(isCurrent ? 0xFF00E5FF : 0xFFFFFFFF);
+        tvDay.setTextColor(isCurrent ? colAccent : colPale);
         tvDay.setTextSize(13.5f);
         tvDay.setTypeface(Typeface.DEFAULT_BOLD);
         LinearLayout.LayoutParams dlp = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
@@ -21725,11 +21695,11 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
 
         TextView tvStatus = new TextView(this);
         tvStatus.setText(isCurrent ? "✓ ON DUTY" : (hours.contains("OFF") ? "REST DAY" : "CONFIRMED"));
-        tvStatus.setTextColor(isCurrent ? 0xFF10B981 : (hours.contains("OFF") ? 0xFF64748B : 0xFF00E5FF));
+        tvStatus.setTextColor(isCurrent ? colEmerald : (hours.contains("OFF") ? colQuiet : colAccent));
         tvStatus.setTextSize(9f);
         tvStatus.setTypeface(Typeface.create(Typeface.MONOSPACE, Typeface.BOLD));
         tvStatus.setPadding(dp(8), dp(3), dp(8), dp(3));
-        tvStatus.setBackground(rounded(isCurrent ? 0x2210B981 : 0x2200E5FF, dp(6)));
+        tvStatus.setBackground(rounded(isCurrent ? colEmeraldSoft : colAccentSoft, dp(6)));
         top.addView(tvStatus);
         card.addView(top);
 
@@ -21748,8 +21718,8 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
         btm.addView(tvHours);
 
         TextView tvDetails = new TextView(this);
-        tvDetails.setText("🛡️ " + details);
-        tvDetails.setTextColor(0xFF94A3B8);
+        tvDetails.setText(details);
+        tvDetails.setTextColor(colMuted);
         tvDetails.setTextSize(11f);
         btm.addView(tvDetails);
 
@@ -21832,7 +21802,7 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
         topBar.addView(btnReturn);
 
         TextView btnDocs = new TextView(this);
-        btnDocs.setText("📚 DOCS & SOPS");
+        btnDocs.setText("DOCS & SOPS");
         btnDocs.setTextColor(0xFF00E5FF);
         btnDocs.setTextSize(10.5f);
         btnDocs.setTypeface(Typeface.create(Typeface.MONOSPACE, Typeface.BOLD));
@@ -21923,7 +21893,7 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
             officerCard.addView(facName);
 
             TextView offInfo = new TextView(this);
-            offInfo.setText("🛡️ Officer Lochran Doherty · QLD Licence #41207 · Guard Hut");
+            offInfo.setText("Officer Lochran Doherty · QLD Licence #41207 · Guard Hut");
             offInfo.setTextColor(0xFF94A3B8);
             offInfo.setTextSize(11.5f);
             officerCard.addView(offInfo);
@@ -22027,7 +21997,7 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
         officerCard.addView(facName);
 
         TextView offInfo = new TextView(this);
-        offInfo.setText("🛡️ Officer Lochran Doherty · QLD Licence #41207 · Guard Hut");
+        offInfo.setText("Officer Lochran Doherty · QLD Licence #41207 · Guard Hut");
         offInfo.setTextColor(0xFF94A3B8);
         offInfo.setTextSize(11.5f);
         officerCard.addView(offInfo);
@@ -22096,7 +22066,7 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
     private LinearLayout buildLiveReliefRadarCard() {
         LinearLayout card = new LinearLayout(this);
         card.setOrientation(LinearLayout.VERTICAL);
-        card.setBackground(rounded(0xFF0F1E19, dp(16)));
+        card.setBackground(rounded(colPanel, dp(16)));
         card.setPadding(dp(16), dp(14), dp(16), dp(14));
         LinearLayout.LayoutParams clp = new LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
@@ -22122,7 +22092,7 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
         nextPill.setTextSize(9);
         nextPill.setTypeface(Typeface.MONOSPACE);
         nextPill.setPadding(dp(6), dp(2), dp(6), dp(2));
-        nextPill.setBackground(rounded(0x22E5A93C, dp(4)));
+        nextPill.setBackground(rounded(colAccentSoft, dp(4)));
         top.addView(nextPill);
         card.addView(top);
 
@@ -22137,13 +22107,13 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
                 if (count >= 2) break;
                 String gName = s.guardName + (s.isCurrentGuard ? " (You)" : "");
                 String sub = s.operationalUnit;
-                int col = (count == 0) ? colEmerald : colCyan;
-                activeRow.addView(buildGuardRadarChip("🛡️ " + gName, sub, col));
+                int col = s.isCurrentGuard ? colAccent : colPale;
+                activeRow.addView(buildGuardRadarChip(gName, sub, col));
                 count++;
             }
         } else {
-            activeRow.addView(buildGuardRadarChip("🛡️ Lochran (You)", "Post 01 Gatehouse", colEmerald));
-            activeRow.addView(buildGuardRadarChip("🛡️ Chris Ireton", "Yard Patrol", colCyan));
+            activeRow.addView(buildGuardRadarChip("Lochran (You)", "Post 01 Gatehouse", colAccent));
+            activeRow.addView(buildGuardRadarChip("Chris Ireton", "Yard Patrol", colPale));
         }
         card.addView(activeRow);
 
@@ -22151,12 +22121,13 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
         LinearLayout reliefBox = new LinearLayout(this);
         reliefBox.setOrientation(LinearLayout.HORIZONTAL);
         reliefBox.setGravity(Gravity.CENTER_VERTICAL);
-        reliefBox.setBackground(rounded(0x20000000, dp(8)));
+        reliefBox.setBackground(rounded(colPanel2, dp(8)));
         reliefBox.setPadding(dp(10), dp(8), dp(10), dp(8));
 
         TextView reliefIcon = new TextView(this);
-        reliefIcon.setText("🤝");
-        reliefIcon.setTextSize(14);
+        reliefIcon.setText("●");
+        reliefIcon.setTextColor(colAccent);
+        reliefIcon.setTextSize(10);
         reliefIcon.setPadding(0, 0, dp(8), 0);
         reliefBox.addView(reliefIcon);
 
@@ -22176,7 +22147,7 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
 
         TextView reliefSub = new TextView(this);
         reliefSub.setText("Shift: " + relHours + " · " + relPost);
-        reliefSub.setTextColor(0xFF94A3B8);
+        reliefSub.setTextColor(colMuted);
         reliefSub.setTextSize(10);
         reliefInfo.addView(reliefSub);
 
@@ -22189,7 +22160,7 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
     private LinearLayout buildGuardRadarChip(String name, String sub, int color) {
         LinearLayout chip = new LinearLayout(this);
         chip.setOrientation(LinearLayout.VERTICAL);
-        chip.setBackground(rounded(0x18000000, dp(8)));
+        chip.setBackground(rounded(colPanel2, dp(8)));
         chip.setPadding(dp(10), dp(6), dp(10), dp(6));
         LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
         lp.rightMargin = dp(4);
@@ -22204,7 +22175,7 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
 
         TextView tvSub = new TextView(this);
         tvSub.setText(sub);
-        tvSub.setTextColor(0xFF94A3B8);
+        tvSub.setTextColor(colMuted);
         tvSub.setTextSize(9.5f);
         chip.addView(tvSub);
 
@@ -22397,7 +22368,7 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
                 tile.addView(rowTop);
 
                 TextView tvGuard = new TextView(this);
-                tvGuard.setText(isMine ? "🛡️ Lochran (You)" : shift[1]);
+                tvGuard.setText(isMine ? "Lochran (You)" : shift[1]);
                 tvGuard.setTextColor(isMine ? colAccent : (isActive ? 0xFFFFFFFF : 0xFFCBD5E1));
                 tvGuard.setTextSize(10f);
                 tvGuard.setTypeface(Typeface.DEFAULT_BOLD);
@@ -22595,7 +22566,7 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
         card.addView(tvHours);
 
         TextView tvPost = new TextView(this);
-        tvPost.setText("📍 Guard Hut · " + primaryGuard);
+        tvPost.setText("Guard Hut ·" + primaryGuard);
         tvPost.setTextColor(0xFFCBD5E1);
         tvPost.setTextSize(11.5f);
         tvPost.setPadding(0, 0, 0, dp(10));
@@ -22617,7 +22588,7 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
             ovTop.setGravity(Gravity.CENTER_VERTICAL);
 
             TextView ovLbl = new TextView(this);
-            ovLbl.setText(isDualGuard ? "👥 2-GUARD ON-SITE OVERLAP (PTT ACTIVE)" : "👤 SHIFT RELIEF & CO-ORDINATION");
+            ovLbl.setText(isDualGuard ? "2-GUARD ON-SITE OVERLAP (PTT ACTIVE)" : "SHIFT RELIEF & CO-ORDINATION");
             ovLbl.setTextColor(isDualGuard ? 0xFFA855F7 : colQuiet);
             ovLbl.setTextSize(8.5f);
             ovLbl.setTypeface(Typeface.MONOSPACE);
@@ -22627,7 +22598,7 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
 
             if (isDualGuard) {
                 TextView pttBadge = new TextView(this);
-                pttBadge.setText("📻 RADIO SYNCED");
+                pttBadge.setText("RADIO SYNCED");
                 pttBadge.setTextColor(0xFF00E5FF);
                 pttBadge.setTextSize(8);
                 pttBadge.setTypeface(Typeface.MONOSPACE);
@@ -22696,14 +22667,14 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
                 tlBar.addView(t2);
 
                 TextView overlapNote = new TextView(this);
-                overlapNote.setText("🤝 18:00 – 00:00 (6.0h Dual Patrol) · 00:00 – 06:00 (Solo Guard Hut)");
+                overlapNote.setText("18:00 – 00:00 (6.0h Dual Patrol) · 00:00 – 06:00 (Solo Guard Hut)");
                 overlapNote.setTextColor(0xFFCBD5E1);
                 overlapNote.setTextSize(9.5f);
                 overlapNote.setPadding(0, dp(4), 0, 0);
                 tlBar.addView(overlapNote);
             } else {
                 TextView soloNote = new TextView(this);
-                soloNote.setText("🤝 Solo Shift · Next Handover: Brian Rush @ 06:00 (Gatehouse Relief)");
+                soloNote.setText("Solo Shift · Next Handover: Brian Rush @ 06:00 (Gatehouse Relief)");
                 soloNote.setTextColor(colPale);
                 soloNote.setTextSize(9.5f);
                 soloNote.setPadding(0, dp(2), 0, 0);
@@ -22742,14 +22713,14 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
             pacerBox.setLayoutParams(pclp);
 
             TextView fLbl = new TextView(this);
-            fLbl.setText("😴 FATIGUE PACER: 14.5h Rest Gap prior · ✓ Compliant with 10h Break Rule");
+            fLbl.setText("FATIGUE PACER: 14.5h Rest Gap prior · ✓ Compliant with 10h Break Rule");
             fLbl.setTextColor(0xFF10B981);
             fLbl.setTextSize(9.5f);
             fLbl.setTypeface(Typeface.DEFAULT_BOLD);
             pacerBox.addView(fLbl);
 
             TextView wLbl = new TextView(this);
-            wLbl.setText("🌤️ WHS WEATHER BRIEF: 21.4°C · SSE 14 km/h · ⚡ Clear Radar · 🧊 No Hail Risk");
+            wLbl.setText("WHS WEATHER BRIEF: 21.4°C · SSE 14 km/h · Clear Radar · No Hail Risk");
             wLbl.setTextColor(0xFF38BDF8);
             wLbl.setTextSize(9.5f);
             wLbl.setPadding(0, dp(2), 0, 0);
@@ -22815,7 +22786,7 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
                     btnRadio.setOnClickListener(new View.OnClickListener() {
                         public void onClick(View v) {
                             hapticClick();
-                            banner.setText("📻 Switched PTT Radio to Hume Yard Dual-Patrol Channel (239.255.41.207)");
+                            banner.setText("Switched PTT Radio to Hume Yard Dual-Patrol Channel (239.255.41.207)");
                             banner.setVisibility(View.VISIBLE);
                         }
                     });
@@ -22832,7 +22803,7 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
         } else {
             // Rest Day Relax Card
             TextView rdoMsg = new TextView(this);
-            rdoMsg.setText("🌴 Enjoy your Rostered Day Off! Next shift begins Saturday 18:00.");
+            rdoMsg.setText("Enjoy your rostered day off. Next shift begins Saturday 18:00.");
             rdoMsg.setTextColor(colPale);
             rdoMsg.setTextSize(11.5f);
             rdoMsg.setPadding(0, dp(6), 0, dp(10));
@@ -22964,12 +22935,12 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
     }
 
     private void showShiftSwapDialog() {
-        final LinearLayout box = dialogContainer("🔄 Request Shift Swap", "ROSTER CO-ORDINATION", colCyan);
+        final LinearLayout box = dialogContainer("Request Shift Swap", "ROSTER CO-ORDINATION", colAccent);
 
         box.addView(formSectionLabel("SELECT TARGET SHIFT"));
         String[] shifts = {"Sun 30 Aug (18:00 - 06:00)", "Mon 31 Aug (18:00 - 06:00)", "Wed 02 Sep (18:00 - 06:00)"};
         final String[] selShift = {shifts[0]};
-        box.addView(buildChipGroup(shifts, selShift, true, colCyan));
+        box.addView(buildChipGroup(shifts, selShift, true, colAccent));
 
         box.addView(formSectionLabel("PROPOSE COVER WITH GUARD"));
         String[] guards = {"Officer Chris Ireton", "Officer Brian Rush", "Officer Bill", "Officer Jon Naylor"};
@@ -22991,11 +22962,11 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
         });
         btnRow.addView(btnCancel);
 
-        TextView btnSend = actionButton("Send Request", colCyan, 0xFF000000);
+        TextView btnSend = actionButton("Send Request", colAccent, colAccentInk);
         btnSend.setOnClickListener(new View.OnClickListener() {
             public void onClick(View v) {
                 hapticHeavyClick();
-                Toast.makeText(MainActivity.this, "Shift swap proposal dispatched to " + selGuard[0], Toast.LENGTH_SHORT).show();
+                Toast.makeText(MainActivity.this, "Shift swap request sent to " + selGuard[0], Toast.LENGTH_SHORT).show();
                 dlg.dismiss();
             }
         });
@@ -24572,7 +24543,7 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
             }
 
             // Floating Telemetry Easter Egg Badge
-            String badgeText = (activePass.isStarlinkTrain ? "✨ STARLINK TRAIN OVERHEAD" : ("🛰️ " + activePass.satName + " FLYOVER")) +
+            String badgeText = (activePass.isStarlinkTrain ? "STARLINK TRAIN OVERHEAD" : (activePass.satName + " FLYOVER")) +
                     " · " + String.format(Locale.US, "%.0f° EL", activePass.maxEl);
             badgeTextPaint.setTextSize(dpf(9.5f));
             float textWidth = badgeTextPaint.measureText(badgeText);
