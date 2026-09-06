@@ -180,7 +180,11 @@ ok
 # The version code is 1000 + the commit count, so every commit on master is a
 # strictly higher number and the updater can refuse to wind a phone back. The
 # old fixed 126 let a same-version reinstall replace a newer build with an older one.
-COMMITS=$(git rev-list --count HEAD 2>/dev/null || echo 0)
+# SQUASH_OFFSET absorbs the 2026-09-06 history squash (28 commits -> 1, which cut
+# the count by 27 and would otherwise regress the version below deployed builds).
+# It keeps the code monotonic and above the pre-squash high-water mark (319).
+SQUASH_OFFSET=30
+COMMITS=$(( $(git rev-list --count HEAD 2>/dev/null || echo 0) + SQUASH_OFFSET ))
 VERSION_CODE=$((1000 + COMMITS))
 VERSION_NAME="1.6.$COMMITS"
 say "manifest and resource table"

@@ -1774,7 +1774,7 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
 
             float cx = w / 2f;
             float cy = h / 2f;
-            float r = Math.min(w, h) / 2f - dpf(8f);
+            float r = Math.min(w, h) / 2f - dpf(22f);
 
             // 1. FULL 3D SPATIAL GYROSCOPE CAMERA PERSPECTIVE
             float tiltRoll = Math.max(-45f, Math.min(45f, smoothedTiltRoll));
@@ -3676,7 +3676,7 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
         DetailedCompassView compassView = new DetailedCompassView(this);
         activeCompassView = compassView;
         LinearLayout.LayoutParams cpl = new LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT, dp(200));
+                LinearLayout.LayoutParams.MATCH_PARENT, dp(280));
         cpl.bottomMargin = dp(10);
         compassView.setLayoutParams(cpl);
         card.addView(compassView);
@@ -3941,7 +3941,7 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
             rHub.addView(buildCompactToolTile("⚡", "OTA Updates", "v" + AutoUpdateManager.getAppVersion(this), colEmerald, "Check live GitHub build", new View.OnClickListener() {
                 public void onClick(View v) {
                     hapticHeavyClick();
-                    AutoUpdateManager.checkForUpdateAsync(MainActivity.this, true, new AutoUpdateManager.UpdateCheckCallback() {
+                    Toast.makeText(MainActivity.this, "Checking for updates…", Toast.LENGTH_SHORT).show(); AutoUpdateManager.checkForUpdateAsync(MainActivity.this, true, new AutoUpdateManager.UpdateCheckCallback() {
                         @Override
                         public void onUpdateFound(final String newSha, final long bytes) {
                             runOnUiThread(new Runnable() {
@@ -4228,8 +4228,68 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
         box.addView(buildGameChipsRow(gamesRow1));
         box.addView(buildGameChipsRow(gamesRow2));
 
+        rippleCard.setOnClickListener(new View.OnClickListener() {
+            public void onClick(View v) { hapticClick(); showGamesPickerSheet(); }
+        });
         rippleCard.addView(box);
         return rippleCard;
+    }
+
+    private void showGamesPickerSheet() {
+        final String[][] GAMES = {
+            {"chess", "Chess", "Two-player strategy"},
+            {"baduk", "Baduk", "Go / Weiqi"},
+            {"royal_ur", "Royal Ur", "Ancient race game"},
+            {"senet", "Senet", "Egyptian race"},
+            {"hnefatafl", "Hnefatafl", "Viking tafl"},
+            {"backgammon", "Backgammon", "Race and dice"},
+            {"morris", "Nine Men's Morris", "Mill game"},
+            {"connect4", "Connect Four", "Line up four"},
+            {"invaders", "Space Invaders", "Arcade"},
+            {"tetris", "Tetris", "Falling blocks"},
+        };
+        final LinearLayout box = dialogContainer("Choose a game", "RECREATION", colAccent);
+        final Dialog dlg = createDialogSheet(box);
+        LinearLayout grid = new LinearLayout(this);
+        grid.setOrientation(LinearLayout.VERTICAL);
+        LinearLayout row = null;
+        for (int i = 0; i < GAMES.length; i++) {
+            final String key = GAMES[i][0];
+            if (i % 2 == 0) {
+                row = new LinearLayout(this);
+                row.setOrientation(LinearLayout.HORIZONTAL);
+                grid.addView(row);
+            }
+            LinearLayout tile = new LinearLayout(this);
+            tile.setOrientation(LinearLayout.VERTICAL);
+            tile.setBackground(hairlinePressable(dp(14)));
+            tile.setPadding(dp(16), dp(16), dp(16), dp(16));
+            TextView name = new TextView(this);
+            name.setText(GAMES[i][1]);
+            name.setTextColor(colPale);
+            name.setTextSize(15.5f);
+            name.setTypeface(Fonts.text(this, 600));
+            tile.addView(name);
+            TextView sub = new TextView(this);
+            sub.setText(GAMES[i][2]);
+            sub.setTextColor(colQuiet);
+            sub.setTextSize(11f);
+            sub.setTypeface(Fonts.mono(this, false));
+            LinearLayout.LayoutParams sl = new LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+            sl.topMargin = dp(3);
+            sub.setLayoutParams(sl);
+            tile.addView(sub);
+            LinearLayout.LayoutParams tl = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
+            tl.setMargins(dp(4), dp(4), dp(4), dp(4));
+            tile.setLayoutParams(tl);
+            tile.setOnClickListener(new View.OnClickListener() {
+                public void onClick(View v) { hapticClick(); dlg.dismiss(); launchGameByKey(key); }
+            });
+            row.addView(tile);
+        }
+        box.addView(grid);
+        dlg.show();
     }
 
     private View buildGameChipsRow(final String[][] games) {
@@ -7221,7 +7281,7 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
             public void onClick(View v) {
                 hapticHeavyClick();
                 btnCheck.setText("⏳ Checking GitHub Master...");
-                AutoUpdateManager.checkForUpdateAsync(MainActivity.this, true, new AutoUpdateManager.UpdateCheckCallback() {
+                Toast.makeText(MainActivity.this, "Checking for updates…", Toast.LENGTH_SHORT).show(); AutoUpdateManager.checkForUpdateAsync(MainActivity.this, true, new AutoUpdateManager.UpdateCheckCallback() {
                     @Override
                     public void onUpdateFound(final String newSha, final long bytes) {
                         runOnUiThread(new Runnable() {
@@ -12015,9 +12075,9 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
         ribbon.setOrientation(LinearLayout.HORIZONTAL);
         ribbon.setGravity(Gravity.CENTER_VERTICAL);
         android.graphics.drawable.GradientDrawable rgd = new android.graphics.drawable.GradientDrawable();
-        rgd.setColor(league.tintColor);
+        rgd.setColor(colPanel2);
         rgd.setCornerRadius(dp(8));
-        rgd.setStroke(dp(1), league.color);
+        rgd.setStroke(dp(1), colLineSubtle);
         ribbon.setBackground(rgd);
         ribbon.setPadding(dp(10), dp(7), dp(10), dp(7));
         LinearLayout.LayoutParams rlp = new LinearLayout.LayoutParams(
@@ -12028,7 +12088,7 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
 
         TextView title = new TextView(this);
         title.setText(league.bannerTitle);
-        title.setTextColor(league.color);
+        title.setTextColor(colAccent);
         title.setTextSize(11f);
         title.setTypeface(Fonts.mono(this, true));
         ribbon.addView(title);
@@ -12042,7 +12102,7 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
         android.graphics.drawable.GradientDrawable cardGd = new android.graphics.drawable.GradientDrawable();
         cardGd.setColor(colPanel2);
         cardGd.setCornerRadius(dp(12));
-        cardGd.setStroke(dp(1), (0x55000000 | (m.league.color & 0x00FFFFFF)));
+        cardGd.setStroke(dp(1), colLineSubtle);
         row.setBackground(cardGd);
         row.setPadding(0, 0, dp(12), 0);
         LinearLayout.LayoutParams rlp = new LinearLayout.LayoutParams(
@@ -12053,7 +12113,7 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
         // 1. Left Discipline Color Accent Bar (4dp wide)
         View accentBar = new View(this);
         android.graphics.drawable.GradientDrawable bgBar = new android.graphics.drawable.GradientDrawable();
-        bgBar.setColor(m.league.color);
+        bgBar.setColor(colAccent);
         bgBar.setCornerRadii(new float[]{dp(12), dp(12), 0, 0, 0, 0, dp(12), dp(12)});
         accentBar.setBackground(bgBar);
         LinearLayout.LayoutParams ablp = new LinearLayout.LayoutParams(dp(5), LinearLayout.LayoutParams.MATCH_PARENT);
@@ -12074,11 +12134,11 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
 
         TextView lBadge = new TextView(this);
         lBadge.setText(m.league.label);
-        lBadge.setTextColor(m.league.color);
+        lBadge.setTextColor(colMuted);
         lBadge.setTextSize(10f);
         lBadge.setTypeface(Typeface.create(Typeface.MONOSPACE, Typeface.BOLD));
         lBadge.setPadding(dp(6), dp(2), dp(6), dp(2));
-        lBadge.setBackground(rounded(m.league.tintColor, dp(4)));
+        lBadge.setBackground(rounded(colPanel2, dp(4)));
         hLine.addView(lBadge);
 
         TextView sBadge = new TextView(this);
@@ -12137,9 +12197,9 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
         scoreBox.setOrientation(LinearLayout.HORIZONTAL);
         scoreBox.setGravity(Gravity.CENTER);
         android.graphics.drawable.GradientDrawable sbg = new android.graphics.drawable.GradientDrawable();
-        sbg.setColor(m.league.tintColor);
+        sbg.setColor(colPanel2);
         sbg.setCornerRadius(dp(8));
-        sbg.setStroke(dp(1), m.league.color);
+        sbg.setStroke(dp(1), colLineSubtle);
         scoreBox.setBackground(sbg);
         scoreBox.setPadding(dp(12), dp(5), dp(12), dp(5));
 
@@ -12149,7 +12209,7 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
             scoreTxt.setTextColor(colQuiet);
         } else {
             scoreTxt.setText(m.homeScore + " - " + m.awayScore);
-            scoreTxt.setTextColor(m.league.color);
+            scoreTxt.setTextColor(colPale);
         }
         scoreTxt.setTextSize(15f);
         scoreTxt.setTypeface(Typeface.create(Typeface.MONOSPACE, Typeface.BOLD));
@@ -12402,7 +12462,7 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
         btnOta.setOnClickListener(new View.OnClickListener() {
             public void onClick(View v) {
                 hapticHeavyClick();
-                AutoUpdateManager.checkForUpdateAsync(MainActivity.this, true, new AutoUpdateManager.UpdateCheckCallback() {
+                Toast.makeText(MainActivity.this, "Checking for updates…", Toast.LENGTH_SHORT).show(); AutoUpdateManager.checkForUpdateAsync(MainActivity.this, true, new AutoUpdateManager.UpdateCheckCallback() {
                     @Override
                     public void onUpdateFound(final String newSha, final long bytes) {
                         runOnUiThread(new Runnable() {
