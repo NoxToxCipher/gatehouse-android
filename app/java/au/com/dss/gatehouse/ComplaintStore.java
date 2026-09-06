@@ -149,6 +149,10 @@ public final class ComplaintStore {
 
     /** Files a complaint, name-free, and remembers the ticket on this phone. Returns the ticket. */
     public static Complaint lodge(Context ctx, String categoryKey, String text) {
+        return lodge(ctx, categoryKey, text, false);
+    }
+
+    public static Complaint lodge(Context ctx, String categoryKey, String text, boolean anonymous) {
         Complaint c = new Complaint();
         c.id = newTicket(ctx);
         c.category = categoryKey == null ? "other" : categoryKey;
@@ -159,7 +163,7 @@ public final class ComplaintStore {
         List<Complaint> list = all(ctx);
         list.add(0, c);
         save(ctx, list);
-        rememberMine(ctx, c.id);
+        rememberMine(ctx, c.id, anonymous);
         return c;
     }
 
@@ -229,8 +233,12 @@ public final class ComplaintStore {
     }
 
     private static void rememberMine(Context ctx, String id) {
+        rememberMine(ctx, id, false);
+    }
+
+    private static void rememberMine(Context ctx, String id, boolean anonymous) {
         SharedPreferences p = ctx.getSharedPreferences(PREFS, Context.MODE_PRIVATE);
-        String key = "mine_" + guardKey(ctx);
+        String key = "mine_" + (anonymous ? "anon" : guardKey(ctx));
         String raw = p.getString(key, "");
         p.edit().putString(key, raw.isEmpty() ? id : raw + "," + id).apply();
     }

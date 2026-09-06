@@ -7959,6 +7959,66 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
         fl.topMargin = dp(14);
         body.addView(field);
 
+        final boolean[] anon = { false };
+        if (GuardSession.active(this)) {
+            LinearLayout anonRow = new LinearLayout(this);
+            anonRow.setOrientation(LinearLayout.HORIZONTAL);
+            anonRow.setGravity(Gravity.CENTER_VERTICAL);
+            anonRow.setBackground(outlined(colLineSubtle, dp(12)));
+            anonRow.setPadding(dp(14), dp(12), dp(14), dp(12));
+            LinearLayout.LayoutParams arl = new LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+            arl.topMargin = dp(12);
+            anonRow.setLayoutParams(arl);
+
+            LinearLayout anonText = new LinearLayout(this);
+            anonText.setOrientation(LinearLayout.VERTICAL);
+            anonText.setLayoutParams(new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f));
+            TextView anonTitle = new TextView(this);
+            anonTitle.setText("Raise anonymously");
+            anonTitle.setTextColor(colPale);
+            anonTitle.setTextSize(14f);
+            anonTitle.setTypeface(Fonts.text(this, 600));
+            TextView anonSub = new TextView(this);
+            anonSub.setText("Not tied to your name. The reply still comes back to this app, under Yours.");
+            anonSub.setTextColor(colQuiet);
+            anonSub.setTextSize(11.5f);
+            anonSub.setTypeface(Fonts.text(this, 400));
+            LinearLayout.LayoutParams asl = new LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+            asl.topMargin = dp(2);
+            anonSub.setLayoutParams(asl);
+            anonText.addView(anonTitle);
+            anonText.addView(anonSub);
+            anonRow.addView(anonText);
+
+            final TextView anonState = new TextView(this);
+            anonState.setText("OFF");
+            anonState.setTextSize(11f);
+            anonState.setLetterSpacing(0.12f);
+            anonState.setGravity(Gravity.CENTER);
+            anonState.setPadding(dp(14), dp(7), dp(14), dp(7));
+            anonState.setTypeface(Fonts.mono(this, true));
+            anonState.setTextColor(colMuted);
+            anonState.setBackground(outlined(colLineSubtle, dp(9)));
+            LinearLayout.LayoutParams anl = new LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+            anl.leftMargin = dp(12);
+            anonState.setLayoutParams(anl);
+            anonRow.addView(anonState);
+
+            anonRow.setOnClickListener(new View.OnClickListener() {
+                public void onClick(View v) {
+                    hapticClick();
+                    anon[0] = !anon[0];
+                    anonState.setText(anon[0] ? "ON" : "OFF");
+                    anonState.setTextColor(anon[0] ? colBg : colMuted);
+                    anonState.setBackground(anon[0] ? rounded(colAccent, dp(9)) : outlined(colLineSubtle, dp(9)));
+                }
+            });
+            body.addView(anonRow);
+        }
+
         TextView send = actionButton("Send it in", colAccent, colBg);
         send.setBackground(rounded(colAccent, dp(12)));
         send.setTextColor(luminance(colAccent) > 0.55f ? 0xFF000000 : 0xFFFFFFFF);
@@ -7971,7 +8031,7 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
                     return;
                 }
                 hapticHeavyClick();
-                ComplaintStore.Complaint c = ComplaintStore.lodge(MainActivity.this, picked[0], text);
+                ComplaintStore.Complaint c = ComplaintStore.lodge(MainActivity.this, picked[0], text, anon[0]);
                 notifyComplaintLodged(c);
                 showComplaintLodged(dlg, c);
             }
