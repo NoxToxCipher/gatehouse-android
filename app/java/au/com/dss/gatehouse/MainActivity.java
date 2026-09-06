@@ -7662,7 +7662,7 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
                     .setContentIntent(pi)
                     .addAction(GatehouseNotify.action(this, "Open Speak up", pi));
             android.app.NotificationManager nm = (android.app.NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
-            nm.notify(5300 + (c.id.hashCode() & 0xff), b.build());
+            nm.notify(530000 + (Math.abs(c.id.hashCode()) % 100000), b.build());
         } catch (Throwable ignored) {}
     }
 
@@ -7684,7 +7684,7 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
                     .setContentIntent(pi)
                     .addAction(GatehouseNotify.action(this, "Read the reply", pi));
             android.app.NotificationManager nm = (android.app.NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
-            nm.notify(5400 + (c.id.hashCode() & 0xff), b.build());
+            nm.notify(730000 + (Math.abs(c.id.hashCode()) % 100000), b.build());
         } catch (Throwable ignored) {}
     }
 
