@@ -35,12 +35,17 @@ public class WearChronographActivity extends Activity {
     private Runnable clockRunnable;
     private GestureDetector gestureDetector;
 
-    private static final int COL_ACCENT = 0xFFFFD166;
+    // The same tokens the phone uses, so the watch is the same instrument.
+    private static final int COL_ACCENT = 0xFFE5A93C;
     private static final int COL_EMERALD = 0xFF10B981;
-    private static final int COL_CYAN = 0xFF00E5FF;
-    private static final int COL_LINE = 0x33475569;
-    private static final int COL_QUIET = 0xFF64748B;
+    private static final int COL_AMBER = 0xFFF59E0B;
+    private static final int COL_CRIMSON = 0xFFEF4444;
+    private static final int COL_CYAN = 0xFF06B6D4;
+    private static final int COL_LINE = 0xFF1E2B40;
+    private static final int COL_LINE_SUBTLE = 0xFF121B28;
+    private static final int COL_QUIET = 0xFF5B6B82;
     private static final int COL_MUTED = 0xFF94A3B8;
+    private static final int COL_PALE = 0xFFF3F6FA;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -105,26 +110,56 @@ public class WearChronographActivity extends Activity {
         private final Paint glowPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
         private final Paint tickPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
         private final Paint textPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+        private final Paint timePaint = new Paint(Paint.ANTI_ALIAS_FLAG);
         private final Paint pipPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+
+        // Read once. Re-reading display metrics every frame stutters on real hardware.
+        private final float density;
+
+        private RosterProvider.Result roster;
+        private long rosterLoadedAt;
 
         public ChronographWatchView(Context context) {
             super(context);
+            density = getResources().getDisplayMetrics().density;
+
             trackPaint.setStyle(Paint.Style.STROKE);
             trackPaint.setStrokeCap(Paint.Cap.ROUND);
-
             arcPaint.setStyle(Paint.Style.STROKE);
             arcPaint.setStrokeCap(Paint.Cap.ROUND);
-
             glowPaint.setStyle(Paint.Style.STROKE);
             glowPaint.setStrokeCap(Paint.Cap.ROUND);
-
             tickPaint.setStrokeCap(Paint.Cap.ROUND);
 
             textPaint.setTextAlign(Paint.Align.CENTER);
-            textPaint.setTypeface(Typeface.create(Typeface.MONOSPACE, Typeface.BOLD));
+            textPaint.setTypeface(Fonts.mono(context, true));
+            timePaint.setTextAlign(Paint.Align.CENTER);
+            timePaint.setTypeface(Fonts.display(context, true));
 
             pipPaint.setStyle(Paint.Style.FILL);
             pipPaint.setColor(0xFFFFFFFF);
+        }
+
+        private float dpf(float v) {
+            return v * density;
+        }
+
+        /** The live rostered shift, or null when nobody is on. Cached for a minute. */
+        private RosterProvider.Shift liveShift() {
+            try {
+                if (roster == null || System.currentTimeMillis() - rosterLoadedAt > 60000L) {
+                    roster = Rostering.create(getContext()).loadCachedResult();
+                    rosterLoadedAt = System.currentTimeMillis();
+                }
+                if (roster != null && roster.weekShifts != null) {
+                    long nowSec = System.currentTimeMillis() / 1000L;
+                    for (RosterProvider.Shift s : roster.weekShifts) {
+                        if (s == null || s.startTs <= 0) continue;
+                        if (s.startTs <= nowSec && nowSec < s.endTs) return s;
+                    }
+                }
+            } catch (Throwable ignored) {}
+            return null;
         }
 
         @Override
@@ -142,96 +177,115 @@ public class WearChronographActivity extends Activity {
             RectF outerRect = new RectF(cx - rOuter, cy - rOuter, cx + rOuter, cy + rOuter);
             RectF innerRect = new RectF(cx - rInner, cy - rInner, cx + rInner, cy + rInner);
 
-            // Shift Calculation (18:00 to 06:00 AEST = 12 hour shift default or 74% demo)
-            long now = System.currentTimeMillis();
             SimpleDateFormat sdfTime = new SimpleDateFormat("HH:mm:ss", Locale.US);
             sdfTime.setTimeZone(TimeZone.getDefault());
-            String timeStr = sdfTime.format(new Date(now));
+            String timeStr = sdfTime.format(new Date(System.currentTimeMillis()));
 
-            float shiftProgress = 0.74f; // 74% active patrol night shift
-            int pct = (int) (shiftProgress * 100);
-
-            // 1. Outer Inactive Track & Hourly Ticks
-            trackPaint.setColor(COL_LINE);
-            trackPaint.setStrokeWidth(12f);
-            canvas.drawArc(outerRect, 135f, 270f, false, trackPaint);
-
-            int tickCount = 12; // 12-hour shift ticks
-            for (int i = 0; i <= tickCount; i++) {
-                float angleDeg = 135f + (i * 270f / (float) tickCount);
-                double rad = Math.toRadians(angleDeg);
-                boolean isMajor = (i == 0 || i == tickCount || i == tickCount / 2);
-                float tLen = isMajor ? 18f : 10f;
-                float x1 = cx + (float) Math.cos(rad) * (rOuter + 6f);
-                float y1 = cy + (float) Math.sin(rad) * (rOuter + 6f);
-                float x2 = cx + (float) Math.cos(rad) * (rOuter + 6f + tLen);
-                float y2 = cy + (float) Math.sin(rad) * (rOuter + 6f + tLen);
-
-                tickPaint.setColor(isMajor ? COL_ACCENT : COL_QUIET);
-                tickPaint.setStrokeWidth(isMajor ? 4.5f : 2.5f);
-                canvas.drawLine(x1, y1, x2, y2, tickPaint);
+            // Real rostered shift. With nobody on, the dial says so rather than
+            // inventing progress.
+            RosterProvider.Shift live = liveShift();
+            boolean onShift = live != null;
+            float shiftProgress = 0f;
+            String startLabel = "";
+            String endLabel = "";
+            if (onShift) {
+                long total = Math.max(1, live.endTs - live.startTs);
+                shiftProgress = Math.min(1f, Math.max(0f,
+                        (System.currentTimeMillis() / 1000L - live.startTs) / (float) total));
+                SimpleDateFormat hm = new SimpleDateFormat("HH:mm", Locale.US);
+                startLabel = hm.format(new Date(live.startTs * 1000L));
+                endLabel = hm.format(new Date(live.endTs * 1000L));
             }
 
-            // 2. Active Glowing Progress Sweep
-            float outerSweep = shiftProgress * 270f;
-            glowPaint.setColor(COL_ACCENT);
-            glowPaint.setAlpha(65);
-            glowPaint.setStrokeWidth(24f);
-            canvas.drawArc(outerRect, 135f, outerSweep, false, glowPaint);
+            // Outer track and notches
+            trackPaint.setColor(COL_LINE);
+            trackPaint.setStrokeWidth(dpf(6f));
+            canvas.drawArc(outerRect, 135f, 270f, false, trackPaint);
 
-            arcPaint.setColor(COL_ACCENT);
-            arcPaint.setStrokeWidth(12f);
-            canvas.drawArc(outerRect, 135f, outerSweep, false, arcPaint);
+            int tickCount = 12;
+            for (int i = 0; i <= tickCount; i++) {
+                double rad = Math.toRadians(135f + (i * 270f / (float) tickCount));
+                boolean isMajor = (i % 3 == 0);
+                boolean isEdge = (i == 0 || i == tickCount || i == tickCount / 2);
+                float tLen = isMajor ? dpf(6f) : dpf(3.5f);
+                float rIn = rOuter + dpf(5f);
+                tickPaint.setColor(isEdge ? COL_ACCENT : COL_QUIET);
+                tickPaint.setStrokeWidth(isMajor ? dpf(1.8f) : dpf(1.0f));
+                canvas.drawLine(
+                        cx + (float) Math.cos(rad) * rIn,
+                        cy + (float) Math.sin(rad) * rIn,
+                        cx + (float) Math.cos(rad) * (rIn + tLen),
+                        cy + (float) Math.sin(rad) * (rIn + tLen), tickPaint);
+            }
 
-            // Progress Cursor Head Pip
-            double headRad = Math.toRadians(135f + outerSweep);
-            float hx = cx + (float) Math.cos(headRad) * rOuter;
-            float hy = cy + (float) Math.sin(headRad) * rOuter;
-            canvas.drawCircle(hx, hy, 7.5f, pipPaint);
+            // Shift sweep, with the phone glow pass and head dot
+            if (onShift && shiftProgress > 0f) {
+                float outerSweep = Math.max(0.01f, shiftProgress * 270f);
+                glowPaint.setColor(COL_ACCENT);
+                glowPaint.setAlpha(60);
+                glowPaint.setStrokeWidth(dpf(11f));
+                canvas.drawArc(outerRect, 135f, outerSweep, false, glowPaint);
 
-            // 3. Inner Secondary Track (Cyan / Emerald)
-            trackPaint.setStrokeWidth(7f);
-            trackPaint.setColor(0x22475569);
+                arcPaint.setColor(COL_ACCENT);
+                arcPaint.setStrokeWidth(dpf(6f));
+                canvas.drawArc(outerRect, 135f, outerSweep, false, arcPaint);
+
+                double headRad = Math.toRadians(135f + outerSweep);
+                canvas.drawCircle(cx + (float) Math.cos(headRad) * rOuter,
+                        cy + (float) Math.sin(headRad) * rOuter, dpf(2.5f), pipPaint);
+            }
+
+            // Inner ring is the welfare countdown, exactly as on the phone
+            trackPaint.setStrokeWidth(dpf(4f));
+            trackPaint.setColor(COL_LINE_SUBTLE);
             canvas.drawArc(innerRect, 135f, 270f, false, trackPaint);
 
-            float innerSweep = (1f - shiftProgress) * 270f;
-            arcPaint.setColor(COL_EMERALD);
-            arcPaint.setStrokeWidth(7f);
-            canvas.drawArc(innerRect, 135f, innerSweep, false, arcPaint);
+            long minsLeft = 0;
+            try {
+                minsLeft = Launcher.welfareMinutesLeft(getContext());
+            } catch (Throwable ignored) {}
+            float welfareLeft = Math.max(0f, Math.min(1f, minsLeft / 90f));
+            float welfareFrac = 1f - welfareLeft;
+            int welfareCol = welfareFrac > 0.85f
+                    ? COL_CRIMSON : (welfareFrac > 0.60f ? COL_AMBER : COL_EMERALD);
+            if (welfareLeft > 0f) {
+                arcPaint.setColor(welfareCol);
+                arcPaint.setStrokeWidth(dpf(4f));
+                canvas.drawArc(innerRect, 135f, Math.max(0.01f, welfareLeft * 270f), false, arcPaint);
+            }
 
-            // 4. Center Monospace Digital Core Display
-            // Top: Shift %
+            // Centre, set like the phone chronograph
             textPaint.setColor(COL_ACCENT);
             textPaint.setTextSize(w * 0.055f);
-            textPaint.setLetterSpacing(0.08f);
-            canvas.drawText("SHIFT " + pct + "%", cx, cy - (h * 0.10f), textPaint);
+            textPaint.setLetterSpacing(0.12f);
+            canvas.drawText(onShift ? "SHIFT " + Math.round(shiftProgress * 100) + "%" : "OFF SHIFT",
+                    cx, cy - (h * 0.10f), textPaint);
 
-            // Center: Digital Time
-            textPaint.setColor(0xFFFFFFFF);
-            textPaint.setTextSize(w * 0.14f);
-            textPaint.setLetterSpacing(0.02f);
-            canvas.drawText(timeStr, cx, cy + (h * 0.035f), textPaint);
+            // HH:mm:ss is eight glyphs wide. Above about 0.125w the string runs
+            // past the inner welfare ring on a round watch, so keep it under that.
+            timePaint.setColor(COL_PALE);
+            timePaint.setTextSize(w * 0.118f);
+            canvas.drawText(timeStr, cx, cy + (h * 0.040f), timePaint);
 
-            // Bottom: Subtitle AEST · BRISBANE
             textPaint.setColor(COL_QUIET);
             textPaint.setTextSize(w * 0.040f);
-            textPaint.setLetterSpacing(0.12f);
-            canvas.drawText("AEST · BRISBANE", cx, cy + (h * 0.14f), textPaint);
-
-            // 5. Baseline 18:00 / 06:00 Timestamps
-            textPaint.setTextSize(w * 0.042f);
-            textPaint.setColor(COL_MUTED);
+            textPaint.setLetterSpacing(0.14f);
+            canvas.drawText("AEST \u00b7 BRISBANE", cx, cy + (h * 0.145f), textPaint);
             textPaint.setLetterSpacing(0f);
 
-            double leftRad = Math.toRadians(135.0);
-            float lx = cx + (float) Math.cos(leftRad) * (rOuter + 28f);
-            float ly = cy + (float) Math.sin(leftRad) * (rOuter + 28f);
-            canvas.drawText("18:00", lx - 8f, ly + 14f, textPaint);
-
-            double rightRad = Math.toRadians(45.0);
-            float rx = cx + (float) Math.cos(rightRad) * (rOuter + 28f);
-            float ry = cy + (float) Math.sin(rightRad) * (rOuter + 28f);
-            canvas.drawText("06:00", rx + 8f, ry + 14f, textPaint);
+            // The shift real ends, not a fixed 18:00 / 06:00
+            if (onShift) {
+                textPaint.setTextSize(w * 0.042f);
+                textPaint.setColor(COL_MUTED);
+                double leftRad = Math.toRadians(135.0);
+                canvas.drawText(startLabel,
+                        cx + (float) Math.cos(leftRad) * (rOuter + dpf(20f)) - dpf(4f),
+                        cy + (float) Math.sin(leftRad) * (rOuter + dpf(20f)) + dpf(12f), textPaint);
+                double rightRad = Math.toRadians(45.0);
+                canvas.drawText(endLabel,
+                        cx + (float) Math.cos(rightRad) * (rOuter + dpf(20f)) + dpf(4f),
+                        cy + (float) Math.sin(rightRad) * (rOuter + dpf(20f)) + dpf(12f), textPaint);
+            }
         }
     }
 }
