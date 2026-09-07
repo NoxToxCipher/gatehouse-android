@@ -2396,17 +2396,23 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
         private OnPressureChangedListener listener;
         private int lastHapticPsi = -1;
 
+        // Read once. Re-reading display metrics every frame is the pattern that
+        // is free on an emulator and a stutter on a real phone.
+        private final float density;
+
         public PressureGaugeView(Context context) {
             super(context);
+            density = getResources().getDisplayMetrics().density;
+
             outerBezelPaint.setStyle(Paint.Style.STROKE);
-            outerBezelPaint.setColor(0xFF1E293B);
+            outerBezelPaint.setColor(colLineSubtle);
 
             dialBackPaint.setStyle(Paint.Style.FILL);
-            dialBackPaint.setColor(0xFF070B14);
+            dialBackPaint.setColor(colPanel);
 
             trackPaint.setStyle(Paint.Style.STROKE);
             trackPaint.setStrokeCap(Paint.Cap.ROUND);
-            trackPaint.setColor(0xFF1E293B);
+            trackPaint.setColor(colLine);
 
             arcPaint.setStyle(Paint.Style.STROKE);
             arcPaint.setStrokeCap(Paint.Cap.ROUND);
@@ -2415,39 +2421,52 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
             tickPaint.setStrokeCap(Paint.Cap.ROUND);
 
             labelPaint.setTextAlign(Paint.Align.CENTER);
-            labelPaint.setTypeface(Typeface.create(Typeface.MONOSPACE, Typeface.BOLD));
-
-            needleShadowPaint.setStyle(Paint.Style.FILL);
-            needleShadowPaint.setColor(0x55000000);
+            labelPaint.setTypeface(Fonts.mono(context, true));
 
             needlePaint.setStyle(Paint.Style.FILL);
 
             hubOuterPaint.setStyle(Paint.Style.FILL);
-            hubOuterPaint.setColor(0xFF475569);
-
             hubInnerPaint.setStyle(Paint.Style.FILL);
-            hubInnerPaint.setColor(0xFF0F172A);
-
-            hudBgPaint.setStyle(Paint.Style.FILL);
-            hudBgPaint.setColor(0xEE0B1222);
-
-            hudBorderPaint.setStyle(Paint.Style.STROKE);
-            hudBorderPaint.setColor(0xFF1E293B);
 
             digitalValPaint.setTextAlign(Paint.Align.CENTER);
-            digitalValPaint.setTypeface(Typeface.create(Typeface.MONOSPACE, Typeface.BOLD));
-
-            digitalUnitPaint.setTextAlign(Paint.Align.LEFT);
-            digitalUnitPaint.setTypeface(Typeface.create(Typeface.MONOSPACE, Typeface.BOLD));
+            digitalValPaint.setTypeface(Fonts.display(context, true));
 
             digitalSubPaint.setTextAlign(Paint.Align.CENTER);
-            digitalSubPaint.setTypeface(Typeface.create(Typeface.MONOSPACE, Typeface.BOLD));
+            digitalSubPaint.setTypeface(Fonts.mono(context, true));
 
             animatedNeedleAngle = psiToAngle(currentPressure);
         }
 
         private float dpf(float v) {
-            return v * getResources().getDisplayMetrics().density;
+            return v * density;
+        }
+
+        /** The reading drives one colour. Nothing else on the dial is coloured. */
+        private int stateColour() {
+            if (currentPressure < 800) return colCrimson;
+            if (currentPressure < 1100) return colAmber;
+            if (currentPressure <= 1350) return colEmerald;
+            return colAmber;
+        }
+
+        private String stateWord() {
+            if (currentPressure < 800) return "CRITICAL";
+            if (currentPressure < 1100) return "LOW";
+            if (currentPressure <= 1350) return "NOMINAL";
+            return "HIGH";
+        }
+
+        private void drawScaleLabel(Canvas canvas, float cx, float cy, float radius, int psi) {
+            double rad = Math.toRadians(psiToAngle(psi));
+            float rText = radius - dpf(17f);
+            float tx = (float) (cx + Math.cos(rad) * rText);
+            float ty = (float) (cy + Math.sin(rad) * rText) + dpf(3.2f);
+            labelPaint.setColor(psi == 1200 ? colAccent : colQuiet);
+            labelPaint.setTextSize(dpf(8.5f));
+            String s = psi >= 1000
+                    ? (psi % 1000 == 0 ? (psi / 1000) + "k" : String.format(Locale.US, "%.1fk", psi / 1000f))
+                    : String.valueOf(psi);
+            canvas.drawText(s, tx, ty, labelPaint);
         }
 
         public void setOnPressureChangedListener(OnPressureChangedListener l) {
@@ -2553,150 +2572,134 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
             float cy = h * 0.44f;
             float radius = Math.min(w * 0.46f, h * 0.42f);
 
-            // 1. Recessed Obsidian Instrument Background & CNC Bezel
+            // Recessed dial and a hairline bezel
             canvas.drawCircle(cx, cy, radius + dpf(7f), dialBackPaint);
-            outerBezelPaint.setStrokeWidth(dpf(2.5f));
-            canvas.drawCircle(cx, cy, radius + dpf(6f), outerBezelPaint);
+            outerBezelPaint.setStrokeWidth(dpf(1.2f));
+            canvas.drawCircle(cx, cy, radius + dpf(7f), outerBezelPaint);
 
             arcRect.set(cx - radius, cy - radius, cx + radius, cy + radius);
 
-            // 2. Base Background Track
-            trackPaint.setStrokeWidth(dpf(6f));
+            // Quiet track across the whole range
+            trackPaint.setStrokeWidth(dpf(7f));
             canvas.drawArc(arcRect, START_ANGLE, SWEEP_ANGLE, false, trackPaint);
 
-            // 🚨 Critical Low Zone (0 - 800 PSI · Red Warning)
-            float redSweep = (800f / MAX_PSI) * SWEEP_ANGLE;
-            arcPaint.setColor(0xFFEF4444);
-            arcPaint.setStrokeWidth(dpf(5f));
-            canvas.drawArc(arcRect, START_ANGLE, redSweep, false, arcPaint);
+            // In-spec window, stated once and quietly
+            float inStart = START_ANGLE + (1100f / MAX_PSI) * SWEEP_ANGLE;
+            float inSweep = (250f / MAX_PSI) * SWEEP_ANGLE;
+            arcPaint.setColor(colEmerald);
+            arcPaint.setAlpha(70);
+            arcPaint.setStrokeWidth(dpf(2.5f));
+            canvas.drawArc(arcRect, inStart, inSweep, false, arcPaint);
+            arcPaint.setAlpha(255);
 
-            // ⚠️ Jack Up Zone (800 - 1,100 PSI · Amber Warning at 1,000 PSI)
-            float yellowStart = START_ANGLE + redSweep;
-            float yellowSweep = (300f / MAX_PSI) * SWEEP_ANGLE;
-            arcPaint.setColor(0xFFF59E0B);
-            arcPaint.setStrokeWidth(dpf(5f));
-            canvas.drawArc(arcRect, yellowStart, yellowSweep, false, arcPaint);
+            // The reading itself, carrying the only colour on the dial
+            int stateCol = stateColour();
+            float valSweep = Math.max(0.01f,
+                    ((currentPressure - MIN_PSI) * 1f / (MAX_PSI - MIN_PSI)) * SWEEP_ANGLE);
+            arcPaint.setColor(stateCol);
+            arcPaint.setAlpha(60);
+            arcPaint.setStrokeWidth(dpf(12f));
+            canvas.drawArc(arcRect, START_ANGLE, valSweep, false, arcPaint);
+            arcPaint.setAlpha(255);
+            arcPaint.setStrokeWidth(dpf(7f));
+            canvas.drawArc(arcRect, START_ANGLE, valSweep, false, arcPaint);
 
-            // ✓ Nominal Optimal Zone (1,100 - 1,350 PSI · Emerald Target Centered on 1,200 PSI★)
-            float greenStart = yellowStart + yellowSweep;
-            float greenSweep = (250f / MAX_PSI) * SWEEP_ANGLE;
-            arcPaint.setColor(0xFF10B981);
-            arcPaint.setStrokeWidth(dpf(7.5f));
-            canvas.drawArc(arcRect, greenStart, greenSweep, false, arcPaint);
+            // Head dot, as on the shift dial
+            double headRad = Math.toRadians(START_ANGLE + valSweep);
+            hubOuterPaint.setColor(0xFFFFFFFF);
+            canvas.drawCircle(cx + (float) Math.cos(headRad) * radius,
+                    cy + (float) Math.sin(headRad) * radius, dpf(2.5f), hubOuterPaint);
 
-            // ⚠️ High Surge Zone (1,350 - 1,600 PSI)
-            float surgeStart = greenStart + greenSweep;
-            float surgeSweep = (250f / MAX_PSI) * SWEEP_ANGLE;
-            arcPaint.setColor(colAccent);
-            arcPaint.setStrokeWidth(dpf(5f));
-            canvas.drawArc(arcRect, surgeStart, surgeSweep, false, arcPaint);
-
-            // 3. Laser-Etched Graduation Ticks (Every 100 PSI, Major at 0, 400, 800, 1000, 1200, 1600)
+            // Graduations outside the track. Brass only at the target.
             for (int psi = 0; psi <= MAX_PSI; psi += 100) {
-                float a = psiToAngle(psi);
-                double rad = Math.toRadians(a);
-                boolean isMajor = (psi % 400 == 0) || (psi == 1000) || (psi == 1200);
+                double rad = Math.toRadians(psiToAngle(psi));
+                boolean isMajor = (psi % 400 == 0);
                 boolean isTarget = (psi == 1200);
-                boolean isBad = (psi == 800);
-                boolean isJack = (psi == 1000);
-
-                float tLen = isMajor ? dpf(7.5f) : dpf(3.5f);
-                float rOuter = radius - dpf(5f);
-                float rInner = rOuter - tLen;
-
-                float x1 = (float) (cx + Math.cos(rad) * rOuter);
-                float y1 = (float) (cy + Math.sin(rad) * rOuter);
-                float x2 = (float) (cx + Math.cos(rad) * rInner);
-                float y2 = (float) (cy + Math.sin(rad) * rInner);
-
-                int tCol = isTarget ? 0xFF10B981 : (isBad ? 0xFFEF4444 : (isJack ? 0xFFF59E0B : 0xFF64748B));
-                tickPaint.setColor(tCol);
+                float tLen = isMajor ? dpf(6f) : dpf(3.5f);
+                float rIn = radius + dpf(5f);
+                tickPaint.setColor(isTarget ? colAccent : colQuiet);
                 tickPaint.setStrokeWidth(isMajor ? dpf(1.8f) : dpf(1.0f));
-                canvas.drawLine(x1, y1, x2, y2, tickPaint);
-
-                // Numerical Scale Labels (Generous clearance inside dial)
-                if (isMajor) {
-                    float rText = rInner - dpf(10f);
-                    float tx = (float) (cx + Math.cos(rad) * rText);
-                    float ty = (float) (cy + Math.sin(rad) * rText) + dpf(3.2f);
-
-                    labelPaint.setColor(isTarget ? 0xFF10B981 : (isBad ? 0xFFEF4444 : (isJack ? 0xFFF59E0B : 0xFF94A3B8)));
-                    labelPaint.setTextSize(isTarget ? dpf(9.5f) : dpf(8f));
-                    String valStr = isTarget ? "1.2k★" : (psi >= 1000 ? (psi / 1000f == (int)(psi/1000f) ? (psi/1000 + "k") : String.format(Locale.US, "%.1fk", psi/1000f)) : String.valueOf(psi));
-                    canvas.drawText(valStr, tx, ty, labelPaint);
-                }
+                canvas.drawLine(
+                        cx + (float) Math.cos(rad) * rIn,
+                        cy + (float) Math.sin(rad) * rIn,
+                        cx + (float) Math.cos(rad) * (rIn + tLen),
+                        cy + (float) Math.sin(rad) * (rIn + tLen), tickPaint);
             }
 
-            // 4. Bi-Tone Tapered Aerodynamic Needle with Dynamic Drop Shadow
+            for (int psi = 0; psi <= MAX_PSI; psi += 400) {
+                drawScaleLabel(canvas, cx, cy, radius, psi);
+            }
+
+            // Needle stays neutral so the arc carries the state
             double nRad = Math.toRadians(animatedNeedleAngle);
-            double nRadPerp = nRad + Math.PI / 2.0;
-
-            float needleLen = radius - dpf(12f);
-            float baseW = dpf(3.2f);
-
-            float tipX = (float) (cx + Math.cos(nRad) * needleLen);
-            float tipY = (float) (cy + Math.sin(nRad) * needleLen);
-            float b1X = (float) (cx + Math.cos(nRadPerp) * baseW);
-            float b1Y = (float) (cy + Math.sin(nRadPerp) * baseW);
-            float b2X = (float) (cx - Math.cos(nRadPerp) * baseW);
-            float b2Y = (float) (cy - Math.sin(nRadPerp) * baseW);
-
-            // Needle Drop Shadow
-            float sOffX = dpf(2f);
-            float sOffY = dpf(3f);
-            needleShadowPath.reset();
-            needleShadowPath.moveTo(tipX + sOffX, tipY + sOffY);
-            needleShadowPath.lineTo(b1X + sOffX, b1Y + sOffY);
-            needleShadowPath.lineTo(b2X + sOffX, b2Y + sOffY);
-            needleShadowPath.close();
-            canvas.drawPath(needleShadowPath, needleShadowPaint);
-
-            // Needle Main Body
+            double nPerp = nRad + Math.PI / 2.0;
+            float needleLen = radius - dpf(15f);
+            float baseW = dpf(2.6f);
             needlePath.reset();
-            needlePath.moveTo(tipX, tipY);
-            needlePath.lineTo(b1X, b1Y);
-            needlePath.lineTo(b2X, b2Y);
+            needlePath.moveTo((float) (cx + Math.cos(nRad) * needleLen),
+                    (float) (cy + Math.sin(nRad) * needleLen));
+            needlePath.lineTo((float) (cx + Math.cos(nPerp) * baseW), (float) (cy + Math.sin(nPerp) * baseW));
+            needlePath.lineTo((float) (cx - Math.cos(nPerp) * baseW), (float) (cy - Math.sin(nPerp) * baseW));
             needlePath.close();
-
-            int needleColor = currentPressure < 800 ? 0xFFEF4444 : (currentPressure < 1100 ? 0xFFF59E0B : 0xFF10B981);
-            needlePaint.setColor(needleColor);
+            needlePaint.setColor(colPale);
             canvas.drawPath(needlePath, needlePaint);
 
-            // Center Titanium Knurled Bezel Hub
-            canvas.drawCircle(cx, cy, dpf(6.5f), hubOuterPaint);
-            canvas.drawCircle(cx, cy, dpf(3.0f), hubInnerPaint);
+            hubOuterPaint.setColor(colPale);
+            canvas.drawCircle(cx, cy, dpf(4.5f), hubOuterPaint);
+            hubInnerPaint.setColor(colBg);
+            canvas.drawCircle(cx, cy, dpf(2f), hubInnerPaint);
 
-            // 5. Dedicated Aerospace Digital HUD Pod (Zero Text Overlap!)
-            float podW = dpf(140f);
-            float podH = dpf(42f);
-            float podTop = cy + radius * 0.40f;
-            float podBottom = podTop + podH;
-            hudRect.set(cx - podW / 2f, podTop, cx + podW / 2f, podBottom);
+            // Readout set like the chronograph centre. No pod, no border.
+            float readTop = cy + radius * 0.46f;
+            labelPaint.setColor(colQuiet);
+            labelPaint.setTextSize(dpf(8.5f));
+            labelPaint.setLetterSpacing(0.18f);
+            canvas.drawText("LINE PRESSURE", cx, readTop, labelPaint);
+            labelPaint.setLetterSpacing(0f);
 
-            hudBorderPaint.setStrokeWidth(dpf(1.2f));
-            canvas.drawRoundRect(hudRect, dpf(10f), dpf(10f), hudBgPaint);
-            canvas.drawRoundRect(hudRect, dpf(10f), dpf(10f), hudBorderPaint);
+            digitalValPaint.setColor(colPale);
+            digitalValPaint.setTextSize(dpf(27f));
+            canvas.drawText(String.format(Locale.US, "%,d", currentPressure), cx, readTop + dpf(27f), digitalValPaint);
 
-            // Line 1: Digital Pressure Readout (e.g. "1,200 PSI")
-            digitalValPaint.setColor(0xFFF8FAFC);
-            digitalValPaint.setTextSize(dpf(17f));
-            String pStr = String.format(Locale.US, "%,d", currentPressure);
-            canvas.drawText(pStr + " PSI", cx, podTop + dpf(19f), digitalValPaint);
-
-            // Line 2: Status Tag Pill
+            digitalSubPaint.setColor(stateCol);
             digitalSubPaint.setTextSize(dpf(9f));
-            if (currentPressure >= 1100 && currentPressure <= 1350) {
-                digitalSubPaint.setColor(0xFF10B981);
-                canvas.drawText("NOMINAL · 1,200 PSI", cx, podTop + dpf(33f), digitalSubPaint);
-            } else if (currentPressure < 800) {
-                digitalSubPaint.setColor(0xFFEF4444);
-                canvas.drawText("CRITICAL · UNDER 800 PSI", cx, podTop + dpf(33f), digitalSubPaint);
-            } else if (currentPressure < 1100) {
-                digitalSubPaint.setColor(0xFFF59E0B);
-                canvas.drawText("JACK PUMP · 1,000 PSI", cx, podTop + dpf(33f), digitalSubPaint);
+            digitalSubPaint.setLetterSpacing(0.14f);
+            canvas.drawText("PSI · " + stateWord(), cx, readTop + dpf(43f), digitalSubPaint);
+            digitalSubPaint.setLetterSpacing(0f);
+        }
+    }
+
+    /**
+     * Lights the preset band the reading currently sits in, in the same colour the
+     * gauge arc is showing. Thresholds mirror PressureGaugeView.stateColour(), so the
+     * chip and the dial can never disagree.
+     */
+    private void styleGaugePresets(List<TextView> chips, int psi) {
+        if (chips == null || chips.isEmpty()) return;
+
+        // Active chip is the nearest preset, so tapping a chip always lights that chip.
+        final int[] presets = {800, 1000, 1200, 1400};
+        int active = 0;
+        int best = Integer.MAX_VALUE;
+        for (int i = 0; i < presets.length && i < chips.size(); i++) {
+            int d = Math.abs(psi - presets[i]);
+            if (d <= best) { best = d; active = i; }
+        }
+
+        // Colour comes from the reading, not the band, so it always agrees with the dial.
+        int col;
+        if (psi < 800) col = colCrimson;
+        else if (psi < 1100) col = colAmber;
+        else if (psi <= 1350) col = colEmerald;
+        else col = colAmber;
+        for (int i = 0; i < chips.size(); i++) {
+            TextView c = chips.get(i);
+            if (i == active) {
+                c.setTextColor(luminance(col) > 0.55f ? 0xFF000000 : 0xFFFFFFFF);
+                c.setBackground(rounded(col, dp(10)));
             } else {
-                digitalSubPaint.setColor(colAccent);
-                canvas.drawText("HIGH SURGE · OVER 1,350 PSI", cx, podTop + dpf(33f), digitalSubPaint);
+                c.setTextColor(colMuted);
+                c.setBackground(outlined(colLineSubtle, dp(10)));
             }
         }
     }
@@ -2974,9 +2977,11 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
             box.addView(pressureField);
 
             final boolean[] isSelfUpdating = {false};
+            final List<TextView> presetChips = new ArrayList<>();
 
             gaugeView.setOnPressureChangedListener(new OnPressureChangedListener() {
                 public void onPressureChanged(int psi) {
+                    styleGaugePresets(presetChips, psi);
                     if (!isSelfUpdating[0]) {
                         isSelfUpdating[0] = true;
                         pressureField.setText(String.valueOf(psi));
@@ -2997,6 +3002,7 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
                             int val = Integer.parseInt(str);
                             isSelfUpdating[0] = true;
                             gaugeView.setPressure(val);
+                            styleGaugePresets(presetChips, val);
                             isSelfUpdating[0] = false;
                         }
                     } catch (Exception e) {}
@@ -3016,26 +3022,13 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
                 final String p = presetPressures[pIdx];
                 final String pLabel = presetLabels[pIdx];
                 TextView chip = new TextView(this);
-                if (p.equals("1200")) {
-                    chip.setText(pLabel);
-                    chip.setTextColor(colAccentInk);
-                    chip.setBackground(rounded(colEmerald, dp(10)));
-                } else if (p.equals("800")) {
-                    chip.setText(pLabel);
-                    chip.setTextColor(colPale);
-                    chip.setBackground(rounded(colCrimson, dp(10)));
-                } else if (p.equals("1000")) {
-                    chip.setText(pLabel);
-                    chip.setTextColor(0xFF000000);
-                    chip.setBackground(rounded(0xFFFFB703, dp(10)));
-                } else {
-                    chip.setText(pLabel);
-                    chip.setTextColor(colPale);
-                    chip.setBackground(rounded(colPanel2, dp(10)));
-                }
+                // Styled by styleGaugePresets: the band holding the reading lights up,
+                // in the same colour the arc is showing. Everything else stays a hairline.
+                chip.setText(pLabel);
+                presetChips.add(chip);
 
                 chip.setTextSize(10f);
-                chip.setTypeface(Typeface.MONOSPACE);
+                chip.setTypeface(Fonts.mono(this, true));
                 chip.setGravity(Gravity.CENTER);
                 chip.setPadding(dp(4), dp(8), dp(4), dp(8));
                 chip.setOnClickListener(new View.OnClickListener() {
@@ -3043,6 +3036,9 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
                         hapticClick();
                         int targetVal = Integer.parseInt(p);
                         gaugeView.animateToPressure(targetVal);
+                        // animateToPressure drives the needle without notifying the
+                        // listener, so restyle here too or the chips freeze on a tap.
+                        styleGaugePresets(presetChips, targetVal);
                         isSelfUpdating[0] = true;
                         pressureField.setText(p);
                         pressureField.setSelection(p.length());
@@ -3054,6 +3050,7 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
                 chip.setLayoutParams(lp);
                 presRow.addView(chip);
             }
+            styleGaugePresets(presetChips, 1200);
             box.addView(presRow);
 
             final Dialog dlg = createDialogSheet(box);
