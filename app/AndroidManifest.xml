@@ -86,6 +86,12 @@
                 <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
                 <action android:name="au.com.dss.gatehouse.WIDGET_TORCH" />
                 <action android:name="au.com.dss.gatehouse.WIDGET_SYNC_DEPUTY" />
+                <action android:name="android.intent.action.TIME_SET" />
+                <action android:name="android.intent.action.TIMEZONE_CHANGED" />
+                <action android:name="android.intent.action.DATE_CHANGED" />
+                <action android:name="android.intent.action.USER_PRESENT" />
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
+                <action android:name="au.com.dss.gatehouse.ACTION_NOTIFY_WIDGET_UPDATE" />
             </intent-filter>
             <meta-data
                 android:name="android.appwidget.provider"

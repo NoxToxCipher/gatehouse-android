@@ -49,6 +49,7 @@ public class GatehouseWidgetProvider extends AppWidgetProvider {
 
         int rootId = context.getResources().getIdentifier("widget_root", "id", pkg);
         int imgId = context.getResources().getIdentifier("widget_chronograph_img", "id", pkg);
+        int clockId = context.getResources().getIdentifier("widget_clock", "id", pkg);
 
         // 1. Fetch live or cached Deputy roster
         RosterProvider api = Rostering.create(context);
@@ -77,9 +78,6 @@ public class GatehouseWidgetProvider extends AppWidgetProvider {
         int totalHours = 8;
 
         SimpleDateFormat sdfHour = new SimpleDateFormat("HH:mm", Locale.US);
-        SimpleDateFormat sdfTime = new SimpleDateFormat("HH:mm", Locale.US);
-        sdfTime.setTimeZone(TimeZone.getDefault());
-        String curTimeStr = sdfTime.format(new Date(nowSec * 1000L));
 
         if (activeShift != null) {
             startLabel = sdfHour.format(new Date(activeShift.startTs * 1000L));
@@ -96,21 +94,29 @@ public class GatehouseWidgetProvider extends AppWidgetProvider {
             shiftProgress = 0f;
         }
 
-        // 2. Render Pure In-App Vector Chronograph Dial Bitmap
+        // 2. Render Pure In-App Vector Chronograph Dial Bitmap (Arc, Ticks, Shift %, Badges)
         if (imgId != 0) {
             Bitmap dialBitmap = renderChronographBitmap(
-                    context, 600, 600, shiftProgress, curTimeStr, startLabel, endLabel, totalHours, activeShift != null);
+                    context, 600, 600, shiftProgress, startLabel, endLabel, totalHours, activeShift != null);
             if (dialBitmap != null) {
                 views.setImageViewBitmap(imgId, dialBitmap);
             }
         }
 
-        // 3. 1-Tap Launch MainActivity
+        // 3. Configure Real-Time Native TextClock
+        if (clockId != 0) {
+            try {
+                views.setString(clockId, "setTimeZone", TimeZone.getDefault().getID());
+            } catch (Throwable ignored) {}
+        }
+
+        // 4. 1-Tap Launch MainActivity
         Intent openIntent = new Intent(context, MainActivity.class);
         openIntent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TOP);
         PendingIntent pOpen = PendingIntent.getActivity(context, 0, openIntent, PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
         if (rootId != 0) views.setOnClickPendingIntent(rootId, pOpen);
         if (imgId != 0) views.setOnClickPendingIntent(imgId, pOpen);
+        if (clockId != 0) views.setOnClickPendingIntent(clockId, pOpen);
 
         appWidgetManager.updateAppWidget(appWidgetId, views);
     }
@@ -119,14 +125,14 @@ public class GatehouseWidgetProvider extends AppWidgetProvider {
      * Vector 2D Canvas rendering of the Shift Chronograph Dial identical to in-app ChronographView.
      */
     private static Bitmap renderChronographBitmap(
-            Context context, int w, int h, float shiftProgress, String timeStr,
+            Context context, int w, int h, float shiftProgress,
             String startLabel, String endLabel, int totalHours, boolean onShift) {
         try {
             Bitmap bmp = Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888);
             Canvas canvas = new Canvas(bmp);
 
             float cx = w / 2f;
-            float cy = h / 2f - 10f;
+            float cy = h / 2f;
             float rOuter = 215f;
             float rInner = 180f;
 
@@ -214,19 +220,13 @@ public class GatehouseWidgetProvider extends AppWidgetProvider {
             textPaint.setColor(onShift ? arcColor : COL_MUTED);
             textPaint.setTextSize(26f);
             textPaint.setLetterSpacing(0.08f);
-            canvas.drawText(onShift ? ("SHIFT " + pct + "%") : "OFF SHIFT", cx, cy - 48f, textPaint);
+            canvas.drawText(onShift ? ("SHIFT " + pct + "%") : "OFF SHIFT", cx, cy - 38f, textPaint);
 
-            // Center: Hero Digital Time
-            textPaint.setColor(0xFFFFFFFF);
-            textPaint.setTextSize(60f);
-            textPaint.setLetterSpacing(0.02f);
-            canvas.drawText(timeStr, cx, cy + 14f, textPaint);
-
-            // Bottom: Timezone / City Sub-label
+            // Bottom: Timezone / City Sub-label (Below Time)
             textPaint.setColor(COL_QUIET);
             textPaint.setTextSize(19f);
             textPaint.setLetterSpacing(0.12f);
-            canvas.drawText("AEST · BRISBANE", cx, cy + 62f, textPaint);
+            canvas.drawText("AEST · BRISBANE", cx, cy + 46f, textPaint);
 
             // 5. Dial Baseline Start/End Time Markers
             textPaint.setTextSize(21f);
@@ -252,6 +252,7 @@ public class GatehouseWidgetProvider extends AppWidgetProvider {
     @Override
     public void onReceive(final Context context, Intent intent) {
         super.onReceive(context, intent);
+        if (intent == null) return;
         String action = intent.getAction();
         if (ACTION_TORCH.equals(action)) {
             Intent i = new Intent("au.com.dss.gatehouse.ACTION_TOGGLE_TORCH");
@@ -272,6 +273,22 @@ public class GatehouseWidgetProvider extends AppWidgetProvider {
                 @Override
                 public void onError(String errorMessage) {}
             });
+        } else if (Intent.ACTION_TIME_CHANGED.equals(action)
+                || Intent.ACTION_TIMEZONE_CHANGED.equals(action)
+                || Intent.ACTION_DATE_CHANGED.equals(action)
+                || Intent.ACTION_USER_PRESENT.equals(action)
+                || Intent.ACTION_SCREEN_ON.equals(action)
+                || "au.com.dss.gatehouse.ACTION_NOTIFY_WIDGET_UPDATE".equals(action)) {
+            try {
+                AppWidgetManager mgr = AppWidgetManager.getInstance(context);
+                ComponentName cn = new ComponentName(context, GatehouseWidgetProvider.class);
+                int[] ids = mgr.getAppWidgetIds(cn);
+                if (ids != null) {
+                    for (int id : ids) {
+                        updateAppWidget(context, mgr, id);
+                    }
+                }
+            } catch (Throwable ignored) {}
         }
     }
 }

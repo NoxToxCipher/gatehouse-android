@@ -1,4 +1,4 @@
-﻿<?xml version="1.0" encoding="utf-8"?>
+<?xml version="1.0" encoding="utf-8"?>
 <FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:id="@+id/widget_root"
     android:layout_width="match_parent"
@@ -6,12 +6,26 @@
     android:background="@drawable/widget_bg"
     android:padding="6dp">
 
-    <!-- ⏱️ Shift Chronograph Pure Vector Dial (1:1 with In-App Chronograph) -->
+    <!-- ⏱️ Shift Chronograph Pure Vector Dial Background -->
     <ImageView
         android:id="@+id/widget_chronograph_img"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:scaleType="fitCenter"
         android:contentDescription="Shift Chronograph Dial" />
+
+    <!-- ⏰ Real-Time Live Clock (Launcher Process Ticker - 100% In-Sync, Zero Battery Drain) -->
+    <TextClock
+        android:id="@+id/widget_clock"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="center"
+        android:format24Hour="HH:mm"
+        android:format12Hour="HH:mm"
+        android:textColor="#FFFFFFFF"
+        android:textSize="32sp"
+        android:fontFamily="monospace"
+        android:textStyle="bold"
+        android:includeFontPadding="false" />
 
 </FrameLayout>
