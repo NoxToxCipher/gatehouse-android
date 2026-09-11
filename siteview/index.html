@@ -1,0 +1,309 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Gatehouse · Site View · Post 01</title>
+
+<!--
+  Gatehouse SITE VIEW — photorealistic 3D "God's Eye" of Post 01
+  (Hume Doors & Timber, Kingston QLD).
+
+  Portions adapted from GOD'S EYE VIEW by Bilawal Sidhu — MIT License
+  https://github.com/bilawalsidhu/gods-eye-view
+  Specifically: the Google Photorealistic 3D Tiles load pattern
+  (src/mapStartup.js), the circular "scope mask" idea (src/scopeMask.js),
+  and the CRT sensor shader (src/styles/retro.js). Copyright (c) 2026
+  Bilawal Sidhu; used under the MIT terms.
+
+  This is a PROTOTYPE SEED. It runs standalone in a browser today and is the
+  basis for the in-app WebView "SITE" tab. See README.md for how to run it and
+  how it slots into Gatehouse.
+-->
+
+<!-- Cesium base URL must point at the Build dir so its workers/assets resolve. -->
+<script>window.CESIUM_BASE_URL = "https://cesium.com/downloads/cesiumjs/releases/1.124/Build/Cesium/";</script>
+<link href="https://cesium.com/downloads/cesiumjs/releases/1.124/Build/Cesium/Widgets/widgets.css" rel="stylesheet">
+<script src="https://cesium.com/downloads/cesiumjs/releases/1.124/Build/Cesium/Cesium.js"></script>
+
+<style>
+  :root{
+    --void:#05080E; --panel:#101725; --panel-2:#151D2B; --line:#233147;
+    --ink:#E7EEF7; --slate:#94A3B8; --mute:#5B6B82; --amber:#E5A93C; --amber-deep:#B87A1E;
+    --ok:#10B981; --alert:#FF5555;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;height:100%;background:var(--void);color:var(--ink);
+    font-family:"IBM Plex Sans",system-ui,sans-serif;overflow:hidden;-webkit-font-smoothing:antialiased;}
+  #cesiumContainer{position:absolute;inset:0;}
+  /* Hide Cesium's default toolbar/lighting chrome — we drive our own. */
+  .cesium-viewer-bottom{display:none;}
+  #cesium-credits{position:absolute;left:10px;bottom:8px;z-index:6;
+    font:400 10px/1.3 "IBM Plex Mono",monospace;color:rgba(148,163,184,.75);
+    text-shadow:0 1px 3px #000; pointer-events:auto;}
+  #cesium-credits a{color:rgba(148,163,184,.9);}
+
+  /* the circular "eye" mask lives above the scene, below the chrome */
+  #scope-mask{position:absolute;inset:0;z-index:3;pointer-events:none;}
+
+  /* top bar */
+  .bar{position:absolute;top:0;left:0;right:0;z-index:7;display:flex;align-items:center;gap:12px;
+    padding:10px 14px;background:linear-gradient(180deg,rgba(5,8,14,.92),rgba(5,8,14,0));}
+  .g{font-family:"Sora",sans-serif;font-weight:700;letter-spacing:.14em;font-size:14px;}
+  .eye{font-family:"IBM Plex Mono",monospace;font-weight:600;font-size:10px;letter-spacing:.32em;
+    color:var(--amber);border:1px solid var(--amber-deep);border-radius:999px;padding:3px 9px;text-transform:uppercase;}
+  .post{font-family:"IBM Plex Mono",monospace;font-size:11px;color:var(--slate);letter-spacing:.05em;margin-right:auto;}
+  .post b{color:var(--ink);font-weight:600;}
+  .status{font-family:"IBM Plex Mono",monospace;font-size:10.5px;color:var(--mute);letter-spacing:.06em;}
+  .status.ok{color:var(--ok);} .status.err{color:var(--alert);}
+
+  /* control panel */
+  .panel{position:absolute;right:12px;top:56px;z-index:7;width:230px;
+    background:linear-gradient(180deg,rgba(21,29,43,.96),rgba(16,23,37,.96));
+    border:1px solid var(--line);border-radius:13px;padding:12px;backdrop-filter:blur(6px);}
+  .panel h2{margin:0 0 9px;font:600 11px/1 "Sora",sans-serif;letter-spacing:.14em;
+    text-transform:uppercase;color:var(--slate);}
+  .row{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:9px 0;
+    font-family:"IBM Plex Mono",monospace;font-size:11px;color:var(--slate);}
+  .row label{cursor:pointer;}
+  input[type=range]{width:96px;accent-color:var(--amber);}
+  .toggle{appearance:none;width:34px;height:19px;border-radius:999px;background:var(--line);
+    position:relative;cursor:pointer;outline:none;border:none;transition:background .15s;}
+  .toggle:checked{background:var(--amber-deep);}
+  .toggle::after{content:"";position:absolute;top:2px;left:2px;width:15px;height:15px;border-radius:50%;
+    background:var(--ink);transition:transform .15s;}
+  .toggle:checked::after{transform:translateX(15px);}
+  .toggle:focus-visible{box-shadow:0 0 0 2px var(--amber);}
+  .btn{width:100%;margin-top:6px;padding:8px;border-radius:9px;border:1px solid var(--line);
+    background:var(--panel);color:var(--ink);font-family:"IBM Plex Mono",monospace;font-size:11px;
+    letter-spacing:.08em;cursor:pointer;}
+  .btn:hover{border-color:var(--amber-deep);}
+  .sub{font-size:9.5px;color:var(--mute);margin-top:2px;}
+
+  /* key gate */
+  #gate{position:absolute;inset:0;z-index:9;display:flex;align-items:center;justify-content:center;
+    background:radial-gradient(120% 90% at 50% 0%,#0C1420,#05080E);padding:20px;}
+  .card{max-width:440px;width:100%;background:var(--panel-2);border:1px solid var(--line);
+    border-radius:16px;padding:22px;}
+  .card h1{margin:0 0 6px;font:700 18px "Sora",sans-serif;letter-spacing:.02em;}
+  .card p{color:var(--slate);font-size:13px;line-height:1.55;margin:8px 0;}
+  .card code{font-family:"IBM Plex Mono",monospace;color:var(--amber);font-size:12px;}
+  .card input{width:100%;margin-top:10px;padding:11px 12px;border-radius:9px;border:1px solid var(--line);
+    background:var(--void);color:var(--ink);font-family:"IBM Plex Mono",monospace;font-size:13px;}
+  .card .btn{margin-top:12px;background:var(--amber);color:#1a1204;border:none;font-weight:600;}
+  .card .note{font-size:11px;color:var(--mute);}
+  [hidden]{display:none!important;}
+</style>
+</head>
+<body>
+
+<div id="cesiumContainer"></div>
+<canvas id="scope-mask" aria-hidden="true"></canvas>
+
+<div class="bar">
+  <span class="g">GATEHOUSE</span>
+  <span class="eye">Site View</span>
+  <span class="post">POST 01 · <b>Hume Doors &amp; Timber</b> · Kingston QLD · 27.6350°S 153.1160°E</span>
+  <span class="status" id="status">booting…</span>
+</div>
+
+<div class="panel" id="panel" hidden>
+  <h2>Sensor</h2>
+  <div class="row"><label for="t-scope">Scope mask (eye)</label><input class="toggle" type="checkbox" id="t-scope" checked></div>
+  <div class="row"><label for="t-orbit">Auto-orbit</label><input class="toggle" type="checkbox" id="t-orbit"></div>
+  <div class="row"><label for="t-crt">CRT skin</label><input class="toggle" type="checkbox" id="t-crt"></div>
+  <div class="row"><label for="s-pix">Pixelation</label><input type="range" id="s-pix" min="1" max="10" step="0.5" value="5"></div>
+  <div class="row"><label for="s-dist">Distortion</label><input type="range" id="s-dist" min="0" max="1" step="0.05" value="0.25"></div>
+  <div class="row"><label for="s-inst">Instability</label><input type="range" id="s-inst" min="0" max="1" step="0.05" value="0.4"></div>
+  <button class="btn" id="reset">Reframe Post 01</button>
+  <div class="sub">Drag to orbit · scroll to zoom · right-drag to tilt</div>
+</div>
+
+<div id="gate">
+  <div class="card">
+    <h1>Site View needs a Google Maps key</h1>
+    <p>Paste a Google Maps Platform API key with the <b>Map Tiles API</b> enabled. It's stored only in
+       this browser (<code>localStorage</code>) and never leaves your device or gets committed.</p>
+    <p class="note">Restrict the key to the Map Tiles API + <code>http://localhost:*</code> and set a budget
+       cap in Google Cloud before using it. Photorealistic 3D Tiles are metered.</p>
+    <input id="key-input" type="password" placeholder="AIza…" autocomplete="off" spellcheck="false">
+    <button class="btn" id="key-go">Load the globe</button>
+    <p class="note" id="gate-err" style="color:var(--alert)" hidden></p>
+  </div>
+</div>
+
+<script>
+/* =========================================================================
+   Gatehouse Site View — prototype seed
+   Google 3D Tiles load + scope mask + CRT shader adapted from God's Eye View
+   (Bilawal Sidhu, MIT). See file header.
+   ========================================================================= */
+(function(){
+  "use strict";
+  var LON = 153.1160, LAT = -27.6350;        // Post 01 — Hume Doors & Timber, Kingston QLD
+  var KEY_STORE = "gatehouse_gmaps_key";
+  var reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
+  var statusEl = document.getElementById("status");
+  function status(msg, cls){ statusEl.textContent = msg; statusEl.className = "status" + (cls?(" "+cls):""); }
+
+  /* ---- CRT sensor shader (verbatim from GEV src/styles/retro.js, MIT) ---- */
+  var RETRO_FRAG = `
+    uniform sampler2D colorTexture;
+    uniform vec2 colorTextureDimensions;
+    uniform float intensity;
+    uniform float pixelation;
+    uniform float distortion;
+    uniform float instability;
+    uniform float time;
+    in vec2 v_textureCoordinates;
+    float hash(vec2 p){ vec3 p3=fract(vec3(p.xyx)*0.1031); p3+=dot(p3,p3.yzx+33.33); return fract((p3.x+p3.y)*p3.z); }
+    vec2 barrelDistort(vec2 uv,float s){ vec2 c=uv*2.0-1.0; float r2=dot(c,c); c*=1.0+r2*s*0.4; return c*0.5+0.5; }
+    void main(){
+      vec2 uv=v_textureCoordinates; vec2 dims=colorTextureDimensions; vec2 texel=1.0/dims;
+      float dist=distortion*intensity; vec2 distUV=barrelDistort(uv,dist);
+      if(distUV.x<0.0||distUV.x>1.0||distUV.y<0.0||distUV.y>1.0){ out_FragColor=vec4(0.0,0.0,0.0,1.0); return; }
+      float lineY=floor(distUV.y*dims.y);
+      float jitterSeed=hash(vec2(lineY,floor(time*8.0)));
+      float jitterActive=step(0.97-instability*0.04,jitterSeed);
+      float jitterAmount=(hash(vec2(lineY*7.0,floor(time*12.0)))-0.5)*0.008*instability*jitterActive*intensity;
+      vec2 jUV=distUV+vec2(jitterAmount,0.0);
+      vec2 centered=jUV-0.5; float ca=length(centered)*0.008*intensity;
+      float r=texture(colorTexture,jUV+centered*ca).r;
+      float g=texture(colorTexture,jUV).g;
+      float b=texture(colorTexture,jUV-centered*ca).b;
+      vec4 color=vec4(r,g,b,1.0);
+      float pixSize=mix(1.0,pixelation,intensity);
+      vec2 pixelUV=floor(jUV*dims/pixSize)*pixSize/dims;
+      vec4 pixelColor=texture(colorTexture,mix(jUV,pixelUV,intensity));
+      color=mix(color,pixelColor,0.7*intensity);
+      float levels=mix(256.0,10.0,intensity);
+      vec3 posterized=floor(color.rgb*levels+0.5)/levels;
+      float gray=dot(posterized,vec3(0.299,0.587,0.114));
+      vec3 result=mix(vec3(gray),posterized,1.0+0.3*intensity);
+      float scanY=distUV.y*dims.y; float scan=pow(sin(scanY*1.0+time*2.5)*0.5+0.5,1.5);
+      float scanFade=0.35*intensity; result*=mix(1.0,scan*scanFade+(1.0-scanFade),intensity);
+      float flicker=1.0-(sin(time*188.5)*0.5+0.5)*0.03*instability*intensity; result*=flicker;
+      vec3 warm=result*vec3(1.02,1.0,0.94); result=mix(result,warm,0.4*intensity);
+      vec2 vg=distUV*(1.0-distUV); float vig=clamp(pow(vg.x*vg.y*20.0,0.25+0.15*intensity),0.0,1.0);
+      result*=mix(1.0,vig,0.6*intensity);
+      out_FragColor=vec4(mix(texture(colorTexture,uv).rgb,result,intensity),1.0);
+    }`;
+
+  /* ---- scope mask (the circular "eye"), adapted from GEV src/scopeMask.js ---- */
+  var maskCv = document.getElementById("scope-mask"), maskOn = true;
+  function drawMask(){
+    var w = innerWidth, h = innerHeight, dpr = Math.min(2, devicePixelRatio||1);
+    maskCv.width = Math.round(w*dpr); maskCv.height = Math.round(h*dpr);
+    var ctx = maskCv.getContext("2d"); ctx.setTransform(dpr,0,0,dpr,0,0); ctx.clearRect(0,0,w,h);
+    if(!maskOn) return;
+    var cx=w/2, cy=h/2, radius=Math.min(w,h)*0.46, feather=radius*0.11;
+    var g=ctx.createRadialGradient(cx,cy,Math.max(0,radius-feather),cx,cy,radius+feather);
+    g.addColorStop(0,"rgba(5,5,8,0)"); g.addColorStop(1,"rgba(5,5,8,0.96)");
+    ctx.fillStyle=g; ctx.fillRect(0,0,w,h);
+  }
+  addEventListener("resize", drawMask); drawMask();
+
+  /* ---- key gate ---- */
+  var gate=document.getElementById("gate"), gateErr=document.getElementById("gate-err");
+  document.getElementById("key-go").onclick=function(){
+    var k=document.getElementById("key-input").value.trim();
+    if(!k){ gateErr.hidden=false; gateErr.textContent="Paste a key first."; return; }
+    try{ localStorage.setItem(KEY_STORE,k); }catch(e){}
+    gate.hidden=true; boot(k);
+  };
+  var saved=null; try{ saved=localStorage.getItem(KEY_STORE); }catch(e){}
+  if(saved){ gate.hidden=true; boot(saved); }
+
+  /* ---- boot Cesium + Google 3D Tiles ---- */
+  async function boot(key){
+    status("configuring viewer…");
+    var viewer = new Cesium.Viewer("cesiumContainer",{
+      timeline:false, animation:false, baseLayerPicker:false, geocoder:false, homeButton:false,
+      sceneModePicker:false, navigationHelpButton:false, fullscreenButton:false, vrButton:false,
+      selectionIndicator:false, infoBox:false, baseLayer:false,
+      // ToS: Google credits must stay visible while tiles are shown.
+      creditContainer:(function(){ var el=document.createElement("div"); el.id="cesium-credits"; document.body.appendChild(el); return el; })(),
+      msaaSamples:4, contextOptions:{ webgl:{ preserveDrawingBuffer:true } },
+    });
+    viewer.targetFrameRate = 60;
+    viewer.scene.globe.show = false;               // Google 3D provides its own globe
+    viewer.scene.skyAtmosphere.show = true;
+    viewer.scene.skyAtmosphere.atmosphereLightIntensity = 18;
+
+    status("loading Google 3D tiles…");
+    try{
+      Cesium.GoogleMaps.defaultApiKey = key;       // GEV mapStartup.js pattern
+      var tileset = await Cesium.createGooglePhotorealistic3DTileset({ onlyUsingWithGoogleGeocoder:true });
+      viewer.scene.primitives.add(tileset);
+      status("live · Post 01", "ok");
+    }catch(err){
+      status("3D tiles failed — check key/Map Tiles API", "err");
+      console.error("[SiteView] tileset load failed:", err);
+      // Surface the gate again so the key can be corrected.
+      try{ localStorage.removeItem(KEY_STORE); }catch(e){}
+      gate.hidden=false; gateErr.hidden=false;
+      gateErr.textContent = "Google refused the key. Enable the Map Tiles API and check restrictions, then retry.";
+      viewer.destroy();
+      return;
+    }
+
+    document.getElementById("panel").hidden=false;
+    wireCamera(viewer);
+    wireCrt(viewer);
+    wireControls(viewer);
+  }
+
+  /* ---- camera: frame Post 01, optional slow auto-orbit ---- */
+  var autoOrbit=false, heading=Cesium.Math.toRadians(35), PITCH=Cesium.Math.toRadians(-32), RANGE=520;
+  function centerFrame(){ return Cesium.Transforms.eastNorthUpToFixedFrame(Cesium.Cartesian3.fromDegrees(LON,LAT,25)); }
+  function frameSite(viewer){
+    viewer.scene.camera.lookAtTransform(centerFrame(), new Cesium.HeadingPitchRange(heading,PITCH,RANGE));
+    // release the transform so default mouse/touch controls resume
+    viewer.scene.camera.lookAtTransform(Cesium.Matrix4.IDENTITY);
+  }
+  function wireCamera(viewer){
+    frameSite(viewer);
+    viewer.scene.preRender.addEventListener(function(){
+      if(!autoOrbit || reduce) return;
+      heading += 0.0016;
+      viewer.scene.camera.lookAtTransform(centerFrame(), new Cesium.HeadingPitchRange(heading,PITCH,RANGE));
+    });
+    // any manual grab cancels auto-orbit and hands control back
+    var stop=function(){ if(autoOrbit){ autoOrbit=false; document.getElementById("t-orbit").checked=false;
+      viewer.scene.camera.lookAtTransform(Cesium.Matrix4.IDENTITY); } };
+    viewer.scene.canvas.addEventListener("mousedown", stop);
+    viewer.scene.canvas.addEventListener("touchstart", stop, {passive:true});
+    window.__siteFrame = function(){ frameSite(viewer); };
+  }
+
+  /* ---- CRT post-process ---- */
+  var crt={ intensity:0, pix:5, dist:0.25, inst:0.4 };
+  function wireCrt(viewer){
+    var stage = new Cesium.PostProcessStage({
+      fragmentShader: RETRO_FRAG,
+      uniforms:{
+        intensity:function(){ return crt.intensity; },
+        pixelation:function(){ return crt.pix; },
+        distortion:function(){ return crt.dist; },
+        instability:function(){ return crt.inst; },
+        time:function(){ return performance.now()/1000; },
+      }
+    });
+    viewer.scene.postProcessStages.add(stage);
+  }
+
+  /* ---- control wiring ---- */
+  function wireControls(viewer){
+    document.getElementById("t-scope").onchange=function(e){ maskOn=e.target.checked; drawMask(); };
+    document.getElementById("t-orbit").onchange=function(e){ autoOrbit=e.target.checked;
+      if(!autoOrbit) viewer.scene.camera.lookAtTransform(Cesium.Matrix4.IDENTITY); };
+    document.getElementById("t-crt").onchange=function(e){ crt.intensity=e.target.checked?1:0; };
+    document.getElementById("s-pix").oninput=function(e){ crt.pix=parseFloat(e.target.value); };
+    document.getElementById("s-dist").oninput=function(e){ crt.dist=parseFloat(e.target.value); };
+    document.getElementById("s-inst").oninput=function(e){ crt.inst=parseFloat(e.target.value); };
+    document.getElementById("reset").onclick=function(){ window.__siteFrame && window.__siteFrame(); };
+  }
+})();
+</script>
+</body>
+</html>
