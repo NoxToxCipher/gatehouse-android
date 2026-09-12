@@ -310,6 +310,16 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
     private static final long HOLD_MS = 2 * 60 * 1000L;
     private static final int MAX_HELD = 50;
     private static final long WELFARE_INTERVAL_MS = 90 * 60 * 1000L;
+    /**
+     * Master switch for the lone-worker welfare check. OFF while Gatehouse is
+     * not in live service: with no guards actually carrying the phones, the
+     * 90-minute prompt just went unanswered on an idle handset and SMSed the
+     * control pair every 90 minutes for nobody. When the
+     * app goes live and guards are on the tool, flip this back to true. It
+     * gates both the automatic check and the manual/easter-egg entry, so no
+     * path can raise the dialog or escalate while it is false.
+     */
+    private static final boolean WELFARE_CHECKS_ENABLED = false;
     private long lastActivityTimeMs;
     private boolean isWelfareDialogShowing = false;
 
@@ -20405,12 +20415,17 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
 
     // Welfare Check Dialog & Handover Boilerplate
     private void checkWelfareDue() {
+        if (!WELFARE_CHECKS_ENABLED) return;
         if (isWelfareDialogShowing || Core.isSealed() == 1) return;
         long elapsed = SystemClock.elapsedRealtime() - lastActivityTimeMs;
         if (elapsed >= WELFARE_INTERVAL_MS) showWelfareCheckDialog();
     }
 
     private void showWelfareCheckDialog() {
+        // Dormant until Gatehouse is live. See WELFARE_CHECKS_ENABLED. This also
+        // covers the hidden brand-tap entry point, so the escalation SMS cannot
+        // fire from any path while the feature is switched off.
+        if (!WELFARE_CHECKS_ENABLED) return;
         isWelfareDialogShowing = true;
         hapticHeavyClick();
         final long promptTime = SystemClock.elapsedRealtime();
